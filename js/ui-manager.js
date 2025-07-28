@@ -616,6 +616,7 @@ export class UIManager {
             { name: "Portugal Day", date: "June 10" },
             { name: "Madeira Day", date: "July 1", badge: "Regional" },
             { name: "Assumption of Mary", date: "August 15" },
+            { name: "Funchal Day", date: "August 21", badge: "Regional" },
             { name: "Republic Day", date: "October 5" },
             { name: "All Saints' Day", date: "November 1" },
             { name: "Restoration of Independence", date: "December 1" },
