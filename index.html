@@ -9,95 +9,37 @@
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        :root {
-            --brand-color: #e94b5a;
-            --brand-color-dark: #d3414f;
-            --brand-color-light: #fde8ea;
-            --brand-color-light-border: #fad1d5;
-            --holiday-color: #fffbeb; /* Light yellow for holidays */
-            --holiday-color-border: #fef3c7;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .day-cell, .employee-card-main {
-            transition: all 0.2s ease-in-out;
-            cursor: pointer;
-        }
-        .day-cell:hover, .employee-card-main:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .status-radio:checked + label {
-            background-color: var(--brand-color);
-            color: white;
-            border-color: var(--brand-color);
-        }
-        .view-btn.active {
-            background-color: var(--brand-color);
-            color: white;
-        }
-        .text-brand { color: var(--brand-color); }
-        .bg-brand { background-color: var(--brand-color); }
-        .hover\:bg-brand-dark:hover { background-color: var(--brand-color-dark); }
-        .focus\:ring-brand:focus {
-            --tw-ring-color: var(--brand-color);
-            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-        }
-        .work-day-checkbox:checked + span {
-            background-color: var(--brand-color-light);
-            color: var(--brand-color);
-            border-color: var(--brand-color-light-border);
-        }
-
-        .draggable {
-            cursor: grab;
-        }
-        .draggable.dragging {
-            opacity: 0.5;
-            background: var(--brand-color-light);
-        }
-        /* Hide spinner from number inputs */
-        input[type='number']::-webkit-inner-spin-button,
-        input[type='number']::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type='number'] {
-            -moz-appearance: textfield;
-        }
-        .day-cell.holiday {
-            background-color: var(--holiday-color);
-            border-color: var(--holiday-color-border);
-        }
-    </style>
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body class="bg-gray-50 text-gray-800">
 
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
-            <div>
-                <h1 class="text-center text-3xl font-extrabold text-brand">Atlantic Holiday</h1>
-                <h2 class="mt-2 text-center text-2xl font-bold text-gray-900">Sign in to your account</h2>
+        <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg modal-content">
+            <div class="text-center">
+                <h1 class="text-center text-4xl font-extrabold text-gradient mb-2">Atlantic Holiday</h1>
+                <div class="w-16 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-4"></div>
+                <h2 class="text-center text-2xl font-bold text-gray-900">Sign in to your account</h2>
             </div>
             <div class="mt-8 space-y-6">
                 <input type="hidden" name="remember" value="true">
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div>
                         <label for="email-address" class="sr-only">Email address</label>
-                        <input id="email-address" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm" placeholder="Email address">
+                        <input id="email-address" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm focus-ring" placeholder="Email address">
                     </div>
                     <div>
                         <label for="password" class="sr-only">Password</label>
-                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm" placeholder="Password">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm focus-ring" placeholder="Password">
                     </div>
                 </div>
                 <p id="login-error" class="text-red-500 text-sm text-center h-5"></p>
                 <div>
-                    <button id="login-btn" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
+                    <button id="login-btn" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white btn-primary hover-lift">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <svg class="h-5 w-5 text-white opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </span>
                         Sign in
                     </button>
                 </div>
@@ -106,14 +48,18 @@
     </div>
 
     <div id="setup-screen" class="hidden min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-xl w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
+        <div class="max-w-xl w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center modal-content">
             <div>
-                <h1 class="text-center text-3xl font-extrabold text-brand">Welcome to the Schedule Calculator!</h1>
+                <h1 class="text-center text-4xl font-extrabold text-gradient mb-2">Welcome to the Schedule Calculator!</h1>
+                <div class="w-16 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-4"></div>
                 <p class="mt-4 text-center text-md text-gray-600">Your schedule is currently empty. How would you like to get started?</p>
             </div>
             <div class="mt-8 space-y-4">
                 <div>
-                     <button id="start-fresh-btn" class="group relative w-full flex justify-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
+                     <button id="start-fresh-btn" class="group relative w-full flex justify-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand hover-lift">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
                         Start With a Blank Schedule
                     </button>
                     <p class="text-xs text-gray-500 mt-1">You can add your own colleagues manually.</p>
@@ -122,28 +68,35 @@
         </div>
     </div>
 
-
     <div id="app-content" class="hidden container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-6 flex justify-between items-center">
-            <div>
-                <h1 class="text-4xl font-bold text-brand">Atlantic Holiday</h1>
+        <header class="text-center mb-8 flex justify-between items-center">
+            <div class="text-center">
+                <h1 class="text-5xl font-bold text-gradient mb-2">Atlantic Holiday</h1>
+                <div class="w-20 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-2"></div>
                 <p class="text-gray-500 mt-2">Work Schedule Calculator</p>
             </div>
             <div>
-                 <button id="sign-out-btn" class="text-sm text-gray-600 hover:text-brand">Sign Out</button>
+                 <button id="sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
             </div>
         </header>
 
         <div id="loading" class="text-center p-8">
+            <div class="loading-spinner mx-auto mb-4"></div>
             <p class="text-lg text-gray-600">Loading your schedule...</p>
         </div>
         
-        <div id="main-app" class="hidden">
+        <div id="main-app" class="hidden fade-in-up">
              <!-- View Toggles -->
-            <div class="mb-6 flex justify-center flex-wrap gap-1">
-                <div class="flex border border-gray-300 rounded-lg p-1 bg-gray-200">
+            <div class="mb-8 flex justify-center flex-wrap gap-2">
+                <div class="flex border border-gray-300 rounded-lg p-1 bg-gray-200 shadow-soft">
                     <button id="monthly-view-btn" class="view-btn active px-4 py-2 text-sm font-medium rounded-md">Monthly View</button>
                     <button id="yearly-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Yearly View</button>
+                    <button id="madeira-holidays-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Madeira Holidays</button>
                     <button id="vacation-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Vacation Planner</button>
                     <button id="reorder-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Manage List</button>
                      <button id="history-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">History</button>
@@ -154,47 +107,71 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 <!-- Left Column: Employee Management -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
-                    <h2 id="summary-title" class="text-2xl font-semibold mb-4 border-b pb-3">Monthly Summary</h2>
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md modal-content">
+                    <h2 id="summary-title" class="text-2xl font-semibold mb-4 border-b pb-3 text-gradient">Monthly Summary</h2>
                     <div id="employee-list" class="space-y-3 max-h-[calc(100vh-210px)] overflow-y-auto pr-2">
                        <!-- Employee items will be inserted here -->
                     </div>
                 </div>
 
                 <!-- Right Column: Calendar & Controls -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md modal-content">
                     <div id="add-colleague-section">
                          <!-- Add Employee Form -->
                         <div class="mb-6 border-b pb-6">
-                            <h3 class="text-lg font-medium mb-2">Add New Colleague</h3>
-                            <input type="text" id="new-employee-name" placeholder="Colleague's Name" class="w-full p-2 border rounded-md mb-2 focus:ring-2 focus:ring-brand">
-                             <input type="number" id="new-employee-staff-number" placeholder="Staff Number" class="w-full p-2 border rounded-md mb-2 focus:ring-2 focus:ring-brand">
-                            <div class="mb-3">
-                                <p class="text-sm text-gray-600 mb-1">Select default working days:</p>
-                                <div id="work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-1 text-center text-sm">
+                            <h3 class="text-lg font-medium mb-4 text-gradient">Add New Colleague</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <input type="text" id="new-employee-name" placeholder="Colleague's Name" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                <input type="number" id="new-employee-staff-number" placeholder="Staff Number" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            </div>
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-600 mb-2">Select default working days:</p>
+                                <div id="work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-sm">
                                     <!-- Checkboxes will be inserted here by JS -->
                                 </div>
                             </div>
-                            <button id="add-employee-btn" class="w-full bg-brand text-white py-2 rounded-md hover:bg-brand-dark transition-colors disabled:opacity-50">Add Colleague</button>
+                            <button id="add-employee-btn" class="w-full btn-primary py-3 rounded-md transition-all disabled:opacity-50 hover-lift">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Add Colleague
+                            </button>
                             <p id="add-employee-error" class="text-red-500 text-sm mt-2 text-center h-5"></p>
                         </div>
                     </div>
                     <!-- Main Content Area -->
                     <div>
-                        <div id="calendar-controls" class="flex justify-between items-center mb-4">
-                            <button id="prev-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                        <div id="calendar-controls" class="flex justify-between items-center mb-6">
+                            <button id="prev-btn" class="p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                             </button>
-                            <h2 id="view-header" class="text-2xl font-semibold"></h2>
-                             <button id="pdf-download-btn" class="hidden ml-4 p-2 rounded-full hover:bg-gray-200 transition-colors" title="Download Monthly Team Report PDF">
+                            <div class="text-center">
+                                <h2 id="view-header" class="text-2xl font-semibold text-gradient"></h2>
+                                <div class="flex items-center justify-center gap-4 mt-2 text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                                        <span>Working</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                                        <span>Holiday ★</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                                        <span>Off/Weekend</span>
+                                    </div>
+                                </div>
+                            </div>
+                             <button id="pdf-download-btn" class="hidden ml-4 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift" title="Download Monthly Team Report PDF">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </button>
-                            <button id="next-btn" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                            <button id="next-btn" class="p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift">
                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                             </button>
                         </div>
-                        <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-3"></div>
                         <div id="yearly-summary-container" class="hidden"></div>
+                        <div id="madeira-holidays-container" class="hidden"></div>
                         <div id="vacation-planner-container" class="hidden"></div>
                         <div id="reorder-list-container" class="hidden"></div>
                         <div id="history-container" class="hidden"></div>
@@ -206,21 +183,21 @@
     
     <!-- Modals -->
     <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-        <div class="relative w-full max-w-sm shadow-lg rounded-xl bg-white p-6 text-center">
+        <div class="relative w-full max-w-sm shadow-lg rounded-xl bg-white p-6 text-center modal-content">
             <h3 id="confirm-modal-title" class="text-lg font-medium text-gray-900 mb-2">Are you sure?</h3>
             <p id="confirm-modal-text" class="text-sm text-gray-600 mb-4"></p>
             <div class="flex justify-center gap-4">
-                <button id="confirm-modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-                <button id="confirm-modal-ok-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirm</button>
+                <button id="confirm-modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                <button id="confirm-modal-ok-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors hover-lift">Confirm</button>
             </div>
         </div>
     </div>
     
     <div id="day-details-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-        <div class="relative w-full max-w-lg shadow-lg rounded-xl bg-white">
+        <div class="relative w-full max-w-lg shadow-lg rounded-xl bg-white modal-content">
             <div class="p-5 border-b flex justify-between items-center">
                 <h3 id="modal-date-header" class="text-xl leading-6 font-medium text-gray-900"></h3>
-                 <button id="modal-close-btn" class="text-gray-400 hover:text-gray-600">
+                 <button id="modal-close-btn" class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                  </button>
             </div>
@@ -229,10 +206,10 @@
     </div>
 
     <div id="employee-summary-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-        <div class="relative w-full max-w-2xl shadow-lg rounded-xl bg-white">
+        <div class="relative w-full max-w-2xl shadow-lg rounded-xl bg-white modal-content">
             <div class="p-5 border-b flex justify-between items-center">
                 <h3 id="employee-summary-header" class="text-xl leading-6 font-medium text-gray-900"></h3>
-                 <button id="employee-summary-close-btn" class="text-gray-400 hover:text-gray-600">
+                 <button id="employee-summary-close-btn" class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                  </button>
             </div>
@@ -241,1147 +218,28 @@
     </div>
 
     <div id="edit-working-days-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-        <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white">
+        <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white modal-content">
             <div class="p-5 border-b flex justify-between items-center">
                 <h3 id="edit-working-days-header" class="text-xl leading-6 font-medium text-gray-900">Edit Working Days</h3>
-                 <button id="edit-working-days-close-btn" class="text-gray-400 hover:text-gray-600">
+                 <button id="edit-working-days-close-btn" class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                  </button>
             </div>
             <div class="p-5 space-y-4">
                 <div>
                     <p class="text-sm text-gray-600 mb-3">Select the days when this colleague works:</p>
-                    <div id="edit-work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-1 text-center text-sm">
+                    <div id="edit-work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-sm">
                         <!-- Checkboxes will be inserted here by JS -->
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
-                    <button id="edit-working-days-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-                    <button id="edit-working-days-save-btn" class="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-dark">Save Changes</button>
+                    <button id="edit-working-days-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                    <button id="edit-working-days-save-btn" class="px-4 py-2 btn-primary rounded-md transition-all hover-lift">Save Changes</button>
                 </div>
             </div>
         </div>
     </div>
 
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- GLOBAL VARIABLES & CONFIG ---
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyBd4x0WVWC0CjSG98C1521oFPRE5TO5lms",
-            authDomain: "my-work-schedule-4dc10.firebaseapp.com",
-            projectId: "my-work-schedule-4dc10",
-            storageBucket: "my-work-schedule-4dc10.appspot.com",
-            messagingSenderId: "926615499821",
-            appId: "1:926615499821:web:af106d8176f06abdf6f4a4"
-        };
-        
-        let db, auth, userId;
-        let activeEmployees = [];
-        let archivedEmployees = [];
-        let holidays = {};
-        let currentDate = new Date();
-        let lastMonthlyDate = new Date();
-        let selectedDateKey = null;
-        let currentView = 'monthly';
-        let unsubscribe = null; 
-
-        const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const MONTHS_OF_YEAR = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        const STATUS_OPTIONS = ['Working', 'Off', 'Absent'];
-
-        // --- INITIALIZATION ---
-        
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                setLogLevel('error');
-                setupLoginListeners();
-
-                onAuthStateChanged(auth, user => {
-                    const loginScreen = document.getElementById('login-screen');
-                    const setupScreen = document.getElementById('setup-screen');
-                    const appContent = document.getElementById('app-content');
-                    if (user) {
-                        userId = user.uid;
-                        loginScreen.classList.add('hidden');
-                        appContent.classList.remove('hidden');
-                        document.getElementById('loading').classList.remove('hidden');
-                        document.getElementById('main-app').classList.add('hidden');
-                        setupScreen.classList.add('hidden');
-                        setupApp();
-                    } else {
-                        userId = null;
-                        loginScreen.classList.remove('hidden');
-                        appContent.classList.add('hidden');
-                        setupScreen.classList.add('hidden');
-                        if (unsubscribe) unsubscribe(); 
-                    }
-                });
-
-            } catch(error) {
-                console.error("Firebase init failed:", error);
-                document.getElementById('login-error').textContent = 'Could not connect to services.';
-            }
-        });
-        
-        async function setupApp() {
-            if (unsubscribe) unsubscribe();
-            setupAppEventListeners();
-            populateDayCheckboxes();
-
-            const employeesSnap = await getDocs(getEmployeesCollectionRef());
-            const hasEmployees = employeesSnap.docs.some(doc => doc.id !== 'metadata');
-            
-            if (!hasEmployees) {
-                showSetupScreen();
-            } else {
-                listenForEmployeeChanges();
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-            }
-        }
-
-        function showSetupScreen() {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('main-app').classList.add('hidden');
-            document.getElementById('setup-screen').classList.remove('hidden');
-        }
-
-        // --- DATA MANAGEMENT ---
-
-        function getEmployeesCollectionRef() {
-            return collection(db, "employees");
-        }
-
-        function listenForEmployeeChanges() {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('setup-screen').classList.add('hidden');
-
-            unsubscribe = onSnapshot(getEmployeesCollectionRef(), (snapshot) => {
-                const allEmployees = snapshot.docs
-                    .filter(doc => doc.id !== 'metadata')
-                    .map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                if (allEmployees.length === 0 && snapshot.docs.length <= 1) { 
-                     showSetupScreen();
-                     return;
-                }
-
-                activeEmployees = allEmployees.filter(emp => !emp.isArchived);
-                archivedEmployees = allEmployees.filter(emp => emp.isArchived);
-
-                activeEmployees.sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity));
-                archivedEmployees.sort((a, b) => a.name.localeCompare(b.name));
-                
-                const year = currentDate.getFullYear();
-                if (!holidays[year]) holidays[year] = getHolidays(year);
-                if (!holidays[year+1]) holidays[year+1] = getHolidays(year+1);
-                if (!holidays[year-1]) holidays[year-1] = getHolidays(year-1);
-
-
-                updateView();
-                if (document.getElementById('day-details-modal').classList.contains('hidden') === false) {
-                    showDayDetailsModal(selectedDateKey);
-                }
-            }, (error) => console.error("Error listening:", error));
-        }
-        
-
-
-        async function addEmployee() {
-            const nameInput = document.getElementById('new-employee-name');
-            const staffNumberInput = document.getElementById('new-employee-staff-number');
-            const errorP = document.getElementById('add-employee-error');
-            errorP.textContent = '';
-
-            const name = nameInput.value.trim();
-            const staffNumber = staffNumberInput.value.trim();
-            if (!name) { errorP.textContent = "Please enter a name."; return; }
-
-            const workDays = Array.from(document.querySelectorAll('#work-day-checkboxes input:checked')).map(cb => parseInt(cb.value));
-            if (workDays.length === 0) { errorP.textContent = "Please select at least one day."; return; }
-            
-            const newEmployeeData = { 
-                name, 
-                staffNumber: staffNumber || null,
-                workDays, 
-                displayOrder: activeEmployees.length,
-                isArchived: false,
-                shifts: { default: '9:00-18:00' },
-                overrides: {}, 
-                extraHours: {}, 
-                extraHoursNotes: {}, 
-                vacations: [] 
-            };
-            await addDoc(getEmployeesCollectionRef(), newEmployeeData).catch(e => errorP.textContent = "Could not add.");
-            nameInput.value = '';
-            staffNumberInput.value = '';
-            document.querySelectorAll('#work-day-checkboxes input').forEach(cb => cb.checked = false);
-        }
-        
-        async function handleStatusChange(employeeId, dateKey, newStatus) {
-            const docRef = doc(db, "employees", employeeId);
-            const fieldPath = `overrides.${dateKey}`;
-            const updateData = (newStatus === 'Default') ? { [fieldPath]: deleteField() } : { [fieldPath]: newStatus };
-            await updateDoc(docRef, updateData).catch(e => console.error("Status update failed:", e));
-        }
-
-        async function handleExtraHoursChange(employeeId, dateKey, hours) {
-            const docRef = doc(db, "employees", employeeId);
-            const fieldPath = `extraHours.${dateKey}`;
-            const hoursValue = parseFloat(hours);
-            const updateData = (isNaN(hoursValue) || hoursValue <= 0) ? { [fieldPath]: deleteField() } : { [fieldPath]: hoursValue };
-            await updateDoc(docRef, updateData).catch(e => console.error("Extra hours update failed:", e));
-        }
-        
-        async function handleExtraHoursNotesChange(employeeId, dateKey, note) {
-            const docRef = doc(db, "employees", employeeId);
-            const fieldPath = `extraHoursNotes.${dateKey}`;
-            const noteText = note.trim();
-            const updateData = noteText ? { [fieldPath]: noteText } : { [fieldPath]: deleteField() };
-            await updateDoc(docRef, updateData).catch(e => console.error("Extra hours note update failed:", e));
-        }
-
-        async function handleScheduleVacation(employeeId, startDate, endDate) {
-            if (!startDate || !endDate || new Date(endDate) < new Date(startDate)) {
-                alert("Please select a valid date range.");
-                return;
-            }
-            const empDoc = activeEmployees.find(e => e.id === employeeId);
-            if (!empDoc) return;
-            
-            const newVacation = { startDate, endDate };
-            const updatedVacations = [...(empDoc.vacations || []), newVacation];
-
-            const docRef = doc(db, "employees", employeeId);
-            await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to schedule vacation", e));
-        }
-        
-        async function handleDeleteVacation(employeeId, vacationIndex) {
-            const empDoc = activeEmployees.find(e => e.id === employeeId);
-            if (!empDoc || !empDoc.vacations) return;
-            
-            const updatedVacations = empDoc.vacations.filter((_, index) => index !== vacationIndex);
-            
-            const docRef = doc(db, "employees", employeeId);
-            await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to delete vacation", e));
-        }
-        
-        async function saveNewOrder() {
-            const reorderedIds = [...document.querySelectorAll('#reorder-list-container .draggable')].map(el => el.dataset.employeeId);
-            const updates = reorderedIds.map((id, index) => {
-                const docRef = doc(db, "employees", id);
-                return updateDoc(docRef, { displayOrder: index });
-            });
-            await Promise.all(updates).catch(e => console.error("Failed to save new order", e));
-        }
-
-        async function handleArchiveToggle(employeeId, shouldArchive) {
-            const docRef = doc(db, "employees", employeeId);
-            await updateDoc(docRef, { isArchived: shouldArchive }).catch(e => console.error("Archive update failed", e));
-        }
-
-        async function handlePermanentDelete(employeeId) {
-            const docRef = doc(db, "employees", employeeId);
-            await deleteDoc(docRef).catch(e => console.error("Permanent delete failed:", e));
-        }
-
-        async function handleUpdateWorkingDays(employeeId, newWorkDays) {
-            const docRef = doc(db, "employees", employeeId);
-            await updateDoc(docRef, { workDays: newWorkDays }).catch(e => console.error("Working days update failed:", e));
-        }
-
-        // --- PDF GENERATION ---
-        function generateTeamReportPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            const month = currentDate.getMonth();
-            const year = currentDate.getFullYear();
-            const monthName = MONTHS_OF_YEAR[month];
-
-            doc.setFontSize(18);
-            doc.text("Atlantic Holiday", 14, 22);
-            doc.setFontSize(14);
-            doc.text(`Monthly Team Work Report`, 14, 30);
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text(`Period: ${monthName} ${year}`, 14, 36);
-
-            const tableData = activeEmployees.map(emp => {
-                let workDays = 0;
-                let vacationDays = 0;
-                let extraHoursTotal = 0;
-                let extraHoursDetails = [];
-
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, month, day);
-                    const status = getEmployeeStatusForDate(emp, date);
-                    const dateKey = getDateKey(date);
-                    
-                    if (status === 'Working') workDays++;
-                    if (status === 'On Vacation') vacationDays++;
-                    
-                    if (emp.extraHours && emp.extraHours[dateKey]) {
-                        const hours = emp.extraHours[dateKey];
-                        extraHoursTotal += hours;
-                        extraHoursDetails.push(`- Day ${day}: ${hours} hrs`);
-                    }
-                }
-                
-                return [
-                    emp.name,
-                    workDays,
-                    vacationDays,
-                    extraHoursTotal.toFixed(1),
-                    extraHoursDetails.join('\n')
-                ];
-            });
-
-            doc.autoTable({
-                head: [['Employee', 'Work Days', 'Vacation Days', 'Total Extra Hrs', 'Extra Hours Details']],
-                body: tableData,
-                startY: 42,
-                theme: 'grid',
-                headStyles: { fillColor: [233, 75, 90] },
-                styles: { cellPadding: 2.5, fontSize: 9 },
-                columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 20, halign: 'center' },
-                    2: { cellWidth: 25, halign: 'center' },
-                    3: { cellWidth: 28, halign: 'center' },
-                    4: { cellWidth: 'auto' },
-                }
-            });
-
-            doc.save(`Team_Report_${monthName}_${year}.pdf`);
-        }
-
-        function generateIndividualReportPDF(employeeId) {
-            const emp = activeEmployees.find(e => e.id === employeeId);
-            if (!emp) return;
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
-            const month = currentDate.getMonth();
-            const year = currentDate.getFullYear();
-            const monthName = MONTHS_OF_YEAR[month];
-
-            doc.setFontSize(18);
-            doc.text("Monthly Hours Report", 14, 22);
-            doc.setFontSize(11);
-            doc.setTextColor(100);
-            doc.text(`Employee: ${emp.name}`, 14, 30);
-            doc.text(`Staff Number: ${emp.staffNumber || 'N/A'}`, 14, 36);
-            doc.text(`Period: ${monthName} ${year}`, 14, 42);
-            
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const tableData = [];
-            let weeklyTotals = [];
-            let currentWeekHours = 0;
-            let monthlyTotal = 0;
-            
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day);
-                const dayOfWeek = date.getDay();
-
-                if (getEmployeeStatusForDate(emp, date) === 'Working') {
-                    const shift = (emp.shifts && emp.shifts[dayOfWeek]) || (emp.shifts && emp.shifts.default) || '9:00-18:00';
-                    const hours = calculateHoursFromShift(shift);
-                    currentWeekHours += hours;
-                    monthlyTotal += hours;
-
-                    tableData.push([
-                        date.toLocaleDateString(),
-                        DAYS_OF_WEEK[dayOfWeek],
-                        shift,
-                        hours.toFixed(1)
-                    ]);
-                }
-
-                if (dayOfWeek === 6 || day === daysInMonth) {
-                    if (currentWeekHours > 0) {
-                        weeklyTotals.push(currentWeekHours);
-                    }
-                    currentWeekHours = 0;
-                }
-            }
-
-            doc.autoTable({
-                head: [['Date', 'Day', 'Shift', 'Hours Worked']],
-                body: tableData,
-                startY: 48,
-                theme: 'grid',
-                headStyles: { fillColor: [233, 75, 90] },
-                styles: { cellPadding: 2, fontSize: 9, halign: 'center' },
-            });
-            
-            let finalY = doc.lastAutoTable.finalY + 10;
-            
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Summary', 14, finalY);
-            
-            let summaryBody = [];
-            weeklyTotals.forEach((hours, i) => {
-                summaryBody.push([`Week ${i+1} Total`, `${hours.toFixed(1)} hours`]);
-            });
-            summaryBody.push(['Monthly Total', `${monthlyTotal.toFixed(1)} hours`]);
-            
-            doc.autoTable({
-                body: summaryBody,
-                startY: finalY + 2,
-                theme: 'plain',
-                styles: { fontSize: 10, cellPadding: 1.5 },
-                columnStyles: { 0: { fontStyle: 'bold' } }
-            });
-
-            let signatureY = doc.lastAutoTable.finalY + 20;
-            if (signatureY > 270) { // Ensure it doesn't go off the page
-                signatureY = 270;
-            }
-
-            doc.setLineWidth(0.5);
-            doc.line(14, signatureY, 80, signatureY); // Signature line
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text("Employee Signature", 14, signatureY + 5);
-
-
-            doc.save(`Hours_Report_${emp.name.replace(' ','_')}_${monthName}_${year}.pdf`);
-        }
-
-        function calculateHoursFromShift(shift) {
-            if (!shift) return 0;
-            try {
-                const [start, end] = shift.split('-').map(time => parseInt(time.split(':')[0]));
-                if(isNaN(start) || isNaN(end)) return 0;
-                const totalHours = end - start;
-                return totalHours > 1 ? totalHours - 1 : totalHours;
-            } catch {
-                return 8; 
-            }
-        }
-
-        // --- HOLIDAY CALCULATION ---
-        function getHolidays(year) {
-            function getEaster(year) {
-                const f = Math.floor, G = year % 19, C = f(year / 100), H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30, I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11)), J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7, L = I - J, month = 3 + f((L + 40) / 44), day = L + 28 - 31 * f(month / 4);
-                return new Date(year, month - 1, day);
-            }
-
-            const easter = getEaster(year);
-            const holidays = [
-                { m: 1, d: 1, name: "New Year's Day" },
-                { date: new Date(easter.getTime() - 47 * 86400000), name: "Carnival" },
-                { m: 4, d: 2, name: "Autonomy Day" },
-                { date: new Date(easter.getTime() - 2 * 86400000), name: "Good Friday" },
-                { date: easter, name: "Easter" },
-                { m: 4, d: 25, name: "Freedom Day" },
-                { m: 5, d: 1, name: "Labour Day" },
-                { date: new Date(easter.getTime() + 60 * 86400000), name: "Corpus Christi" },
-                { m: 8, d: 15, name: "Assumption of Mary" },
-                { m: 12, d: 1, name: "Restoration of Independence" },
-                { m: 12, d: 8, name: "Immaculate Conception" },
-                { m: 12, d: 25, name: "Christmas Day" },
-                { m: 7, d: 1, name: "Madeira Day" },
-                { m: 8, d: 21, name: "Funchal Day" }
-            ];
-
-            const holidayMap = {};
-            holidays.forEach(h => {
-                const date = h.date || new Date(year, h.m - 1, h.d);
-                const key = getDateKey(date);
-                holidayMap[key] = h.name;
-            });
-            return holidayMap;
-        }
-
-
-        // --- UI RENDERING & HELPERS ---
-
-        function isDateInVacation(date, vacations) {
-            if (!vacations || vacations.length === 0) return false;
-            const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); 
-            for (const vac of vacations) {
-                const startDate = new Date(vac.startDate);
-                const endDate = new Date(vac.endDate);
-                if (checkDate >= startDate && checkDate <= endDate) return true;
-            }
-            return false;
-        }
-
-        function getEmployeeStatusForDate(employee, date) {
-            const dateKey = getDateKey(date);
-            const currentYearHolidays = holidays[date.getFullYear()] || {};
-
-            if (currentYearHolidays[dateKey]) return 'Holiday';
-            if (isDateInVacation(date, employee.vacations)) return 'On Vacation';
-            if (employee.overrides && employee.overrides[dateKey]) return employee.overrides[dateKey];
-            
-            return employee.workDays.includes(date.getDay()) ? 'Working' : 'Scheduled Off';
-        }
-
-        function getDateKey(date) {
-             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-        
-        function populateDayCheckboxes() {
-            const container = document.getElementById('work-day-checkboxes');
-            container.innerHTML = DAYS_OF_WEEK.map((day, index) => `
-                <label class="p-1 border rounded-md cursor-pointer">
-                    <input type="checkbox" value="${index}" class="sr-only work-day-checkbox">
-                    <span class="block p-1">${day}</span>
-                </label>
-            `).join('');
-        }
-
-        function renderEmployeeList() {
-            const listContainer = document.getElementById('employee-list');
-            if (!listContainer) return;
-            if (activeEmployees.length === 0) {
-                listContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active colleagues.</p>`;
-                return;
-            }
-            const year = currentDate.getFullYear();
-            
-            listContainer.innerHTML = activeEmployees.map(emp => {
-                let stats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
-                const loopMonths = (currentView === 'yearly') ? 12 : 1;
-                const startMonth = (currentView === 'yearly') ? 0 : currentDate.getMonth();
-
-                for (let m = 0; m < loopMonths; m++) {
-                    const month = startMonth + m;
-                    const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    for (let day = 1; day <= daysInMonth; day++) {
-                        const date = new Date(year, month, day);
-                        const status = getEmployeeStatusForDate(emp, date);
-
-                        if (status === 'On Vacation') stats.vacation++;
-                        else if (status === 'Working') stats.worked++;
-                        else if (status === 'Absent') stats.absent++;
-                        else stats.off++; 
-
-                        const dateKey = getDateKey(date);
-                        if(emp.extraHours && emp.extraHours[dateKey]) {
-                            stats.extraHours += emp.extraHours[dateKey];
-                        }
-                    }
-                }
-                
-                return `
-                    <div class="employee-card bg-gray-100 rounded-lg p-3">
-                        <div class="employee-card-main" data-employee-id="${emp.id}">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-medium">${emp.name}</p>
-                                    <p class="text-sm text-gray-600">Default: ${emp.workDays.map(d => DAYS_OF_WEEK[d]).join(', ')}</p>
-                                </div>
-                                <button class="edit-working-days-btn text-brand hover:text-brand-dark p-1 rounded-md hover:bg-brand-light" title="Edit working days" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                </button>
-                            </div>
-                            <div class="mt-3 grid grid-cols-5 gap-1 text-center">
-                                <div><p class="font-bold text-lg text-green-600">${stats.worked}</p><p class="text-xs text-gray-500">Worked</p></div>
-                                <div><p class="font-bold text-lg text-yellow-600">${stats.vacation}</p><p class="text-xs text-gray-500">Vacation</p></div>
-                                <div><p class="font-bold text-lg text-blue-600">${stats.off}</p><p class="text-xs text-gray-500">Off</p></div>
-                                <div><p class="font-bold text-lg text-red-600">${stats.absent}</p><p class="text-xs text-gray-500">Absent</p></div>
-                                <div><p class="font-bold text-lg text-purple-600">${stats.extraHours.toFixed(1)}</p><p class="text-xs text-gray-500">Extra</p></div>
-                            </div>
-                        </div>
-                        <button class="individual-pdf-btn mt-3 w-full text-sm bg-white border border-gray-300 text-gray-700 py-1.5 rounded-md hover:bg-gray-50 flex items-center justify-center gap-2" data-employee-id="${emp.id}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Download Report
-                        </button>
-                    </div>`;
-            }).join('');
-        }
-
-        function renderCalendarGrid() {
-            const month = currentDate.getMonth();
-            const year = currentDate.getFullYear();
-            const currentYearHolidays = holidays[year] || {};
-
-            const grid = document.getElementById('calendar-grid');
-            if(!grid) return;
-            grid.innerHTML = '';
-            DAYS_OF_WEEK.forEach(day => grid.innerHTML += `<div class="text-center font-bold text-gray-500 text-sm">${day}</div>`);
-            
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-            
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day);
-                const workingCount = activeEmployees.filter(emp => getEmployeeStatusForDate(emp, date) === 'Working').length;
-                const dateKey = getDateKey(date);
-                const holidayName = currentYearHolidays[dateKey];
-                
-                const dayCell = document.createElement('div');
-                dayCell.className = `day-cell p-2 border rounded-lg flex flex-col items-center justify-center h-24 sm:h-28 relative`;
-                if ([0, 6].includes(date.getDay()) && !holidayName) dayCell.classList.add('bg-gray-50');
-                if (holidayName) {
-                    dayCell.classList.add('holiday');
-                    dayCell.title = holidayName;
-                }
-
-                dayCell.dataset.date = dateKey;
-                dayCell.innerHTML = `
-                    ${holidayName ? `<div class="absolute top-1 right-2 text-yellow-500" title="${holidayName}">★</div>` : ''}
-                    <div class="text-lg font-semibold">${day}</div>
-                    <div class="mt-2 flex items-center space-x-2 text-green-600">
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>
-                        <span class="text-xl font-bold">${workingCount}</span>
-                    </div>
-                    <div class="text-xs text-gray-500">working</div>`;
-                grid.appendChild(dayCell);
-            }
-        }
-        
-        function renderYearlySummary() {
-            const year = currentDate.getFullYear();
-            const container = document.getElementById('yearly-summary-container');
-            if(!container) return;
-            let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-sm text-left">
-                                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                                    <tr><th class="px-4 py-3">Month</th><th class="px-4 py-3">Worked</th><th class="px-4 py-3">Vacation</th><th class="px-4 py-3">Off</th><th class="px-4 py-3">Absent</th><th class="px-4 py-3">Extra Hours</th></tr>
-                                </thead><tbody>`;
-
-            MONTHS_OF_YEAR.forEach((monthName, monthIndex) => {
-                let monthStats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
-                const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, monthIndex, day);
-                    activeEmployees.forEach(emp => {
-                        const status = getEmployeeStatusForDate(emp, date);
-                        if (status === 'On Vacation') monthStats.vacation++;
-                        else if (status === 'Working') monthStats.worked++;
-                        else if (status === 'Absent') monthStats.absent++;
-                        else monthStats.off++;
-
-                        const dateKey = getDateKey(date);
-                        if(emp.extraHours && emp.extraHours[dateKey]) {
-                            monthStats.extraHours += emp.extraHours[dateKey];
-                        }
-                    });
-                }
-                tableHTML += `<tr class="border-b">
-                                <td class="px-4 py-3 font-medium">${monthName}</td>
-                                <td class="px-4 py-3 text-green-600 font-semibold">${monthStats.worked}</td>
-                                <td class="px-4 py-3 text-yellow-600 font-semibold">${monthStats.vacation}</td>
-                                <td class="px-4 py-3 text-blue-600 font-semibold">${monthStats.off}</td>
-                                <td class="px-4 py-3 text-red-600 font-semibold">${monthStats.absent}</td>
-                                <td class="px-4 py-3 text-purple-600 font-semibold">${monthStats.extraHours.toFixed(1)}</td>
-                              </tr>`;
-            });
-
-            container.innerHTML = tableHTML + `</tbody></table></div>`;
-        }
-
-        function renderVacationPlanner() {
-            const container = document.getElementById('vacation-planner-container');
-            if(!container) return;
-            container.innerHTML = `<div class="space-y-6">${activeEmployees.map(emp => `
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h4 class="font-bold text-lg">${emp.name}</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-3">
-                        <input type="date" id="vacation-start-${emp.id}" class="p-2 border rounded-md focus:ring-1 focus:ring-brand">
-                        <input type="date" id="vacation-end-${emp.id}" class="p-2 border rounded-md focus:ring-1 focus:ring-brand">
-                        <button class="schedule-vacation-btn bg-brand text-white p-2 rounded-md hover:bg-brand-dark" data-employee-id="${emp.id}">Schedule</button>
-                    </div>
-                    <div class="mt-4 space-y-2">
-                        <h5 class="font-semibold text-sm">Scheduled Vacations:</h5>
-                        ${(emp.vacations && emp.vacations.length > 0) ? emp.vacations.map((vac, index) => `
-                            <div class="flex justify-between items-center bg-white p-2 rounded-md text-sm">
-                                <span>${new Date(vac.startDate + 'T00:00:00').toLocaleDateString()} - ${new Date(vac.endDate + 'T00:00:00').toLocaleDateString()}</span>
-                                <button class="delete-vacation-btn text-red-500 hover:text-red-700" data-employee-id="${emp.id}" data-vacation-index="${index}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </div>
-                        `).join('') : '<p class="text-sm text-gray-500 italic">No vacations scheduled.</p>'}
-                    </div>
-                </div>
-            `).join('')}</div>`;
-        }
-        
-        function renderReorderList() {
-            const container = document.getElementById('reorder-list-container');
-            if(!container) return;
-            container.innerHTML = `<div class="space-y-2">${activeEmployees.map(emp => `
-                <div class="draggable bg-white p-4 rounded-lg shadow flex items-center" draggable="true" data-employee-id="${emp.id}">
-                    <svg class="w-5 h-5 text-gray-400 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    <span class="font-medium flex-grow">${emp.name}</span>
-                     <button class="archive-btn text-yellow-600 hover:text-yellow-800" title="Archive ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                    </button>
-                </div>
-            `).join('')}</div><p class="text-center text-sm text-gray-500 mt-4">Drag and drop to reorder the list. Changes are saved automatically.</p>`;
-        }
-        
-        function renderHistoryList() {
-            const container = document.getElementById('history-container');
-            if(!container) return;
-             if (archivedEmployees.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 italic">No colleagues in the archive.</p>`;
-                return;
-            }
-            container.innerHTML = `<div class="space-y-2">${archivedEmployees.map(emp => `
-                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                    <span class="font-medium text-gray-500">${emp.name}</span>
-                    <div class="flex items-center gap-4">
-                         <button class="restore-btn text-green-600 hover:text-green-800 flex items-center gap-1 text-sm" title="Restore ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15l4 4 4-4M4 4h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                            <span>Restore</span>
-                        </button>
-                        <button class="delete-btn text-red-600 hover:text-red-800 flex items-center gap-1 text-sm" title="Permanently Delete ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            <span>Delete</span>
-                        </button>
-                    </div>
-                </div>
-            `).join('')}</div>`;
-        }
-
-        function showDayDetailsModal(dateKey) {
-            selectedDateKey = dateKey;
-            const modal = document.getElementById('day-details-modal');
-            const [year, month, day] = dateKey.split('-').map(Number);
-            const date = new Date(year, month - 1, day);
-            document.getElementById('modal-date-header').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            
-            const listContainer = document.getElementById('modal-employee-list');
-            listContainer.innerHTML = activeEmployees.map(emp => {
-                const onVacation = isDateInVacation(date, emp.vacations);
-                const isHoliday = (holidays[year] && holidays[year][dateKey]);
-                const currentStatus = getEmployeeStatusForDate(emp, date);
-                const isScheduled = emp.workDays.includes(date.getDay());
-                const defaultStatusText = isScheduled ? "Working" : "Off";
-                let effectiveStatus = currentStatus;
-                
-                if (currentStatus === 'Holiday') effectiveStatus = 'Default';
-                else if (currentStatus === 'Scheduled Off' || (currentStatus === 'Working' && isScheduled && !emp.overrides[dateKey])) effectiveStatus = 'Default';
-
-                const radioButtons = ['Default', ...STATUS_OPTIONS].map(status => `
-                    <div>
-                        <input type="radio" name="status-${emp.id}" id="status-${emp.id}-${status}" value="${status}" class="sr-only status-radio" 
-                               ${(status === 'Default' && effectiveStatus === 'Default') || status === currentStatus ? 'checked' : ''} 
-                               ${onVacation || isHoliday ? 'disabled' : ''}
-                               data-employee-id="${emp.id}" data-date-key="${dateKey}">
-                        <label for="status-${emp.id}-${status}" class="inline-block px-3 py-1 border rounded-full text-sm cursor-pointer transition-colors ${(onVacation || isHoliday) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}">
-                            ${status === 'Default' ? `Default (${defaultStatusText})` : status}
-                        </label>
-                    </div>`).join('');
-                
-                const extraHours = (emp.extraHours && emp.extraHours[dateKey]) || '';
-                const extraHoursNote = (emp.extraHoursNotes && emp.extraHoursNotes[dateKey]) || '';
-
-                let statusText = '';
-                if(onVacation) statusText = '<span class="text-blue-600 font-normal text-sm">(On Vacation)</span>';
-                if(isHoliday) statusText = `<span class="text-yellow-600 font-normal text-sm">(Holiday: ${holidays[year][dateKey]})</span>`;
-
-                return `
-                    <div class="p-4 rounded-lg ${onVacation ? 'bg-blue-50' : (isHoliday ? 'bg-yellow-50' : 'bg-gray-50')}">
-                        <p class="font-medium mb-2">${emp.name} ${statusText}</p>
-                        <div class="flex flex-wrap gap-2 items-center">${radioButtons}</div>
-                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                             <div class="md:col-span-1">
-                                <label class="text-sm font-medium text-gray-700">Extra Hours</label>
-                                <input type="number" min="0" step="0.5"
-                                       class="extra-hours-input mt-1 w-full p-2 border rounded-md focus:ring-1 focus:ring-brand"
-                                       value="${extraHours}"
-                                       data-employee-id="${emp.id}" data-date-key="${dateKey}">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="text-sm font-medium text-gray-700">Note</label>
-                                <input type="text" placeholder="Reason for extra hours..."
-                                       class="extra-hours-note-input mt-1 w-full p-2 border rounded-md focus:ring-1 focus:ring-brand"
-                                       value="${extraHoursNote}"
-                                       data-employee-id="${emp.id}" data-date-key="${dateKey}">
-                            </div>
-                        </div>
-                    </div>`;
-            }).join('');
-            modal.classList.remove('hidden');
-        }
-
-        function showEmployeeSummaryModal(employeeId) {
-            const emp = activeEmployees.find(e => e.id === employeeId);
-            if (!emp) return;
-
-            const modal = document.getElementById('employee-summary-modal');
-            const header = document.getElementById('employee-summary-header');
-            const content = document.getElementById('employee-summary-content');
-            
-            const period = (currentView === 'monthly') ? MONTHS_OF_YEAR[currentDate.getMonth()] + " " + currentDate.getFullYear() : "Year " + currentDate.getFullYear();
-            header.textContent = `${emp.name} - Summary for ${period}`;
-
-            let detailsHTML = '<div class="space-y-2">';
-            let hasEntries = false;
-
-            const year = currentDate.getFullYear();
-            const startMonth = currentView === 'monthly' ? currentDate.getMonth() : 0;
-            const endMonth = currentView === 'monthly' ? currentDate.getMonth() : 11;
-
-            for (let m = startMonth; m <= endMonth; m++) {
-                const daysInMonth = new Date(year, m + 1, 0).getDate();
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const date = new Date(year, m, d);
-                    const dateKey = getDateKey(date);
-                    const hours = emp.extraHours ? emp.extraHours[dateKey] : null;
-                    const note = emp.extraHoursNotes ? emp.extraHoursNotes[dateKey] : null;
-                    
-                    if (hours || note) {
-                        hasEntries = true;
-                        detailsHTML += `
-                            <div class="p-3 bg-gray-100 rounded-lg">
-                                <p class="font-semibold">${date.toLocaleDateString()}</p>
-                                ${hours ? `<p class="text-sm"><strong>Hours:</strong> ${hours}</p>` : ''}
-                                ${note ? `<p class="text-sm text-gray-700"><strong>Note:</strong> ${note}</p>` : ''}
-                            </div>
-                        `;
-                    }
-                }
-            }
-
-            if (!hasEntries) {
-                detailsHTML += '<p class="text-center text-gray-500 italic">No extra hours or notes for this period.</p>';
-            }
-            detailsHTML += '</div>';
-            content.innerHTML = detailsHTML;
-            modal.classList.remove('hidden');
-        }
-
-        function showEditWorkingDaysModal(employeeId) {
-            const emp = activeEmployees.find(e => e.id === employeeId);
-            if (!emp) return;
-
-            const modal = document.getElementById('edit-working-days-modal');
-            const header = document.getElementById('edit-working-days-header');
-            const container = document.getElementById('edit-work-day-checkboxes');
-            
-            header.textContent = `Edit Working Days - ${emp.name}`;
-            
-            // Populate checkboxes with current working days
-            container.innerHTML = DAYS_OF_WEEK.map((day, index) => `
-                <label class="p-1 border rounded-md cursor-pointer">
-                    <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${emp.workDays.includes(index) ? 'checked' : ''}>
-                    <span class="block p-1">${day}</span>
-                </label>
-            `).join('');
-            
-            // Store the employee ID for the save function
-            modal.dataset.employeeId = employeeId;
-            modal.classList.remove('hidden');
-        }
-
-        function updateView() {
-            renderEmployeeList();
-            
-            const year = currentDate.getFullYear();
-            const monthName = currentDate.toLocaleString('default', { month: 'long' });
-            
-            const viewHeader = document.getElementById('view-header');
-            const summaryTitle = document.getElementById('summary-title');
-            
-            const mainViews = {
-                calendar: document.getElementById('calendar-grid'),
-                yearly: document.getElementById('yearly-summary-container'),
-                vacation: document.getElementById('vacation-planner-container'),
-                reorder: document.getElementById('reorder-list-container'),
-                history: document.getElementById('history-container')
-            };
-
-            // Hide all main content views first
-            Object.values(mainViews).forEach(v => v.classList.add('hidden'));
-
-            const showSidePanel = ['monthly', 'yearly', 'vacation'].includes(currentView);
-            document.getElementById('summary-title').style.display = showSidePanel ? '' : 'none';
-            document.getElementById('employee-list').style.display = showSidePanel ? '' : 'none';
-            document.getElementById('add-colleague-section').style.display = showSidePanel ? '' : 'none';
-
-            const showCalendarControls = ['monthly', 'yearly'].includes(currentView);
-            document.getElementById('calendar-controls').style.display = showCalendarControls ? 'flex' : 'none';
-            document.getElementById('pdf-download-btn').style.display = currentView === 'monthly' ? 'block' : 'none';
-
-
-            if (currentView === 'monthly') {
-                viewHeader.textContent = `${monthName} ${year}`;
-                summaryTitle.textContent = "Monthly Summary";
-                mainViews.calendar.classList.remove('hidden');
-                renderCalendarGrid();
-            } else if (currentView === 'yearly') {
-                viewHeader.textContent = year;
-                summaryTitle.textContent = "Yearly Summary";
-                mainViews.yearly.classList.remove('hidden');
-                renderYearlySummary();
-            } else if (currentView === 'vacation') {
-                summaryTitle.textContent = "Team List";
-                mainViews.vacation.classList.remove('hidden');
-                renderVacationPlanner();
-            } else if (currentView === 'reorder') {
-                mainViews.reorder.classList.remove('hidden');
-                renderReorderList();
-            } else if (currentView === 'history') {
-                mainViews.history.classList.remove('hidden');
-                renderHistoryList();
-            }
-        }
-        
-        function switchView(view) {
-            if(currentView === 'yearly' && view === 'monthly') {
-               currentDate = new Date(lastMonthlyDate.getTime());
-            } else if(currentView === 'monthly' && view === 'yearly') {
-               lastMonthlyDate = new Date(currentDate.getTime());
-            }
-            
-            currentView = view;
-            
-            document.getElementById('monthly-view-btn').classList.toggle('active', view === 'monthly');
-            document.getElementById('yearly-view-btn').classList.toggle('active', view === 'yearly');
-            document.getElementById('vacation-view-btn').classList.toggle('active', view === 'vacation');
-            document.getElementById('reorder-view-btn').classList.toggle('active', view === 'reorder');
-            document.getElementById('history-view-btn').classList.toggle('active', view === 'history');
-            
-            updateView();
-        }
-
-        function showConfirmationModal(title, text, onConfirm) {
-            const modal = document.getElementById('custom-confirm-modal');
-            document.getElementById('confirm-modal-title').textContent = title;
-            document.getElementById('confirm-modal-text').textContent = text;
-            modal.classList.remove('hidden');
-            
-            const confirmOk = document.getElementById('confirm-modal-ok-btn');
-            const confirmCancel = document.getElementById('confirm-modal-cancel-btn');
-
-            const okListener = () => {
-                onConfirm();
-                modal.classList.add('hidden');
-                confirmOk.removeEventListener('click', okListener);
-                confirmCancel.removeEventListener('click', cancelListener);
-            };
-
-            const cancelListener = () => {
-                modal.classList.add('hidden');
-                confirmOk.removeEventListener('click', okListener);
-                confirmCancel.removeEventListener('click', cancelListener);
-            };
-            
-            confirmOk.addEventListener('click', okListener);
-            confirmCancel.addEventListener('click', cancelListener);
-        }
-
-        // --- EVENT LISTENERS ---
-        function setupLoginListeners() {
-            const loginBtn = document.getElementById('login-btn');
-            const emailInput = document.getElementById('email-address');
-            const passwordInput = document.getElementById('password');
-            const loginError = document.getElementById('login-error');
-
-            loginBtn.addEventListener('click', () => {
-                const email = emailInput.value;
-                const password = passwordInput.value;
-                loginError.textContent = '';
-                
-                signInWithEmailAndPassword(auth, email, password)
-                    .catch(error => {
-                        console.error('Login failed:', error.message);
-                        loginError.textContent = "Login failed. Please check your email and password.";
-                    });
-            });
-            
-            document.getElementById('start-fresh-btn').addEventListener('click', () => {
-                setDoc(doc(db, "employees/metadata"), { initialized: true });
-                listenForEmployeeChanges();
-            });
-        }
-
-        function setupAppEventListeners() {
-            document.getElementById('add-employee-btn').addEventListener('click', addEmployee);
-            document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
-            document.getElementById('pdf-download-btn').addEventListener('click', generateTeamReportPDF);
-            
-            document.getElementById('prev-btn').addEventListener('click', () => {
-                if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() - 1);
-                else if(currentView === 'yearly') currentDate.setFullYear(currentDate.getFullYear() - 1);
-                updateView();
-            });
-            document.getElementById('next-btn').addEventListener('click', () => {
-                if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1);
-                else if (currentView === 'yearly') currentDate.setFullYear(currentDate.getFullYear() + 1);
-                updateView();
-            });
-            
-            document.getElementById('monthly-view-btn').addEventListener('click', () => switchView('monthly'));
-            document.getElementById('yearly-view-btn').addEventListener('click', () => switchView('yearly'));
-            document.getElementById('vacation-view-btn').addEventListener('click', () => switchView('vacation'));
-            document.getElementById('reorder-view-btn').addEventListener('click', () => switchView('reorder'));
-            document.getElementById('history-view-btn').addEventListener('click', () => switchView('history'));
-
-            document.getElementById('calendar-grid').addEventListener('click', e => {
-                const dayCell = e.target.closest('.day-cell');
-                if (dayCell && dayCell.dataset.date) showDayDetailsModal(dayCell.dataset.date);
-            });
-
-            document.getElementById('modal-close-btn').addEventListener('click', () => {
-                document.getElementById('day-details-modal').classList.add('hidden');
-                selectedDateKey = null;
-            });
-            
-            document.getElementById('modal-employee-list').addEventListener('change', e => {
-                const { employeeId, dateKey } = e.target.dataset;
-                if(e.target.matches('.status-radio')) {
-                    handleStatusChange(employeeId, dateKey, e.target.value);
-                } else if (e.target.matches('.extra-hours-input')) {
-                    handleExtraHoursChange(employeeId, dateKey, e.target.value);
-                } else if (e.target.matches('.extra-hours-note-input')) {
-                    handleExtraHoursNotesChange(employeeId, dateKey, e.target.value);
-                }
-            });
-
-            document.getElementById('employee-list').addEventListener('click', e => {
-                const card = e.target.closest('.employee-card-main');
-                const pdfBtn = e.target.closest('.individual-pdf-btn');
-                const editBtn = e.target.closest('.edit-working-days-btn');
-
-                if (card && card.dataset.employeeId && !e.target.closest('.edit-working-days-btn')) {
-                    showEmployeeSummaryModal(card.dataset.employeeId);
-                } else if (pdfBtn && pdfBtn.dataset.employeeId) {
-                    generateIndividualReportPDF(pdfBtn.dataset.employeeId);
-                } else if (editBtn && editBtn.dataset.employeeId) {
-                    showEditWorkingDaysModal(editBtn.dataset.employeeId);
-                }
-            });
-
-            document.getElementById('employee-summary-close-btn').addEventListener('click', () => {
-                document.getElementById('employee-summary-modal').classList.add('hidden');
-            });
-
-            // Edit working days modal event listeners
-            document.getElementById('edit-working-days-close-btn').addEventListener('click', () => {
-                document.getElementById('edit-working-days-modal').classList.add('hidden');
-            });
-
-            document.getElementById('edit-working-days-cancel-btn').addEventListener('click', () => {
-                document.getElementById('edit-working-days-modal').classList.add('hidden');
-            });
-
-            document.getElementById('edit-working-days-save-btn').addEventListener('click', () => {
-                const modal = document.getElementById('edit-working-days-modal');
-                const employeeId = modal.dataset.employeeId;
-                const selectedDays = Array.from(document.querySelectorAll('#edit-work-day-checkboxes input:checked')).map(cb => parseInt(cb.value));
-                
-                if (selectedDays.length === 0) {
-                    alert('Please select at least one working day.');
-                    return;
-                }
-                
-                handleUpdateWorkingDays(employeeId, selectedDays);
-                modal.classList.add('hidden');
-            });
-
-            document.getElementById('vacation-planner-container').addEventListener('click', e => {
-                const scheduleBtn = e.target.closest('.schedule-vacation-btn');
-                const deleteBtn = e.target.closest('.delete-vacation-btn');
-
-                if (scheduleBtn) {
-                    const employeeId = scheduleBtn.dataset.employeeId;
-                    const startDate = document.getElementById(`vacation-start-${employeeId}`).value;
-                    const endDate = document.getElementById(`vacation-end-${employeeId}`).value;
-                    handleScheduleVacation(employeeId, startDate, endDate);
-                } else if (deleteBtn) {
-                    const { employeeId, vacationIndex } = deleteBtn.dataset;
-                    showConfirmationModal('Delete Vacation', 'Are you sure you want to delete this vacation?', () => {
-                        handleDeleteVacation(employeeId, parseInt(vacationIndex));
-                    });
-                }
-            });
-            
-            const reorderContainer = document.getElementById('reorder-list-container');
-            reorderContainer.addEventListener('click', e => {
-                const archiveBtn = e.target.closest('.archive-btn');
-                if (archiveBtn) {
-                    const { employeeId, employeeName } = archiveBtn.dataset;
-                    showConfirmationModal(
-                        `Archive ${employeeName}?`,
-                        'This will move them to the history tab. You can restore them later.',
-                        () => handleArchiveToggle(employeeId, true)
-                    );
-                }
-            });
-
-            reorderContainer.addEventListener('dragstart', e => {
-                if (e.target.classList.contains('draggable')) {
-                    e.target.classList.add('dragging');
-                }
-            });
-            
-            reorderContainer.addEventListener('dragend', e => {
-                 if (e.target.classList.contains('draggable')) {
-                    e.target.classList.remove('dragging');
-                    saveNewOrder();
-                }
-            });
-            
-            reorderContainer.addEventListener('dragover', e => {
-                e.preventDefault();
-                const dragging = document.querySelector('.dragging');
-                if (!dragging) return;
-                
-                const afterElement = getDragAfterElement(reorderContainer, e.clientY);
-                const parent = dragging.parentNode;
-                
-                if (afterElement == null) {
-                    parent.appendChild(dragging);
-                } else {
-                    parent.insertBefore(dragging, afterElement);
-                }
-            });
-
-            document.getElementById('history-container').addEventListener('click', e => {
-                const restoreBtn = e.target.closest('.restore-btn');
-                const deleteBtn = e.target.closest('.delete-btn');
-                 if (restoreBtn) {
-                    const { employeeId, employeeName } = restoreBtn.dataset;
-                    showConfirmationModal(
-                        `Restore ${employeeName}?`,
-                        'This will move them back to the active list.',
-                        () => handleArchiveToggle(employeeId, false)
-                    );
-                } else if (deleteBtn) {
-                    const { employeeId, employeeName } = deleteBtn.dataset;
-                    showConfirmationModal(
-                        `Permanently Delete ${employeeName}?`,
-                        'This action is irreversible. All data for this colleague will be lost forever.',
-                        () => handlePermanentDelete(employeeId)
-                    );
-                }
-            });
-
-            function getDragAfterElement(container, y) {
-                const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
-
-                return draggableElements.reduce((closest, child) => {
-                    const box = child.getBoundingClientRect();
-                    const offset = y - box.top - box.height / 2;
-                    if (offset < 0 && offset > closest.offset) {
-                        return { offset: offset, element: child };
-                    } else {
-                        return closest;
-                    }
-                }, { offset: Number.NEGATIVE_INFINITY }).element;
-            }
-        }
-    </script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
