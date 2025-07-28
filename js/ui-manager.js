@@ -269,12 +269,24 @@ export class UIManager {
         container.innerHTML = `<div class="space-y-2">${this.dataManager.getActiveEmployees().map(emp => `
             <div class="draggable bg-white p-4 rounded-lg shadow flex items-center" draggable="true" data-employee-id="${emp.id}">
                 <svg class="w-5 h-5 text-gray-400 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                <span class="font-medium flex-grow">${emp.name}</span>
-                 <button class="archive-btn text-yellow-600 hover:text-yellow-800" title="Archive ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
+                <div class="flex-grow">
+                    <div class="font-medium text-gray-900">${emp.name}</div>
+                    <div class="text-sm text-gray-600">
+                        ${emp.staffNumber ? `Staff #${emp.staffNumber}` : 'No staff number'}
+                        ${emp.department ? ` • ${emp.department}` : ''}
+                        ${emp.position ? ` • ${emp.position}` : ''}
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 ml-4">
+                    <button class="edit-employee-btn text-blue-600 hover:text-blue-800 p-2 rounded-md hover:bg-blue-50 transition-all hover-scale" title="Edit ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    <button class="archive-btn text-yellow-600 hover:text-yellow-800 p-2 rounded-md hover:bg-yellow-50 transition-all hover-scale" title="Archive ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                 </button>
+                </div>
             </div>
-        `).join('')}</div><p class="text-center text-sm text-gray-500 mt-4">Drag and drop to reorder the list. Changes are saved automatically.</p>`;
+        `).join('')}</div><p class="text-center text-sm text-gray-500 mt-4">Drag and drop to reorder the list. Edit or archive colleagues as needed.</p>`;
     }
     
     renderHistoryList() {
@@ -432,6 +444,44 @@ export class UIManager {
                 <span class="block p-1">${day}</span>
             </label>
         `).join('');
+        
+        // Store the employee ID for the save function
+        modal.dataset.employeeId = employeeId;
+        modal.classList.remove('hidden');
+    }
+
+    showEditEmployeeModal(employeeId) {
+        const emp = this.dataManager.getActiveEmployees().find(e => e.id === employeeId);
+        if (!emp) return;
+
+        const modal = document.getElementById('edit-employee-modal');
+        const header = document.getElementById('edit-employee-header');
+        
+        header.textContent = `Edit Colleague Information - ${emp.name}`;
+        
+        // Populate form fields with current employee data
+        document.getElementById('edit-employee-name').value = emp.name || '';
+        document.getElementById('edit-employee-staff-number').value = emp.staffNumber || '';
+        document.getElementById('edit-employee-email').value = emp.email || '';
+        document.getElementById('edit-employee-phone').value = emp.phone || '';
+        document.getElementById('edit-employee-department').value = emp.department || '';
+        document.getElementById('edit-employee-position').value = emp.position || '';
+        document.getElementById('edit-employee-hire-date').value = emp.hireDate || '';
+        document.getElementById('edit-employee-employment-type').value = emp.employmentType || '';
+        document.getElementById('edit-employee-shift').value = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
+        document.getElementById('edit-employee-notes').value = emp.notes || '';
+        
+        // Populate working days checkboxes
+        const workDaysContainer = document.getElementById('edit-employee-work-days');
+        workDaysContainer.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
+            <label class="p-1 border rounded-md cursor-pointer">
+                <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${emp.workDays.includes(index) ? 'checked' : ''}>
+                <span class="block p-1">${day}</span>
+            </label>
+        `).join('');
+        
+        // Clear any previous error messages
+        document.getElementById('edit-employee-error').textContent = '';
         
         // Store the employee ID for the save function
         modal.dataset.employeeId = employeeId;

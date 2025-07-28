@@ -84,7 +84,15 @@ export class DataManager {
             overrides: {}, 
             extraHours: {}, 
             extraHoursNotes: {}, 
-            vacations: [] 
+            vacations: [],
+            // Additional fields for employee information
+            email: null,
+            phone: null,
+            department: null,
+            position: null,
+            hireDate: null,
+            employmentType: null,
+            notes: null
         };
         return await addDoc(this.getEmployeesCollectionRef(), newEmployeeData);
     }
@@ -159,6 +167,58 @@ export class DataManager {
     async handleUpdateWorkingDays(employeeId, newWorkDays) {
         const docRef = doc(this.db, "employees", employeeId);
         await updateDoc(docRef, { workDays: newWorkDays }).catch(e => console.error("Working days update failed:", e));
+    }
+
+    async updateEmployee(employeeId, updatedData) {
+        const docRef = doc(this.db, "employees", employeeId);
+        
+        // Validate required fields
+        if (!updatedData.name || updatedData.name.trim() === '') {
+            throw new Error('Name is required');
+        }
+        
+        // Clean up the data - remove empty strings and set appropriate defaults
+        const cleanData = {};
+        
+        // Required fields
+        cleanData.name = updatedData.name.trim();
+        cleanData.workDays = updatedData.workDays || [];
+        
+        // Optional fields - only include if they have values
+        if (updatedData.staffNumber && updatedData.staffNumber.trim() !== '') {
+            cleanData.staffNumber = parseInt(updatedData.staffNumber.trim()) || null;
+        }
+        if (updatedData.email && updatedData.email.trim() !== '') {
+            cleanData.email = updatedData.email.trim();
+        }
+        if (updatedData.phone && updatedData.phone.trim() !== '') {
+            cleanData.phone = updatedData.phone.trim();
+        }
+        if (updatedData.department && updatedData.department.trim() !== '') {
+            cleanData.department = updatedData.department.trim();
+        }
+        if (updatedData.position && updatedData.position.trim() !== '') {
+            cleanData.position = updatedData.position.trim();
+        }
+        if (updatedData.hireDate && updatedData.hireDate.trim() !== '') {
+            cleanData.hireDate = updatedData.hireDate.trim();
+        }
+        if (updatedData.employmentType && updatedData.employmentType.trim() !== '') {
+            cleanData.employmentType = updatedData.employmentType.trim();
+        }
+        if (updatedData.notes && updatedData.notes.trim() !== '') {
+            cleanData.notes = updatedData.notes.trim();
+        }
+        
+        // Handle shifts object
+        if (updatedData.defaultShift && updatedData.defaultShift.trim() !== '') {
+            cleanData.shifts = { default: updatedData.defaultShift.trim() };
+        }
+        
+        await updateDoc(docRef, cleanData).catch(e => {
+            console.error("Employee update failed:", e);
+            throw e;
+        });
     }
 
     async initializeDatabase() {

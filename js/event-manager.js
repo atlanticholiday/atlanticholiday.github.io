@@ -138,6 +138,19 @@ export class EventManager {
             modal.classList.add('hidden');
         });
 
+        // Edit employee modal event listeners
+        document.getElementById('edit-employee-close-btn').addEventListener('click', () => {
+            document.getElementById('edit-employee-modal').classList.add('hidden');
+        });
+
+        document.getElementById('edit-employee-cancel-btn').addEventListener('click', () => {
+            document.getElementById('edit-employee-modal').classList.add('hidden');
+        });
+
+        document.getElementById('edit-employee-save-btn').addEventListener('click', () => {
+            this.saveEmployeeChanges();
+        });
+
         document.getElementById('vacation-planner-container').addEventListener('click', e => {
             const scheduleBtn = e.target.closest('.schedule-vacation-btn');
             const deleteBtn = e.target.closest('.delete-vacation-btn');
@@ -158,7 +171,12 @@ export class EventManager {
         const reorderContainer = document.getElementById('reorder-list-container');
         reorderContainer.addEventListener('click', e => {
             const archiveBtn = e.target.closest('.archive-btn');
-            if (archiveBtn) {
+            const editBtn = e.target.closest('.edit-employee-btn');
+            
+            if (editBtn) {
+                const { employeeId } = editBtn.dataset;
+                this.uiManager.showEditEmployeeModal(employeeId);
+            } else if (archiveBtn) {
                 const { employeeId, employeeName } = archiveBtn.dataset;
                 this.uiManager.showConfirmationModal(
                     `Archive ${employeeName}?`,
@@ -234,6 +252,75 @@ export class EventManager {
         nameInput.value = '';
         staffNumberInput.value = '';
         document.querySelectorAll('#work-day-checkboxes input').forEach(cb => cb.checked = false);
+    }
+
+    async saveEmployeeChanges() {
+        const modal = document.getElementById('edit-employee-modal');
+        const employeeId = modal.dataset.employeeId;
+        const errorElement = document.getElementById('edit-employee-error');
+        
+        // Clear previous errors
+        errorElement.textContent = '';
+        
+        // Gather form data
+        const name = document.getElementById('edit-employee-name').value.trim();
+        const staffNumber = document.getElementById('edit-employee-staff-number').value.trim();
+        const email = document.getElementById('edit-employee-email').value.trim();
+        const phone = document.getElementById('edit-employee-phone').value.trim();
+        const department = document.getElementById('edit-employee-department').value.trim();
+        const position = document.getElementById('edit-employee-position').value.trim();
+        const hireDate = document.getElementById('edit-employee-hire-date').value.trim();
+        const employmentType = document.getElementById('edit-employee-employment-type').value.trim();
+        const defaultShift = document.getElementById('edit-employee-shift').value.trim();
+        const notes = document.getElementById('edit-employee-notes').value.trim();
+        
+        // Validate required fields
+        if (!name) {
+            errorElement.textContent = 'Name is required.';
+            return;
+        }
+        
+        // Get selected working days
+        const workDays = Array.from(document.querySelectorAll('#edit-employee-work-days input:checked')).map(cb => parseInt(cb.value));
+        if (workDays.length === 0) {
+            errorElement.textContent = 'Please select at least one working day.';
+            return;
+        }
+        
+        // Validate shift format if provided
+        if (defaultShift && !/^[0-9]{1,2}:[0-9]{2}-[0-9]{1,2}:[0-9]{2}$/.test(defaultShift)) {
+            errorElement.textContent = 'Shift time must be in format HH:MM-HH:MM (e.g., 9:00-17:30).';
+            return;
+        }
+        
+        // Validate email format if provided
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errorElement.textContent = 'Please enter a valid email address.';
+            return;
+        }
+        
+        // Prepare data for update
+        const updatedData = {
+            name,
+            staffNumber,
+            email,
+            phone,
+            department,
+            position,
+            hireDate,
+            employmentType,
+            defaultShift,
+            notes,
+            workDays
+        };
+        
+        try {
+            await this.dataManager.updateEmployee(employeeId, updatedData);
+            modal.classList.add('hidden');
+        } catch (error) {
+            console.error('Failed to update employee:', error);
+            errorElement.textContent = error.message || 'Failed to update colleague information.';
+        }
     }
 
     getDragAfterElement(container, y) {
