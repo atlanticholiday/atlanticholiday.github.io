@@ -47,9 +47,11 @@
             --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
             box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
         }
-        .has-[:checked]:bg-brand-light { background-color: var(--brand-color-light); }
-        .has-[:checked]:text-brand { color: var(--brand-color); }
-        .has-[:checked]:border-brand-light-border { border-color: var(--brand-color-light-border); }
+        .work-day-checkbox:checked + span {
+            background-color: var(--brand-color-light);
+            color: var(--brand-color);
+            border-color: var(--brand-color-light-border);
+        }
 
         .draggable {
             cursor: grab;
@@ -235,6 +237,29 @@
                  </button>
             </div>
             <div id="employee-summary-content" class="p-5 space-y-3 max-h-[70vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <div id="edit-working-days-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+        <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 id="edit-working-days-header" class="text-xl leading-6 font-medium text-gray-900">Edit Working Days</h3>
+                 <button id="edit-working-days-close-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                 </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <p class="text-sm text-gray-600 mb-3">Select the days when this colleague works:</p>
+                    <div id="edit-work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-1 text-center text-sm">
+                        <!-- Checkboxes will be inserted here by JS -->
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button id="edit-working-days-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button id="edit-working-days-save-btn" class="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-dark">Save Changes</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -467,6 +492,11 @@
         async function handlePermanentDelete(employeeId) {
             const docRef = doc(db, "employees", employeeId);
             await deleteDoc(docRef).catch(e => console.error("Permanent delete failed:", e));
+        }
+
+        async function handleUpdateWorkingDays(employeeId, newWorkDays) {
+            const docRef = doc(db, "employees", employeeId);
+            await updateDoc(docRef, { workDays: newWorkDays }).catch(e => console.error("Working days update failed:", e));
         }
 
         // --- PDF GENERATION ---
@@ -709,9 +739,9 @@
         function populateDayCheckboxes() {
             const container = document.getElementById('work-day-checkboxes');
             container.innerHTML = DAYS_OF_WEEK.map((day, index) => `
-                <label class="p-1 border rounded-md cursor-pointer has-[:checked]:bg-brand-light has-[:checked]:text-brand has-[:checked]:border-brand-light-border">
-                    <input type="checkbox" value="${index}" class="sr-only">
-                    <span>${day}</span>
+                <label class="p-1 border rounded-md cursor-pointer">
+                    <input type="checkbox" value="${index}" class="sr-only work-day-checkbox">
+                    <span class="block p-1">${day}</span>
                 </label>
             `).join('');
         }
@@ -752,9 +782,14 @@
                 return `
                     <div class="employee-card bg-gray-100 rounded-lg p-3">
                         <div class="employee-card-main" data-employee-id="${emp.id}">
-                            <div>
-                                <p class="font-medium">${emp.name}</p>
-                                <p class="text-sm text-gray-600">Default: ${emp.workDays.map(d => DAYS_OF_WEEK[d]).join(', ')}</p>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium">${emp.name}</p>
+                                    <p class="text-sm text-gray-600">Default: ${emp.workDays.map(d => DAYS_OF_WEEK[d]).join(', ')}</p>
+                                </div>
+                                <button class="edit-working-days-btn text-brand hover:text-brand-dark p-1 rounded-md hover:bg-brand-light" title="Edit working days" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
                             </div>
                             <div class="mt-3 grid grid-cols-5 gap-1 text-center">
                                 <div><p class="font-bold text-lg text-green-600">${stats.worked}</p><p class="text-xs text-gray-500">Worked</p></div>
@@ -1026,6 +1061,29 @@
             modal.classList.remove('hidden');
         }
 
+        function showEditWorkingDaysModal(employeeId) {
+            const emp = activeEmployees.find(e => e.id === employeeId);
+            if (!emp) return;
+
+            const modal = document.getElementById('edit-working-days-modal');
+            const header = document.getElementById('edit-working-days-header');
+            const container = document.getElementById('edit-work-day-checkboxes');
+            
+            header.textContent = `Edit Working Days - ${emp.name}`;
+            
+            // Populate checkboxes with current working days
+            container.innerHTML = DAYS_OF_WEEK.map((day, index) => `
+                <label class="p-1 border rounded-md cursor-pointer">
+                    <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${emp.workDays.includes(index) ? 'checked' : ''}>
+                    <span class="block p-1">${day}</span>
+                </label>
+            `).join('');
+            
+            // Store the employee ID for the save function
+            modal.dataset.employeeId = employeeId;
+            modal.classList.remove('hidden');
+        }
+
         function updateView() {
             renderEmployeeList();
             
@@ -1194,16 +1252,42 @@
             document.getElementById('employee-list').addEventListener('click', e => {
                 const card = e.target.closest('.employee-card-main');
                 const pdfBtn = e.target.closest('.individual-pdf-btn');
+                const editBtn = e.target.closest('.edit-working-days-btn');
 
-                if (card && card.dataset.employeeId) {
+                if (card && card.dataset.employeeId && !e.target.closest('.edit-working-days-btn')) {
                     showEmployeeSummaryModal(card.dataset.employeeId);
                 } else if (pdfBtn && pdfBtn.dataset.employeeId) {
                     generateIndividualReportPDF(pdfBtn.dataset.employeeId);
+                } else if (editBtn && editBtn.dataset.employeeId) {
+                    showEditWorkingDaysModal(editBtn.dataset.employeeId);
                 }
             });
 
             document.getElementById('employee-summary-close-btn').addEventListener('click', () => {
                 document.getElementById('employee-summary-modal').classList.add('hidden');
+            });
+
+            // Edit working days modal event listeners
+            document.getElementById('edit-working-days-close-btn').addEventListener('click', () => {
+                document.getElementById('edit-working-days-modal').classList.add('hidden');
+            });
+
+            document.getElementById('edit-working-days-cancel-btn').addEventListener('click', () => {
+                document.getElementById('edit-working-days-modal').classList.add('hidden');
+            });
+
+            document.getElementById('edit-working-days-save-btn').addEventListener('click', () => {
+                const modal = document.getElementById('edit-working-days-modal');
+                const employeeId = modal.dataset.employeeId;
+                const selectedDays = Array.from(document.querySelectorAll('#edit-work-day-checkboxes input:checked')).map(cb => parseInt(cb.value));
+                
+                if (selectedDays.length === 0) {
+                    alert('Please select at least one working day.');
+                    return;
+                }
+                
+                handleUpdateWorkingDays(employeeId, selectedDays);
+                modal.classList.add('hidden');
             });
 
             document.getElementById('vacation-planner-container').addEventListener('click', e => {
