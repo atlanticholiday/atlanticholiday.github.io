@@ -111,12 +111,6 @@
             </div>
             <div class="mt-8 space-y-4">
                 <div>
-                    <button id="load-sample-btn" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
-                        Load Sample Employee List
-                    </button>
-                     <p class="text-xs text-gray-500 mt-1">This will add the sample employee list to get you started.</p>
-                </div>
-                <div>
                      <button id="start-fresh-btn" class="group relative w-full flex justify-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
                         Start With a Blank Schedule
                     </button>
@@ -375,28 +369,7 @@
             }, (error) => console.error("Error listening:", error));
         }
         
-        async function addInitialData() {
-             const initialEmployees = [
-                { name: 'Lucas', staffNumber: 4, workDays: [1, 2, 3, 4, 5], displayOrder: 0, shifts: { default: '9:00-18:00' } },
-                { name: 'André', staffNumber: 5, workDays: [1, 2, 3, 4, 5], displayOrder: 1, shifts: { default: '9:00-18:00' } },
-                { name: 'Nastassja', staffNumber: 10, workDays: [1, 2, 3, 4, 5], displayOrder: 2, shifts: { default: '9:00-18:00' } },
-                { name: 'João', staffNumber: 11, workDays: [0, 1, 2, 3, 4], displayOrder: 3, shifts: { default: '9:00-18:00', 0: '10:00-19:00' } },
-                { name: 'Marta', staffNumber: 12, workDays: [0, 1, 2, 3, 4], displayOrder: 4, shifts: { default: '9:00-18:00' } },
-                { name: 'Celso', staffNumber: 13, workDays: [2, 3, 4, 5, 6], displayOrder: 5, shifts: { default: '9:00-18:00', 6: '10:00-19:00' } },
-                { name: 'Artur', staffNumber: 14, workDays: [1, 2, 3, 4, 5], displayOrder: 6, shifts: { default: '9:00-18:00' } },
-                { name: 'Catarina', staffNumber: 15, workDays: [2, 3, 4, 5, 6], displayOrder: 7, shifts: { default: '9:00-18:00' } },
-                { name: 'Ana Lume', staffNumber: 17, workDays: [1, 2, 3, 4, 5], displayOrder: 8, shifts: { default: '9:00-18:00' } },
-                { name: 'Ana Brazão', staffNumber: 18, workDays: [4, 5, 6, 0, 1], displayOrder: 9, shifts: { default: '9:00-18:00', 0: '10:00-19:00', 6: '10:00-19:00' } },
-                { name: 'Gonçalo', staffNumber: 19, workDays: [2, 3, 4, 5, 6], displayOrder: 10, shifts: { default: '9:00-18:00' } },
-            ];
 
-            for (const emp of initialEmployees) {
-                const docData = { ...emp, isArchived: false, overrides: {}, extraHours: {}, extraHoursNotes: {}, vacations: [] };
-                await addDoc(getEmployeesCollectionRef(), docData);
-            }
-            await setDoc(doc(db, "employees/metadata"), { initialized: true });
-            listenForEmployeeChanges();
-        }
 
         async function addEmployee() {
             const nameInput = document.getElementById('new-employee-name');
@@ -1169,7 +1142,6 @@
                     });
             });
             
-            document.getElementById('load-sample-btn').addEventListener('click', addInitialData);
             document.getElementById('start-fresh-btn').addEventListener('click', () => {
                 setDoc(doc(db, "employees/metadata"), { initialized: true });
                 listenForEmployeeChanges();
