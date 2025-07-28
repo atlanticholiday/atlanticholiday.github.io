@@ -50,7 +50,7 @@ export class UIManager {
         const year = this.dataManager.getCurrentDate().getFullYear();
         
         listContainer.innerHTML = activeEmployees.map(emp => {
-            let stats = { worked: 0, off: 0, absent: 0, vacation: 0, holiday: 0, extraHours: 0 };
+            let stats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
             const currentView = this.dataManager.getCurrentView();
             const loopMonths = (currentView === 'yearly') ? 12 : 1;
             const startMonth = (currentView === 'yearly') ? 0 : this.dataManager.getCurrentDate().getMonth();
@@ -65,7 +65,6 @@ export class UIManager {
                     if (status === 'On Vacation') stats.vacation++;
                     else if (status === 'Working') stats.worked++;
                     else if (status === 'Absent') stats.absent++;
-                    else if (status === 'Holiday') stats.holiday++;
                     else stats.off++; 
 
                     const dateKey = this.dataManager.getDateKey(date);
@@ -96,10 +95,7 @@ export class UIManager {
                                 <p class="font-bold text-lg text-yellow-600">${stats.vacation}</p>
                                 <p class="text-xs text-gray-500">Vacation</p>
                             </div>
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-orange-600">${stats.holiday}</p>
-                                <p class="text-xs text-gray-500">Holiday</p>
-                            </div>
+
                             <div class="stat-item">
                                 <p class="font-bold text-lg text-blue-600">${stats.off}</p>
                                 <p class="text-xs text-gray-500">Off</p>
@@ -110,7 +106,7 @@ export class UIManager {
                             </div>
                             <div class="stat-item">
                                 <p class="font-bold text-lg text-purple-600">${stats.extraHours.toFixed(1)}</p>
-                                <p class="text-xs text-gray-500">Extra</p>
+                                <p class="text-xs text-gray-500">Extra Hours</p>
                             </div>
                         </div>
                     </div>
@@ -324,17 +320,17 @@ export class UIManager {
             const defaultStatusText = isScheduled ? "Working" : "Off";
             let effectiveStatus = currentStatus;
             
-            if (currentStatus === 'Holiday') effectiveStatus = 'Default';
-            else if (currentStatus === 'Scheduled Off' || (currentStatus === 'Working' && isScheduled && !emp.overrides[dateKey])) effectiveStatus = 'Default';
+            // If no override exists, use the default status based on schedule
+            if (currentStatus === 'Scheduled Off' || (currentStatus === 'Working' && isScheduled && !emp.overrides[dateKey])) effectiveStatus = defaultStatusText;
 
-            const radioButtons = ['Default', ...Config.STATUS_OPTIONS].map(status => `
+            const radioButtons = Config.STATUS_OPTIONS.map(status => `
                 <div>
                     <input type="radio" name="status-${emp.id}" id="status-${emp.id}-${status}" value="${status}" class="sr-only status-radio" 
-                           ${(status === 'Default' && effectiveStatus === 'Default') || status === currentStatus ? 'checked' : ''} 
-                           ${onVacation || isHoliday ? 'disabled' : ''}
+                           ${status === effectiveStatus ? 'checked' : ''} 
+                           ${onVacation ? 'disabled' : ''}
                            data-employee-id="${emp.id}" data-date-key="${dateKey}">
-                    <label for="status-${emp.id}-${status}" class="inline-block px-3 py-1 border rounded-full text-sm cursor-pointer transition-colors ${(onVacation || isHoliday) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}">
-                        ${status === 'Default' ? `Default (${defaultStatusText})` : status}
+                    <label for="status-${emp.id}-${status}" class="inline-block px-3 py-1 border rounded-full text-sm cursor-pointer transition-colors ${onVacation ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}">
+                        ${status}
                     </label>
                 </div>`).join('');
             

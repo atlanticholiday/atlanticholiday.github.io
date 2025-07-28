@@ -92,7 +92,7 @@ export class DataManager {
     async handleStatusChange(employeeId, dateKey, newStatus) {
         const docRef = doc(this.db, "employees", employeeId);
         const fieldPath = `overrides.${dateKey}`;
-        const updateData = (newStatus === 'Default') ? { [fieldPath]: deleteField() } : { [fieldPath]: newStatus };
+        const updateData = { [fieldPath]: newStatus };
         await updateDoc(docRef, updateData).catch(e => console.error("Status update failed:", e));
     }
 
@@ -222,10 +222,13 @@ export class DataManager {
     getEmployeeStatusForDate(employee, date) {
         const dateKey = this.getDateKey(date);
         const currentYearHolidays = this.holidays[date.getFullYear()] || {};
+        const isHoliday = currentYearHolidays[dateKey];
 
-        if (currentYearHolidays[dateKey]) return 'Holiday';
         if (this.isDateInVacation(date, employee.vacations)) return 'On Vacation';
         if (employee.overrides && employee.overrides[dateKey]) return employee.overrides[dateKey];
+        
+        // On holidays, default to 'Off' unless overridden
+        if (isHoliday) return 'Off';
         
         return employee.workDays.includes(date.getDay()) ? 'Working' : 'Scheduled Off';
     }
