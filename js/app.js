@@ -118,8 +118,14 @@ function setupGlobalEventListeners() {
                     type: baseType,
                     typology: typology,
                     rooms: bedrooms, // Auto-set from typology
-                    rating: parseInt(document.getElementById('property-rating').value) || 0,
-                    description: document.getElementById('property-description').value || `${typology} - ${bedrooms === 0 ? 'Studio' : `${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`}`
+                    bathrooms: parseFloat(document.getElementById('property-bathrooms').value) || null,
+                    floor: document.getElementById('property-floor').value.trim() || null,
+                    wifiSpeed: document.getElementById('property-wifi-speed').value || null,
+                    wifiAirbnb: document.getElementById('property-wifi-airbnb').value,
+                    parkingSpot: document.getElementById('property-parking-spot').value.trim() || null,
+                    parkingFloor: document.getElementById('property-parking-floor').value.trim() || null,
+                    energySource: document.getElementById('property-energy-source').value || null,
+                    smartTv: document.getElementById('property-smart-tv').value
                 };
             } else {
                 // Traditional property types (hotel, resort, etc.)
@@ -128,8 +134,14 @@ function setupGlobalEventListeners() {
                     location: document.getElementById('property-location').value,
                     type: selectedType,
                     rooms: parseInt(document.getElementById('property-rooms').value) || 0,
-                    rating: parseInt(document.getElementById('property-rating').value) || 0,
-                    description: document.getElementById('property-description').value
+                    bathrooms: parseFloat(document.getElementById('property-bathrooms').value) || null,
+                    floor: document.getElementById('property-floor').value.trim() || null,
+                    wifiSpeed: document.getElementById('property-wifi-speed').value || null,
+                    wifiAirbnb: document.getElementById('property-wifi-airbnb').value,
+                    parkingSpot: document.getElementById('property-parking-spot').value.trim() || null,
+                    parkingFloor: document.getElementById('property-parking-floor').value.trim() || null,
+                    energySource: document.getElementById('property-energy-source').value || null,
+                    smartTv: document.getElementById('property-smart-tv').value
                 };
             }
             
@@ -371,13 +383,46 @@ function setupGlobalEventListeners() {
             }
         });
     }
+
+    // Edit Property Modal Event Listeners
+    const editPropertyModal = document.getElementById('edit-property-modal');
+    const editPropertyCloseBtn = document.getElementById('edit-property-close-btn');
+    const editPropertyCancelBtn = document.getElementById('edit-property-cancel-btn');
+    const editPropertySaveBtn = document.getElementById('edit-property-save-btn');
+
+    if (editPropertyCloseBtn) {
+        editPropertyCloseBtn.addEventListener('click', () => {
+            editPropertyModal.classList.add('hidden');
+        });
+    }
+
+    if (editPropertyCancelBtn) {
+        editPropertyCancelBtn.addEventListener('click', () => {
+            editPropertyModal.classList.add('hidden');
+        });
+    }
+
+    if (editPropertySaveBtn) {
+        editPropertySaveBtn.addEventListener('click', async () => {
+            await savePropertyChanges();
+        });
+    }
+
+    // Close modal when clicking outside
+    if (editPropertyModal) {
+        editPropertyModal.addEventListener('click', (e) => {
+            if (e.target === editPropertyModal) {
+                editPropertyModal.classList.add('hidden');
+            }
+        });
+    }
     
     // Make functions globally available for onclick handlers
     window.editProperty = (propertyId) => {
         const property = propertiesManager.getPropertyById(propertyId);
         if (property) {
-            // TODO: Implement edit modal
-            alert('Edit functionality coming soon!');
+            populateEditModal(property);
+            document.getElementById('edit-property-modal').classList.remove('hidden');
         }
     };
     
@@ -390,6 +435,125 @@ function setupGlobalEventListeners() {
             }
         }
     };
+}
+
+// Property editing functions
+function populateEditModal(property) {
+    // Store the property ID for saving
+    document.getElementById('edit-property-modal').dataset.propertyId = property.id;
+    
+    // Basic information
+    document.getElementById('edit-property-name').value = property.name || '';
+    document.getElementById('edit-property-location').value = property.location || '';
+    
+    // Set property type dropdown
+    const typeSelect = document.getElementById('edit-property-type');
+    if (property.typology && property.type) {
+        // For Portuguese typology (T1, V2, etc.)
+        typeSelect.value = `${property.type}-${property.typology}`;
+    } else {
+        // For other property types
+        typeSelect.value = property.type || '';
+    }
+    
+    document.getElementById('edit-property-rooms').value = property.rooms || '';
+    document.getElementById('edit-property-bathrooms').value = property.bathrooms || '';
+    document.getElementById('edit-property-floor').value = property.floor || '';
+    document.getElementById('edit-property-wifi-speed').value = property.wifiSpeed || '';
+    document.getElementById('edit-property-wifi-airbnb').value = property.wifiAirbnb || 'no';
+    document.getElementById('edit-property-parking-spot').value = property.parkingSpot || '';
+    document.getElementById('edit-property-parking-floor').value = property.parkingFloor || '';
+    document.getElementById('edit-property-energy-source').value = property.energySource || '';
+    document.getElementById('edit-property-smart-tv').value = property.smartTv || 'no';
+    document.getElementById('edit-property-status').value = property.status || 'available';
+    
+    // Set amenities checkboxes
+    const amenities = property.amenities || [];
+    document.getElementById('edit-amenity-wifi').checked = amenities.includes('wifi');
+    document.getElementById('edit-amenity-pool').checked = amenities.includes('pool');
+    document.getElementById('edit-amenity-garden').checked = amenities.includes('garden');
+    document.getElementById('edit-amenity-balcony').checked = amenities.includes('balcony');
+    document.getElementById('edit-amenity-ac').checked = amenities.includes('ac');
+    document.getElementById('edit-amenity-kitchen').checked = amenities.includes('kitchen');
+    document.getElementById('edit-amenity-washing-machine').checked = amenities.includes('washing-machine');
+    document.getElementById('edit-amenity-sea-view').checked = amenities.includes('sea-view');
+    
+    // Clear any previous errors
+    document.getElementById('edit-property-error').textContent = '';
+}
+
+async function savePropertyChanges() {
+    const modal = document.getElementById('edit-property-modal');
+    const propertyId = modal.dataset.propertyId;
+    const errorElement = document.getElementById('edit-property-error');
+    
+    // Clear previous errors
+    errorElement.textContent = '';
+    
+    // Gather form data
+    const selectedType = document.getElementById('edit-property-type').value;
+    let propertyData;
+
+    // Parse the selected typology
+    if (selectedType.includes('-T') || selectedType.includes('-V')) {
+        // Portuguese typology format (apartment-T2, villa-V3, etc.)
+        const [baseType, typology] = selectedType.split('-');
+        const bedrooms = parseInt(typology.substring(1)); // Extract number from T2, V3 etc.
+        
+        propertyData = {
+            name: document.getElementById('edit-property-name').value.trim(),
+            location: document.getElementById('edit-property-location').value.trim(),
+            type: baseType,
+            typology: typology,
+            rooms: bedrooms // Auto-set from typology
+        };
+    } else {
+        // Traditional property types (hotel, resort, etc.)
+        propertyData = {
+            name: document.getElementById('edit-property-name').value.trim(),
+            location: document.getElementById('edit-property-location').value.trim(),
+            type: selectedType,
+            rooms: parseInt(document.getElementById('edit-property-rooms').value) || 0
+        };
+    }
+
+    // Add all the additional fields
+    propertyData.bathrooms = parseFloat(document.getElementById('edit-property-bathrooms').value) || null;
+    propertyData.floor = document.getElementById('edit-property-floor').value.trim() || null;
+    propertyData.wifiSpeed = document.getElementById('edit-property-wifi-speed').value || null;
+    propertyData.wifiAirbnb = document.getElementById('edit-property-wifi-airbnb').value;
+    propertyData.parkingSpot = document.getElementById('edit-property-parking-spot').value.trim() || null;
+    propertyData.parkingFloor = document.getElementById('edit-property-parking-floor').value.trim() || null;
+    propertyData.energySource = document.getElementById('edit-property-energy-source').value || null;
+    propertyData.smartTv = document.getElementById('edit-property-smart-tv').value;
+    propertyData.status = document.getElementById('edit-property-status').value;
+
+    // Collect amenities
+    const amenities = [];
+    if (document.getElementById('edit-amenity-wifi').checked) amenities.push('wifi');
+    if (document.getElementById('edit-amenity-pool').checked) amenities.push('pool');
+    if (document.getElementById('edit-amenity-garden').checked) amenities.push('garden');
+    if (document.getElementById('edit-amenity-balcony').checked) amenities.push('balcony');
+    if (document.getElementById('edit-amenity-ac').checked) amenities.push('ac');
+    if (document.getElementById('edit-amenity-kitchen').checked) amenities.push('kitchen');
+    if (document.getElementById('edit-amenity-washing-machine').checked) amenities.push('washing-machine');
+    if (document.getElementById('edit-amenity-sea-view').checked) amenities.push('sea-view');
+    propertyData.amenities = amenities;
+
+    // Validate
+    const errors = propertiesManager.validatePropertyData(propertyData);
+    if (errors.length > 0) {
+        errorElement.textContent = errors[0]; // Show first error
+        return;
+    }
+
+    try {
+        await propertiesManager.updateProperty(propertyId, propertyData);
+        modal.classList.add('hidden');
+    } catch (error) {
+        console.error('Error updating property:', error);
+        errorElement.textContent = 'Failed to update property. Please try again.';
+    }
 }
 
 async function setupApp() {

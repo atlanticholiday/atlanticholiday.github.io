@@ -784,7 +784,8 @@ p, span, div {
 }
 
 /* Enhance the view toggle container */
-.flex.border.border-gray-300.rounded-lg.p-1.bg-gray-200 {
+.flex.border.border-gray-300.rounded-lg.p-1.bg-gray-200,
+.flex.border.border-gray-300.rounded-lg.p-1.bg-gray-100 {
     background: rgba(255, 255, 255, 0.7) !important;
     backdrop-filter: var(--blur-glass);
     -webkit-backdrop-filter: var(--blur-glass);
@@ -792,6 +793,53 @@ p, span, div {
     border-radius: var(--radius-lg) !important;
     padding: 4px !important;
     box-shadow: var(--shadow-glass);
+}
+
+/* View toggle buttons for properties */
+.view-toggle {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 14px;
+    transition: var(--transition-smooth);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.view-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-brand-soft);
+    opacity: 0;
+    transition: var(--transition-smooth);
+}
+
+.view-toggle:hover:not(.active)::before {
+    opacity: 0.5;
+}
+
+.view-toggle:hover:not(.active) {
+    color: #374151;
+    background: rgba(249, 250, 251, 0.8);
+}
+
+.view-toggle.active {
+    background: var(--gradient-brand);
+    color: white;
+    box-shadow: var(--shadow-button);
+    transform: translateY(-1px);
+}
+
+.view-toggle.active::before {
+    opacity: 0;
 }
 
 /* Properties page specific styles */

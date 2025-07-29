@@ -100,7 +100,7 @@
                         </svg>
                     </div>
                     <h3 class="text-2xl font-semibold text-gray-900 mb-4">Properties</h3>
-                    <p class="text-gray-600 mb-6">Manage your hotel properties, rooms, and bookings</p>
+                    <p class="text-gray-600 mb-6">Manage your short rental properties and bookings</p>
                     <button id="go-to-properties-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
                         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -141,7 +141,7 @@
                     </button>
                     <div>
                         <h1 class="text-2xl font-bold text-gradient">Properties Management</h1>
-                        <p class="text-gray-500 text-sm">Manage your hotel properties</p>
+                        <p class="text-gray-500 text-sm">Manage your short rental properties</p>
                     </div>
                 </div>
                 <button id="properties-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
@@ -154,119 +154,343 @@
         </header>
 
         <div class="container mx-auto px-4 py-8 max-w-7xl">
-            <!-- Add Property Section -->
-            <div class="bg-white rounded-xl shadow-md p-6 mb-8 modal-content">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-gradient">Add Properties</h2>
-                    <div class="flex gap-2">
-                        <button id="single-add-tab" class="px-4 py-2 text-sm font-medium rounded-md bg-brand text-white">Single</button>
-                        <button id="bulk-add-tab" class="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Bulk Import</button>
-                    </div>
-                </div>
-
-                <!-- Single Property Add Form -->
-                <div id="single-add-form">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <input type="text" id="property-name" placeholder="Property Name" class="w-full p-3 border rounded-md focus-ring transition-all">
-                        <input type="text" id="property-location" placeholder="Location" class="w-full p-3 border rounded-md focus-ring transition-all">
-                        <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
-                            <option value="">Select Property Typology</option>
-                            <optgroup label="Apartments (T)">
-                                <option value="apartment-T0">T0 - Studio Apartment</option>
-                                <option value="apartment-T1">T1 - 1 Bedroom Apartment</option>
-                                <option value="apartment-T2">T2 - 2 Bedroom Apartment</option>
-                                <option value="apartment-T3">T3 - 3 Bedroom Apartment</option>
-                                <option value="apartment-T4">T4 - 4 Bedroom Apartment</option>
-                                <option value="apartment-T5">T5 - 5 Bedroom Apartment</option>
-                            </optgroup>
-                            <optgroup label="Houses/Villas (V)">
-                                <option value="villa-V0">V0 - Studio House</option>
-                                <option value="villa-V1">V1 - 1 Bedroom House</option>
-                                <option value="villa-V2">V2 - 2 Bedroom House</option>
-                                <option value="villa-V3">V3 - 3 Bedroom House</option>
-                                <option value="villa-V4">V4 - 4 Bedroom House</option>
-                                <option value="villa-V5">V5 - 5 Bedroom House</option>
-                                <option value="villa-V6">V6 - 6 Bedroom House</option>
-                            </optgroup>
-                            <optgroup label="Other Property Types">
-                                <option value="hotel">Hotel</option>
-                                <option value="resort">Resort</option>
-                                <option value="aparthotel">Aparthotel</option>
-                                <option value="guesthouse">Guesthouse</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <input type="number" id="property-rooms" placeholder="Number of Bedrooms" class="w-full p-3 border rounded-md focus-ring transition-all">
-                        <input type="number" id="property-rating" placeholder="Star Rating (1-5)" min="1" max="5" class="w-full p-3 border rounded-md focus-ring transition-all">
-                    </div>
-                    <div class="mb-4">
-                        <textarea id="property-description" rows="3" placeholder="Property Description" class="w-full p-3 border rounded-md focus-ring transition-all"></textarea>
-                    </div>
-                    <button id="add-property-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift">
-                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Add Property
-                    </button>
-                    <div id="add-property-error" class="text-red-500 text-sm mt-2"></div>
-                </div>
-
-                <!-- Bulk Import Form -->
-                <div id="bulk-add-form" class="hidden">
-                    <div class="mb-4">
-                        <h3 class="text-md font-medium mb-2 text-gray-700">Bulk Import Properties</h3>
-                        <p class="text-sm text-gray-600 mb-4">Enter one property per line in the format: <strong>Property Name, Location, Typology</strong></p>
-                        <div class="bg-gray-50 p-3 rounded-md mb-4">
-                            <p class="text-xs text-gray-600 mb-2">Example format (Portuguese typology system):</p>
-                            <code class="text-xs bg-white px-2 py-1 rounded block">
-                                Sunset Apartment, Downtown Lisboa, T2<br>
-                                Ocean View House, Porto Beach, V3<br>
-                                Mountain Villa, Sintra Hills, V4<br>
-                                Cozy Studio, Faro Center, T0
-                            </code>
-                            <div class="mt-2 text-xs text-gray-500">
-                                <strong>T0-T9:</strong> Apartments (Studio or 1-9 bedrooms) • <strong>V0-V9:</strong> Houses/Villas (Studio or 1-9 bedrooms)
+            <!-- Three Column Layout -->
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                
+                <!-- Left Column: Add Property Section -->
+                <div class="xl:col-span-1">
+                    <div class="bg-white rounded-xl shadow-md p-6 modal-content sticky top-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-gradient">Add Properties</h2>
+                            <div class="flex gap-2">
+                                <button id="single-add-tab" class="px-3 py-1 text-xs font-medium rounded-md bg-brand text-white">Single</button>
+                                <button id="bulk-add-tab" class="px-3 py-1 text-xs font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Bulk</button>
                             </div>
                         </div>
-                        <textarea id="bulk-property-input" rows="8" placeholder="Sunset Apartment, Downtown Lisboa, T2
+
+                        <!-- Single Property Add Form -->
+                        <div id="single-add-form">
+                            <div class="space-y-4 mb-4">
+                                <input type="text" id="property-name" placeholder="Property Name" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                <input type="text" id="property-location" placeholder="Location" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                    <option value="">Select Property Typology</option>
+                                    <optgroup label="Apartments (T)">
+                                        <option value="apartment-T0">T0 - Studio Apartment</option>
+                                        <option value="apartment-T1">T1 - 1 Bedroom Apartment</option>
+                                        <option value="apartment-T2">T2 - 2 Bedroom Apartment</option>
+                                        <option value="apartment-T3">T3 - 3 Bedroom Apartment</option>
+                                        <option value="apartment-T4">T4 - 4 Bedroom Apartment</option>
+                                        <option value="apartment-T5">T5 - 5 Bedroom Apartment</option>
+                                    </optgroup>
+                                    <optgroup label="Houses/Villas (V)">
+                                        <option value="villa-V0">V0 - Studio House</option>
+                                        <option value="villa-V1">V1 - 1 Bedroom House</option>
+                                        <option value="villa-V2">V2 - 2 Bedroom House</option>
+                                        <option value="villa-V3">V3 - 3 Bedroom House</option>
+                                        <option value="villa-V4">V4 - 4 Bedroom House</option>
+                                        <option value="villa-V5">V5 - 5 Bedroom House</option>
+                                        <option value="villa-V6">V6 - 6 Bedroom House</option>
+                                    </optgroup>
+                                    <optgroup label="Other Property Types">
+                                        <option value="hotel">Hotel</option>
+                                        <option value="resort">Resort</option>
+                                        <option value="aparthotel">Aparthotel</option>
+                                        <option value="guesthouse">Guesthouse</option>
+                                    </optgroup>
+                                </select>
+                                <input type="number" id="property-rooms" placeholder="Number of Bedrooms" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            </div>
+                            
+                            <!-- Property Details -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <input type="number" id="property-bathrooms" placeholder="Bathrooms" class="w-full p-3 border rounded-md focus-ring transition-all" min="0" max="20" step="0.5">
+                                <input type="text" id="property-floor" placeholder="Apartment Floor" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            </div>
+                            
+                            <!-- WiFi and Connectivity -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <select id="property-wifi-speed" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                    <option value="">WiFi Speed</option>
+                                    <option value="basic">Basic (< 25 Mbps)</option>
+                                    <option value="standard">Standard (25-50 Mbps)</option>
+                                    <option value="fast">Fast (50-100 Mbps)</option>
+                                    <option value="very-fast">Very Fast (100+ Mbps)</option>
+                                    <option value="fiber">Fiber (500+ Mbps)</option>
+                                </select>
+                                <select id="property-wifi-airbnb" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                    <option value="no">WiFi on Airbnb - No</option>
+                                    <option value="yes">WiFi on Airbnb - Yes</option>
+                                    <option value="featured">WiFi Featured on Airbnb</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Parking and Features -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <input type="text" id="property-parking-spot" placeholder="Parking Spot Number" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                <input type="text" id="property-parking-floor" placeholder="Parking Floor" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            </div>
+                            
+                            <!-- Utilities -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <select id="property-energy-source" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                    <option value="">Energy Source</option>
+                                    <option value="electric">Electric</option>
+                                    <option value="gas">Gas</option>
+                                    <option value="mixed">Mixed (Electric & Gas)</option>
+                                    <option value="solar">Solar</option>
+                                    <option value="heat-pump">Heat Pump</option>
+                                </select>
+                                <select id="property-smart-tv" class="w-full p-3 border rounded-md focus-ring transition-all">
+                                    <option value="no">Smart TV - No</option>
+                                    <option value="yes">Smart TV - Yes</option>
+                                    <option value="multiple">Multiple Smart TVs</option>
+                                </select>
+                            </div>
+                            <button id="add-property-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Add Property
+                            </button>
+                            <div id="add-property-error" class="text-red-500 text-sm mt-2"></div>
+                        </div>
+
+                        <!-- Bulk Import Form -->
+                        <div id="bulk-add-form" class="hidden">
+                            <div class="mb-4">
+                                <h3 class="text-md font-medium mb-2 text-gray-700">Bulk Import Properties</h3>
+                                <p class="text-sm text-gray-600 mb-4">Enter one property per line in the format: <strong>Property Name, Location, Typology</strong></p>
+                                <div class="bg-gray-50 p-3 rounded-md mb-4">
+                                    <p class="text-xs text-gray-600 mb-2">Example format (Portuguese typology system):</p>
+                                    <code class="text-xs bg-white px-2 py-1 rounded block">
+                                        Sunset Apartment, Downtown Lisboa, T2<br>
+                                        Ocean View House, Porto Beach, V3<br>
+                                        Mountain Villa, Sintra Hills, V4<br>
+                                        Cozy Studio, Faro Center, T0
+                                    </code>
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        <strong>T0-T9:</strong> Apartments (Studio or 1-9 bedrooms) • <strong>V0-V9:</strong> Houses/Villas (Studio or 1-9 bedrooms)
+                                    </div>
+                                </div>
+                                <textarea id="bulk-property-input" rows="6" placeholder="Sunset Apartment, Downtown Lisboa, T2
 Ocean View House, Porto Beach, V3
 Mountain Villa, Sintra Hills, V4
 Cozy Studio, Faro Center, T0" class="w-full p-3 border rounded-md focus-ring transition-all font-mono text-sm"></textarea>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="text-sm text-gray-600">
-                            <span id="bulk-property-count">0</span> properties ready to import
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <div class="text-sm text-gray-600 text-center">
+                                    <span id="bulk-property-count">0</span> properties ready to import
+                                </div>
+                                <button id="bulk-add-properties-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                    </svg>
+                                    Import Properties
+                                </button>
+                            </div>
+                            <div id="bulk-add-property-error" class="mt-2"></div>
+                            <div id="bulk-import-progress" class="hidden mt-4">
+                                <div class="bg-gray-200 rounded-full h-2">
+                                    <div id="bulk-import-progress-bar" class="bg-brand h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <p id="bulk-import-status" class="text-sm text-gray-600 mt-2 text-center">Importing properties...</p>
+                            </div>
                         </div>
-                        <button id="bulk-add-properties-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                            </svg>
-                            Import Properties
-                        </button>
-                    </div>
-                    <div id="bulk-add-property-error" class="mt-2"></div>
-                    <div id="bulk-import-progress" class="hidden mt-4">
-                        <div class="bg-gray-200 rounded-full h-2">
-                            <div id="bulk-import-progress-bar" class="bg-brand h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <p id="bulk-import-status" class="text-sm text-gray-600 mt-2 text-center">Importing properties...</p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Properties List -->
-            <div class="bg-white rounded-xl shadow-md p-6 modal-content">
-                <h2 class="text-xl font-semibold mb-6 text-gradient">Your Properties</h2>
-                <div id="properties-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Properties will be inserted here -->
+                <!-- Middle Column: Filters Section -->
+                <div class="xl:col-span-1">
+                    <div class="bg-white rounded-xl shadow-md p-6 modal-content sticky top-8">
+                        <h2 class="text-xl font-semibold text-gradient mb-6">Search & Filters</h2>
+                        
+                        <!-- Search Bar -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search Properties</label>
+                            <div class="relative">
+                                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input type="text" id="property-search" placeholder="Name or location..." class="w-full pl-10 pr-4 py-3 border rounded-md focus-ring transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Sort Options -->
+                        <div class="mb-4">
+                            <label for="property-sort" class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                            <select id="property-sort" class="w-full px-3 py-2 border rounded-md focus-ring transition-all">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="location-asc">Location (A-Z)</option>
+                                <option value="location-desc">Location (Z-A)</option>
+                                <option value="typology-asc">Typology (T0-T9, V0-V9)</option>
+                                <option value="typology-desc">Typology (V9-V0, T9-T0)</option>
+                                <option value="rooms-asc">Bedrooms (Low to High)</option>
+                                <option value="rooms-desc">Bedrooms (High to Low)</option>
+                                <option value="date-newest">Date Added (Newest)</option>
+                                <option value="date-oldest">Date Added (Oldest)</option>
+                            </select>
+                        </div>
+
+                        <!-- Property Type Filter -->
+                        <div class="mb-4">
+                            <label for="property-type-filter" class="block text-sm font-medium text-gray-700 mb-2">Property Type</label>
+                            <select id="property-type-filter" class="w-full px-3 py-2 border rounded-md focus-ring transition-all">
+                                <option value="">All Types</option>
+                                <option value="apartment">Apartments (T)</option>
+                                <option value="villa">Houses/Villas (V)</option>
+                                <option value="other">Other Types</option>
+                            </select>
+                        </div>
+
+                        <!-- Bedrooms Filter -->
+                        <div class="mb-4">
+                            <label for="property-bedrooms-filter" class="block text-sm font-medium text-gray-700 mb-2">Bedrooms</label>
+                            <select id="property-bedrooms-filter" class="w-full px-3 py-2 border rounded-md focus-ring transition-all">
+                                <option value="">All Bedrooms</option>
+                                <option value="0">Studio (0 bed)</option>
+                                <option value="1">1 Bedroom</option>
+                                <option value="2">2 Bedrooms</option>
+                                <option value="3">3 Bedrooms</option>
+                                <option value="4">4 Bedrooms</option>
+                                <option value="5+">5+ Bedrooms</option>
+                            </select>
+                        </div>
+
+                        <!-- Data Completeness Filter -->
+                        <div class="mb-6">
+                            <label for="property-data-filter" class="block text-sm font-medium text-gray-700 mb-2">Data Status</label>
+                            <select id="property-data-filter" class="w-full px-3 py-2 border rounded-md focus-ring transition-all">
+                                <option value="">All Properties</option>
+                                <option value="complete">Complete Info</option>
+                                <option value="missing">Missing Information</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Find properties with incomplete operational data</p>
+                        </div>
+
+                        <!-- Clear Filters Button -->
+                        <button id="clear-filters-btn" class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Clear All Filters
+                        </button>
+
+                        <!-- Active Filters Indicator -->
+                        <div id="filters-active-indicator" class="hidden mt-4 px-3 py-2 bg-blue-50 text-blue-700 rounded-md text-center text-sm">
+                            <span class="font-medium">Filters Active</span>
+                        </div>
+                    </div>
                 </div>
-                <div id="no-properties-message" class="text-center py-12 text-gray-500">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
-                    </svg>
-                    <p class="text-lg">No properties added yet</p>
-                    <p class="text-sm">Add your first property using the form above</p>
+
+                <!-- Right Column: Properties List -->
+                <div class="xl:col-span-2">
+                    <div class="bg-white rounded-xl shadow-md p-6 modal-content">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-4">
+                                <h2 class="text-xl font-semibold text-gradient">Your Properties</h2>
+                                <div class="flex border border-gray-300 rounded-lg p-1 bg-gray-100">
+                                    <button id="card-view-btn" class="view-toggle active px-3 py-1 text-sm font-medium rounded-md transition-colors">Cards</button>
+                                    <button id="table-view-btn" class="view-toggle px-3 py-1 text-sm font-medium rounded-md transition-colors">Table</button>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <span id="property-count">0</span> total • <span id="filtered-count">0</span> showing
+                            </div>
+                        </div>
+                        <!-- Card View -->
+                        <div id="properties-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Properties will be inserted here -->
+                        </div>
+
+                        <!-- Table View -->
+                        <div id="properties-table" class="hidden">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="name">
+                                                <div class="flex items-center gap-1">
+                                                    Property
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="type">
+                                                <div class="flex items-center gap-1">
+                                                    Type
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="floor">
+                                                <div class="flex items-center gap-1">
+                                                    Floor
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="parking">
+                                                <div class="flex items-center gap-1">
+                                                    Parking
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="wifi">
+                                                <div class="flex items-center gap-1">
+                                                    WiFi
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="energy">
+                                                <div class="flex items-center gap-1">
+                                                    Energy
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="smarttv">
+                                                <div class="flex items-center gap-1">
+                                                    Smart TV
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100 transition-colors" data-sort="status">
+                                                <div class="flex items-center gap-1">
+                                                    Status
+                                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                                    </svg>
+                                                </div>
+                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="properties-table-body" class="divide-y divide-gray-200">
+                                        <!-- Properties will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="no-properties-message" class="text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                            </svg>
+                            <p class="text-lg">No properties added yet</p>
+                            <p class="text-sm">Add your first property using the form on the left</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -541,6 +765,201 @@ Cozy Studio, Faro Center, T0" class="w-full p-3 border rounded-md focus-ring tra
             <div class="p-5 border-t flex justify-end gap-3">
                 <button id="edit-employee-cancel-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
                 <button id="edit-employee-save-btn" class="px-6 py-2 btn-primary rounded-md transition-all hover-lift">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Property Modal -->
+    <div id="edit-property-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+        <div class="relative w-full max-w-2xl shadow-lg rounded-xl bg-white modal-content">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 id="edit-property-header" class="text-xl leading-6 font-medium text-gray-900">Edit Property</h3>
+                <button id="edit-property-close-btn" class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
+                <!-- Basic Information -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Property Name *</label>
+                        <input type="text" id="edit-property-name" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="Property Name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Location *</label>
+                        <input type="text" id="edit-property-location" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="Location">
+                    </div>
+                </div>
+
+                <!-- Property Type and Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Property Type *</label>
+                        <select id="edit-property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="">Select Property Typology</option>
+                            <optgroup label="Apartments (T)">
+                                <option value="apartment-T0">T0 - Studio Apartment</option>
+                                <option value="apartment-T1">T1 - 1 Bedroom Apartment</option>
+                                <option value="apartment-T2">T2 - 2 Bedroom Apartment</option>
+                                <option value="apartment-T3">T3 - 3 Bedroom Apartment</option>
+                                <option value="apartment-T4">T4 - 4 Bedroom Apartment</option>
+                                <option value="apartment-T5">T5 - 5 Bedroom Apartment</option>
+                            </optgroup>
+                            <optgroup label="Houses/Villas (V)">
+                                <option value="villa-V0">V0 - Studio House</option>
+                                <option value="villa-V1">V1 - 1 Bedroom House</option>
+                                <option value="villa-V2">V2 - 2 Bedroom House</option>
+                                <option value="villa-V3">V3 - 3 Bedroom House</option>
+                                <option value="villa-V4">V4 - 4 Bedroom House</option>
+                                <option value="villa-V5">V5 - 5 Bedroom House</option>
+                                <option value="villa-V6">V6 - 6 Bedroom House</option>
+                            </optgroup>
+                            <optgroup label="Other Property Types">
+                                <option value="hotel">Hotel</option>
+                                <option value="resort">Resort</option>
+                                <option value="aparthotel">Aparthotel</option>
+                                <option value="guesthouse">Guesthouse</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Bedrooms</label>
+                        <input type="number" id="edit-property-rooms" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="Number of Bedrooms" min="0" max="50">
+                    </div>
+                </div>
+
+                <!-- Property Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Bathrooms</label>
+                        <input type="number" id="edit-property-bathrooms" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="Number of Bathrooms" min="0" max="20" step="0.5">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Apartment Floor</label>
+                        <input type="text" id="edit-property-floor" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="e.g. 3rd, Ground, Basement">
+                    </div>
+                </div>
+
+                <!-- WiFi and Connectivity -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">WiFi Speed</label>
+                        <select id="edit-property-wifi-speed" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="">Not specified</option>
+                            <option value="basic">Basic (< 25 Mbps)</option>
+                            <option value="standard">Standard (25-50 Mbps)</option>
+                            <option value="fast">Fast (50-100 Mbps)</option>
+                            <option value="very-fast">Very Fast (100+ Mbps)</option>
+                            <option value="fiber">Fiber (500+ Mbps)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">WiFi Listed on Airbnb</label>
+                        <select id="edit-property-wifi-airbnb" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                            <option value="featured">Featured Amenity</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Parking Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Parking Spot Number</label>
+                        <input type="text" id="edit-property-parking-spot" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="e.g. A15, 23, None">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Parking Floor</label>
+                        <input type="text" id="edit-property-parking-floor" class="w-full p-3 border rounded-md focus-ring transition-all" placeholder="e.g. B1, Ground, -2">
+                    </div>
+                </div>
+
+                <!-- Utilities and Features -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Energy Source</label>
+                        <select id="edit-property-energy-source" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="">Not specified</option>
+                            <option value="electric">Electric</option>
+                            <option value="gas">Gas</option>
+                            <option value="mixed">Mixed (Electric & Gas)</option>
+                            <option value="solar">Solar</option>
+                            <option value="heat-pump">Heat Pump</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Smart TV</label>
+                        <select id="edit-property-smart-tv" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                            <option value="multiple">Multiple TVs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Property Status</label>
+                        <select id="edit-property-status" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="maintenance">Under Maintenance</option>
+                            <option value="renovation">Under Renovation</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Amenities -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Amenities</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-wifi" class="mr-2">
+                            <span class="text-sm">WiFi</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-pool" class="mr-2">
+                            <span class="text-sm">Pool</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-garden" class="mr-2">
+                            <span class="text-sm">Garden</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-balcony" class="mr-2">
+                            <span class="text-sm">Balcony</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-ac" class="mr-2">
+                            <span class="text-sm">A/C</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-kitchen" class="mr-2">
+                            <span class="text-sm">Kitchen</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-washing-machine" class="mr-2">
+                            <span class="text-sm">Washing Machine</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="edit-amenity-sea-view" class="mr-2">
+                            <span class="text-sm">Sea View</span>
+                        </label>
+                    </div>
+                </div>
+
+
+
+                <p id="edit-property-error" class="text-red-500 text-sm text-center h-5"></p>
+            </div>
+            <div class="p-5 border-t flex justify-end gap-3">
+                <button id="edit-property-cancel-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                <button id="edit-property-save-btn" class="px-6 py-2 btn-primary rounded-md transition-all hover-lift">Save Changes</button>
             </div>
         </div>
     </div>
