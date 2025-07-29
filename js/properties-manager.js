@@ -156,7 +156,7 @@ export class PropertiesManager {
         } else {
             propertiesTable.classList.add('hidden');
             propertiesGrid.classList.remove('hidden');
-            propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
+        propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
         }
     }
 
