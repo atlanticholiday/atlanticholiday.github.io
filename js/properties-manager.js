@@ -88,6 +88,7 @@ export class PropertiesManager {
 
     createPropertyCard(property) {
         const stars = '★'.repeat(property.rating || 0) + '☆'.repeat(5 - (property.rating || 0));
+        const displayType = property.typology || property.type;
         
         return `
             <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow property-card">
@@ -97,7 +98,7 @@ export class PropertiesManager {
                         <p class="text-sm text-gray-600 mb-2">${property.location}</p>
                         <div class="flex items-center mb-2">
                             <span class="text-yellow-400 text-sm mr-2">${stars}</span>
-                            <span class="text-xs text-gray-500 capitalize px-2 py-1 bg-gray-100 rounded">${property.type}</span>
+                            <span class="text-xs text-gray-500 uppercase px-2 py-1 bg-gray-100 rounded font-medium">${displayType}</span>
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -121,9 +122,10 @@ export class PropertiesManager {
                 <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
                     <div class="flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 21v-4a2 2 0 012-2h2a2 2 0 012 2v4" />
                         </svg>
-                        ${property.rooms || 0} rooms
+                        ${property.rooms || 0} bedroom${(property.rooms || 0) !== 1 ? 's' : ''}
                     </div>
                     <div class="flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,11 +160,18 @@ export class PropertiesManager {
         if (!data.type) {
             errors.push('Property type is required');
         }
-        if (data.rooms && (data.rooms < 1 || data.rooms > 10000)) {
-            errors.push('Number of rooms must be between 1 and 10000');
+        
+        // Validate property type
+        const validTypes = ['apartment', 'villa', 'hotel', 'resort', 'aparthotel', 'guesthouse'];
+        if (!validTypes.includes(data.type)) {
+            errors.push(`Invalid property type "${data.type}". Must be one of: ${validTypes.join(', ')}`);
         }
-        if (data.rating && (data.rating < 1 || data.rating > 5)) {
-            errors.push('Rating must be between 1 and 5 stars');
+        
+        if (data.rooms && (data.rooms < 0 || data.rooms > 50)) {
+            errors.push('Number of bedrooms must be between 0 and 50');
+        }
+        if (data.rating && (data.rating < 0 || data.rating > 5)) {
+            errors.push('Rating must be between 0 and 5 stars');
         }
 
         return errors;
@@ -170,5 +179,99 @@ export class PropertiesManager {
 
     getPropertyById(propertyId) {
         return this.properties.find(p => p.id === propertyId);
+    }
+
+    parseBulkPropertyData(inputText) {
+        const lines = inputText.trim().split('\n').filter(line => line.trim());
+        const properties = [];
+        const errors = [];
+
+        lines.forEach((line, index) => {
+            const parts = line.split(',').map(part => part.trim());
+            
+            if (parts.length < 3) {
+                errors.push(`Line ${index + 1}: Invalid format. Expected: Property Name, Location, Typology`);
+                return;
+            }
+
+            const [name, location, typology, ...extra] = parts;
+            
+            // Parse Portuguese property typology (T1, T2, V1, V2, etc.)
+            const typologyUpper = typology.toUpperCase();
+            const typologyMatch = typologyUpper.match(/^([TV])(\d+)$/);
+            
+            if (!typologyMatch) {
+                errors.push(`Line ${index + 1}: Invalid typology "${typology}". Expected format: T1-T9 (apartments) or V1-V9 (houses/villas)`);
+                return;
+            }
+
+            const [, typeCode, bedroomCount] = typologyMatch;
+            const bedrooms = parseInt(bedroomCount);
+            
+            if (bedrooms < 1 || bedrooms > 9) {
+                errors.push(`Line ${index + 1}: Invalid bedroom count "${bedroomCount}". Must be between 1 and 9`);
+                return;
+            }
+
+            // Convert typology to property type and set bedroom count
+            let propertyType, displayType;
+            if (typeCode === 'T') {
+                propertyType = 'apartment';
+                displayType = `T${bedrooms}`;
+            } else { // V
+                propertyType = 'villa';
+                displayType = `V${bedrooms}`;
+            }
+
+            const propertyData = {
+                name: name,
+                location: location,
+                type: propertyType,
+                typology: displayType, // Store the original typology
+                rooms: bedrooms, // Set bedrooms from typology
+                rating: 0, // Default value for bulk import
+                description: `${displayType} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}` // Auto-generate description
+            };
+
+            // Validate the property data
+            const validationErrors = this.validatePropertyData(propertyData);
+            if (validationErrors.length > 0) {
+                validationErrors.forEach(error => {
+                    errors.push(`Line ${index + 1}: ${error}`);
+                });
+                return;
+            }
+
+            properties.push(propertyData);
+        });
+
+        return { properties, errors };
+    }
+
+    async bulkAddProperties(properties, onProgress = () => {}) {
+        const results = {
+            successful: 0,
+            failed: 0,
+            errors: []
+        };
+
+        for (let i = 0; i < properties.length; i++) {
+            try {
+                await this.addProperty(properties[i]);
+                results.successful++;
+            } catch (error) {
+                results.failed++;
+                results.errors.push(`Failed to add "${properties[i].name}": ${error.message}`);
+            }
+            
+            // Call progress callback
+            onProgress({
+                completed: i + 1,
+                total: properties.length,
+                percentage: Math.round(((i + 1) / properties.length) * 100)
+            });
+        }
+
+        return results;
     }
 } 

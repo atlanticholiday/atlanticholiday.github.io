@@ -103,14 +103,35 @@ function setupGlobalEventListeners() {
     const addPropertyBtn = document.getElementById('add-property-btn');
     if (addPropertyBtn) {
         addPropertyBtn.addEventListener('click', async () => {
-            const propertyData = {
-                name: document.getElementById('property-name').value,
-                location: document.getElementById('property-location').value,
-                type: document.getElementById('property-type').value,
-                rooms: parseInt(document.getElementById('property-rooms').value) || 0,
-                rating: parseInt(document.getElementById('property-rating').value) || 0,
-                description: document.getElementById('property-description').value
-            };
+            const selectedType = document.getElementById('property-type').value;
+            let propertyData;
+
+            // Parse the selected typology
+            if (selectedType.includes('-T') || selectedType.includes('-V')) {
+                // Portuguese typology format (apartment-T2, villa-V3, etc.)
+                const [baseType, typology] = selectedType.split('-');
+                const bedrooms = parseInt(typology.substring(1)); // Extract number from T2, V3 etc.
+                
+                propertyData = {
+                    name: document.getElementById('property-name').value,
+                    location: document.getElementById('property-location').value,
+                    type: baseType,
+                    typology: typology,
+                    rooms: bedrooms, // Auto-set from typology
+                    rating: parseInt(document.getElementById('property-rating').value) || 0,
+                    description: document.getElementById('property-description').value || `${typology} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`
+                };
+            } else {
+                // Traditional property types (hotel, resort, etc.)
+                propertyData = {
+                    name: document.getElementById('property-name').value,
+                    location: document.getElementById('property-location').value,
+                    type: selectedType,
+                    rooms: parseInt(document.getElementById('property-rooms').value) || 0,
+                    rating: parseInt(document.getElementById('property-rating').value) || 0,
+                    description: document.getElementById('property-description').value
+                };
+            }
             
             const errors = propertiesManager.validatePropertyData(propertyData);
             const errorElement = document.getElementById('add-property-error');
@@ -126,6 +147,159 @@ function setupGlobalEventListeners() {
                 errorElement.textContent = '';
             } catch (error) {
                 errorElement.textContent = 'Failed to add property. Please try again.';
+            }
+        });
+    }
+
+    // Auto-populate bedroom count when typology is selected
+    const propertyTypeSelect = document.getElementById('property-type');
+    const propertyRoomsInput = document.getElementById('property-rooms');
+    const propertyDescriptionInput = document.getElementById('property-description');
+
+    if (propertyTypeSelect && propertyRoomsInput) {
+        propertyTypeSelect.addEventListener('change', () => {
+            const selectedValue = propertyTypeSelect.value;
+            
+            if (selectedValue.includes('-T') || selectedValue.includes('-V')) {
+                // Extract bedroom count from typology (T2 -> 2, V3 -> 3)
+                const [, typology] = selectedValue.split('-');
+                const bedrooms = parseInt(typology.substring(1));
+                
+                propertyRoomsInput.value = bedrooms;
+                propertyRoomsInput.readOnly = true;
+                propertyRoomsInput.classList.add('bg-gray-100');
+                
+                // Auto-generate description if empty
+                if (!propertyDescriptionInput.value.trim()) {
+                    propertyDescriptionInput.value = `${typology} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`;
+                }
+            } else {
+                // For traditional property types, allow manual entry
+                propertyRoomsInput.readOnly = false;
+                propertyRoomsInput.classList.remove('bg-gray-100');
+                if (propertyDescriptionInput.value.match(/^[TV]\d+ - \d+ bedrooms?$/)) {
+                    propertyDescriptionInput.value = '';
+                }
+            }
+        });
+    }
+
+    // Tab switching for property forms
+    const singleAddTab = document.getElementById('single-add-tab');
+    const bulkAddTab = document.getElementById('bulk-add-tab');
+    const singleAddForm = document.getElementById('single-add-form');
+    const bulkAddForm = document.getElementById('bulk-add-form');
+
+    if (singleAddTab && bulkAddTab && singleAddForm && bulkAddForm) {
+        singleAddTab.addEventListener('click', () => {
+            singleAddTab.classList.remove('bg-gray-200', 'text-gray-700');
+            singleAddTab.classList.add('bg-brand', 'text-white');
+            bulkAddTab.classList.remove('bg-brand', 'text-white');
+            bulkAddTab.classList.add('bg-gray-200', 'text-gray-700');
+            
+            singleAddForm.classList.remove('hidden');
+            bulkAddForm.classList.add('hidden');
+        });
+
+        bulkAddTab.addEventListener('click', () => {
+            bulkAddTab.classList.remove('bg-gray-200', 'text-gray-700');
+            bulkAddTab.classList.add('bg-brand', 'text-white');
+            singleAddTab.classList.remove('bg-brand', 'text-white');
+            singleAddTab.classList.add('bg-gray-200', 'text-gray-700');
+            
+            bulkAddForm.classList.remove('hidden');
+            singleAddForm.classList.add('hidden');
+        });
+    }
+
+    // Bulk property input handling
+    const bulkPropertyInput = document.getElementById('bulk-property-input');
+    const bulkPropertyCount = document.getElementById('bulk-property-count');
+    const bulkAddPropertiesBtn = document.getElementById('bulk-add-properties-btn');
+
+    if (bulkPropertyInput && bulkPropertyCount && bulkAddPropertiesBtn) {
+        // Update property count as user types
+        const updateBulkPropertyCount = () => {
+            const inputText = bulkPropertyInput.value.trim();
+            if (!inputText) {
+                bulkPropertyCount.textContent = '0';
+                bulkAddPropertiesBtn.disabled = true;
+                return;
+            }
+
+            const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
+            bulkPropertyCount.textContent = properties.length.toString();
+            bulkAddPropertiesBtn.disabled = properties.length === 0;
+        };
+
+        bulkPropertyInput.addEventListener('input', updateBulkPropertyCount);
+        bulkPropertyInput.addEventListener('paste', () => {
+            setTimeout(updateBulkPropertyCount, 10); // Small delay to allow paste to complete
+        });
+
+        // Bulk import button
+        bulkAddPropertiesBtn.addEventListener('click', async () => {
+            const inputText = bulkPropertyInput.value.trim();
+            const errorElement = document.getElementById('bulk-add-property-error');
+            const progressContainer = document.getElementById('bulk-import-progress');
+            const progressBar = document.getElementById('bulk-import-progress-bar');
+            const progressStatus = document.getElementById('bulk-import-status');
+
+            if (!inputText) {
+                errorElement.textContent = 'Please enter property data to import.';
+                return;
+            }
+
+            const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
+
+            if (errors.length > 0) {
+                errorElement.textContent = errors[0] + (errors.length > 1 ? ` (and ${errors.length - 1} more errors)` : '');
+                return;
+            }
+
+            if (properties.length === 0) {
+                errorElement.textContent = 'No valid properties found to import.';
+                return;
+            }
+
+            // Show progress and disable button
+            errorElement.textContent = '';
+            bulkAddPropertiesBtn.disabled = true;
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressStatus.textContent = 'Starting import...';
+
+            try {
+                const results = await propertiesManager.bulkAddProperties(properties, (progress) => {
+                    progressBar.style.width = `${progress.percentage}%`;
+                    progressStatus.textContent = `Importing properties... ${progress.completed}/${progress.total}`;
+                });
+
+                // Show completion status
+                progressStatus.textContent = `Import complete! ${results.successful} properties added successfully.`;
+                
+                if (results.failed > 0) {
+                    errorElement.textContent = `${results.failed} properties failed to import. Check console for details.`;
+                    console.error('Bulk import errors:', results.errors);
+                }
+
+                // Clear the form on successful import
+                if (results.successful > 0) {
+                    bulkPropertyInput.value = '';
+                    updateBulkPropertyCount();
+                }
+
+                // Hide progress after 3 seconds
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    bulkAddPropertiesBtn.disabled = false;
+                }, 3000);
+
+            } catch (error) {
+                console.error('Bulk import failed:', error);
+                errorElement.textContent = 'Bulk import failed. Please try again.';
+                progressContainer.classList.add('hidden');
+                bulkAddPropertiesBtn.disabled = false;
             }
         });
     }

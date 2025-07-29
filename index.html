@@ -156,33 +156,101 @@
         <div class="container mx-auto px-4 py-8 max-w-7xl">
             <!-- Add Property Section -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-8 modal-content">
-                <h2 class="text-xl font-semibold mb-4 text-gradient">Add New Property</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <input type="text" id="property-name" placeholder="Property Name" class="w-full p-3 border rounded-md focus-ring transition-all">
-                    <input type="text" id="property-location" placeholder="Location" class="w-full p-3 border rounded-md focus-ring transition-all">
-                    <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
-                        <option value="">Select Property Type</option>
-                        <option value="hotel">Hotel</option>
-                        <option value="resort">Resort</option>
-                        <option value="aparthotel">Aparthotel</option>
-                        <option value="villa">Villa</option>
-                        <option value="guesthouse">Guesthouse</option>
-                    </select>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gradient">Add Properties</h2>
+                    <div class="flex gap-2">
+                        <button id="single-add-tab" class="px-4 py-2 text-sm font-medium rounded-md bg-brand text-white">Single</button>
+                        <button id="bulk-add-tab" class="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Bulk Import</button>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <input type="number" id="property-rooms" placeholder="Number of Rooms" class="w-full p-3 border rounded-md focus-ring transition-all">
-                    <input type="number" id="property-rating" placeholder="Star Rating (1-5)" min="1" max="5" class="w-full p-3 border rounded-md focus-ring transition-all">
+
+                <!-- Single Property Add Form -->
+                <div id="single-add-form">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="property-name" placeholder="Property Name" class="w-full p-3 border rounded-md focus-ring transition-all">
+                        <input type="text" id="property-location" placeholder="Location" class="w-full p-3 border rounded-md focus-ring transition-all">
+                        <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="">Select Property Typology</option>
+                            <optgroup label="Apartments (T)">
+                                <option value="apartment-T1">T1 - 1 Bedroom Apartment</option>
+                                <option value="apartment-T2">T2 - 2 Bedroom Apartment</option>
+                                <option value="apartment-T3">T3 - 3 Bedroom Apartment</option>
+                                <option value="apartment-T4">T4 - 4 Bedroom Apartment</option>
+                                <option value="apartment-T5">T5 - 5 Bedroom Apartment</option>
+                            </optgroup>
+                            <optgroup label="Houses/Villas (V)">
+                                <option value="villa-V1">V1 - 1 Bedroom House</option>
+                                <option value="villa-V2">V2 - 2 Bedroom House</option>
+                                <option value="villa-V3">V3 - 3 Bedroom House</option>
+                                <option value="villa-V4">V4 - 4 Bedroom House</option>
+                                <option value="villa-V5">V5 - 5 Bedroom House</option>
+                                <option value="villa-V6">V6 - 6 Bedroom House</option>
+                            </optgroup>
+                            <optgroup label="Other Property Types">
+                                <option value="hotel">Hotel</option>
+                                <option value="resort">Resort</option>
+                                <option value="aparthotel">Aparthotel</option>
+                                <option value="guesthouse">Guesthouse</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <input type="number" id="property-rooms" placeholder="Number of Bedrooms" class="w-full p-3 border rounded-md focus-ring transition-all">
+                        <input type="number" id="property-rating" placeholder="Star Rating (1-5)" min="1" max="5" class="w-full p-3 border rounded-md focus-ring transition-all">
+                    </div>
+                    <div class="mb-4">
+                        <textarea id="property-description" rows="3" placeholder="Property Description" class="w-full p-3 border rounded-md focus-ring transition-all"></textarea>
+                    </div>
+                    <button id="add-property-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Property
+                    </button>
+                    <p id="add-property-error" class="text-red-500 text-sm mt-2 h-5"></p>
                 </div>
-                <div class="mb-4">
-                    <textarea id="property-description" rows="3" placeholder="Property Description" class="w-full p-3 border rounded-md focus-ring transition-all"></textarea>
+
+                <!-- Bulk Import Form -->
+                <div id="bulk-add-form" class="hidden">
+                    <div class="mb-4">
+                        <h3 class="text-md font-medium mb-2 text-gray-700">Bulk Import Properties</h3>
+                        <p class="text-sm text-gray-600 mb-4">Enter one property per line in the format: <strong>Property Name, Location, Typology</strong></p>
+                        <div class="bg-gray-50 p-3 rounded-md mb-4">
+                            <p class="text-xs text-gray-600 mb-2">Example format (Portuguese typology system):</p>
+                            <code class="text-xs bg-white px-2 py-1 rounded block">
+                                Sunset Apartment, Downtown Lisboa, T2<br>
+                                Ocean View House, Porto Beach, V3<br>
+                                Mountain Villa, Sintra Hills, V4<br>
+                                Cozy Studio, Faro Center, T1
+                            </code>
+                            <div class="mt-2 text-xs text-gray-500">
+                                <strong>T1-T9:</strong> Apartments (1-9 bedrooms) • <strong>V1-V9:</strong> Houses/Villas (1-9 bedrooms)
+                            </div>
+                        </div>
+                        <textarea id="bulk-property-input" rows="8" placeholder="Sunset Apartment, Downtown Lisboa, T2
+Ocean View House, Porto Beach, V3
+Mountain Villa, Sintra Hills, V4
+Cozy Studio, Faro Center, T1" class="w-full p-3 border rounded-md focus-ring transition-all font-mono text-sm"></textarea>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-600">
+                            <span id="bulk-property-count">0</span> properties ready to import
+                        </div>
+                        <button id="bulk-add-properties-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            Import Properties
+                        </button>
+                    </div>
+                    <p id="bulk-add-property-error" class="text-red-500 text-sm mt-2 h-5"></p>
+                    <div id="bulk-import-progress" class="hidden mt-4">
+                        <div class="bg-gray-200 rounded-full h-2">
+                            <div id="bulk-import-progress-bar" class="bg-brand h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="bulk-import-status" class="text-sm text-gray-600 mt-2 text-center">Importing properties...</p>
+                    </div>
                 </div>
-                <button id="add-property-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift">
-                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Add Property
-                </button>
-                <p id="add-property-error" class="text-red-500 text-sm mt-2 h-5"></p>
             </div>
 
             <!-- Properties List -->
