@@ -68,12 +68,153 @@
         </div>
     </div>
 
+    <!-- Landing Page -->
+    <div id="landing-page" class="hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
+                <div>
+                    <h1 class="text-3xl font-bold text-gradient">Atlantic Holiday</h1>
+                    <p class="text-gray-500 text-sm">Property Management System</p>
+                </div>
+                <button id="landing-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-12 max-w-6xl">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Welcome to Your Dashboard</h2>
+                <p class="text-xl text-gray-600">Choose what you'd like to manage today</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <!-- Properties Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Properties</h3>
+                    <p class="text-gray-600 mb-6">Manage your hotel properties, rooms, and bookings</p>
+                    <button id="go-to-properties-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        Manage Properties
+                    </button>
+                </div>
+
+                <!-- Schedule Calculator Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Work Schedule</h3>
+                    <p class="text-gray-600 mb-6">Plan and manage staff schedules and holidays</p>
+                    <button id="go-to-schedule-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        Open Schedule Calculator
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Properties Management Page -->
+    <div id="properties-page" class="hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="flex items-center">
+                    <button id="back-to-landing-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gradient">Properties Management</h1>
+                        <p class="text-gray-500 text-sm">Manage your hotel properties</p>
+                    </div>
+                </div>
+                <button id="properties-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <!-- Add Property Section -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8 modal-content">
+                <h2 class="text-xl font-semibold mb-4 text-gradient">Add New Property</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="text" id="property-name" placeholder="Property Name" class="w-full p-3 border rounded-md focus-ring transition-all">
+                    <input type="text" id="property-location" placeholder="Location" class="w-full p-3 border rounded-md focus-ring transition-all">
+                    <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
+                        <option value="">Select Property Type</option>
+                        <option value="hotel">Hotel</option>
+                        <option value="resort">Resort</option>
+                        <option value="aparthotel">Aparthotel</option>
+                        <option value="villa">Villa</option>
+                        <option value="guesthouse">Guesthouse</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <input type="number" id="property-rooms" placeholder="Number of Rooms" class="w-full p-3 border rounded-md focus-ring transition-all">
+                    <input type="number" id="property-rating" placeholder="Star Rating (1-5)" min="1" max="5" class="w-full p-3 border rounded-md focus-ring transition-all">
+                </div>
+                <div class="mb-4">
+                    <textarea id="property-description" rows="3" placeholder="Property Description" class="w-full p-3 border rounded-md focus-ring transition-all"></textarea>
+                </div>
+                <button id="add-property-btn" class="btn-primary py-3 px-6 rounded-md transition-all hover-lift">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Property
+                </button>
+                <p id="add-property-error" class="text-red-500 text-sm mt-2 h-5"></p>
+            </div>
+
+            <!-- Properties List -->
+            <div class="bg-white rounded-xl shadow-md p-6 modal-content">
+                <h2 class="text-xl font-semibold mb-6 text-gradient">Your Properties</h2>
+                <div id="properties-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Properties will be inserted here -->
+                </div>
+                <div id="no-properties-message" class="text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                    </svg>
+                    <p class="text-lg">No properties added yet</p>
+                    <p class="text-sm">Add your first property using the form above</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="app-content" class="hidden container mx-auto p-4 md:p-8 max-w-7xl">
         <header class="text-center mb-8 flex justify-between items-center">
-            <div class="text-center">
-                <h1 class="text-5xl font-bold text-gradient mb-2">Atlantic Holiday</h1>
-                <div class="w-20 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-2"></div>
-                <p class="text-gray-500 mt-2">Work Schedule Calculator</p>
+            <div class="flex items-center">
+                <button id="back-to-landing-from-schedule-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div class="text-center">
+                    <h1 class="text-5xl font-bold text-gradient mb-2">Atlantic Holiday</h1>
+                    <div class="w-20 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-2"></div>
+                    <p class="text-gray-500 mt-2">Work Schedule Calculator</p>
+                </div>
             </div>
             <div>
                  <button id="sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">

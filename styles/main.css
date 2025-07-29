@@ -792,4 +792,65 @@ p, span, div {
     border-radius: var(--radius-lg) !important;
     padding: 4px !important;
     box-shadow: var(--shadow-glass);
+}
+
+/* Properties page specific styles */
+.property-card {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(233, 75, 90, 0.1);
+}
+
+.property-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(233, 75, 90, 0.1);
+    border-color: rgba(233, 75, 90, 0.2);
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Landing page cards */
+.landing-card {
+    background: var(--gradient-glass);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: var(--transition-smooth);
+}
+
+.landing-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(233, 75, 90, 0.1);
+    box-shadow: var(--shadow-glass-hover);
+    transform: translateY(-4px);
+}
+
+/* Property form styles */
+#property-name:focus,
+#property-location:focus,
+#property-type:focus,
+#property-rooms:focus,
+#property-rating:focus,
+#property-description:focus {
+    border-color: var(--brand-color);
+    box-shadow: 0 0 0 3px rgba(233, 75, 90, 0.1);
+}
+
+/* Fade in animation for main content */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
 } 

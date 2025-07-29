@@ -15,22 +15,14 @@ export class EventManager {
         const passwordInput = document.getElementById('password');
         const loginError = document.getElementById('login-error');
 
-        console.log('Setting up login listeners...');
-        console.log('Login button found:', loginBtn);
-        console.log('Email input found:', emailInput);
-        console.log('Password input found:', passwordInput);
-
         loginBtn.addEventListener('click', () => {
-            console.log('Login button clicked!');
             const email = emailInput.value;
             const password = passwordInput.value;
-            console.log('Email:', email);
-            console.log('Password length:', password.length);
             loginError.textContent = '';
             
             signInWithEmailAndPassword(this.auth, email, password)
                 .then(() => {
-                    console.log('Login successful!');
+                    // Login successful
                 })
                 .catch(error => {
                     console.error('Login failed:', error.message);
@@ -39,8 +31,10 @@ export class EventManager {
         });
         
         document.getElementById('start-fresh-btn').addEventListener('click', () => {
-            setDoc(doc(this.dataManager.db, "employees/metadata"), { initialized: true });
-            this.dataManager.listenForEmployeeChanges();
+            setDoc(doc(this.dataManager.db, `users/${this.dataManager.userId}/employees`, 'metadata'), { initialized: true });
+            // Navigate back to schedule page and initialize
+            const event = new CustomEvent('schedulePageOpened');
+            document.dispatchEvent(event);
         });
     }
 

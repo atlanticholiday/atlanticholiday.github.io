@@ -31,11 +31,7 @@ export class UIManager {
         `).join('');
     }
 
-    showSetupScreen() {
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('main-app').classList.add('hidden');
-        document.getElementById('setup-screen').classList.remove('hidden');
-    }
+    // Removed showSetupScreen - navigation is now handled by NavigationManager
 
     renderEmployeeList() {
         const listContainer = document.getElementById('employee-list');

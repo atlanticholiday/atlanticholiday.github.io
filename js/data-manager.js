@@ -2,8 +2,9 @@ import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, dele
 import { Config } from './config.js';
 
 export class DataManager {
-    constructor(db) {
+    constructor(db, userId = null) {
         this.db = db;
+        this.userId = userId;
         this.activeEmployees = [];
         this.archivedEmployees = [];
         this.holidays = {};
@@ -18,6 +19,10 @@ export class DataManager {
         this.initializeHolidays();
     }
 
+    setUserId(userId) {
+        this.userId = userId;
+    }
+
     initializeHolidays() {
         const currentYear = new Date().getFullYear();
         
@@ -28,7 +33,10 @@ export class DataManager {
     }
 
     getEmployeesCollectionRef() {
-        return collection(this.db, "employees");
+        if (!this.userId) {
+            throw new Error('User ID is required to access employees collection');
+        }
+        return collection(this.db, `users/${this.userId}/employees`);
     }
 
     setOnDataChangeCallback(callback) {
@@ -36,17 +44,15 @@ export class DataManager {
     }
 
     listenForEmployeeChanges() {
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('setup-screen').classList.add('hidden');
-
         this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), (snapshot) => {
             const allEmployees = snapshot.docs
                 .filter(doc => doc.id !== 'metadata')
                 .map(doc => ({ id: doc.id, ...doc.data() }));
             
             if (allEmployees.length === 0 && snapshot.docs.length <= 1) { 
-                this.showSetupScreen();
+                // Dispatch event instead of directly showing setup screen
+                const event = new CustomEvent('noEmployeesFound');
+                document.dispatchEvent(event);
                 return;
             }
 
@@ -67,11 +73,7 @@ export class DataManager {
         }, (error) => console.error("Error listening:", error));
     }
 
-    showSetupScreen() {
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('main-app').classList.add('hidden');
-        document.getElementById('setup-screen').classList.remove('hidden');
-    }
+    // Removed showSetupScreen - navigation is now handled by NavigationManager
 
     async addEmployee(name, staffNumber, workDays) {
         const newEmployeeData = { 
