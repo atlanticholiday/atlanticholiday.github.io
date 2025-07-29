@@ -187,10 +187,16 @@ export class PropertiesManager {
         const errors = [];
 
         lines.forEach((line, index) => {
+            const lineNumber = index + 1;
             const parts = line.split(',').map(part => part.trim());
             
             if (parts.length < 3) {
-                errors.push(`Line ${index + 1}: Invalid format. Expected: Property Name, Location, Typology`);
+                errors.push({
+                    lineNumber,
+                    line: line,
+                    error: 'Invalid format. Expected: Property Name, Location, Typology',
+                    suggestion: 'Make sure you have exactly 3 parts separated by commas'
+                });
                 return;
             }
 
@@ -201,7 +207,12 @@ export class PropertiesManager {
             const typologyMatch = typologyUpper.match(/^([TV])(\d+)$/);
             
             if (!typologyMatch) {
-                errors.push(`Line ${index + 1}: Invalid typology "${typology}". Expected format: T1-T9 (apartments) or V1-V9 (houses/villas)`);
+                errors.push({
+                    lineNumber,
+                    line: line,
+                    error: `Invalid typology "${typology}"`,
+                    suggestion: 'Use format T0-T9 for apartments or V0-V9 for houses/villas'
+                });
                 return;
             }
 
@@ -209,7 +220,12 @@ export class PropertiesManager {
             const bedrooms = parseInt(bedroomCount);
             
             if (bedrooms < 0 || bedrooms > 9) {
-                errors.push(`Line ${index + 1}: Invalid bedroom count "${bedroomCount}". Must be between 0 and 9`);
+                errors.push({
+                    lineNumber,
+                    line: line,
+                    error: `Invalid bedroom count "${bedroomCount}"`,
+                    suggestion: 'Use numbers 0-9 (T0, T1, T2... or V0, V1, V2...)'
+                });
                 return;
             }
 
@@ -237,7 +253,12 @@ export class PropertiesManager {
             const validationErrors = this.validatePropertyData(propertyData);
             if (validationErrors.length > 0) {
                 validationErrors.forEach(error => {
-                    errors.push(`Line ${index + 1}: ${error}`);
+                    errors.push({
+                        lineNumber,
+                        line: line,
+                        error: error,
+                        suggestion: 'Check that the property name and location are not empty'
+                    });
                 });
                 return;
             }

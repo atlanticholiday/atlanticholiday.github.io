@@ -221,21 +221,89 @@ function setupGlobalEventListeners() {
         // Update property count as user types
         const updateBulkPropertyCount = () => {
             const inputText = bulkPropertyInput.value.trim();
+            const errorElement = document.getElementById('bulk-add-property-error');
+            
             if (!inputText) {
                 bulkPropertyCount.textContent = '0';
                 bulkAddPropertiesBtn.disabled = true;
+                errorElement.innerHTML = '';
                 return;
             }
 
             const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
             bulkPropertyCount.textContent = properties.length.toString();
             bulkAddPropertiesBtn.disabled = properties.length === 0;
+            
+            // Clear errors when typing (show them only on submit)
+            if (errors.length === 0) {
+                errorElement.innerHTML = '';
+            }
         };
 
         bulkPropertyInput.addEventListener('input', updateBulkPropertyCount);
         bulkPropertyInput.addEventListener('paste', () => {
             setTimeout(updateBulkPropertyCount, 10); // Small delay to allow paste to complete
         });
+
+        // Function to display bulk import errors in a user-friendly way
+        const displayBulkImportErrors = (errors) => {
+            const errorElement = document.getElementById('bulk-add-property-error');
+            const maxErrorsToShow = 5; // Show max 5 errors to avoid overwhelming the user
+            
+            if (errors.length === 1) {
+                const error = errors[0];
+                errorElement.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+                        <div class="text-sm">
+                            <strong class="text-red-800">Line ${error.lineNumber}:</strong> 
+                            <span class="text-red-700">${error.error}</span>
+                        </div>
+                        <div class="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
+                            "${error.line}"
+                        </div>
+                        <div class="text-xs text-red-600 mt-1">
+                            💡 ${error.suggestion}
+                        </div>
+                    </div>
+                `;
+            } else {
+                const errorsToShow = errors.slice(0, maxErrorsToShow);
+                const remainingErrors = errors.length - maxErrorsToShow;
+                
+                let errorHtml = `<div class="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+                    <div class="text-sm font-medium text-red-800 mb-2">
+                        Found ${errors.length} error${errors.length > 1 ? 's' : ''}:
+                    </div>`;
+                
+                errorsToShow.forEach(error => {
+                    errorHtml += `
+                        <div class="mb-3 pb-2 border-b border-red-200 last:border-b-0">
+                            <div class="text-sm">
+                                <strong class="text-red-800">Line ${error.lineNumber}:</strong> 
+                                <span class="text-red-700">${error.error}</span>
+                            </div>
+                            <div class="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
+                                "${error.line}"
+                            </div>
+                            <div class="text-xs text-red-600 mt-1">
+                                💡 ${error.suggestion}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if (remainingErrors > 0) {
+                    errorHtml += `
+                        <div class="text-xs text-red-600 mt-2 text-center">
+                            ... and ${remainingErrors} more error${remainingErrors > 1 ? 's' : ''}. Fix the above errors first.
+                        </div>
+                    `;
+                }
+                
+                errorHtml += '</div>';
+                errorElement.innerHTML = errorHtml;
+            }
+        };
 
         // Bulk import button
         bulkAddPropertiesBtn.addEventListener('click', async () => {
@@ -246,24 +314,24 @@ function setupGlobalEventListeners() {
             const progressStatus = document.getElementById('bulk-import-status');
 
             if (!inputText) {
-                errorElement.textContent = 'Please enter property data to import.';
+                errorElement.innerHTML = '<div class="text-red-500">Please enter property data to import.</div>';
                 return;
             }
 
             const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
 
             if (errors.length > 0) {
-                errorElement.textContent = errors[0] + (errors.length > 1 ? ` (and ${errors.length - 1} more errors)` : '');
+                displayBulkImportErrors(errors);
                 return;
             }
 
             if (properties.length === 0) {
-                errorElement.textContent = 'No valid properties found to import.';
+                errorElement.innerHTML = '<div class="text-red-500">No valid properties found to import.</div>';
                 return;
             }
 
             // Show progress and disable button
-            errorElement.textContent = '';
+            errorElement.innerHTML = '';
             bulkAddPropertiesBtn.disabled = true;
             progressContainer.classList.remove('hidden');
             progressBar.style.width = '0%';
@@ -279,7 +347,7 @@ function setupGlobalEventListeners() {
                 progressStatus.textContent = `Import complete! ${results.successful} properties added successfully.`;
                 
                 if (results.failed > 0) {
-                    errorElement.textContent = `${results.failed} properties failed to import. Check console for details.`;
+                    errorElement.innerHTML = `<div class="text-yellow-600 bg-yellow-50 border border-yellow-200 rounded p-2">${results.failed} properties failed to import. Check console for details.</div>`;
                     console.error('Bulk import errors:', results.errors);
                 }
 
@@ -297,7 +365,7 @@ function setupGlobalEventListeners() {
 
             } catch (error) {
                 console.error('Bulk import failed:', error);
-                errorElement.textContent = 'Bulk import failed. Please try again.';
+                errorElement.innerHTML = '<div class="text-red-500 bg-red-50 border border-red-200 rounded p-2">Bulk import failed. Please try again.</div>';
                 progressContainer.classList.add('hidden');
                 bulkAddPropertiesBtn.disabled = false;
             }
