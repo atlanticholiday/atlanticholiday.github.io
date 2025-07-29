@@ -125,7 +125,7 @@ export class PropertiesManager {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 21v-4a2 2 0 012-2h2a2 2 0 012 2v4" />
                         </svg>
-                        ${property.rooms || 0} bedroom${(property.rooms || 0) !== 1 ? 's' : ''}
+                        ${property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bedroom${(property.rooms || 0) !== 1 ? 's' : ''}`}
                     </div>
                     <div class="flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,8 +208,8 @@ export class PropertiesManager {
             const [, typeCode, bedroomCount] = typologyMatch;
             const bedrooms = parseInt(bedroomCount);
             
-            if (bedrooms < 1 || bedrooms > 9) {
-                errors.push(`Line ${index + 1}: Invalid bedroom count "${bedroomCount}". Must be between 1 and 9`);
+            if (bedrooms < 0 || bedrooms > 9) {
+                errors.push(`Line ${index + 1}: Invalid bedroom count "${bedroomCount}". Must be between 0 and 9`);
                 return;
             }
 
@@ -230,7 +230,7 @@ export class PropertiesManager {
                 typology: displayType, // Store the original typology
                 rooms: bedrooms, // Set bedrooms from typology
                 rating: 0, // Default value for bulk import
-                description: `${displayType} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}` // Auto-generate description
+                description: `${displayType} - ${bedrooms === 0 ? 'Studio' : `${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`}` // Auto-generate description
             };
 
             // Validate the property data

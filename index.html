@@ -172,6 +172,7 @@
                         <select id="property-type" class="w-full p-3 border rounded-md focus-ring transition-all">
                             <option value="">Select Property Typology</option>
                             <optgroup label="Apartments (T)">
+                                <option value="apartment-T0">T0 - Studio Apartment</option>
                                 <option value="apartment-T1">T1 - 1 Bedroom Apartment</option>
                                 <option value="apartment-T2">T2 - 2 Bedroom Apartment</option>
                                 <option value="apartment-T3">T3 - 3 Bedroom Apartment</option>
@@ -179,6 +180,7 @@
                                 <option value="apartment-T5">T5 - 5 Bedroom Apartment</option>
                             </optgroup>
                             <optgroup label="Houses/Villas (V)">
+                                <option value="villa-V0">V0 - Studio House</option>
                                 <option value="villa-V1">V1 - 1 Bedroom House</option>
                                 <option value="villa-V2">V2 - 2 Bedroom House</option>
                                 <option value="villa-V3">V3 - 3 Bedroom House</option>
@@ -221,16 +223,16 @@
                                 Sunset Apartment, Downtown Lisboa, T2<br>
                                 Ocean View House, Porto Beach, V3<br>
                                 Mountain Villa, Sintra Hills, V4<br>
-                                Cozy Studio, Faro Center, T1
+                                Cozy Studio, Faro Center, T0
                             </code>
                             <div class="mt-2 text-xs text-gray-500">
-                                <strong>T1-T9:</strong> Apartments (1-9 bedrooms) • <strong>V1-V9:</strong> Houses/Villas (1-9 bedrooms)
+                                <strong>T0-T9:</strong> Apartments (Studio or 1-9 bedrooms) • <strong>V0-V9:</strong> Houses/Villas (Studio or 1-9 bedrooms)
                             </div>
                         </div>
                         <textarea id="bulk-property-input" rows="8" placeholder="Sunset Apartment, Downtown Lisboa, T2
 Ocean View House, Porto Beach, V3
 Mountain Villa, Sintra Hills, V4
-Cozy Studio, Faro Center, T1" class="w-full p-3 border rounded-md focus-ring transition-all font-mono text-sm"></textarea>
+Cozy Studio, Faro Center, T0" class="w-full p-3 border rounded-md focus-ring transition-all font-mono text-sm"></textarea>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="text-sm text-gray-600">

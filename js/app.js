@@ -119,7 +119,7 @@ function setupGlobalEventListeners() {
                     typology: typology,
                     rooms: bedrooms, // Auto-set from typology
                     rating: parseInt(document.getElementById('property-rating').value) || 0,
-                    description: document.getElementById('property-description').value || `${typology} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`
+                    description: document.getElementById('property-description').value || `${typology} - ${bedrooms === 0 ? 'Studio' : `${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`}`
                 };
             } else {
                 // Traditional property types (hotel, resort, etc.)
@@ -171,13 +171,13 @@ function setupGlobalEventListeners() {
                 
                 // Auto-generate description if empty
                 if (!propertyDescriptionInput.value.trim()) {
-                    propertyDescriptionInput.value = `${typology} - ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`;
+                    propertyDescriptionInput.value = `${typology} - ${bedrooms === 0 ? 'Studio' : `${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`}`;
                 }
             } else {
                 // For traditional property types, allow manual entry
                 propertyRoomsInput.readOnly = false;
                 propertyRoomsInput.classList.remove('bg-gray-100');
-                if (propertyDescriptionInput.value.match(/^[TV]\d+ - \d+ bedrooms?$/)) {
+                if (propertyDescriptionInput.value.match(/^[TV]\d+ - (\d+ bedrooms?|Studio)$/)) {
                     propertyDescriptionInput.value = '';
                 }
             }
