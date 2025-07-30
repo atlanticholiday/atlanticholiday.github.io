@@ -1,3 +1,5 @@
+import { collection, addDoc, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 export class OperationsManager {
     constructor(db, userId) {
         this.db = db;
@@ -14,23 +16,53 @@ export class OperationsManager {
     parseCSVFile(csvContent) {
         try {
             const lines = csvContent.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            console.log('Raw CSV lines:', lines.slice(0, 10)); // Debug first 10 lines
             
-            console.log('CSV Headers:', headers);
+            // Handle multi-line headers by joining lines until we have proper header count
+            let headerEndIndex = 0;
+            let combinedHeader = '';
+            
+            // Look for the line that ends the header (has the expected number of commas/fields)
+            for (let i = 0; i < Math.min(10, lines.length); i++) {
+                combinedHeader += lines[i];
+                const headerFields = this.parseCSVLine(combinedHeader);
+                
+                // If we have 8-9 fields, this is likely our complete header
+                if (headerFields.length >= 8) {
+                    headerEndIndex = i;
+                    break;
+                }
+                
+                // Add space for multi-line continuation
+                if (i < lines.length - 1) combinedHeader += ' ';
+            }
+            
+            const headers = this.parseCSVLine(combinedHeader);
+            console.log('Parsed headers:', headers);
             
             const operations = [];
             const errors = [];
 
-            for (let i = 1; i < lines.length; i++) {
+            // Start parsing from after the header
+            for (let i = headerEndIndex + 1; i < lines.length; i++) {
                 try {
                     const line = lines[i];
                     if (!line.trim()) continue; // Skip empty lines
                     
+                    console.log(`Parsing line ${i + 1}:`, line);
+                    
                     // Parse CSV line handling quoted values and commas within quotes
                     const values = this.parseCSVLine(line);
+                    console.log(`Parsed values for line ${i + 1}:`, values);
                     
                     if (values.length < 2) {
-                        errors.push(`Line ${i + 1}: Insufficient data`);
+                        errors.push({
+                            lineNumber: i + 1,
+                            line: line,
+                            error: `Insufficient data: found ${values.length} fields, expected at least 2`,
+                            values: values,
+                            suggestion: 'Check that the line has property name and access code separated by commas'
+                        });
                         continue;
                     }
 
@@ -45,7 +77,8 @@ export class OperationsManager {
                         dronePhotos: values[6]?.trim() || '',
                         wifiAirbnb: values[7]?.trim() || '',
                         wifiSpeed: values[8]?.trim() || '',
-                        importedAt: new Date()
+                        importedAt: new Date(),
+                        originalLine: line // Keep original for debugging
                     };
 
                     // Clean up data
@@ -57,15 +90,39 @@ export class OperationsManager {
 
                     if (operation.propertyName) {
                         operations.push(operation);
+                    } else {
+                        errors.push({
+                            lineNumber: i + 1,
+                            line: line,
+                            error: 'Property name is empty',
+                            values: values,
+                            suggestion: 'Make sure the first field contains the property name'
+                        });
                     }
                 } catch (error) {
-                    errors.push(`Line ${i + 1}: ${error.message}`);
+                    errors.push({
+                        lineNumber: i + 1,
+                        line: lines[i],
+                        error: `Parsing error: ${error.message}`,
+                        values: [],
+                        suggestion: 'Check for malformed quotes or special characters'
+                    });
                 }
             }
 
+            console.log(`Parsed ${operations.length} operations with ${errors.length} errors`);
             return { operations, errors };
         } catch (error) {
-            return { operations: [], errors: [`Failed to parse CSV: ${error.message}`] };
+            return { 
+                operations: [], 
+                errors: [{ 
+                    lineNumber: 0, 
+                    line: '', 
+                    error: `Failed to parse CSV: ${error.message}`,
+                    values: [],
+                    suggestion: 'Check that the file is a valid CSV format'
+                }] 
+            };
         }
     }
 
@@ -164,11 +221,311 @@ export class OperationsManager {
         this.operationsData = operations;
         this.filteredData = [...operations];
         this.renderOperations();
+        
+        // Show save buttons and status section when data is loaded
+        if (operations.length > 0) {
+            const saveBtn = document.getElementById('save-operations-btn');
+            const linkBtn = document.getElementById('link-to-properties-btn');
+            const statusSection = document.getElementById('operations-status-section');
+            
+            if (saveBtn) saveBtn.classList.remove('hidden');
+            if (linkBtn) linkBtn.classList.remove('hidden');
+            if (statusSection) statusSection.classList.remove('hidden');
+            
+            this.updateDataStatus('Session data loaded - not yet saved');
+        }
+    }
+
+    updateDataStatus(status) {
+        const statusText = document.getElementById('data-status-text');
+        if (statusText) {
+            statusText.textContent = status;
+        }
+    }
+
+    async saveOperationsToDatabase() {
+        if (!this.db || this.operationsData.length === 0) {
+            showToast('No data to save or database not available', 'error');
+            return;
+        }
+
+        try {
+            const saveBtn = document.getElementById('save-operations-btn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+
+            // Save to Firebase operations collection
+            const operationsRef = collection(this.db, "operations");
+            
+            let savedCount = 0;
+            for (const operation of this.operationsData) {
+                try {
+                    // Check if this operation already exists
+                    const existingQuery = await getDocs(query(
+                        operationsRef, 
+                        where("propertyName", "==", operation.propertyName),
+                        where("userId", "==", this.userId)
+                    ));
+
+                    if (existingQuery.empty) {
+                        // Save new operation
+                        await addDoc(operationsRef, {
+                            ...operation,
+                            userId: this.userId,
+                            savedAt: new Date(),
+                            version: 1
+                        });
+                        savedCount++;
+                    } else {
+                        // Update existing operation
+                        const docRef = existingQuery.docs[0].ref;
+                        await updateDoc(docRef, {
+                            ...operation,
+                            userId: this.userId,
+                            savedAt: new Date(),
+                            version: (existingQuery.docs[0].data().version || 0) + 1
+                        });
+                        savedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to save operation for ${operation.propertyName}:`, error);
+                }
+            }
+
+            this.updateDataStatus(`Saved to database (${savedCount} properties)`);
+            
+            // Update last saved time
+            const lastSavedInfo = document.getElementById('last-saved-info');
+            const lastSavedTime = document.getElementById('last-saved-time');
+            if (lastSavedInfo && lastSavedTime) {
+                lastSavedInfo.classList.remove('hidden');
+                lastSavedTime.textContent = new Date().toLocaleString();
+            }
+
+            showToast(`Successfully saved ${savedCount} operational records!`);
+
+        } catch (error) {
+            console.error('Error saving operations:', error);
+            showToast('Failed to save operational data', 'error');
+            this.updateDataStatus('Save failed - still session data only');
+        } finally {
+            const saveBtn = document.getElementById('save-operations-btn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Save to Database
+                `;
+            }
+        }
+    }
+
+    async linkToProperties() {
+        if (!this.operationsData.length) {
+            showToast('No operational data to link', 'error');
+            return;
+        }
+
+        try {
+            const linkBtn = document.getElementById('link-to-properties-btn');
+            if (linkBtn) {
+                linkBtn.disabled = true;
+                linkBtn.textContent = 'Linking...';
+            }
+
+            // Get existing properties from the properties collection
+            const propertiesRef = collection(this.db, "properties");
+            const propertiesSnap = await getDocs(propertiesRef);
+            const existingProperties = propertiesSnap.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            let linkedCount = 0;
+            const linkResults = [];
+
+            for (const operation of this.operationsData) {
+                // Try to find matching property by name (fuzzy matching)
+                const matchedProperty = existingProperties.find(prop => 
+                    this.fuzzyMatch(prop.name, operation.propertyName)
+                );
+
+                if (matchedProperty) {
+                    try {
+                        // Update the property with operational data
+                        const propertyRef = doc(this.db, "properties", matchedProperty.id);
+                        await updateDoc(propertyRef, {
+                            // Add operational fields
+                            accessCode: operation.accessCode,
+                            operationalFloor: operation.floor,
+                            operationalParking: operation.parkingSpot,
+                            operationalHeating: operation.heating,
+                            operationalSmartTV: operation.smartTV,
+                            operationalDronePhotos: operation.dronePhotos,
+                            operationalWifiAirbnb: operation.wifiAirbnb,
+                            operationalWifiSpeed: operation.wifiSpeed,
+                            operationsLinkedAt: new Date(),
+                            operationsSource: 'csv_import'
+                        });
+
+                        linkedCount++;
+                        linkResults.push({
+                            operationName: operation.propertyName,
+                            propertyName: matchedProperty.name,
+                            status: 'linked'
+                        });
+                    } catch (error) {
+                        console.error(`Failed to link ${operation.propertyName}:`, error);
+                        linkResults.push({
+                            operationName: operation.propertyName,
+                            propertyName: matchedProperty.name,
+                            status: 'error'
+                        });
+                    }
+                } else {
+                    linkResults.push({
+                        operationName: operation.propertyName,
+                        propertyName: 'No match found',
+                        status: 'unmatched'
+                    });
+                }
+            }
+
+            // Show results
+            this.showLinkingResults(linkResults, linkedCount);
+
+        } catch (error) {
+            console.error('Error linking to properties:', error);
+            showToast('Failed to link to properties', 'error');
+        } finally {
+            const linkBtn = document.getElementById('link-to-properties-btn');
+            if (linkBtn) {
+                linkBtn.disabled = false;
+                linkBtn.innerHTML = `
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Link to Properties
+                `;
+            }
+        }
+    }
+
+    fuzzyMatch(str1, str2) {
+        if (!str1 || !str2) return false;
+        
+        const normalize = (str) => str.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        const normalized1 = normalize(str1);
+        const normalized2 = normalize(str2);
+        
+        // Exact match
+        if (normalized1 === normalized2) return true;
+        
+        // Contains match
+        if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return true;
+        
+        // Similarity threshold (simple implementation)
+        const similarity = this.calculateSimilarity(normalized1, normalized2);
+        return similarity > 0.8;
+    }
+
+    calculateSimilarity(str1, str2) {
+        const longer = str1.length > str2.length ? str1 : str2;
+        const shorter = str1.length > str2.length ? str2 : str1;
+        
+        if (longer.length === 0) return 1.0;
+        
+        const editDistance = this.levenshteinDistance(longer, shorter);
+        return (longer.length - editDistance) / longer.length;
+    }
+
+    levenshteinDistance(str1, str2) {
+        const matrix = Array(str2.length + 1).fill().map(() => Array(str1.length + 1).fill(0));
+        
+        for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+        for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+        
+        for (let j = 1; j <= str2.length; j++) {
+            for (let i = 1; i <= str1.length; i++) {
+                const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(
+                    matrix[j][i - 1] + 1,
+                    matrix[j - 1][i] + 1,
+                    matrix[j - 1][i - 1] + cost
+                );
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
+    }
+
+    showLinkingResults(results, linkedCount) {
+        const modal = this.createResultsModal(results, linkedCount);
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+    }
+
+    createResultsModal(results, linkedCount) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4';
+        
+        modal.innerHTML = `
+            <div class="relative w-full max-w-2xl shadow-lg rounded-xl bg-white modal-content">
+                <div class="p-5 border-b flex justify-between items-center">
+                    <h3 class="text-xl font-medium text-gray-900">Property Linking Results</h3>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-5 max-h-96 overflow-y-auto">
+                    <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded">
+                        <div class="font-medium text-green-800">✅ Successfully linked ${linkedCount} properties</div>
+                    </div>
+                    <div class="space-y-2">
+                        ${results.map(result => `
+                            <div class="flex items-center justify-between p-2 rounded border ${
+                                result.status === 'linked' ? 'bg-green-50 border-green-200' :
+                                result.status === 'error' ? 'bg-red-50 border-red-200' :
+                                'bg-yellow-50 border-yellow-200'
+                            }">
+                                <div class="flex-1">
+                                    <div class="font-medium">${result.operationName}</div>
+                                    <div class="text-sm text-gray-600">${result.propertyName}</div>
+                                </div>
+                                <div class="text-sm font-medium ${
+                                    result.status === 'linked' ? 'text-green-600' :
+                                    result.status === 'error' ? 'text-red-600' :
+                                    'text-yellow-600'
+                                }">
+                                    ${result.status === 'linked' ? '✅ Linked' :
+                                      result.status === 'error' ? '❌ Error' :
+                                      '⚠️ No match'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="p-5 border-t flex justify-end">
+                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        return modal;
     }
 
     renderOperations() {
         console.log(`🎨 Rendering operations: ${this.operationsData.length} total, ${this.filteredData.length} filtered`);
         
+        // Apply filtering and sorting
         this.applyFilters();
         
         const operationsGrid = document.getElementById('operations-grid');
@@ -176,15 +533,43 @@ export class OperationsManager {
         const noOperationsMessage = document.getElementById('no-operations-message');
         const operationsCountElement = document.getElementById('operations-count');
         
+        console.log(`🎨 DOM elements found: grid=${!!operationsGrid}, table=${!!operationsTable}, message=${!!noOperationsMessage}`);
+
         // Update count
         if (operationsCountElement) {
             operationsCountElement.textContent = this.filteredData.length;
         }
 
-        if (this.filteredData.length === 0) {
+        if (this.operationsData.length === 0) {
+            console.log("⚠️ No operations found - showing no operations message");
             operationsGrid?.classList.add('hidden');
             operationsTable?.classList.add('hidden');
             noOperationsMessage?.classList.remove('hidden');
+            
+            // Hide save buttons and status when no data
+            const saveBtn = document.getElementById('save-operations-btn');
+            const linkBtn = document.getElementById('link-to-properties-btn');
+            const statusSection = document.getElementById('operations-status-section');
+            
+            if (saveBtn) saveBtn.classList.add('hidden');
+            if (linkBtn) linkBtn.classList.add('hidden');
+            if (statusSection) statusSection.classList.add('hidden');
+            
+            return;
+        }
+
+        if (this.filteredData.length === 0) {
+            console.log("⚠️ No filtered operations found - showing filtered message");
+            operationsGrid?.classList.add('hidden');
+            operationsTable?.classList.add('hidden');
+            noOperationsMessage?.classList.remove('hidden');
+            noOperationsMessage.innerHTML = `
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <p class="text-lg">No properties match your filters</p>
+                <p class="text-sm">Try adjusting your search or filter criteria</p>
+            `;
             return;
         }
 
@@ -439,6 +824,22 @@ export class OperationsManager {
                 this.renderOperations();
             });
         }
+
+        // Save operations button
+        const saveOperationsBtn = document.getElementById('save-operations-btn');
+        if (saveOperationsBtn) {
+            saveOperationsBtn.addEventListener('click', () => {
+                this.saveOperationsToDatabase();
+            });
+        }
+
+        // Link to properties button
+        const linkToPropertiesBtn = document.getElementById('link-to-properties-btn');
+        if (linkToPropertiesBtn) {
+            linkToPropertiesBtn.addEventListener('click', () => {
+                this.linkToProperties();
+            });
+        }
     }
 
     async handleCSVUpload() {
@@ -468,11 +869,30 @@ export class OperationsManager {
             const { operations, errors } = this.parseCSVFile(csvContent);
             
             if (errors.length > 0) {
-                const errorMessages = errors.slice(0, 5).join('<br>');
-                const moreErrors = errors.length > 5 ? `<br>... and ${errors.length - 5} more errors` : '';
-                errorElement.innerHTML = `<div class="text-yellow-600 bg-yellow-50 border border-yellow-200 rounded p-2">
-                    Some parsing errors occurred:<br>${errorMessages}${moreErrors}
-                </div>`;
+                let errorHtml = '<div class="text-yellow-600 bg-yellow-50 border border-yellow-200 rounded p-2">';
+                errorHtml += '<h4 class="font-medium mb-2">Parsing Issues Found:</h4>';
+                
+                // Show first 5 errors in detail
+                const errorsToShow = errors.slice(0, 5);
+                errorsToShow.forEach(err => {
+                    errorHtml += `<div class="mb-2 p-2 bg-white rounded border-l-4 border-yellow-400">`;
+                    errorHtml += `<div class="font-medium">Line ${err.lineNumber}: ${err.error}</div>`;
+                    if (err.values && err.values.length > 0) {
+                        errorHtml += `<div class="text-sm">Found values: ${err.values.map(v => `"${v}"`).join(', ')}</div>`;
+                    }
+                    errorHtml += `<div class="text-sm italic">💡 ${err.suggestion}</div>`;
+                    if (err.line) {
+                        errorHtml += `<div class="text-xs text-gray-600 mt-1 font-mono bg-gray-100 p-1 rounded">${err.line.substring(0, 100)}${err.line.length > 100 ? '...' : ''}</div>`;
+                    }
+                    errorHtml += `</div>`;
+                });
+                
+                if (errors.length > 5) {
+                    errorHtml += `<div class="text-sm mt-2">... and ${errors.length - 5} more similar errors</div>`;
+                }
+                
+                errorHtml += '</div>';
+                errorElement.innerHTML = errorHtml;
             } else {
                 errorElement.innerHTML = '';
             }

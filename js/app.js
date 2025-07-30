@@ -27,6 +27,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         auth = getAuth(app);
         setLogLevel('error');
         
+        // Make copyToClipboard globally available early for all pages
+        window.copyToClipboard = function(text, buttonElement) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Add visual feedback
+                const button = buttonElement || (window.event && window.event.target.closest('button'));
+                if (button) {
+                    const originalHTML = button.innerHTML;
+                    button.innerHTML = `
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    `;
+                    button.classList.add('copy-success');
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalHTML;
+                        button.classList.remove('copy-success');
+                    }, 1500);
+                }
+                
+                console.log('Copied to clipboard:', text);
+                
+                // Show toast notification if function exists
+                if (typeof showToast !== 'undefined') {
+                    showToast('Access code copied to clipboard!');
+                } else {
+                    // Simple fallback notification
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-md text-white text-sm font-medium bg-green-500';
+                    toast.textContent = 'Access code copied!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => document.body.removeChild(toast), 2000);
+                }
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy access code');
+            });
+        };
+        
         // Initialize managers
         dataManager = new DataManager(db);
         holidayCalculator = new HolidayCalculator();
@@ -801,11 +840,17 @@ async function savePropertyChanges() {
     propertyData.floor = document.getElementById('edit-property-floor').value.trim() || null;
     propertyData.wifiSpeed = document.getElementById('edit-property-wifi-speed').value || null;
     propertyData.wifiAirbnb = document.getElementById('edit-property-wifi-airbnb').value;
-    propertyData.parkingSpot = document.getElementById('edit-property-parking-spot').value.trim() || null;
-    propertyData.parkingFloor = document.getElementById('edit-property-parking-floor').value.trim() || null;
-    propertyData.energySource = document.getElementById('edit-property-energy-source').value || null;
-    propertyData.smartTv = document.getElementById('edit-property-smart-tv').value;
     propertyData.status = document.getElementById('edit-property-status').value;
+
+    // Add operational fields - save changes back to database
+    propertyData.accessCode = document.getElementById('edit-property-access-code').value.trim() || null;
+    propertyData.operationalFloor = document.getElementById('edit-property-operational-floor').value.trim() || null;
+    propertyData.operationalParking = document.getElementById('edit-property-operational-parking').value.trim() || null;
+    propertyData.operationalHeating = document.getElementById('edit-property-operational-energy').value || null;
+    propertyData.operationalSmartTv = document.getElementById('edit-property-operational-smart-tv').value || null;
+    propertyData.operationalWifiSpeed = document.getElementById('edit-property-operational-wifi-speed').value || null;
+    propertyData.operationalDronePhotos = document.getElementById('edit-property-drone-photos').value || null;
+    propertyData.operationalWifiAirbnb = document.getElementById('edit-property-operational-wifi-airbnb').value || null;
 
     // Collect amenities
     const amenities = [];

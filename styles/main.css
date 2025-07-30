@@ -1090,3 +1090,222 @@ header h1, header h2, header h3 {
 .copy-success {
     animation: copyFeedback 0.5s ease;
 } 
+
+/* Mobile responsiveness for operations page */
+@media (max-width: 768px) {
+    /* Operations page mobile styles */
+    .operations-page .bg-white.shadow-lg {
+        padding: 1rem;
+        margin: 0.5rem;
+    }
+    
+    .operations-page h1 {
+        font-size: 1.5rem;
+    }
+    
+    .operations-page .grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .operations-page .operation-card {
+        padding: 1rem;
+    }
+    
+    .operations-page .text-lg {
+        font-size: 1rem;
+    }
+    
+    .operations-page .text-base {
+        font-size: 0.875rem;
+    }
+    
+    .operations-page .px-4 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .operations-page .py-3 {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .operations-page .gap-4 {
+        gap: 0.75rem;
+    }
+    
+    .operations-page .mb-4 {
+        margin-bottom: 0.75rem;
+    }
+    
+    .operations-page .text-sm {
+        font-size: 0.75rem;
+    }
+    
+    /* Hide less important columns on mobile */
+    .operations-page .mobile-hide {
+        display: none;
+    }
+    
+    /* Make buttons more touch-friendly */
+    .operations-page button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Adjust grid for smaller screens */
+    .operations-page .operations-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Properties page mobile optimization */
+    .properties-page .property-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .properties-page .access-code-section {
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .properties-page .access-code-section .font-mono {
+        font-size: 1rem;
+        word-break: break-all;
+    }
+    
+    /* Properties table mobile responsiveness */
+    .properties-page table {
+        font-size: 0.75rem;
+    }
+    
+    .properties-page th,
+    .properties-page td {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    /* Hide less critical columns on mobile for properties table */
+    .properties-page .mobile-hide-property {
+        display: none;
+    }
+    
+    /* Stack access code info vertically on mobile */
+    .properties-page .access-code-mobile {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .properties-page .access-code-mobile .font-mono {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Make copy buttons more touch-friendly */
+    .properties-page .copy-btn {
+        min-height: 32px;
+        min-width: 32px;
+        padding: 0.25rem;
+    }
+    
+    /* Optimize property name column for mobile */
+    .properties-page .property-name-mobile {
+        min-width: 120px;
+    }
+    
+    /* Access code column mobile optimization */
+    .properties-page .access-code-column {
+        min-width: 100px;
+        max-width: 140px;
+    }
+    
+    /* Responsive table wrapper */
+    .properties-page .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Make action buttons stack on mobile */
+    .properties-page .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+}
+
+/* Operation card styling */
+.operation-card {
+    transition: all 0.2s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.operation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+.operation-card .access-code-highlight {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 4px solid #3b82f6;
+}
+
+/* Copy success animation */
+.copy-success {
+    background-color: #10b981 !important;
+    color: white !important;
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+}
+
+/* Properties page specific access code styling */
+.properties-page .access-code-section {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 4px solid #3b82f6;
+    transition: all 0.2s ease;
+}
+
+.properties-page .access-code-section:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.properties-page .property-card.border-l-blue-500 {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    border-left-width: 4px;
+}
+
+/* Mobile-specific table responsiveness for properties */
+@media (max-width: 640px) {
+    .properties-page table {
+        min-width: 600px; /* Allow horizontal scroll but keep readability */
+    }
+    
+    .properties-page .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    /* Priority columns that should always be visible */
+    .properties-page .col-priority-1 {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 10;
+        min-width: 140px;
+    }
+    
+    .properties-page .col-priority-2 {
+        min-width: 120px;
+    }
+    
+    /* Less priority columns that can be smaller */
+    .properties-page .col-priority-3 {
+        min-width: 80px;
+    }
+    
+    .properties-page .col-priority-4 {
+        min-width: 60px;
+    }
+} 
