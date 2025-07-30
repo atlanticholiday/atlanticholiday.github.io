@@ -1,9 +1,8 @@
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class PropertiesManager {
-    constructor(db, userId) {
+    constructor(db) {
         this.db = db;
-        this.userId = userId;
         this.properties = [];
         this.filteredProperties = [];
         this.unsubscribe = null;
@@ -20,10 +19,14 @@ export class PropertiesManager {
         
         // Initialize event listeners after DOM is loaded
         setTimeout(() => this.initializeEventListeners(), 100);
+        
+        // Start listening for property changes immediately
+        console.log("🏠 PropertiesManager initialized - starting to listen for properties");
+        this.listenForPropertyChanges();
     }
 
     getPropertiesCollectionRef() {
-        return collection(this.db, `users/${this.userId}/properties`);
+        return collection(this.db, "properties");
     }
 
     async addProperty(propertyData) {
@@ -42,7 +45,7 @@ export class PropertiesManager {
 
     async updateProperty(propertyId, updates) {
         try {
-            const propertyRef = doc(this.db, `users/${this.userId}/properties`, propertyId);
+            const propertyRef = doc(this.db, "properties", propertyId);
             await updateDoc(propertyRef, {
                 ...updates,
                 updatedAt: new Date()
@@ -55,7 +58,7 @@ export class PropertiesManager {
 
     async deleteProperty(propertyId) {
         try {
-            const propertyRef = doc(this.db, `users/${this.userId}/properties`, propertyId);
+            const propertyRef = doc(this.db, "properties", propertyId);
             await deleteDoc(propertyRef);
         } catch (error) {
             console.error('Error deleting property:', error);
@@ -68,16 +71,28 @@ export class PropertiesManager {
             this.unsubscribe();
         }
 
+        console.log("🔄 Starting to listen for property changes in shared collection...");
         this.unsubscribe = onSnapshot(this.getPropertiesCollectionRef(), (snapshot) => {
+            console.log(`📋 Received ${snapshot.docs.length} properties from shared collection`);
             this.properties = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+            
+            // Log properties for debugging
+            if (this.properties.length > 0) {
+                console.log("📋 Properties loaded:", this.properties.map(p => `${p.name} (${p.location})`));
+            } else {
+                console.log("⚠️ No properties found in shared collection");
+            }
+            
             // Initialize filtered properties on first load
             if (this.filteredProperties.length === 0) {
                 this.filteredProperties = [...this.properties];
             }
             this.renderProperties();
+        }, (error) => {
+            console.error("❌ Error listening for property changes:", error);
         });
     }
 
@@ -89,6 +104,8 @@ export class PropertiesManager {
     }
 
     renderProperties() {
+        console.log(`🎨 Rendering properties: ${this.properties.length} total, ${this.filteredProperties.length} filtered`);
+        
         // Apply filtering and sorting
         this.applyFiltersAndSort();
         
@@ -97,6 +114,8 @@ export class PropertiesManager {
         const noPropertiesMessage = document.getElementById('no-properties-message');
         const propertyCountElement = document.getElementById('property-count');
         const filteredCountElement = document.getElementById('filtered-count');
+        
+        console.log(`🎨 DOM elements found: grid=${!!propertiesGrid}, table=${!!propertiesTable}, message=${!!noPropertiesMessage}`);
 
         // Update property counts
         if (propertyCountElement) {
@@ -118,6 +137,7 @@ export class PropertiesManager {
         }
 
         if (this.properties.length === 0) {
+            console.log("⚠️ No properties found - showing no properties message");
             propertiesGrid.classList.add('hidden');
             propertiesTable.classList.add('hidden');
             noPropertiesMessage.classList.remove('hidden');
@@ -125,6 +145,7 @@ export class PropertiesManager {
         }
 
         if (this.filteredProperties.length === 0) {
+            console.log("⚠️ No filtered properties found - showing filtered message");
             propertiesGrid.classList.add('hidden');
             propertiesTable.classList.add('hidden');
             noPropertiesMessage.classList.remove('hidden');

@@ -47,10 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
-                // Update dataManager with userId
-                dataManager.setUserId(userId);
-                // Initialize properties manager with user context
-                propertiesManager = new PropertiesManager(db, userId);
+                // Initialize properties manager for shared properties
+                propertiesManager = new PropertiesManager(db);
                 navigationManager.showLandingPage();
                 setupApp();
             } else {
@@ -568,11 +566,6 @@ async function setupApp() {
 
 async function initializeScheduleApp() {
     try {
-        // Ensure dataManager has the correct userId
-        if (!dataManager.userId && userId) {
-            dataManager.setUserId(userId);
-        }
-        
         const employeesSnap = await getDocs(dataManager.getEmployeesCollectionRef());
         const hasEmployees = employeesSnap.docs.some(doc => doc.id !== 'metadata');
         
@@ -598,4 +591,178 @@ async function initializeScheduleApp() {
         console.error('Error initializing schedule app:', error);
         navigationManager.showSetupPage();
     }
-} 
+}
+
+// Property Migration Functions - Available globally
+window.migratePropertiesToShared = async function() {
+    if (!db) {
+        console.error("❌ Database not initialized. Please log in first.");
+        return;
+    }
+    
+    console.log("🔄 Starting property migration to shared collection...");
+    
+    let totalMigrated = 0;
+    let errors = [];
+    
+    try {
+        // Get all user documents  
+        const usersRef = collection(db, "users");
+        const userSnapshots = await getDocs(usersRef);
+        
+        console.log(`📁 Found ${userSnapshots.docs.length} user collections`);
+        
+        for (const userDoc of userSnapshots.docs) {
+            const userId = userDoc.id;
+            console.log(`\n👤 Checking user: ${userId}`);
+            
+            try {
+                // Get properties for this user
+                const userPropertiesRef = collection(db, `users/${userId}/properties`);
+                const propertySnapshots = await getDocs(userPropertiesRef);
+                
+                console.log(`  📋 Found ${propertySnapshots.docs.length} properties`);
+                
+                for (const propertyDoc of propertySnapshots.docs) {
+                    try {
+                        const propertyData = propertyDoc.data();
+                        
+                        // Add to shared collection
+                        await addDoc(collection(db, "properties"), {
+                            ...propertyData,
+                            migratedFrom: userId,
+                            migratedAt: new Date()
+                        });
+                        
+                        totalMigrated++;
+                        console.log(`  ✅ Migrated: ${propertyData.name}`);
+                        
+                    } catch (error) {
+                        errors.push(`Error migrating property ${propertyDoc.id} from user ${userId}: ${error.message}`);
+                        console.error(`  ❌ Error migrating property:`, error);
+                    }
+                }
+                
+            } catch (error) {
+                console.log(`  ⚠️  No properties collection for user ${userId}`);
+            }
+        }
+        
+        console.log(`\n🎉 Migration complete!`);
+        console.log(`✅ Total properties migrated: ${totalMigrated}`);
+        
+        if (errors.length > 0) {
+            console.log(`❌ Errors encountered: ${errors.length}`);
+            errors.forEach(error => console.error(error));
+        }
+        
+        // Refresh the properties view
+        if (propertiesManager) {
+            console.log("🔄 Refreshing properties view...");
+            propertiesManager.listenForPropertyChanges();
+        }
+        
+        return { success: true, migrated: totalMigrated, errors };
+        
+    } catch (error) {
+        console.error("💥 Migration failed:", error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Check what properties would be migrated (dry run)
+window.checkPropertiesForMigration = async function() {
+    if (!db) {
+        console.error("❌ Database not initialized. Please log in first.");
+        return;
+    }
+    
+    console.log("🔍 Checking properties for migration (dry run)...");
+    
+    let totalProperties = 0;
+    const userProperties = {};
+    
+    try {
+        const usersRef = collection(db, "users");
+        const userSnapshots = await getDocs(usersRef);
+        
+        for (const userDoc of userSnapshots.docs) {
+            const userId = userDoc.id;
+            
+            try {
+                const userPropertiesRef = collection(db, `users/${userId}/properties`);
+                const propertySnapshots = await getDocs(userPropertiesRef);
+                
+                if (propertySnapshots.docs.length > 0) {
+                    userProperties[userId] = propertySnapshots.docs.map(doc => ({
+                        id: doc.id,
+                        name: doc.data().name,
+                        location: doc.data().location
+                    }));
+                    totalProperties += propertySnapshots.docs.length;
+                }
+                
+            } catch (error) {
+                // User has no properties collection
+            }
+        }
+        
+        console.log(`📊 Migration Summary:`);
+        console.log(`Total properties to migrate: ${totalProperties}`);
+        console.log(`Users with properties:`, Object.keys(userProperties).length);
+        
+        Object.entries(userProperties).forEach(([userId, properties]) => {
+            console.log(`\n👤 ${userId}: ${properties.length} properties`);
+            properties.forEach(prop => console.log(`  - ${prop.name} (${prop.location})`));
+        });
+        
+        return { totalProperties, userProperties };
+        
+    } catch (error) {
+        console.error("Error checking properties:", error);
+        return { error: error.message };
+    }
+};
+
+// Force refresh properties view
+window.refreshPropertiesView = function() {
+    if (!propertiesManager) {
+        console.error("❌ Properties manager not initialized. Please log in first.");
+        return;
+    }
+    
+    console.log("🔄 Force refreshing properties view...");
+    propertiesManager.listenForPropertyChanges();
+};
+
+// Debug function to check shared properties collection directly
+window.checkSharedProperties = async function() {
+    if (!db) {
+        console.error("❌ Database not initialized. Please log in first.");
+        return;
+    }
+    
+    console.log("🔍 Checking shared properties collection directly...");
+    
+    try {
+        const sharedPropertiesRef = collection(db, "properties");
+        const snapshot = await getDocs(sharedPropertiesRef);
+        
+        console.log(`📋 Found ${snapshot.docs.length} properties in shared collection:`);
+        
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            console.log(`  ✅ ${data.name} - ${data.location} (ID: ${doc.id})`);
+        });
+        
+        if (snapshot.docs.length === 0) {
+            console.log("⚠️ No properties found in shared collection. Run migratePropertiesToShared() first.");
+        }
+        
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+    } catch (error) {
+        console.error("❌ Error checking shared properties:", error);
+        return { error: error.message };
+    }
+}; 

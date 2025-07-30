@@ -33,10 +33,7 @@ export class DataManager {
     }
 
     getEmployeesCollectionRef() {
-        if (!this.userId) {
-            throw new Error('User ID is required to access employees collection');
-        }
-        return collection(this.db, `users/${this.userId}/employees`);
+        return collection(this.db, "employees");
     }
 
     setOnDataChangeCallback(callback) {
@@ -224,7 +221,7 @@ export class DataManager {
     }
 
     async initializeDatabase() {
-        await setDoc(doc(this.db, "employees/metadata"), { initialized: true });
+        await setDoc(doc(this.db, "employees", 'metadata'), { initialized: true });
         this.listenForEmployeeChanges();
     }
 

@@ -31,7 +31,7 @@ export class EventManager {
         });
         
         document.getElementById('start-fresh-btn').addEventListener('click', () => {
-            setDoc(doc(this.dataManager.db, `users/${this.dataManager.userId}/employees`, 'metadata'), { initialized: true });
+            setDoc(doc(this.dataManager.db, 'employees', 'metadata'), { initialized: true });
             // Navigate back to schedule page and initialize
             const event = new CustomEvent('schedulePageOpened');
             document.dispatchEvent(event);
