@@ -4,6 +4,7 @@ export class NavigationManager {
         this.pages = {
             landing: 'landing-page',
             properties: 'properties-page',
+            operations: 'operations-page',
             schedule: 'app-content',
             login: 'login-screen',
             setup: 'setup-screen'
@@ -35,6 +36,10 @@ export class NavigationManager {
         this.showPage('properties');
     }
 
+    showOperationsPage() {
+        this.showPage('operations');
+    }
+
     showSchedulePage() {
         this.showPage('schedule');
     }
@@ -54,6 +59,7 @@ export class NavigationManager {
     setupNavigationListeners() {
         // Landing page navigation
         const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
+        const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         
         if (goToPropertiesBtn) {
@@ -61,6 +67,15 @@ export class NavigationManager {
                 this.showPropertiesPage();
                 // Trigger properties page initialization if needed
                 const event = new CustomEvent('propertiesPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (goToOperationsBtn) {
+            goToOperationsBtn.addEventListener('click', () => {
+                this.showOperationsPage();
+                // Trigger operations page initialization if needed
+                const event = new CustomEvent('operationsPageOpened');
                 document.dispatchEvent(event);
             });
         }
@@ -76,10 +91,17 @@ export class NavigationManager {
 
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
+        const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
         
         if (backToLandingBtn) {
             backToLandingBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromOperationsBtn) {
+            backToLandingFromOperationsBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }
@@ -93,6 +115,7 @@ export class NavigationManager {
         // Sign out buttons
         const landingSignOutBtn = document.getElementById('landing-sign-out-btn');
         const propertiesSignOutBtn = document.getElementById('properties-sign-out-btn');
+        const operationsSignOutBtn = document.getElementById('operations-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -103,6 +126,13 @@ export class NavigationManager {
 
         if (propertiesSignOutBtn) {
             propertiesSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (operationsSignOutBtn) {
+            operationsSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

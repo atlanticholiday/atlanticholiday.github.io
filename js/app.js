@@ -10,13 +10,14 @@ import { HolidayCalculator } from './holiday-calculator.js';
 import { EventManager } from './event-manager.js';
 import { NavigationManager } from './navigation-manager.js';
 import { PropertiesManager } from './properties-manager.js';
+import { OperationsManager } from './operations-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
 let unsubscribe = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 userId = user.uid;
                 // Initialize properties manager for shared properties
                 propertiesManager = new PropertiesManager(db);
+                operationsManager = new OperationsManager(db, userId); // Initialize operations manager
                 navigationManager.showLandingPage();
                 setupApp();
                 
@@ -61,6 +63,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (propertiesManager) {
                     propertiesManager.stopListening();
                     propertiesManager = null;
+                }
+                if (operationsManager) {
+                    operationsManager.stopListening();
+                    operationsManager = null;
                 }
             }
         });
@@ -108,6 +114,14 @@ function setupGlobalEventListeners() {
             navigationManager.showLandingPage();
         });
     }
+
+    // Operations page event listeners
+    document.addEventListener('operationsPageOpened', () => {
+        if (operationsManager) {
+            console.log('Operations page opened, initializing...');
+            // Initialize operations page if needed
+        }
+    });
 
     // Properties management toggle buttons
     const quickAddToggleBtn = document.getElementById('quick-add-toggle-btn');
