@@ -80,20 +80,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn') {
-            signOut();
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn') {
+            signOut(auth);
         }
     });
 
     // Landing page navigation
     const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
+    const goToOperationsBtn = document.getElementById('go-to-operations-btn');
     const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
     const backToLandingBtn = document.getElementById('back-to-landing-btn');
+    const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
     const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
 
     if (goToPropertiesBtn) {
         goToPropertiesBtn.addEventListener('click', () => {
             navigationManager.showPropertiesPage();
+        });
+    }
+
+    if (goToOperationsBtn) {
+        goToOperationsBtn.addEventListener('click', () => {
+            navigationManager.showOperationsPage();
         });
     }
 
@@ -109,6 +117,12 @@ function setupGlobalEventListeners() {
         });
     }
 
+    if (backToLandingFromOperationsBtn) {
+        backToLandingFromOperationsBtn.addEventListener('click', () => {
+            navigationManager.showLandingPage();
+        });
+    }
+
     if (backToLandingFromScheduleBtn) {
         backToLandingFromScheduleBtn.addEventListener('click', () => {
             navigationManager.showLandingPage();
@@ -119,8 +133,22 @@ function setupGlobalEventListeners() {
     document.addEventListener('operationsPageOpened', () => {
         if (operationsManager) {
             console.log('Operations page opened, initializing...');
-            // Initialize operations page if needed
+            setTimeout(() => {
+                try {
+                    operationsManager.initializeEventListeners();
+                } catch (error) {
+                    console.error('Error initializing operations manager:', error);
+                }
+            }, 100);
         }
+    });
+
+    // Schedule page event listeners
+    document.addEventListener('schedulePageOpened', () => {
+        console.log('Schedule page opened, initializing...');
+        setTimeout(() => {
+            initializeScheduleApp();
+        }, 100); // Small delay to ensure DOM is ready
     });
 
     // Properties management toggle buttons
@@ -819,12 +847,24 @@ async function setupApp() {
 
 async function initializeScheduleApp() {
     try {
+        console.log('🔄 Initializing schedule app...');
+        
+        if (!dataManager) {
+            console.error('❌ DataManager not available');
+            return;
+        }
+        
         const employeesSnap = await getDocs(dataManager.getEmployeesCollectionRef());
         const hasEmployees = employeesSnap.docs.some(doc => doc.id !== 'metadata');
         
+        console.log(`📊 Found ${employeesSnap.docs.length} employee documents, hasEmployees: ${hasEmployees}`);
+        
         if (!hasEmployees) {
+            console.log('📝 No employees found, showing setup page');
             navigationManager.showSetupPage();
         } else {
+            console.log('👥 Employees found, initializing main schedule app');
+            
             // Start listening for employee changes
             dataManager.listenForEmployeeChanges();
             
@@ -832,16 +872,23 @@ async function initializeScheduleApp() {
             const loadingEl = document.getElementById('loading');
             const mainAppEl = document.getElementById('main-app');
             
+            console.log(`🎯 DOM elements: loading=${!!loadingEl}, mainApp=${!!mainAppEl}`);
+            
             if (loadingEl) loadingEl.classList.add('hidden');
             if (mainAppEl) mainAppEl.classList.remove('hidden');
             
             // Force UI refresh after a brief delay to ensure holidays are loaded
             setTimeout(() => {
-                uiManager.updateView();
+                if (uiManager) {
+                    console.log('🎨 Updating UI view');
+                    uiManager.updateView();
+                } else {
+                    console.error('❌ UIManager not available');
+                }
             }, 100);
         }
     } catch (error) {
-        console.error('Error initializing schedule app:', error);
+        console.error('💥 Error initializing schedule app:', error);
         navigationManager.showSetupPage();
     }
 }

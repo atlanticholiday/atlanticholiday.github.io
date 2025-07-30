@@ -7,8 +7,8 @@ export class OperationsManager {
         this.currentView = 'cards'; // 'cards' or 'table'
         this.currentSearch = '';
         
-        // Initialize event listeners after DOM is loaded
-        setTimeout(() => this.initializeEventListeners(), 100);
+        // Event listeners will be initialized when operations page is opened
+        console.log('Operations manager created for user:', userId);
     }
 
     parseCSVFile(csvContent) {
@@ -223,7 +223,7 @@ export class OperationsManager {
                         <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm font-medium text-blue-900">Access Code:</span>
-                                <button onclick="copyToClipboard('${operation.accessCode}')" class="text-blue-600 hover:text-blue-800 text-xs" title="Copy to clipboard">
+                                <button onclick="copyToClipboard('${operation.accessCode}', this)" class="text-blue-600 hover:text-blue-800 text-xs" title="Copy to clipboard">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
@@ -305,7 +305,7 @@ export class OperationsManager {
                         ${operation.accessCode ? `
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-sm bg-blue-50 px-2 py-1 rounded">${operation.accessCode}</span>
-                            <button onclick="copyToClipboard('${operation.accessCode}')" class="text-blue-600 hover:text-blue-800" title="Copy">
+                            <button onclick="copyToClipboard('${operation.accessCode}', this)" class="text-blue-600 hover:text-blue-800" title="Copy">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
@@ -341,6 +341,13 @@ export class OperationsManager {
     }
 
     initializeEventListeners() {
+        // Check if we're on the operations page before initializing
+        const operationsPage = document.getElementById('operations-page');
+        if (!operationsPage || operationsPage.classList.contains('hidden')) {
+            console.log('Operations page not active, skipping event listener initialization');
+            return;
+        }
+
         // CSV Import Toggle
         const csvImportToggleBtn = document.getElementById('csv-import-toggle-btn');
         const csvImportSection = document.getElementById('csv-import-section');
@@ -508,36 +515,6 @@ export class OperationsManager {
     }
 }
 
-// Make copy function globally available
-window.copyToClipboard = function(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Add visual feedback
-        const button = event.target.closest('button');
-        if (button) {
-            const originalHTML = button.innerHTML;
-            button.innerHTML = `
-                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-            `;
-            button.classList.add('copy-success');
-            
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.classList.remove('copy-success');
-            }, 1500);
-        }
-        
-        console.log('Copied to clipboard:', text);
-        
-        // Show toast notification (optional)
-        showToast('Access code copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        showToast('Failed to copy access code', 'error');
-    });
-};
-
 // Simple toast notification function
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
@@ -561,4 +538,34 @@ function showToast(message, type = 'success') {
             document.body.removeChild(toast);
         }, 300);
     }, 3000);
-} 
+}
+
+// Make copy function globally available
+window.copyToClipboard = function(text, buttonElement) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Add visual feedback
+        const button = buttonElement || (window.event && window.event.target.closest('button'));
+        if (button) {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = `
+                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            `;
+            button.classList.add('copy-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('copy-success');
+            }, 1500);
+        }
+        
+        console.log('Copied to clipboard:', text);
+        
+        // Show toast notification
+        showToast('Access code copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy access code', 'error');
+    });
+}; 
