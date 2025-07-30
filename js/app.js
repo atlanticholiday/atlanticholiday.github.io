@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 propertiesManager = new PropertiesManager(db);
                 navigationManager.showLandingPage();
                 setupApp();
+                
+                // Auto-migrate properties from user-specific collections to shared collection
+                checkAndMigrateUserProperties();
             } else {
                 userId = null;
                 navigationManager.showLoginPage();
@@ -590,6 +593,64 @@ async function initializeScheduleApp() {
     } catch (error) {
         console.error('Error initializing schedule app:', error);
         navigationManager.showSetupPage();
+    }
+}
+
+// Auto-migration function for current user's properties
+async function checkAndMigrateUserProperties() {
+    if (!db || !userId) {
+        console.log("❌ Database or userId not available for auto-migration");
+        return;
+    }
+    
+    try {
+        console.log(`🔍 Checking for properties to migrate for user: ${userId}`);
+        
+        // Check if user has properties in their personal collection
+        const userPropertiesRef = collection(db, `users/${userId}/properties`);
+        const propertySnapshots = await getDocs(userPropertiesRef);
+        
+        if (propertySnapshots.docs.length === 0) {
+            console.log(`✅ No user-specific properties found for ${userId} - using shared collection`);
+            return;
+        }
+        
+        console.log(`📋 Found ${propertySnapshots.docs.length} user-specific properties - migrating to shared collection...`);
+        
+        let migrated = 0;
+        for (const propertyDoc of propertySnapshots.docs) {
+            try {
+                const propertyData = propertyDoc.data();
+                
+                // Add to shared collection with migration metadata
+                await addDoc(collection(db, "properties"), {
+                    ...propertyData,
+                    migratedFrom: userId,
+                    migratedAt: new Date(),
+                    autoMigrated: true
+                });
+                
+                migrated++;
+                console.log(`  ✅ Auto-migrated: ${propertyData.name || 'Unnamed property'}`);
+                
+            } catch (error) {
+                console.error(`  ❌ Error auto-migrating property ${propertyDoc.id}:`, error);
+            }
+        }
+        
+        if (migrated > 0) {
+            console.log(`🎉 Auto-migration complete! Migrated ${migrated} properties to shared collection`);
+            
+            // Refresh properties view if manager exists
+            if (propertiesManager) {
+                setTimeout(() => {
+                    propertiesManager.listenForPropertyChanges();
+                }, 500);
+            }
+        }
+        
+    } catch (error) {
+        console.error("💥 Auto-migration failed:", error);
     }
 }
 
