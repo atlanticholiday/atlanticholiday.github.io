@@ -596,50 +596,84 @@ async function initializeScheduleApp() {
     }
 }
 
-// Auto-migration function for current user's properties
+// Auto-migration function for ALL user properties
 async function checkAndMigrateUserProperties() {
-    if (!db || !userId) {
-        console.log("❌ Database or userId not available for auto-migration");
+    if (!db) {
+        console.log("❌ Database not available for auto-migration");
         return;
     }
     
     try {
-        console.log(`🔍 Checking for properties to migrate for user: ${userId}`);
+        console.log("🔍 Checking for properties to migrate from ALL user collections...");
         
-        // Check if user has properties in their personal collection
-        const userPropertiesRef = collection(db, `users/${userId}/properties`);
-        const propertySnapshots = await getDocs(userPropertiesRef);
+        // Get all user documents to check for properties in any user collection
+        const usersRef = collection(db, "users");
+        const userSnapshots = await getDocs(usersRef);
         
-        if (propertySnapshots.docs.length === 0) {
-            console.log(`✅ No user-specific properties found for ${userId} - using shared collection`);
-            return;
-        }
+        console.log(`👥 Found ${userSnapshots.docs.length} user collections to check`);
         
-        console.log(`📋 Found ${propertySnapshots.docs.length} user-specific properties - migrating to shared collection...`);
+        let totalMigrated = 0;
         
-        let migrated = 0;
-        for (const propertyDoc of propertySnapshots.docs) {
+        // Load existing properties once for duplicate checking
+        const existingPropertiesRef = collection(db, "properties");
+        const existingSnapshots = await getDocs(existingPropertiesRef);
+        const existingProperties = existingSnapshots.docs.map(doc => doc.data());
+        console.log(`  📊 Found ${existingProperties.length} existing properties in shared collection`);
+        
+        for (const userDoc of userSnapshots.docs) {
+            const userIdToCheck = userDoc.id;
+            
             try {
-                const propertyData = propertyDoc.data();
+                // Check if this user has properties in their personal collection
+                const userPropertiesRef = collection(db, `users/${userIdToCheck}/properties`);
+                const propertySnapshots = await getDocs(userPropertiesRef);
                 
-                // Add to shared collection with migration metadata
-                await addDoc(collection(db, "properties"), {
-                    ...propertyData,
-                    migratedFrom: userId,
-                    migratedAt: new Date(),
-                    autoMigrated: true
-                });
+                if (propertySnapshots.docs.length === 0) {
+                    console.log(`  ✅ No properties found for user: ${userIdToCheck}`);
+                    continue;
+                }
                 
-                migrated++;
-                console.log(`  ✅ Auto-migrated: ${propertyData.name || 'Unnamed property'}`);
+                console.log(`  📋 Found ${propertySnapshots.docs.length} properties for user: ${userIdToCheck} - migrating...`);
+                
+                for (const propertyDoc of propertySnapshots.docs) {
+                    try {
+                        const propertyData = propertyDoc.data();
+                        
+                        // Check if this property was already migrated to avoid duplicates
+                        const alreadyExists = existingProperties.some(existing => {
+                            return existing.name === propertyData.name && 
+                                   existing.location === propertyData.location &&
+                                   existing.migratedFrom === userIdToCheck;
+                        });
+                        
+                        if (alreadyExists) {
+                            console.log(`    ⏭️  Property "${propertyData.name}" already migrated, skipping`);
+                            continue;
+                        }
+                        
+                        // Add to shared collection with migration metadata
+                        await addDoc(collection(db, "properties"), {
+                            ...propertyData,
+                            migratedFrom: userIdToCheck,
+                            migratedAt: new Date(),
+                            autoMigrated: true
+                        });
+                        
+                        totalMigrated++;
+                        console.log(`    ✅ Auto-migrated: ${propertyData.name || 'Unnamed property'}`);
+                        
+                    } catch (error) {
+                        console.error(`    ❌ Error auto-migrating property ${propertyDoc.id}:`, error);
+                    }
+                }
                 
             } catch (error) {
-                console.error(`  ❌ Error auto-migrating property ${propertyDoc.id}:`, error);
+                console.log(`  ⚠️  No properties collection for user ${userIdToCheck} or access denied`);
             }
         }
         
-        if (migrated > 0) {
-            console.log(`🎉 Auto-migration complete! Migrated ${migrated} properties to shared collection`);
+        if (totalMigrated > 0) {
+            console.log(`🎉 Auto-migration complete! Migrated ${totalMigrated} properties total to shared collection`);
             
             // Refresh properties view if manager exists
             if (propertiesManager) {
@@ -647,6 +681,8 @@ async function checkAndMigrateUserProperties() {
                     propertiesManager.listenForPropertyChanges();
                 }, 500);
             }
+        } else {
+            console.log("✅ No new properties to migrate - all users are using shared collection");
         }
         
     } catch (error) {
