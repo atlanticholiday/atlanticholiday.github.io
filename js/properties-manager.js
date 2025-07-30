@@ -236,13 +236,9 @@ export class PropertiesManager {
             };
             return energyLabels[source] || '';
         };
-
-        // Check if property has operational data
-        const hasAccessCode = property.accessCode && property.accessCode.trim();
-        const hasOperationalData = hasAccessCode || property.operationalFloor || property.operationalParking;
         
         return `
-            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow property-card ${hasAccessCode ? 'border-l-4 border-l-blue-500' : ''}">
+            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow property-card">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex-1">
                         <h3 class="text-lg font-semibold text-gray-900 mb-1">${property.name}</h3>
@@ -250,7 +246,6 @@ export class PropertiesManager {
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-xs text-blue-600 uppercase px-3 py-1 bg-blue-50 rounded-full font-medium">${displayType}</span>
                             ${getStatusBadge(property.status || 'available')}
-                            ${hasOperationalData ? '<span class="text-xs text-green-600 px-2 py-1 bg-green-50 rounded-full font-medium">🔑 Ops Data</span>' : ''}
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -266,21 +261,6 @@ export class PropertiesManager {
                         </button>
                     </div>
                 </div>
-
-                ${hasAccessCode ? `
-                <!-- Access Code Section -->
-                <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-blue-900">🔑 Access Code:</span>
-                        <button onclick="copyToClipboard('${property.accessCode}', this)" class="text-blue-600 hover:text-blue-800 text-xs" title="Copy to clipboard">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="text-blue-800 font-mono text-lg mt-1">${property.accessCode}</div>
-                </div>
-                ` : ''}
                 
                 <!-- Property Details Grid -->
                 <div class="bg-gray-50 rounded-lg p-4 mb-4">
@@ -295,16 +275,16 @@ export class PropertiesManager {
                             <span class="ml-2 font-medium">${property.bathrooms}</span>
                         </div>
                         ` : ''}
-                        ${(property.floor || property.operationalFloor) ? `
+                        ${property.floor ? `
                         <div class="flex items-center">
                             <span class="text-gray-500 min-w-0 truncate">Floor:</span>
-                            <span class="ml-2 font-medium">${property.operationalFloor || property.floor}</span>
+                            <span class="ml-2 font-medium">${property.floor}</span>
                         </div>
                         ` : ''}
-                        ${(property.parkingSpot || property.operationalParking) ? `
+                        ${property.parkingSpot ? `
                         <div class="flex items-center">
                             <span class="text-gray-500 min-w-0 truncate">Parking:</span>
-                            <span class="ml-2 font-medium">${property.operationalParking || property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}</span>
+                            <span class="ml-2 font-medium">${property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -312,30 +292,23 @@ export class PropertiesManager {
                 
                 <!-- Tech & Features -->
                 <div class="space-y-2 text-sm">
-                    ${getWifiDisplay(property.operationalWifiSpeed || property.wifiSpeed) ? `
+                    ${getWifiDisplay(property.wifiSpeed) ? `
                     <div class="flex items-center justify-between">
-                        <span>${getWifiDisplay(property.operationalWifiSpeed || property.wifiSpeed)}</span>
-                        ${(property.operationalWifiAirbnb || property.wifiAirbnb) === 'yes' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Listed on Airbnb</span>' : ''}
-                        ${(property.operationalWifiAirbnb || property.wifiAirbnb) === 'featured' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">⭐ Featured</span>' : ''}
+                        <span>${getWifiDisplay(property.wifiSpeed)}</span>
+                        ${property.wifiAirbnb === 'yes' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Listed on Airbnb</span>' : ''}
+                        ${property.wifiAirbnb === 'featured' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">⭐ Featured</span>' : ''}
                     </div>
                     ` : ''}
                     
                     <div class="flex items-center justify-between">
-                        ${getEnergyDisplay(property.operationalHeating || property.energySource) ? `<span>${getEnergyDisplay(property.operationalHeating || property.energySource)}</span>` : '<span class="text-gray-400">Energy: Not specified</span>'}
-                        ${(property.operationalSmartTV || property.smartTv) === 'yes' ? '<span class="text-sm">📺 Smart TV</span>' : ''}
-                        ${(property.operationalSmartTV || property.smartTv) === 'multiple' ? '<span class="text-sm">📺 Multiple TVs</span>' : ''}
+                        ${getEnergyDisplay(property.energySource) ? `<span>${getEnergyDisplay(property.energySource)}</span>` : '<span class="text-gray-400">Energy: Not specified</span>'}
+                        ${property.smartTv === 'yes' ? '<span class="text-sm">📺 Smart TV</span>' : ''}
+                        ${property.smartTv === 'multiple' ? '<span class="text-sm">📺 Multiple TVs</span>' : ''}
                     </div>
-
-                    ${property.operationalDronePhotos ? `
-                    <div class="flex items-center">
-                        <span class="text-sm">📸 Drone Photos: ${property.operationalDronePhotos}</span>
-                    </div>
-                    ` : ''}
                 </div>
                 
-                <div class="pt-3 mt-4 border-t border-gray-100 text-xs text-gray-500 flex justify-between">
-                    <span>Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}</span>
-                    ${property.operationsLinkedAt ? `<span class="text-green-600">🔗 Ops linked ${new Date(property.operationsLinkedAt?.toDate?.() || property.operationsLinkedAt).toLocaleDateString()}</span>` : ''}
+                <div class="pt-3 mt-4 border-t border-gray-100 text-xs text-gray-500">
+                    Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}
                 </div>
             </div>
         `;
@@ -353,29 +326,29 @@ export class PropertiesManager {
         tableBody.innerHTML = tableData.map(property => {
             const displayType = property.typology || property.type;
             
-            // Format values for table display - prioritize operational data
-            const floor = property.operationalFloor || property.floor || '-';
-            const parking = (property.operationalParking || property.parkingSpot) 
-                ? `${property.operationalParking || property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}`
+            // Format values for table display
+            const floor = property.floor || '-';
+            const parking = property.parkingSpot 
+                ? `${property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}`
                 : '-';
             
-            const wifiSpeed = (property.operationalWifiSpeed || property.wifiSpeed) 
-                ? (property.operationalWifiSpeed || property.wifiSpeed).charAt(0).toUpperCase() + (property.operationalWifiSpeed || property.wifiSpeed).slice(1)
+            const wifiSpeed = property.wifiSpeed 
+                ? property.wifiSpeed.charAt(0).toUpperCase() + property.wifiSpeed.slice(1)
                 : '-';
             
-            const wifiAirbnb = (property.operationalWifiAirbnb || property.wifiAirbnb) === 'yes' 
+            const wifiAirbnb = property.wifiAirbnb === 'yes' 
                 ? '✓' 
-                : (property.operationalWifiAirbnb || property.wifiAirbnb) === 'featured' 
+                : property.wifiAirbnb === 'featured' 
                 ? '⭐' 
                 : '-';
             
-            const energy = (property.operationalHeating || property.energySource) 
-                ? (property.operationalHeating || property.energySource).charAt(0).toUpperCase() + (property.operationalHeating || property.energySource).slice(1)
+            const energy = property.energySource 
+                ? property.energySource.charAt(0).toUpperCase() + property.energySource.slice(1)
                 : '-';
             
-            const smartTv = (property.operationalSmartTV || property.smartTv) === 'yes' 
+            const smartTv = property.smartTv === 'yes' 
                 ? '✓' 
-                : (property.operationalSmartTV || property.smartTv) === 'multiple' 
+                : property.smartTv === 'multiple' 
                 ? '✓✓' 
                 : '-';
             
@@ -390,8 +363,7 @@ export class PropertiesManager {
             
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
-            const hasAccessCode = property.accessCode && property.accessCode.trim();
-            const rowClass = hasMissingInfo ? 'bg-red-50' : hasAccessCode ? 'bg-blue-50' : '';
+            const rowClass = hasMissingInfo ? 'bg-red-50' : '';
             
             return `
                 <tr class="hover:bg-gray-50 transition-colors ${rowClass}">
@@ -399,19 +371,6 @@ export class PropertiesManager {
                         <div class="font-medium text-gray-900">${property.name}</div>
                         <div class="text-sm text-gray-500">${property.location}</div>
                         ${property.bathrooms ? `<div class="text-xs text-gray-400">${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</div>` : ''}
-                        ${hasAccessCode ? '<div class="text-xs text-blue-600 font-medium">🔑 Access Code Available</div>' : ''}
-                    </td>
-                    <td class="px-4 py-3 border-b">
-                        ${hasAccessCode ? `
-                        <div class="flex items-center gap-2">
-                            <span class="font-mono text-sm bg-blue-100 px-2 py-1 rounded">${property.accessCode}</span>
-                            <button onclick="copyToClipboard('${property.accessCode}', this)" class="text-blue-600 hover:text-blue-800" title="Copy">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </button>
-                        </div>
-                        ` : '<span class="text-gray-400 text-sm">Not available</span>'}
                     </td>
                     <td class="px-4 py-3 border-b">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-blue-800 bg-blue-100">
@@ -431,7 +390,6 @@ export class PropertiesManager {
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
                             ${status.charAt(0).toUpperCase() + status.slice(1)}
                         </span>
-                        ${property.operationsLinkedAt ? '<div class="text-xs text-green-600 mt-1">🔗 Ops linked</div>' : ''}
                     </td>
                     <td class="px-4 py-3 border-b">
                         <div class="flex items-center gap-2">
