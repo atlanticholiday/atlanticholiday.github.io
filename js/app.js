@@ -73,35 +73,205 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function setupGlobalEventListeners() {
     // Sign out event listener
-    document.addEventListener('signOutRequested', () => {
-        signOut(auth);
-    });
-    
-    // Properties page opened event listener
-    document.addEventListener('propertiesPageOpened', () => {
-        if (propertiesManager) {
-            propertiesManager.listenForPropertyChanges();
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn') {
+            signOut();
         }
     });
-    
-    // Schedule page opened event listener
-    document.addEventListener('schedulePageOpened', async () => {
-        try {
+
+    // Landing page navigation
+    const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
+    const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
+    const backToLandingBtn = document.getElementById('back-to-landing-btn');
+    const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
+
+    if (goToPropertiesBtn) {
+        goToPropertiesBtn.addEventListener('click', () => {
+            navigationManager.showPropertiesPage();
+        });
+    }
+
+    if (goToScheduleBtn) {
+        goToScheduleBtn.addEventListener('click', () => {
             navigationManager.showSchedulePage();
-            await initializeScheduleApp();
-        } catch (error) {
-            console.error('Error opening schedule page:', error);
-            navigationManager.showSetupPage();
-        }
-    });
+        });
+    }
+
+    if (backToLandingBtn) {
+        backToLandingBtn.addEventListener('click', () => {
+            navigationManager.showLandingPage();
+        });
+    }
+
+    if (backToLandingFromScheduleBtn) {
+        backToLandingFromScheduleBtn.addEventListener('click', () => {
+            navigationManager.showLandingPage();
+        });
+    }
+
+    // Properties management toggle buttons
+    const quickAddToggleBtn = document.getElementById('quick-add-toggle-btn');
+    const bulkImportToggleBtn = document.getElementById('bulk-import-toggle-btn');
+    const filtersToggleBtn = document.getElementById('filters-toggle-btn');
     
-    // No employees found event listener
-    document.addEventListener('noEmployeesFound', () => {
-        navigationManager.showSetupPage();
-    });
+    // Quick Add Section
+    const quickAddSection = document.getElementById('quick-add-section');
+    const quickAddCloseBtn = document.getElementById('quick-add-close-btn');
+    
+    if (quickAddToggleBtn && quickAddSection) {
+        quickAddToggleBtn.addEventListener('click', () => {
+            const isHidden = quickAddSection.classList.contains('hidden');
+            
+            // Hide other sections
+            document.getElementById('bulk-import-section')?.classList.add('hidden');
+            document.getElementById('filters-section')?.classList.add('hidden');
+            
+            // Toggle quick add section
+            if (isHidden) {
+                quickAddSection.classList.remove('hidden');
+                quickAddToggleBtn.classList.add('bg-brand', 'text-white');
+                quickAddToggleBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            } else {
+                quickAddSection.classList.add('hidden');
+                quickAddToggleBtn.classList.remove('bg-brand', 'text-white');
+                quickAddToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+            }
+        });
+    }
+    
+    if (quickAddCloseBtn && quickAddSection) {
+        quickAddCloseBtn.addEventListener('click', () => {
+            quickAddSection.classList.add('hidden');
+            quickAddToggleBtn.classList.remove('bg-brand', 'text-white');
+            quickAddToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+        });
+    }
+    
+    // Bulk Import Section
+    const bulkImportSection = document.getElementById('bulk-import-section');
+    const bulkImportCloseBtn = document.getElementById('bulk-import-close-btn');
+    
+    if (bulkImportToggleBtn && bulkImportSection) {
+        bulkImportToggleBtn.addEventListener('click', () => {
+            const isHidden = bulkImportSection.classList.contains('hidden');
+            
+            // Hide other sections
+            document.getElementById('quick-add-section')?.classList.add('hidden');
+            document.getElementById('filters-section')?.classList.add('hidden');
+            
+            // Reset quick add button
+            quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
+            quickAddToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
+            
+            // Toggle bulk import section
+            if (isHidden) {
+                bulkImportSection.classList.remove('hidden');
+                bulkImportToggleBtn.classList.add('bg-brand', 'text-white');
+                bulkImportToggleBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            } else {
+                bulkImportSection.classList.add('hidden');
+                bulkImportToggleBtn.classList.remove('bg-brand', 'text-white');
+                bulkImportToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+            }
+        });
+    }
+    
+    if (bulkImportCloseBtn && bulkImportSection) {
+        bulkImportCloseBtn.addEventListener('click', () => {
+            bulkImportSection.classList.add('hidden');
+            bulkImportToggleBtn.classList.remove('bg-brand', 'text-white');
+            bulkImportToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+        });
+    }
+    
+    // Filters Section
+    const filtersSection = document.getElementById('filters-section');
+    const filtersCloseBtn = document.getElementById('filters-close-btn');
+    const filterCountBadge = document.getElementById('filter-count-badge');
+    
+    if (filtersToggleBtn && filtersSection) {
+        filtersToggleBtn.addEventListener('click', () => {
+            const isHidden = filtersSection.classList.contains('hidden');
+            
+            // Hide other sections
+            document.getElementById('quick-add-section')?.classList.add('hidden');
+            document.getElementById('bulk-import-section')?.classList.add('hidden');
+            
+            // Reset other buttons
+            quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
+            quickAddToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
+            bulkImportToggleBtn?.classList.remove('bg-brand', 'text-white');
+            bulkImportToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
+            
+            // Toggle filters section
+            if (isHidden) {
+                filtersSection.classList.remove('hidden');
+                filtersToggleBtn.classList.add('bg-brand', 'text-white');
+                filtersToggleBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            } else {
+                filtersSection.classList.add('hidden');
+                filtersToggleBtn.classList.remove('bg-brand', 'text-white');
+                filtersToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+            }
+        });
+    }
+    
+    if (filtersCloseBtn && filtersSection) {
+        filtersCloseBtn.addEventListener('click', () => {
+            filtersSection.classList.add('hidden');
+            filtersToggleBtn.classList.remove('bg-brand', 'text-white');
+            filtersToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+        });
+    }
+    
+    // Advanced Property Modal
+    const advancedAddBtn = document.getElementById('advanced-add-btn');
+    const advancedPropertyModal = document.getElementById('advanced-property-modal');
+    const advancedPropertyCloseBtn = document.getElementById('advanced-property-close-btn');
+    const advancedPropertyCancelBtn = document.getElementById('advanced-property-cancel-btn');
+    const advancedPropertySaveBtn = document.getElementById('advanced-property-save-btn');
+    
+    if (advancedAddBtn && advancedPropertyModal) {
+        advancedAddBtn.addEventListener('click', () => {
+            // Copy values from quick add form to advanced form if they exist
+            const quickName = document.getElementById('property-name')?.value;
+            const quickLocation = document.getElementById('property-location')?.value;
+            const quickType = document.getElementById('property-type')?.value;
+            const quickRooms = document.getElementById('property-rooms')?.value;
+            
+            if (quickName) document.getElementById('advanced-property-name').value = quickName;
+            if (quickLocation) document.getElementById('advanced-property-location').value = quickLocation;
+            if (quickType) document.getElementById('advanced-property-type').value = quickType;
+            if (quickRooms) document.getElementById('advanced-property-rooms').value = quickRooms;
+            
+            advancedPropertyModal.classList.remove('hidden');
+        });
+    }
+    
+    if (advancedPropertyCloseBtn && advancedPropertyModal) {
+        advancedPropertyCloseBtn.addEventListener('click', () => {
+            advancedPropertyModal.classList.add('hidden');
+        });
+    }
+    
+    if (advancedPropertyCancelBtn && advancedPropertyModal) {
+        advancedPropertyCancelBtn.addEventListener('click', () => {
+            advancedPropertyModal.classList.add('hidden');
+        });
+    }
+    
+    // Close modal when clicking outside
+    if (advancedPropertyModal) {
+        advancedPropertyModal.addEventListener('click', (e) => {
+            if (e.target === advancedPropertyModal) {
+                advancedPropertyModal.classList.add('hidden');
+            }
+        });
+    }
     
     // Properties management event listeners
     const addPropertyBtn = document.getElementById('add-property-btn');
+
     if (addPropertyBtn) {
         addPropertyBtn.addEventListener('click', async () => {
             const selectedType = document.getElementById('property-type').value;
@@ -119,14 +289,14 @@ function setupGlobalEventListeners() {
                     type: baseType,
                     typology: typology,
                     rooms: bedrooms, // Auto-set from typology
-                    bathrooms: parseFloat(document.getElementById('property-bathrooms').value) || null,
-                    floor: document.getElementById('property-floor').value.trim() || null,
-                    wifiSpeed: document.getElementById('property-wifi-speed').value || null,
-                    wifiAirbnb: document.getElementById('property-wifi-airbnb').value,
-                    parkingSpot: document.getElementById('property-parking-spot').value.trim() || null,
-                    parkingFloor: document.getElementById('property-parking-floor').value.trim() || null,
-                    energySource: document.getElementById('property-energy-source').value || null,
-                    smartTv: document.getElementById('property-smart-tv').value
+                    bathrooms: parseFloat(document.getElementById('property-bathrooms')?.value) || null,
+                    floor: document.getElementById('property-floor')?.value?.trim() || null,
+                    wifiSpeed: document.getElementById('property-wifi-speed')?.value || null,
+                    wifiAirbnb: document.getElementById('property-wifi-airbnb')?.value || 'no',
+                    parkingSpot: document.getElementById('property-parking-spot')?.value?.trim() || null,
+                    parkingFloor: document.getElementById('property-parking-floor')?.value?.trim() || null,
+                    energySource: document.getElementById('property-energy-source')?.value || null,
+                    smartTv: document.getElementById('property-smart-tv')?.value || 'no'
                 };
             } else {
                 // Traditional property types (hotel, resort, etc.)
@@ -135,14 +305,14 @@ function setupGlobalEventListeners() {
                     location: document.getElementById('property-location').value,
                     type: selectedType,
                     rooms: parseInt(document.getElementById('property-rooms').value) || 0,
-                    bathrooms: parseFloat(document.getElementById('property-bathrooms').value) || null,
-                    floor: document.getElementById('property-floor').value.trim() || null,
-                    wifiSpeed: document.getElementById('property-wifi-speed').value || null,
-                    wifiAirbnb: document.getElementById('property-wifi-airbnb').value,
-                    parkingSpot: document.getElementById('property-parking-spot').value.trim() || null,
-                    parkingFloor: document.getElementById('property-parking-floor').value.trim() || null,
-                    energySource: document.getElementById('property-energy-source').value || null,
-                    smartTv: document.getElementById('property-smart-tv').value
+                    bathrooms: parseFloat(document.getElementById('property-bathrooms')?.value) || null,
+                    floor: document.getElementById('property-floor')?.value?.trim() || null,
+                    wifiSpeed: document.getElementById('property-wifi-speed')?.value || null,
+                    wifiAirbnb: document.getElementById('property-wifi-airbnb')?.value || 'no',
+                    parkingSpot: document.getElementById('property-parking-spot')?.value?.trim() || null,
+                    parkingFloor: document.getElementById('property-parking-floor')?.value?.trim() || null,
+                    energySource: document.getElementById('property-energy-source')?.value || null,
+                    smartTv: document.getElementById('property-smart-tv')?.value || 'no'
                 };
             }
             
@@ -158,195 +328,130 @@ function setupGlobalEventListeners() {
                 await propertiesManager.addProperty(propertyData);
                 propertiesManager.clearForm();
                 errorElement.textContent = '';
+                
+                // Close the quick add section after successful add
+                document.getElementById('quick-add-section')?.classList.add('hidden');
+                quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
+                quickAddToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
             } catch (error) {
                 errorElement.textContent = 'Failed to add property. Please try again.';
             }
         });
     }
+    
+    // Advanced Property Save
+    if (advancedPropertySaveBtn) {
+        advancedPropertySaveBtn.addEventListener('click', async () => {
+            await saveAdvancedProperty();
+        });
+    }
 
     // Auto-populate bedroom count when typology is selected
     const propertyTypeSelect = document.getElementById('property-type');
-    const propertyRoomsInput = document.getElementById('property-rooms');
-    const propertyDescriptionInput = document.getElementById('property-description');
-
-    if (propertyTypeSelect && propertyRoomsInput) {
-        propertyTypeSelect.addEventListener('change', () => {
-            const selectedValue = propertyTypeSelect.value;
+    if (propertyTypeSelect) {
+        propertyTypeSelect.addEventListener('change', (e) => {
+            const selectedType = e.target.value;
+            const roomsInput = document.getElementById('property-rooms');
             
-            if (selectedValue.includes('-T') || selectedValue.includes('-V')) {
-                // Extract bedroom count from typology (T2 -> 2, V3 -> 3)
-                const [, typology] = selectedValue.split('-');
+            if (selectedType.includes('-T') || selectedType.includes('-V')) {
+                // Extract bedroom count from typology (T2 = 2 bedrooms, V3 = 3 bedrooms)
+                const typology = selectedType.split('-')[1];
                 const bedrooms = parseInt(typology.substring(1));
                 
-                propertyRoomsInput.value = bedrooms;
-                propertyRoomsInput.readOnly = true;
-                propertyRoomsInput.classList.add('bg-gray-100');
-                
-                // Auto-generate description if empty
-                if (!propertyDescriptionInput.value.trim()) {
-                    propertyDescriptionInput.value = `${typology} - ${bedrooms === 0 ? 'Studio' : `${bedrooms} bedroom${bedrooms > 1 ? 's' : ''}`}`;
+                if (roomsInput && !isNaN(bedrooms)) {
+                    roomsInput.value = bedrooms;
+                    roomsInput.disabled = true; // Disable manual editing when typology is selected
                 }
             } else {
-                // For traditional property types, allow manual entry
-                propertyRoomsInput.readOnly = false;
-                propertyRoomsInput.classList.remove('bg-gray-100');
-                if (propertyDescriptionInput.value.match(/^[TV]\d+ - (\d+ bedrooms?|Studio)$/)) {
-                    propertyDescriptionInput.value = '';
+                // Enable manual editing for traditional property types
+                if (roomsInput) {
+                    roomsInput.disabled = false;
                 }
             }
         });
     }
 
-    // Tab switching for property forms
-    const singleAddTab = document.getElementById('single-add-tab');
-    const bulkAddTab = document.getElementById('bulk-add-tab');
-    const singleAddForm = document.getElementById('single-add-form');
-    const bulkAddForm = document.getElementById('bulk-add-form');
-
-    if (singleAddTab && bulkAddTab && singleAddForm && bulkAddForm) {
-        singleAddTab.addEventListener('click', () => {
-            singleAddTab.classList.remove('bg-gray-200', 'text-gray-700');
-            singleAddTab.classList.add('bg-brand', 'text-white');
-            bulkAddTab.classList.remove('bg-brand', 'text-white');
-            bulkAddTab.classList.add('bg-gray-200', 'text-gray-700');
+    // Do the same for advanced property form
+    const advancedPropertyTypeSelect = document.getElementById('advanced-property-type');
+    if (advancedPropertyTypeSelect) {
+        advancedPropertyTypeSelect.addEventListener('change', (e) => {
+            const selectedType = e.target.value;
+            const roomsInput = document.getElementById('advanced-property-rooms');
             
-            singleAddForm.classList.remove('hidden');
-            bulkAddForm.classList.add('hidden');
-        });
-
-        bulkAddTab.addEventListener('click', () => {
-            bulkAddTab.classList.remove('bg-gray-200', 'text-gray-700');
-            bulkAddTab.classList.add('bg-brand', 'text-white');
-            singleAddTab.classList.remove('bg-brand', 'text-white');
-            singleAddTab.classList.add('bg-gray-200', 'text-gray-700');
-            
-            bulkAddForm.classList.remove('hidden');
-            singleAddForm.classList.add('hidden');
+            if (selectedType.includes('-T') || selectedType.includes('-V')) {
+                // Extract bedroom count from typology
+                const typology = selectedType.split('-')[1];
+                const bedrooms = parseInt(typology.substring(1));
+                
+                if (roomsInput && !isNaN(bedrooms)) {
+                    roomsInput.value = bedrooms;
+                    roomsInput.disabled = true;
+                }
+            } else {
+                if (roomsInput) {
+                    roomsInput.disabled = false;
+                }
+            }
         });
     }
 
-    // Bulk property input handling
+    // Bulk import functionality (now moved to new section)
     const bulkPropertyInput = document.getElementById('bulk-property-input');
     const bulkPropertyCount = document.getElementById('bulk-property-count');
     const bulkAddPropertiesBtn = document.getElementById('bulk-add-properties-btn');
+    const bulkAddPropertyError = document.getElementById('bulk-add-property-error');
 
-    if (bulkPropertyInput && bulkPropertyCount && bulkAddPropertiesBtn) {
-        // Update property count as user types
-        const updateBulkPropertyCount = () => {
-            const inputText = bulkPropertyInput.value.trim();
-            const errorElement = document.getElementById('bulk-add-property-error');
-            
-            if (!inputText) {
-                bulkPropertyCount.textContent = '0';
-                bulkAddPropertiesBtn.disabled = true;
-                errorElement.innerHTML = '';
-                return;
-            }
+    function updateBulkPropertyCount() {
+        if (!bulkPropertyInput || !bulkPropertyCount) return;
+        
+        const inputText = bulkPropertyInput.value.trim();
+        const lines = inputText.split('\n').filter(line => line.trim()).length;
+        bulkPropertyCount.textContent = lines;
+        
+        if (bulkAddPropertiesBtn) {
+            bulkAddPropertiesBtn.disabled = lines === 0;
+        }
+    }
 
-            const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
-            bulkPropertyCount.textContent = properties.length.toString();
-            bulkAddPropertiesBtn.disabled = properties.length === 0;
-            
-            // Clear errors when typing (show them only on submit)
-            if (errors.length === 0) {
-                errorElement.innerHTML = '';
-            }
-        };
-
+    if (bulkPropertyInput) {
         bulkPropertyInput.addEventListener('input', updateBulkPropertyCount);
-        bulkPropertyInput.addEventListener('paste', () => {
-            setTimeout(updateBulkPropertyCount, 10); // Small delay to allow paste to complete
-        });
+        updateBulkPropertyCount(); // Initial count
+    }
 
-        // Function to display bulk import errors in a user-friendly way
-        const displayBulkImportErrors = (errors) => {
-            const errorElement = document.getElementById('bulk-add-property-error');
-            const maxErrorsToShow = 5; // Show max 5 errors to avoid overwhelming the user
-            
-            if (errors.length === 1) {
-                const error = errors[0];
-                errorElement.innerHTML = `
-                    <div class="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
-                        <div class="text-sm">
-                            <strong class="text-red-800">Line ${error.lineNumber}:</strong> 
-                            <span class="text-red-700">${error.error}</span>
-                        </div>
-                        <div class="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
-                            "${error.line}"
-                        </div>
-                        <div class="text-xs text-red-600 mt-1">
-                            💡 ${error.suggestion}
-                        </div>
-                    </div>
-                `;
-            } else {
-                const errorsToShow = errors.slice(0, maxErrorsToShow);
-                const remainingErrors = errors.length - maxErrorsToShow;
-                
-                let errorHtml = `<div class="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
-                    <div class="text-sm font-medium text-red-800 mb-2">
-                        Found ${errors.length} error${errors.length > 1 ? 's' : ''}:
-                    </div>`;
-                
-                errorsToShow.forEach(error => {
-                    errorHtml += `
-                        <div class="mb-3 pb-2 border-b border-red-200 last:border-b-0">
-                            <div class="text-sm">
-                                <strong class="text-red-800">Line ${error.lineNumber}:</strong> 
-                                <span class="text-red-700">${error.error}</span>
-                            </div>
-                            <div class="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
-                                "${error.line}"
-                            </div>
-                            <div class="text-xs text-red-600 mt-1">
-                                💡 ${error.suggestion}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                if (remainingErrors > 0) {
-                    errorHtml += `
-                        <div class="text-xs text-red-600 mt-2 text-center">
-                            ... and ${remainingErrors} more error${remainingErrors > 1 ? 's' : ''}. Fix the above errors first.
-                        </div>
-                    `;
-                }
-                
-                errorHtml += '</div>';
-                errorElement.innerHTML = errorHtml;
-            }
-        };
+    if (bulkAddPropertiesBtn) {
+        const progressContainer = document.getElementById('bulk-import-progress');
+        const progressBar = document.getElementById('bulk-import-progress-bar');
+        const progressStatus = document.getElementById('bulk-import-status');
+        const errorElement = document.getElementById('bulk-add-property-error');
 
         // Bulk import button
         bulkAddPropertiesBtn.addEventListener('click', async () => {
             const inputText = bulkPropertyInput.value.trim();
-            const errorElement = document.getElementById('bulk-add-property-error');
-            const progressContainer = document.getElementById('bulk-import-progress');
-            const progressBar = document.getElementById('bulk-import-progress-bar');
-            const progressStatus = document.getElementById('bulk-import-status');
-
             if (!inputText) {
-                errorElement.innerHTML = '<div class="text-red-500">Please enter property data to import.</div>';
+                errorElement.innerHTML = '<div class="text-red-500 bg-red-50 border border-red-200 rounded p-2">Please enter property data to import.</div>';
                 return;
             }
 
             const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
-
+            
             if (errors.length > 0) {
-                displayBulkImportErrors(errors);
+                const errorMessages = errors.map(error => 
+                    `Line ${error.lineNumber}: ${error.error}`
+                ).join('<br>');
+                errorElement.innerHTML = `<div class="text-red-500 bg-red-50 border border-red-200 rounded p-2">${errorMessages}</div>`;
                 return;
             }
 
             if (properties.length === 0) {
-                errorElement.innerHTML = '<div class="text-red-500">No valid properties found to import.</div>';
+                errorElement.innerHTML = '<div class="text-red-500 bg-red-50 border border-red-200 rounded p-2">No valid properties found to import.</div>';
                 return;
             }
 
-            // Show progress and disable button
+            // Clear previous errors and show progress
             errorElement.innerHTML = '';
-            bulkAddPropertiesBtn.disabled = true;
             progressContainer.classList.remove('hidden');
+            bulkAddPropertiesBtn.disabled = true;
+
             progressBar.style.width = '0%';
             progressStatus.textContent = 'Starting import...';
 
@@ -438,7 +543,138 @@ function setupGlobalEventListeners() {
     };
 }
 
-// Property editing functions
+async function saveAdvancedProperty() {
+    const modal = document.getElementById('advanced-property-modal');
+    const errorElement = document.getElementById('advanced-property-error');
+    
+    // Clear previous errors
+    errorElement.textContent = '';
+    
+    // Gather form data
+    const selectedType = document.getElementById('advanced-property-type').value;
+    let propertyData;
+
+    // Parse the selected typology
+    if (selectedType.includes('-T') || selectedType.includes('-V')) {
+        // Portuguese typology format (apartment-T2, villa-V3, etc.)
+        const [baseType, typology] = selectedType.split('-');
+        const bedrooms = parseInt(typology.substring(1)); // Extract number from T2, V3 etc.
+        
+        propertyData = {
+            name: document.getElementById('advanced-property-name').value.trim(),
+            location: document.getElementById('advanced-property-location').value.trim(),
+            type: baseType,
+            typology: typology,
+            rooms: bedrooms // Auto-set from typology
+        };
+    } else {
+        // Traditional property types (hotel, resort, etc.)
+        propertyData = {
+            name: document.getElementById('advanced-property-name').value.trim(),
+            location: document.getElementById('advanced-property-location').value.trim(),
+            type: selectedType,
+            rooms: parseInt(document.getElementById('advanced-property-rooms').value) || 0
+        };
+    }
+
+    // Add all the additional fields
+    propertyData.bathrooms = parseFloat(document.getElementById('advanced-property-bathrooms').value) || null;
+    propertyData.floor = document.getElementById('advanced-property-floor').value.trim() || null;
+    propertyData.wifiSpeed = document.getElementById('advanced-property-wifi-speed').value || null;
+    propertyData.wifiAirbnb = document.getElementById('advanced-property-wifi-airbnb').value || 'no';
+    propertyData.parkingSpot = document.getElementById('advanced-property-parking-spot').value.trim() || null;
+    propertyData.parkingFloor = document.getElementById('advanced-property-parking-floor').value.trim() || null;
+    propertyData.energySource = document.getElementById('advanced-property-energy-source').value || null;
+    propertyData.smartTv = document.getElementById('advanced-property-smart-tv').value || 'no';
+    propertyData.status = document.getElementById('advanced-property-status').value || 'available';
+    
+    // Collect amenities
+    const amenities = [];
+    const amenityCheckboxes = [
+        'advanced-amenity-wifi',
+        'advanced-amenity-pool', 
+        'advanced-amenity-garden',
+        'advanced-amenity-balcony',
+        'advanced-amenity-ac',
+        'advanced-amenity-kitchen',
+        'advanced-amenity-washing-machine',
+        'advanced-amenity-sea-view'
+    ];
+    
+    amenityCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox && checkbox.checked) {
+            amenities.push(id.replace('advanced-amenity-', ''));
+        }
+    });
+    
+    if (amenities.length > 0) {
+        propertyData.amenities = amenities;
+    }
+
+    // Validate property data
+    const errors = propertiesManager.validatePropertyData(propertyData);
+    
+    if (errors.length > 0) {
+        errorElement.textContent = errors[0];
+        return;
+    }
+
+    try {
+        await propertiesManager.addProperty(propertyData);
+        
+        // Clear form and close modal
+        clearAdvancedPropertyForm();
+        modal.classList.add('hidden');
+        
+        // Success notification (optional)
+        console.log('Property added successfully via advanced form');
+        
+    } catch (error) {
+        console.error('Error adding property:', error);
+        errorElement.textContent = 'Failed to add property. Please try again.';
+    }
+}
+
+function clearAdvancedPropertyForm() {
+    // Clear all form fields
+    document.getElementById('advanced-property-name').value = '';
+    document.getElementById('advanced-property-location').value = '';
+    document.getElementById('advanced-property-type').value = '';
+    document.getElementById('advanced-property-rooms').value = '';
+    document.getElementById('advanced-property-bathrooms').value = '';
+    document.getElementById('advanced-property-floor').value = '';
+    document.getElementById('advanced-property-status').value = 'available';
+    document.getElementById('advanced-property-wifi-speed').value = '';
+    document.getElementById('advanced-property-wifi-airbnb').value = 'no';
+    document.getElementById('advanced-property-parking-spot').value = '';
+    document.getElementById('advanced-property-parking-floor').value = '';
+    document.getElementById('advanced-property-energy-source').value = '';
+    document.getElementById('advanced-property-smart-tv').value = 'no';
+    
+    // Clear amenity checkboxes
+    const amenityCheckboxes = [
+        'advanced-amenity-wifi',
+        'advanced-amenity-pool', 
+        'advanced-amenity-garden',
+        'advanced-amenity-balcony',
+        'advanced-amenity-ac',
+        'advanced-amenity-kitchen',
+        'advanced-amenity-washing-machine',
+        'advanced-amenity-sea-view'
+    ];
+    
+    amenityCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+    });
+    
+    // Clear error message
+    document.getElementById('advanced-property-error').textContent = '';
+}
+
 function populateEditModal(property) {
     // Store the property ID for saving
     document.getElementById('edit-property-modal').dataset.propertyId = property.id;

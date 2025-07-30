@@ -13,6 +13,8 @@ export class PropertiesManager {
         this.currentTypeFilter = '';
         this.currentBedroomsFilter = '';
         this.currentDataFilter = '';
+        this.currentWifiSpeedFilter = '';
+        this.currentEnergySourceFilter = '';
         this.currentView = 'cards'; // 'cards' or 'table'
         this.tableSortColumn = '';
         this.tableSortDirection = 'asc';
@@ -127,7 +129,7 @@ export class PropertiesManager {
 
         // Show/hide filters active indicator
         const filtersActiveIndicator = document.getElementById('filters-active-indicator');
-        const hasActiveFilters = this.currentSearch || this.currentTypeFilter || this.currentBedroomsFilter || this.currentDataFilter;
+        const hasActiveFilters = this.currentSearch || this.currentTypeFilter || this.currentBedroomsFilter || this.currentDataFilter || this.currentWifiSpeedFilter || this.currentEnergySourceFilter;
         if (filtersActiveIndicator) {
             if (hasActiveFilters) {
                 filtersActiveIndicator.classList.remove('hidden');
@@ -140,6 +142,7 @@ export class PropertiesManager {
             console.log("⚠️ No properties found - showing no properties message");
             propertiesGrid.classList.add('hidden');
             propertiesTable.classList.add('hidden');
+            document.getElementById('properties-list')?.classList.add('hidden');
             noPropertiesMessage.classList.remove('hidden');
             return;
         }
@@ -148,6 +151,7 @@ export class PropertiesManager {
             console.log("⚠️ No filtered properties found - showing filtered message");
             propertiesGrid.classList.add('hidden');
             propertiesTable.classList.add('hidden');
+            document.getElementById('properties-list')?.classList.add('hidden');
             noPropertiesMessage.classList.remove('hidden');
             noPropertiesMessage.innerHTML = `
                 <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,18 +170,28 @@ export class PropertiesManager {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
             </svg>
             <p class="text-lg">No properties added yet</p>
-            <p class="text-sm">Add your first property using the form on the left</p>
+            <p class="text-sm">Add your first property using the "Quick Add Property" button above</p>
         `;
 
         // Show the appropriate view
         if (this.currentView === 'table') {
             propertiesGrid.classList.add('hidden');
+            document.getElementById('properties-list')?.classList.add('hidden');
             propertiesTable.classList.remove('hidden');
             this.renderTableView();
+        } else if (this.currentView === 'list') {
+            propertiesGrid.classList.add('hidden');
+            propertiesTable.classList.add('hidden');
+            const propertiesList = document.getElementById('properties-list');
+            if (propertiesList) {
+                propertiesList.classList.remove('hidden');
+                this.renderListView();
+            }
         } else {
             propertiesTable.classList.add('hidden');
+            document.getElementById('properties-list')?.classList.add('hidden');
             propertiesGrid.classList.remove('hidden');
-        propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
+            propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
         }
     }
 
@@ -396,6 +410,131 @@ export class PropertiesManager {
         }).join('');
     }
 
+    renderListView() {
+        const listContainer = document.getElementById('properties-list');
+        
+        // Apply table-specific sorting if set
+        let listData = [...this.filteredProperties];
+        if (this.tableSortColumn) {
+            listData.sort((a, b) => this.compareTableColumns(a, b, this.tableSortColumn, this.tableSortDirection));
+        }
+        
+        listContainer.innerHTML = listData.map(property => {
+            const displayType = property.typology || property.type;
+            
+            // Status badge with appropriate colors
+            const getStatusBadge = (status) => {
+                const statusConfig = {
+                    'available': { color: 'green', text: 'Available' },
+                    'occupied': { color: 'blue', text: 'Occupied' },
+                    'maintenance': { color: 'yellow', text: 'Maintenance' },
+                    'renovation': { color: 'orange', text: 'Renovation' },
+                    'inactive': { color: 'gray', text: 'Inactive' }
+                };
+                const config = statusConfig[status] || statusConfig['available'];
+                return `<span class="text-xs text-${config.color}-600 px-2 py-1 bg-${config.color}-50 rounded-full font-medium">${config.text}</span>`;
+            };
+
+            // Format bedroom display
+            const bedroomDisplay = property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bed${(property.rooms || 0) !== 1 ? 's' : ''}`;
+            
+            // Format additional details
+            const details = [];
+            if (property.bathrooms) details.push(`${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}`);
+            if (property.floor) details.push(`Floor: ${property.floor}`);
+            if (property.parkingSpot) details.push(`Parking: ${property.parkingSpot}`);
+            
+            // Tech features
+            const techFeatures = [];
+            if (property.wifiSpeed) {
+                const wifiLabels = {
+                    'basic': 'Basic WiFi',
+                    'standard': 'Standard WiFi',
+                    'fast': 'Fast WiFi',
+                    'very-fast': 'Very Fast WiFi',
+                    'fiber': 'Fiber WiFi'
+                };
+                techFeatures.push(wifiLabels[property.wifiSpeed] || 'WiFi');
+            }
+            if (property.energySource) {
+                const energyLabels = {
+                    'electric': 'Electric',
+                    'gas': 'Gas',
+                    'mixed': 'Mixed Energy',
+                    'solar': 'Solar',
+                    'heat-pump': 'Heat Pump'
+                };
+                techFeatures.push(energyLabels[property.energySource]);
+            }
+            if (property.smartTv === 'yes') techFeatures.push('Smart TV');
+            if (property.smartTv === 'multiple') techFeatures.push('Multiple TVs');
+            
+            // Check if property has missing information
+            const hasMissingInfo = this.hasIncompleteData(property);
+            const rowClass = hasMissingInfo ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200';
+            
+            return `
+                <div class="border ${rowClass} rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <!-- Left: Main Property Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-lg font-semibold text-gray-900 truncate">${property.name}</h3>
+                                <span class="text-xs text-blue-600 uppercase px-2 py-1 bg-blue-50 rounded-full font-medium flex-shrink-0">${displayType}</span>
+                                ${getStatusBadge(property.status || 'available')}
+                            </div>
+                            
+                            <div class="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    ${property.location}
+                                </span>
+                                
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 15V9" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15V9" />
+                                    </svg>
+                                    ${bedroomDisplay}
+                                </span>
+                                
+                                ${details.length > 0 ? `<span class="text-gray-400">•</span><span>${details.join(' • ')}</span>` : ''}
+                            </div>
+                            
+                            ${techFeatures.length > 0 ? `
+                            <div class="flex flex-wrap gap-2">
+                                ${techFeatures.map(feature => `<span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">${feature}</span>`).join('')}
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Right: Actions -->
+                        <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                            <button onclick="editProperty('${property.id}')" class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded transition-colors" title="Edit Property">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteProperty('${property.id}')" class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors" title="Delete Property">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                        Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     compareTableColumns(a, b, column, direction) {
         let valueA, valueB;
         
@@ -489,14 +628,32 @@ export class PropertiesManager {
         document.getElementById('property-location').value = '';
         document.getElementById('property-type').value = '';
         document.getElementById('property-rooms').value = '';
-        document.getElementById('property-bathrooms').value = '';
-        document.getElementById('property-floor').value = '';
-        document.getElementById('property-wifi-speed').value = '';
-        document.getElementById('property-wifi-airbnb').value = 'no';
-        document.getElementById('property-parking-spot').value = '';
-        document.getElementById('property-parking-floor').value = '';
-        document.getElementById('property-energy-source').value = '';
-        document.getElementById('property-smart-tv').value = 'no';
+        
+        // These fields might not exist in quick add form, so check before clearing
+        const bathroomsField = document.getElementById('property-bathrooms');
+        if (bathroomsField) bathroomsField.value = '';
+        
+        const floorField = document.getElementById('property-floor');
+        if (floorField) floorField.value = '';
+        
+        const wifiSpeedField = document.getElementById('property-wifi-speed');
+        if (wifiSpeedField) wifiSpeedField.value = '';
+        
+        const wifiAirbnbField = document.getElementById('property-wifi-airbnb');
+        if (wifiAirbnbField) wifiAirbnbField.value = 'no';
+        
+        const parkingSpotField = document.getElementById('property-parking-spot');
+        if (parkingSpotField) parkingSpotField.value = '';
+        
+        const parkingFloorField = document.getElementById('property-parking-floor');
+        if (parkingFloorField) parkingFloorField.value = '';
+        
+        const energySourceField = document.getElementById('property-energy-source');
+        if (energySourceField) energySourceField.value = '';
+        
+        const smartTvField = document.getElementById('property-smart-tv');
+        if (smartTvField) smartTvField.value = 'no';
+        
         document.getElementById('add-property-error').textContent = '';
     }
 
@@ -698,15 +855,45 @@ export class PropertiesManager {
             });
         }
 
+        // WiFi speed filter (in expanded filters section)
+        const wifiSpeedFilter = document.getElementById('property-wifi-speed');
+        if (wifiSpeedFilter) {
+            wifiSpeedFilter.addEventListener('change', (e) => {
+                this.currentWifiSpeedFilter = e.target.value;
+                this.renderProperties();
+            });
+        }
+
+        // Energy source filter (in expanded filters section)
+        const energySourceFilter = document.getElementById('property-energy-source');
+        if (energySourceFilter) {
+            energySourceFilter.addEventListener('change', (e) => {
+                this.currentEnergySourceFilter = e.target.value;
+                this.renderProperties();
+            });
+        }
+
         // View toggle buttons
         const cardViewBtn = document.getElementById('card-view-btn');
+        const listViewBtn = document.getElementById('list-view-btn');
         const tableViewBtn = document.getElementById('table-view-btn');
         
         if (cardViewBtn) {
             cardViewBtn.addEventListener('click', () => {
                 this.currentView = 'cards';
                 cardViewBtn.classList.add('active');
-                tableViewBtn.classList.remove('active');
+                listViewBtn?.classList.remove('active');
+                tableViewBtn?.classList.remove('active');
+                this.renderProperties();
+            });
+        }
+        
+        if (listViewBtn) {
+            listViewBtn.addEventListener('click', () => {
+                this.currentView = 'list';
+                listViewBtn.classList.add('active');
+                cardViewBtn?.classList.remove('active');
+                tableViewBtn?.classList.remove('active');
                 this.renderProperties();
             });
         }
@@ -715,10 +902,12 @@ export class PropertiesManager {
             tableViewBtn.addEventListener('click', () => {
                 this.currentView = 'table';
                 tableViewBtn.classList.add('active');
-                cardViewBtn.classList.remove('active');
+                cardViewBtn?.classList.remove('active');
+                listViewBtn?.classList.remove('active');
                 this.renderProperties();
-                         });
-         }
+                this.updateTableSortIndicators();
+            });
+        }
 
         // Table column sorting
         const tableHeaders = document.querySelectorAll('[data-sort]');
@@ -798,6 +987,16 @@ export class PropertiesManager {
             }
         }
 
+        // Apply WiFi speed filter
+        if (this.currentWifiSpeedFilter) {
+            filtered = filtered.filter(property => property.wifiSpeed === this.currentWifiSpeedFilter);
+        }
+
+        // Apply energy source filter
+        if (this.currentEnergySourceFilter) {
+            filtered = filtered.filter(property => property.energySource === this.currentEnergySourceFilter);
+        }
+
         // Apply sorting
         filtered.sort((a, b) => {
             switch (this.currentSort) {
@@ -864,6 +1063,8 @@ export class PropertiesManager {
         this.currentTypeFilter = '';
         this.currentBedroomsFilter = '';
         this.currentDataFilter = '';
+        this.currentWifiSpeedFilter = '';
+        this.currentEnergySourceFilter = '';
         
         // Reset form elements
         const searchInput = document.getElementById('property-search');
@@ -880,6 +1081,12 @@ export class PropertiesManager {
         
         const dataFilter = document.getElementById('property-data-filter');
         if (dataFilter) dataFilter.value = '';
+        
+        const wifiSpeedFilter = document.getElementById('property-wifi-speed');
+        if (wifiSpeedFilter) wifiSpeedFilter.value = '';
+        
+        const energySourceFilter = document.getElementById('property-energy-source');
+        if (energySourceFilter) energySourceFilter.value = '';
         
         // Re-render with cleared filters
         this.renderProperties();
