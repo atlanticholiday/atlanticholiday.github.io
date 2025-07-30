@@ -257,17 +257,23 @@ export class OperationsManager {
             }
 
             // Save to Firebase operations collection
+            console.log(`💾 [FIRESTORE READ] Starting to save ${this.operationsData.length} operations...`);
             const operationsRef = collection(this.db, "operations");
             
             let savedCount = 0;
+            let totalQueryReads = 0;
+            
             for (const operation of this.operationsData) {
                 try {
                     // Check if this operation already exists
+                    console.log(`🔍 [FIRESTORE READ] Querying for existing operation: ${operation.propertyName}`);
                     const existingQuery = await getDocs(query(
                         operationsRef, 
                         where("propertyName", "==", operation.propertyName),
                         where("userId", "==", this.userId)
                     ));
+                    totalQueryReads += existingQuery.docs.length || 1;
+                    console.log(`📊 [FIRESTORE READ] Query result: ${existingQuery.docs.length} docs (${totalQueryReads} total reads so far)`);
 
                     if (existingQuery.empty) {
                         // Save new operation
@@ -293,6 +299,8 @@ export class OperationsManager {
                     console.error(`Failed to save operation for ${operation.propertyName}:`, error);
                 }
             }
+            
+            console.log(`💾 [FIRESTORE READ] Operations save completed - Total reads: ${totalQueryReads}`);
 
             this.updateDataStatus(`Saved to database (${savedCount} properties)`);
             
@@ -337,10 +345,16 @@ export class OperationsManager {
                 linkBtn.textContent = 'Linking...';
             }
 
-            // Get existing properties from the properties collection
+            console.log(`💾 Processing ${this.operationsData.length} operations for property matching...`);
+            
+            // Get all properties from the shared collection
+            console.log(`📋 [FIRESTORE READ] Reading all properties for operations matching...`);
             const propertiesRef = collection(this.db, "properties");
             const propertiesSnap = await getDocs(propertiesRef);
-            const existingProperties = propertiesSnap.docs.map(doc => ({
+            const propertiesReadCount = propertiesSnap.docs.length || 1;
+            console.log(`📋 [FIRESTORE READ] Properties query returned ${propertiesReadCount} reads`);
+            
+            const properties = propertiesSnap.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
@@ -350,7 +364,7 @@ export class OperationsManager {
 
             for (const operation of this.operationsData) {
                 // Try to find matching property by name (fuzzy matching)
-                const matchedProperty = existingProperties.find(prop => 
+                const matchedProperty = properties.find(prop => 
                     this.fuzzyMatch(prop.name, operation.propertyName)
                 );
 

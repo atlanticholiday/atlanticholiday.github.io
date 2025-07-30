@@ -42,9 +42,20 @@ export class DataManager {
 
     listenForEmployeeChanges() {
         this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), (snapshot) => {
+            const readCount = snapshot.docs.length || 1;
+            console.log(`👥 [FIRESTORE READ] Employee listener triggered - ${readCount} reads from employees collection`);
+            console.log(`👥 [FIRESTORE READ] Employee snapshot metadata:`, {
+                fromCache: snapshot.metadata.fromCache,
+                hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                docChanges: snapshot.docChanges().length,
+                isFirstLoad: snapshot.docChanges().every(change => change.type === 'added')
+            });
+            
             const allEmployees = snapshot.docs
                 .filter(doc => doc.id !== 'metadata')
                 .map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            console.log(`👥 [FIRESTORE READ] Processed ${allEmployees.length} employees (filtered out metadata doc)`);
             
             if (allEmployees.length === 0 && snapshot.docs.length <= 1) { 
                 // Dispatch event instead of directly showing setup screen

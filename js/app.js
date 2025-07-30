@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { Config } from './config.js';
 import { DataManager } from './data-manager.js';
@@ -15,6 +15,7 @@ import { OperationsManager } from './operations-manager.js';
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
 let unsubscribe = null;
+let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager;
@@ -24,8 +25,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const app = initializeApp(Config.firebaseConfig);
         db = getFirestore(app);
+        // Enable offline data persistence to cache Firestore data across page reloads
+        enableIndexedDbPersistence(db).catch(err => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Offline persistence failed - multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Offline persistence not supported by this browser');
+            }
+        });
         auth = getAuth(app);
+        // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
+        await setPersistence(auth, browserLocalPersistence);
         setLogLevel('error');
+        
+        // Add global Firestore read tracking
+        let globalReadCount = 0;
+        console.log("🔍 [GLOBAL READ TRACKER] Initialized - tracking all Firestore reads");
+        
+        // Monitor Firebase console directly if possible
+        if (typeof window !== 'undefined') {
+            // Track any console network activity
+            const originalFetch = window.fetch;
+            window.fetch = async function(...args) {
+                const url = args[0];
+                if (typeof url === 'string' && url.includes('firestore')) {
+                    console.log(`🌐 [NETWORK TRACKER] Firestore request to:`, url);
+                }
+                return originalFetch.apply(this, args);
+            };
+            
+            // Track XMLHttpRequest as well
+            const originalXHR = window.XMLHttpRequest.prototype.open;
+            window.XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                if (typeof url === 'string' && url.includes('firestore')) {
+                    console.log(`🌐 [XHR TRACKER] Firestore ${method} request to:`, url);
+                }
+                return originalXHR.apply(this, [method, url, ...args]);
+            };
+        }
+        
+        // Wrap getDocs to count reads
+        const originalGetDocs = window.getDocs || getDocs;
+        window.getDocsTracked = async function(query) {
+            const result = await originalGetDocs(query);
+            const readCount = result.docs.length || 1;
+            globalReadCount += readCount;
+            console.log(`📊 [GLOBAL READ TRACKER] getDocs called: +${readCount} reads (Total: ${globalReadCount})`);
+            console.log(`📊 [GLOBAL READ TRACKER] getDocs source: ${result.metadata?.fromCache ? 'CACHE' : 'SERVER'}`);
+            return result;
+        };
+        
+        // Wrap onSnapshot to count reads
+        const originalOnSnapshot = window.onSnapshot || onSnapshot;
+        window.onSnapshotTracked = function(query, callback, errorCallback) {
+            return originalOnSnapshot(query, (snapshot) => {
+                const readCount = snapshot.docs.length || 1;
+                globalReadCount += readCount;
+                console.log(`📊 [GLOBAL READ TRACKER] onSnapshot triggered: +${readCount} reads (Total: ${globalReadCount})`);
+                console.log(`📊 [GLOBAL READ TRACKER] Snapshot source: ${snapshot.metadata.fromCache ? 'CACHE' : 'SERVER'}`);
+                callback(snapshot);
+            }, errorCallback);
+        };
         
         // Initialize managers
         dataManager = new DataManager(db);
@@ -48,23 +108,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
+                console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
+                
                 // Initialize properties manager for shared properties
+                console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
                 propertiesManager = new PropertiesManager(db);
+                
+                console.log(`⚙️ [INITIALIZATION] Creating OperationsManager...`);
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
+                
                 navigationManager.showLandingPage();
                 setupApp();
                 
-                // Auto-migrate properties from user-specific collections to shared collection
-                checkAndMigrateUserProperties();
+                // OPTIMIZATION: Run migration AFTER properties have loaded to avoid duplicate reads
+                console.log(`⏰ [OPTIMIZATION] Scheduling migration check after properties load...`);
+                setTimeout(() => {
+                    if (!migrationCompleted) {
+                        console.log(`🔄 [MIGRATION] Running migration check after properties loaded...`);
+                        checkAndMigrateUserProperties();
+                        migrationCompleted = true;
+                    }
+                }, 2000); // Wait 2 seconds for properties to load
             } else {
+                console.log(`🔐 [INITIALIZATION] User logged out`);
                 userId = null;
                 navigationManager.showLoginPage();
                 if (unsubscribe) unsubscribe(); 
                 if (propertiesManager) {
+                    console.log(`📋 [CLEANUP] Stopping PropertiesManager...`);
                     propertiesManager.stopListening();
                     propertiesManager = null;
                 }
                 if (operationsManager) {
+                    console.log(`⚙️ [CLEANUP] Stopping OperationsManager...`);
                     operationsManager.stopListening();
                     operationsManager = null;
                 }
@@ -147,7 +223,14 @@ function setupGlobalEventListeners() {
     document.addEventListener('schedulePageOpened', () => {
         console.log('Schedule page opened, initializing...');
         setTimeout(() => {
-            initializeScheduleApp();
+            // OPTIMIZATION: Only initialize if we don't already have employee data
+            console.log('📅 [SCHEDULE PAGE] Checking if initialization needed...');
+            if (!dataManager.activeEmployees || dataManager.activeEmployees.length === 0) {
+                console.log('📅 [SCHEDULE PAGE] No employee data, running full initialization');
+                initializeScheduleApp();
+            } else {
+                console.log('📅 [SCHEDULE PAGE] Employee data exists, skipping expensive initialization');
+            }
         }, 100); // Small delay to ensure DOM is ready
     });
 
@@ -836,28 +919,60 @@ async function savePropertyChanges() {
 }
 
 async function setupApp() {
-    if (unsubscribe) unsubscribe();
-    
-    // Setup app event listeners (but not login listeners - those are already set up)
-    eventManager.setupAppEventListeners();
-    
-    // Initialize UI components
-    uiManager.populateDayCheckboxes();
+    console.log(`🚀 [INITIALIZATION] setupApp() called`);
+    try {
+        if (!dataManager || !uiManager) {
+            console.error('❌ [INITIALIZATION] Required managers not available:', { dataManager: !!dataManager, uiManager: !!uiManager });
+            return;
+        }
+        
+        console.log(`👥 [INITIALIZATION] Setting up employee data listener...`);
+        // Set up data change callback and start listening
+        dataManager.setOnDataChangeCallback(() => {
+            console.log(`🔄 [DATA CHANGE] Employee data changed, updating UI`);
+            if (uiManager) uiManager.updateView();
+        });
+        
+        dataManager.listenForEmployeeChanges();
+        
+        // Show the main app interface
+        const loadingEl = document.getElementById('loading');
+        const mainAppEl = document.getElementById('main-app');
+        
+        console.log(`🎯 DOM elements: loading=${!!loadingEl}, mainApp=${!!mainAppEl}`);
+        
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (mainAppEl) mainAppEl.classList.remove('hidden');
+        
+        // Force UI refresh after a brief delay to ensure holidays are loaded
+        setTimeout(() => {
+            if (uiManager) {
+                console.log('🎨 Updating UI view');
+                uiManager.updateView();
+            } else {
+                console.error('❌ UIManager not available');
+            }
+        }, 100);
+    } catch (error) {
+        console.error('💥 Error initializing schedule app:', error);
+        navigationManager.showSetupPage();
+    }
 }
 
 async function initializeScheduleApp() {
     try {
-        console.log('🔄 Initializing schedule app...');
+        console.log('🔄 [INITIALIZATION] Schedule app requested...');
         
         if (!dataManager) {
             console.error('❌ DataManager not available');
             return;
         }
         
-        const employeesSnap = await getDocs(dataManager.getEmployeesCollectionRef());
-        const hasEmployees = employeesSnap.docs.some(doc => doc.id !== 'metadata');
+        // OPTIMIZATION: Instead of doing a fresh getDocs, check if we already have employee data
+        console.log('📊 [OPTIMIZATION] Using existing employee data from DataManager instead of fresh query');
+        const hasEmployees = dataManager.activeEmployees && dataManager.activeEmployees.length > 0;
         
-        console.log(`📊 Found ${employeesSnap.docs.length} employee documents, hasEmployees: ${hasEmployees}`);
+        console.log(`📊 [OPTIMIZATION] Found employees in memory: ${hasEmployees} (${dataManager.activeEmployees?.length || 0} active employees)`);
         
         if (!hasEmployees) {
             console.log('📝 No employees found, showing setup page');
@@ -865,8 +980,13 @@ async function initializeScheduleApp() {
         } else {
             console.log('👥 Employees found, initializing main schedule app');
             
-            // Start listening for employee changes
-            dataManager.listenForEmployeeChanges();
+            // Start listening for employee changes if not already listening
+            if (!dataManager.unsubscribe) {
+                console.log('🔄 [OPTIMIZATION] Starting employee listener for first time');
+                dataManager.listenForEmployeeChanges();
+            } else {
+                console.log('✅ [OPTIMIZATION] Employee listener already active');
+            }
             
             // Show the main app interface
             const loadingEl = document.getElementById('loading');
@@ -901,29 +1021,93 @@ async function checkAndMigrateUserProperties() {
     }
     
     try {
-        console.log("🔍 Checking for properties to migrate from ALL user collections...");
+        console.log("🔍 [FIRESTORE READ TRACKING] Starting migration check...");
+        let totalReads = 0;
+        
+        // OPTIMIZATION: Use PropertiesManager data instead of separate query
+        console.log("📊 [OPTIMIZATION] Waiting for PropertiesManager to load data instead of separate query...");
+        
+        // Wait for properties manager to load data (max 3 seconds)
+        let waitCount = 0;
+        while ((!propertiesManager || !propertiesManager.properties || propertiesManager.properties.length === 0) && waitCount < 30) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            waitCount++;
+        }
+        
+        if (propertiesManager && propertiesManager.properties) {
+            const existingProperties = propertiesManager.properties;
+            console.log(`📊 [OPTIMIZATION] Using existing PropertiesManager data: ${existingProperties.length} properties (0 additional reads)`);
+            
+            // If there are already 10+ properties, assume migration was completed
+            if (existingProperties.length >= 10) {
+                console.log(`✅ [FIRESTORE READ TRACKING] Migration skipped - ${existingProperties.length} properties exist, Total additional reads: ${totalReads}`);
+                return;
+            }
+        } else {
+            console.log("⚠️ [OPTIMIZATION] PropertiesManager data not available, falling back to direct query");
+            // Fallback to original method if properties manager data isn't available
+            console.log("📊 [FIRESTORE READ] Reading shared properties collection...");
+            const existingPropertiesRef = collection(db, "properties");
+            console.log("📊 [FIRESTORE READ] About to call getDocs on properties collection...");
+            const existingSnapshots = await getDocs(existingPropertiesRef);
+            const migrationReadCount = existingSnapshots.docs.length || 1;
+            totalReads += migrationReadCount;
+            console.log(`📊 [FIRESTORE READ] getDocs completed - ${migrationReadCount} reads from properties collection`);
+            console.log(`📊 [FIRESTORE READ] Properties metadata:`, {
+                fromCache: existingSnapshots.metadata?.fromCache,
+                source: existingSnapshots.metadata?.fromCache ? 'CACHE' : 'SERVER'
+            });
+            const existingProperties = existingSnapshots.docs.map(doc => doc.data());
+            console.log(`📊 [FIRESTORE READ] Found ${existingProperties.length} existing properties (${totalReads} reads so far)`);
+            
+            // If there are already 10+ properties, assume migration was completed
+            if (existingProperties.length >= 10) {
+                console.log(`✅ [FIRESTORE READ TRACKING] Migration skipped - ${existingProperties.length} properties exist, Total reads: ${totalReads}`);
+                return;
+            }
+        }
+        
+        // Check if we have permission to read users collection first
+        try {
+            console.log("🔐 [PERMISSION CHECK] Testing access to users collection...");
+            const usersRef = collection(db, "users");
+            const testQuery = await getDocs(usersRef);
+            console.log(`✅ [PERMISSION CHECK] Access granted to users collection`);
+        } catch (permissionError) {
+            console.log(`❌ [PERMISSION CHECK] No access to users collection, skipping migration:`, permissionError.message);
+            console.log(`📊 [FIRESTORE READ TRACKING] Migration skipped due to permissions - Total reads: ${totalReads}`);
+            return;
+        }
         
         // Get all user documents to check for properties in any user collection
+        console.log("👥 [FIRESTORE READ] Reading users collection...");
         const usersRef = collection(db, "users");
         const userSnapshots = await getDocs(usersRef);
+        totalReads += userSnapshots.docs.length || 1; // Count reads
         
-        console.log(`👥 Found ${userSnapshots.docs.length} user collections to check`);
+        console.log(`👥 [FIRESTORE READ] Found ${userSnapshots.docs.length} user collections (${totalReads} reads so far)`);
+        
+        // Limit the number of user collections checked to prevent excessive reads
+        const maxUsersToCheck = 10;
+        const usersToCheck = userSnapshots.docs.slice(0, maxUsersToCheck);
+        
+        if (userSnapshots.docs.length > maxUsersToCheck) {
+            console.log(`⚠️ Limited migration check to first ${maxUsersToCheck} users to prevent excessive reads`);
+        }
         
         let totalMigrated = 0;
         
-        // Load existing properties once for duplicate checking
-        const existingPropertiesRef = collection(db, "properties");
-        const existingSnapshots = await getDocs(existingPropertiesRef);
-        const existingProperties = existingSnapshots.docs.map(doc => doc.data());
-        console.log(`  📊 Found ${existingProperties.length} existing properties in shared collection`);
-        
-        for (const userDoc of userSnapshots.docs) {
+        for (const userDoc of usersToCheck) {
             const userIdToCheck = userDoc.id;
             
             try {
                 // Check if this user has properties in their personal collection
+                console.log(`🔍 [FIRESTORE READ] Reading properties for user: ${userIdToCheck}`);
                 const userPropertiesRef = collection(db, `users/${userIdToCheck}/properties`);
                 const propertySnapshots = await getDocs(userPropertiesRef);
+                totalReads += propertySnapshots.docs.length || 1; // Count reads
+                
+                console.log(`📋 [FIRESTORE READ] User ${userIdToCheck}: ${propertySnapshots.docs.length} properties (${totalReads} reads so far)`);
                 
                 if (propertySnapshots.docs.length === 0) {
                     console.log(`  ✅ No properties found for user: ${userIdToCheck}`);
@@ -987,135 +1171,36 @@ async function checkAndMigrateUserProperties() {
     }
 }
 
-// Property Migration Functions - Available globally
+// Property Migration Functions - Available globally (DISABLED to prevent excessive reads)
 window.migratePropertiesToShared = async function() {
+    console.warn("⚠️ [MIGRATION DISABLED] This function has been disabled to prevent excessive Firestore reads.");
+    console.warn("⚠️ If you need to migrate properties, please use the auto-migration feature that runs once per session.");
+    return { success: false, error: "Migration disabled to prevent excessive reads" };
+    
+    /* COMMENTED OUT TO PREVENT EXCESSIVE READS
     if (!db) {
         console.error("❌ Database not initialized. Please log in first.");
         return;
     }
     
     console.log("🔄 Starting property migration to shared collection...");
-    
-    let totalMigrated = 0;
-    let errors = [];
-    
-    try {
-        // Get all user documents  
-        const usersRef = collection(db, "users");
-        const userSnapshots = await getDocs(usersRef);
-        
-        console.log(`📁 Found ${userSnapshots.docs.length} user collections`);
-        
-        for (const userDoc of userSnapshots.docs) {
-            const userId = userDoc.id;
-            console.log(`\n👤 Checking user: ${userId}`);
-            
-            try {
-                // Get properties for this user
-                const userPropertiesRef = collection(db, `users/${userId}/properties`);
-                const propertySnapshots = await getDocs(userPropertiesRef);
-                
-                console.log(`  📋 Found ${propertySnapshots.docs.length} properties`);
-                
-                for (const propertyDoc of propertySnapshots.docs) {
-                    try {
-                        const propertyData = propertyDoc.data();
-                        
-                        // Add to shared collection
-                        await addDoc(collection(db, "properties"), {
-                            ...propertyData,
-                            migratedFrom: userId,
-                            migratedAt: new Date()
-                        });
-                        
-                        totalMigrated++;
-                        console.log(`  ✅ Migrated: ${propertyData.name}`);
-                        
-                    } catch (error) {
-                        errors.push(`Error migrating property ${propertyDoc.id} from user ${userId}: ${error.message}`);
-                        console.error(`  ❌ Error migrating property:`, error);
-                    }
-                }
-                
-            } catch (error) {
-                console.log(`  ⚠️  No properties collection for user ${userId}`);
-            }
-        }
-        
-        console.log(`\n🎉 Migration complete!`);
-        console.log(`✅ Total properties migrated: ${totalMigrated}`);
-        
-        if (errors.length > 0) {
-            console.log(`❌ Errors encountered: ${errors.length}`);
-            errors.forEach(error => console.error(error));
-        }
-        
-        // Refresh the properties view
-        if (propertiesManager) {
-            console.log("🔄 Refreshing properties view...");
-            propertiesManager.listenForPropertyChanges();
-        }
-        
-        return { success: true, migrated: totalMigrated, errors };
-        
-    } catch (error) {
-        console.error("💥 Migration failed:", error);
-        return { success: false, error: error.message };
-    }
+    */
 };
 
-// Check what properties would be migrated (dry run)
+// Check what properties would be migrated (dry run) - DISABLED
 window.checkPropertiesForMigration = async function() {
+    console.warn("⚠️ [DRY RUN DISABLED] This function has been disabled to prevent excessive Firestore reads.");
+    console.warn("⚠️ Use the console logs from auto-migration instead for information about migrations.");
+    return { success: false, error: "Dry run disabled to prevent excessive reads" };
+    
+    /* COMMENTED OUT TO PREVENT EXCESSIVE READS
     if (!db) {
         console.error("❌ Database not initialized. Please log in first.");
         return;
     }
     
     console.log("🔍 Checking properties for migration (dry run)...");
-    
-    let totalProperties = 0;
-    const userProperties = {};
-    
-    try {
-        const usersRef = collection(db, "users");
-        const userSnapshots = await getDocs(usersRef);
-        
-        for (const userDoc of userSnapshots.docs) {
-            const userId = userDoc.id;
-            
-            try {
-                const userPropertiesRef = collection(db, `users/${userId}/properties`);
-                const propertySnapshots = await getDocs(userPropertiesRef);
-                
-                if (propertySnapshots.docs.length > 0) {
-                    userProperties[userId] = propertySnapshots.docs.map(doc => ({
-                        id: doc.id,
-                        name: doc.data().name,
-                        location: doc.data().location
-                    }));
-                    totalProperties += propertySnapshots.docs.length;
-                }
-                
-            } catch (error) {
-                // User has no properties collection
-            }
-        }
-        
-        console.log(`📊 Migration Summary:`);
-        console.log(`Total properties to migrate: ${totalProperties}`);
-        console.log(`Users with properties:`, Object.keys(userProperties).length);
-        
-        Object.entries(userProperties).forEach(([userId, properties]) => {
-            console.log(`\n👤 ${userId}: ${properties.length} properties`);
-            properties.forEach(prop => console.log(`  - ${prop.name} (${prop.location})`));
-        });
-        
-        return { totalProperties, userProperties };
-        
-    } catch (error) {
-        console.error("Error checking properties:", error);
-        return { error: error.message };
-    }
+    */
 };
 
 // Force refresh properties view

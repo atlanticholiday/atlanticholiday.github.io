@@ -2,6 +2,7 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https
 
 export class PropertiesManager {
     constructor(db) {
+        console.log(`📋 [INITIALIZATION] PropertiesManager constructor called`);
         this.db = db;
         this.properties = [];
         this.filteredProperties = [];
@@ -23,7 +24,7 @@ export class PropertiesManager {
         setTimeout(() => this.initializeEventListeners(), 100);
         
         // Start listening for property changes immediately
-        console.log("🏠 PropertiesManager initialized - starting to listen for properties");
+        console.log(`📋 [INITIALIZATION] Starting property listener from constructor`);
         this.listenForPropertyChanges();
     }
 
@@ -73,9 +74,17 @@ export class PropertiesManager {
             this.unsubscribe();
         }
 
-        console.log("🔄 Starting to listen for property changes in shared collection...");
+        console.log("🔄 [FIRESTORE READ] Starting to listen for property changes in shared collection...");
         this.unsubscribe = onSnapshot(this.getPropertiesCollectionRef(), (snapshot) => {
-            console.log(`📋 Received ${snapshot.docs.length} properties from shared collection`);
+            const readCount = snapshot.docs.length || 1;
+            console.log(`📋 [FIRESTORE READ] Properties listener triggered - ${readCount} reads from shared collection`);
+            console.log(`📋 [FIRESTORE READ] Properties snapshot metadata:`, {
+                fromCache: snapshot.metadata.fromCache,
+                hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                docChanges: snapshot.docChanges().length,
+                isFirstLoad: snapshot.docChanges().every(change => change.type === 'added')
+            });
+            
             this.properties = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
