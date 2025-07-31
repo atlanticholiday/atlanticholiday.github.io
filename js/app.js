@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
                 propertiesManager = new PropertiesManager(db);
+                window.propertiesManager = propertiesManager;
                 
                 console.log(`⚙️ [INITIALIZATION] Creating OperationsManager...`);
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
@@ -648,6 +649,76 @@ function setupGlobalEventListeners() {
         });
     }
     
+    // Setup Edit Property modal tabs
+    const basicTab = document.getElementById('edit-basic-tab');
+    const advancedTab = document.getElementById('edit-advanced-tab');
+    basicTab.addEventListener('click', () => {
+      document.getElementById('edit-basic-section').classList.remove('hidden');
+      document.getElementById('edit-advanced-section').classList.add('hidden');
+      basicTab.classList.add('border-blue-500', 'text-black');
+      advancedTab.classList.remove('border-blue-500', 'text-black');
+    });
+    advancedTab.addEventListener('click', () => {
+      document.getElementById('edit-basic-section').classList.add('hidden');
+      document.getElementById('edit-advanced-section').classList.remove('hidden');
+      advancedTab.classList.add('border-blue-500', 'text-black');
+      basicTab.classList.remove('border-blue-500', 'text-black');
+    });
+
+    // Manage Links & Credentials button
+    const manageLinksBtn = document.getElementById('manage-links-btn');
+    manageLinksBtn.addEventListener('click', () => {
+      const propertyId = document.getElementById('edit-property-modal').dataset.propertyId;
+      
+      // Get the current property data from the properties manager
+      if (window.propertiesManager && window.propertiesManager.properties) {
+        const property = window.propertiesManager.properties.find(p => p.id === propertyId);
+        if (property) {
+          // Store the property data in sessionStorage for the settings page
+          sessionStorage.setItem('currentProperty', JSON.stringify(property));
+          window.location.href = `property-settings.html?id=${propertyId}`;
+        } else {
+          alert('Property not found. Please try again.');
+        }
+      } else {
+        alert('Unable to load property data. Please try again.');
+      }
+    });
+
+    // Add Property modal wizard logic
+    let addWizardStep = 1;
+    const totalAddSteps = 2;
+    function showAddStep(step) {
+      document.getElementById('add-wizard-step-1').classList.toggle('hidden', step !== 1);
+      document.getElementById('add-wizard-step-2').classList.toggle('hidden', step !== 2);
+      document.getElementById('advanced-back-btn').classList.toggle('hidden', step === 1);
+      document.getElementById('advanced-next-btn').classList.toggle('hidden', step === totalAddSteps);
+      document.getElementById('advanced-property-save-btn').classList.toggle('hidden', step !== totalAddSteps);
+    }
+
+    document.getElementById('advanced-next-btn').addEventListener('click', () => {
+      if (addWizardStep < totalAddSteps) {
+        addWizardStep++;
+        showAddStep(addWizardStep);
+      }
+    });
+
+    document.getElementById('advanced-back-btn').addEventListener('click', () => {
+      if (addWizardStep > 1) {
+        addWizardStep--;
+        showAddStep(addWizardStep);
+      }
+    });
+
+    // Reset wizard when opening add modal
+    const advancedModal = document.getElementById('advanced-property-modal');
+    advancedModal.addEventListener('transitionend', () => {
+      if (!advancedModal.classList.contains('hidden')) {
+        addWizardStep = 1;
+        showAddStep(addWizardStep);
+      }
+    });
+    
     // Make functions globally available for onclick handlers
     window.editProperty = (propertyId) => {
         const property = propertiesManager.getPropertyById(propertyId);
@@ -828,18 +899,26 @@ function populateEditModal(property) {
     document.getElementById('edit-property-energy-source').value = property.energySource || '';
     document.getElementById('edit-property-smart-tv').value = property.smartTv || 'no';
     document.getElementById('edit-property-status').value = property.status || 'available';
-    
-    // Set amenities checkboxes
-    const amenities = property.amenities || [];
-    document.getElementById('edit-amenity-wifi').checked = amenities.includes('wifi');
-    document.getElementById('edit-amenity-pool').checked = amenities.includes('pool');
-    document.getElementById('edit-amenity-garden').checked = amenities.includes('garden');
-    document.getElementById('edit-amenity-balcony').checked = amenities.includes('balcony');
-    document.getElementById('edit-amenity-ac').checked = amenities.includes('ac');
-    document.getElementById('edit-amenity-kitchen').checked = amenities.includes('kitchen');
-    document.getElementById('edit-amenity-washing-machine').checked = amenities.includes('washing-machine');
-    document.getElementById('edit-amenity-sea-view').checked = amenities.includes('sea-view');
-    
+    document.getElementById('edit-property-key-box-code').value = property.keyBoxCode || '';
+    document.getElementById('edit-property-air-conditioning').value = property.airConditioning || '';
+    document.getElementById('edit-property-fans').value = property.fans || '';
+    document.getElementById('edit-property-heaters').value = property.heaters || '';
+    document.getElementById('edit-property-crib').value = property.crib || '';
+    document.getElementById('edit-property-crib-mattress').value = property.cribMattress || '';
+    document.getElementById('edit-property-baby-chair').value = property.babyChair || '';
+    document.getElementById('edit-property-wifi-frame').value = property.wifiFrame || '';
+    document.getElementById('edit-property-recommendations-frame').value = property.recommendationsFrame || '';
+    document.getElementById('edit-property-investment-frame').value = property.investmentFrame || '';
+    document.getElementById('edit-property-breakfast-box').value = property.breakfastInABox || '';
+    document.getElementById('edit-property-private-sign').value = property.privateSign || '';
+    document.getElementById('edit-property-no-smoking-sign').value = property.noSmokingSign || '';
+    document.getElementById('edit-property-no-junk-mail-sign').value = property.noJunkMailSign || '';
+    document.getElementById('edit-property-al-ah-sign').value = property.alAhSign || '';
+    document.getElementById('edit-property-keys-notice').value = property.keysNotice || '';
+    document.getElementById('edit-property-wc-sign').value = property.wcSign || '';
+    document.getElementById('edit-property-condominium').value = property.condominiumName || '';
+    document.getElementById('edit-property-condominium-email').value = property.condominiumEmail || '';
+    document.getElementById('edit-property-condominium-phone').value = property.condominiumContact || '';
     // Clear any previous errors
     document.getElementById('edit-property-error').textContent = '';
 }
@@ -888,6 +967,26 @@ async function savePropertyChanges() {
     propertyData.parkingFloor = document.getElementById('edit-property-parking-floor').value.trim() || null;
     propertyData.energySource = document.getElementById('edit-property-energy-source').value || null;
     propertyData.smartTv = document.getElementById('edit-property-smart-tv').value;
+    propertyData.keyBoxCode = document.getElementById('edit-property-key-box-code').value.trim() || null;
+    propertyData.airConditioning = parseInt(document.getElementById('edit-property-air-conditioning').value) || 0;
+    propertyData.fans = parseInt(document.getElementById('edit-property-fans').value) || 0;
+    propertyData.heaters = parseInt(document.getElementById('edit-property-heaters').value) || 0;
+    propertyData.crib = parseInt(document.getElementById('edit-property-crib').value) || 0;
+    propertyData.cribMattress = parseInt(document.getElementById('edit-property-crib-mattress').value) || 0;
+    propertyData.babyChair = parseInt(document.getElementById('edit-property-baby-chair').value) || 0;
+    propertyData.wifiFrame = document.getElementById('edit-property-wifi-frame').value;
+    propertyData.recommendationsFrame = document.getElementById('edit-property-recommendations-frame').value;
+    propertyData.investmentFrame = document.getElementById('edit-property-investment-frame').value;
+    propertyData.breakfastInABox = document.getElementById('edit-property-breakfast-box').value;
+    propertyData.privateSign = document.getElementById('edit-property-private-sign').value;
+    propertyData.noSmokingSign = document.getElementById('edit-property-no-smoking-sign').value;
+    propertyData.noJunkMailSign = document.getElementById('edit-property-no-junk-mail-sign').value;
+    propertyData.alAhSign = document.getElementById('edit-property-al-ah-sign').value;
+    propertyData.keysNotice = document.getElementById('edit-property-keys-notice').value;
+    propertyData.wcSign = document.getElementById('edit-property-wc-sign').value;
+    propertyData.condominiumName = document.getElementById('edit-property-condominium').value.trim() || null;
+    propertyData.condominiumEmail = document.getElementById('edit-property-condominium-email').value.trim() || null;
+    propertyData.condominiumContact = document.getElementById('edit-property-condominium-phone').value.trim() || null;
     propertyData.status = document.getElementById('edit-property-status').value;
 
     // Collect amenities
@@ -953,6 +1052,24 @@ async function setupApp() {
                 console.error('❌ UIManager not available');
             }
         }, 100);
+
+        // Check for settings updates when returning from settings page
+        if (sessionStorage.getItem('propertySettingsUpdated') === 'true') {
+          const updatedProperty = sessionStorage.getItem('currentProperty');
+          if (updatedProperty && window.propertiesManager) {
+            try {
+              const property = JSON.parse(updatedProperty);
+              // Update the property in Firestore
+              await window.propertiesManager.updateProperty(property.id, property);
+              console.log('Property settings updated successfully');
+            } catch (error) {
+              console.error('Error updating property settings:', error);
+            }
+          }
+          // Clear the session storage
+          sessionStorage.removeItem('propertySettingsUpdated');
+          sessionStorage.removeItem('currentProperty');
+        }
     } catch (error) {
         console.error('💥 Error initializing schedule app:', error);
         navigationManager.showSetupPage();
