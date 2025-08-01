@@ -1090,3 +1090,11 @@ header h1, header h2, header h3 {
 .copy-success {
     animation: copyFeedback 0.5s ease;
 } 
+
+/* All Info nav wrap override */
+#allinfo-nav {
+  display: flex;
+  flex-wrap: wrap !important;
+  gap: 1rem !important;
+  overflow-x: visible !important;
+} 

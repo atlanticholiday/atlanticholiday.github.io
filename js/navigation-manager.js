@@ -7,7 +7,8 @@ export class NavigationManager {
             operations: 'operations-page',
             schedule: 'app-content',
             login: 'login-screen',
-            setup: 'setup-screen'
+            setup: 'setup-screen',
+            allinfo: 'allinfo-page'
         };
     }
 
@@ -89,6 +90,16 @@ export class NavigationManager {
             });
         }
 
+        // All Info navigation
+        const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
+        if (goToAllInfoBtn) {
+            goToAllInfoBtn.addEventListener('click', () => {
+                this.showPage('allinfo');
+                const event = new CustomEvent('allInfoPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
@@ -108,6 +119,14 @@ export class NavigationManager {
 
         if (backToLandingFromScheduleBtn) {
             backToLandingFromScheduleBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        // Back from All Info
+        const backToLandingFromAllInfoBtn = document.getElementById('back-to-landing-from-allinfo-btn');
+        if (backToLandingFromAllInfoBtn) {
+            backToLandingFromAllInfoBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }

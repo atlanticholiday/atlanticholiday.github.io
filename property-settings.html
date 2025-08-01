@@ -197,73 +197,11 @@
         .form-input::placeholder {
             color: #9ca3af;
         }
-        
-        .actions {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .action-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-        }
-        
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            font-size: 0.875rem;
-        }
-        
-        .btn-secondary {
-            background: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
-        }
-        
-        .btn-secondary:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-        
-        .btn-primary {
-            background: #dc2626;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #b91c1c;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: stretch;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
+
+        /* Highlight anchor section */
+        .highlight {
+          background-color: #fefcbf;
+          transition: background-color 2s ease-out;
         }
     </style>
 </head>
@@ -316,7 +254,7 @@
       <input type="hidden" id="settings-property-id" value="">
       
       <!-- Maps & Location -->
-      <div class="form-section">
+      <div id="section-maps-location" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
             <i class="fas fa-map-marker-alt"></i>
@@ -349,7 +287,7 @@
       </div>
 
       <!-- Media & Content -->
-      <div class="form-section">
+      <div id="section-media-content" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #f3e8ff; color: #9333ea;">
             <i class="fas fa-video"></i>
@@ -381,7 +319,7 @@
       </div>
 
       <!-- Google Drive -->
-      <div class="form-section">
+      <div id="section-google-drive" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #f0fdf4; color: #16a34a;">
             <i class="fab fa-google-drive"></i>
@@ -417,7 +355,7 @@
       </div>
 
       <!-- Recommendations -->
-      <div class="form-section">
+      <div id="section-recommendations" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #fefce8; color: #ca8a04;">
             <i class="fas fa-star"></i>
@@ -443,7 +381,7 @@
       </div>
 
       <!-- Legal & Compliance -->
-      <div class="form-section">
+      <div id="section-legal-compliance" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
             <i class="fas fa-gavel"></i>
@@ -501,7 +439,7 @@
       </div>
 
       <!-- Online Services -->
-      <div class="form-section">
+      <div id="section-online-services" class="form-section">
         <div class="section-header">
           <div class="section-icon" style="background: #eef2ff; color: #6366f1;">
             <i class="fas fa-globe"></i>
@@ -543,6 +481,323 @@
               <option value="yes">Yes</option>
               <option value="missing">Missing</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connectivity & Utilities -->
+      <div id="section-connectivity-utilities" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #eef2ff; color: #1d4ed8;">
+            <i class="fas fa-wifi"></i>
+          </div>
+          <h2 class="section-title">Connectivity & Utilities</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-signal"></i>
+              <span>WiFi Speed</span>
+            </label>
+            <select id="settings-wifi-speed" class="form-input">
+              <option value="">Select Speed</option>
+              <option value="basic">&lt; 25 Mbps</option>
+              <option value="standard">25-50 Mbps</option>
+              <option value="fast">50-100 Mbps</option>
+              <option value="very-fast">100+ Mbps</option>
+              <option value="fiber">Fiber (500+ Mbps)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-bolt"></i>
+              <span>Energy Source</span>
+            </label>
+            <select id="settings-energy-source" class="form-input">
+              <option value="">Select Source</option>
+              <option value="electric">Electric</option>
+              <option value="gas">Gas</option>
+              <option value="mixed">Mixed</option>
+              <option value="solar">Solar</option>
+              <option value="heat-pump">Heat Pump</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Access & Parking -->
+      <div id="section-access-parking" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #f0fdf4; color: #059669;">
+            <i class="fas fa-parking"></i>
+          </div>
+          <h2 class="section-title">Access & Parking</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Key Box Code</span>
+            </label>
+            <input type="text" id="settings-key-box-code" class="form-input" placeholder="Enter code">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-car"></i>
+              <span>Parking Spot Number</span>
+            </label>
+            <input type="text" id="settings-parking-spot" class="form-input" placeholder="Enter spot">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-layer-group"></i>
+              <span>Parking Floor</span>
+            </label>
+            <input type="text" id="settings-parking-floor" class="form-input" placeholder="Enter floor">
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment -->
+      <div id="section-equipment" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
+            <i class="fas fa-toolbox"></i>
+          </div>
+          <h2 class="section-title">Equipment</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-snowflake"></i>
+              <span>Air Conditioning (units)</span>
+            </label>
+            <input type="number" id="settings-air-conditioning" class="form-input" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-fan"></i>
+              <span>Fans (units)</span>
+            </label>
+            <input type="number" id="settings-fans" class="form-input" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-fire"></i>
+              <span>Heaters (units)</span>
+            </label>
+            <input type="number" id="settings-heaters" class="form-input" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-baby"></i>
+              <span>Crib (units)</span>
+            </label>
+            <input type="number" id="settings-crib" class="form-input" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-mattress-pillow"></i>
+              <span>Crib Mattress (units)</span>
+            </label>
+            <input type="number" id="settings-crib-mattress" class="form-input" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-chair"></i>
+              <span>Baby Chair (units)</span>
+            </label>
+            <input type="number" id="settings-baby-chair" class="form-input" min="0" placeholder="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Frames -->
+      <div id="section-frames" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #f3e8ff; color: #7e22ce;">
+            <i class="fas fa-border-all"></i>
+          </div>
+          <h2 class="section-title">Frames</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-wifi"></i>
+              <span>WiFi Frame</span>
+            </label>
+            <select id="settings-wifi-frame" class="form-input">
+              <option value="">Select</option>
+              <option value="placed">Placed</option>
+              <option value="no">No</option>
+              <option value="done">Done</option>
+              <option value="check">Check</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-star"></i>
+              <span>Recommendations Frame</span>
+            </label>
+            <select id="settings-recommendations-frame" class="form-input">
+              <option value="">Select</option>
+              <option value="placed">Placed</option>
+              <option value="no">No</option>
+              <option value="done">Done</option>
+              <option value="check">Check</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-chart-line"></i>
+              <span>Investment Frame</span>
+            </label>
+            <select id="settings-investment-frame" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="do-not-place">Do not place</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services & Extras -->
+      <div id="section-services-extras" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #fefce8; color: #a16207;">
+            <i class="fas fa-concierge-bell"></i>
+          </div>
+          <h2 class="section-title">Services & Extras</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-utensils"></i>
+              <span>Breakfast in a box</span>
+            </label>
+            <select id="settings-breakfast-box" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signage -->
+      <div id="section-signage" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #eef2ff; color: #2563eb;">
+            <i class="fas fa-sign"></i>
+          </div>
+          <h2 class="section-title">Signage</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-door-open"></i>
+              <span>Private Sign</span>
+            </label>
+            <select id="settings-private-sign" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-smoking-ban"></i>
+              <span>No Smoking Sign</span>
+            </label>
+            <select id="settings-no-smoking-sign" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-inbox"></i>
+              <span>No Junk Mail Sign</span>
+            </label>
+            <select id="settings-no-junk-mail-sign" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-hotel"></i>
+              <span>AL AH Sign</span>
+            </label>
+            <select id="settings-al-ah-sign" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="not-necessary">Not necessary</option>
+              <option value="authorized">Authorized</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Keys Notice</span>
+            </label>
+            <select id="settings-keys-notice" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-restroom"></i>
+              <span>WC Sign</span>
+            </label>
+            <select id="settings-wc-sign" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Condominium Info -->
+      <div id="section-condominium-info" class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background: #f3e8ff; color: #7c3aed;">
+            <i class="fas fa-building"></i>
+          </div>
+          <h2 class="section-title">Condominium Info</h2>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-building"></i>
+              <span>Condominium Name</span>
+            </label>
+            <input type="text" id="settings-condominium" class="form-input" placeholder="Enter name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-envelope"></i>
+              <span>Condominium Email</span>
+            </label>
+            <input type="email" id="settings-condominium-email" class="form-input" placeholder="Enter email">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-phone"></i>
+              <span>Condominium Contact No.</span>
+            </label>
+            <input type="text" id="settings-condominium-phone" class="form-input" placeholder="Enter contact">
           </div>
         </div>
       </div>
@@ -622,6 +877,30 @@
           document.getElementById('settings-online-complaint-books-email').value = property.onlineComplaintBooksEmail || '';
           document.getElementById('settings-online-complaint-books-password').value = property.onlineComplaintBooksPassword || '';
           document.getElementById('settings-airbnb-links-status').value = property.airbnbLinksStatus || '';
+          document.getElementById('settings-wifi-speed').value = property.wifiSpeed || '';
+          document.getElementById('settings-energy-source').value = property.energySource || '';
+          document.getElementById('settings-key-box-code').value = property.keyBoxCode || '';
+          document.getElementById('settings-parking-spot').value = property.parkingSpot || '';
+          document.getElementById('settings-parking-floor').value = property.parkingFloor || '';
+          document.getElementById('settings-air-conditioning').value = property.airConditioning || '0';
+          document.getElementById('settings-fans').value = property.fans || '0';
+          document.getElementById('settings-heaters').value = property.heaters || '0';
+          document.getElementById('settings-crib').value = property.crib || '0';
+          document.getElementById('settings-crib-mattress').value = property.cribMattress || '0';
+          document.getElementById('settings-baby-chair').value = property.babyChair || '0';
+          document.getElementById('settings-wifi-frame').value = property.wifiFrame || '';
+          document.getElementById('settings-recommendations-frame').value = property.recommendationsFrame || '';
+          document.getElementById('settings-investment-frame').value = property.investmentFrame || '';
+          document.getElementById('settings-breakfast-box').value = property.breakfastBox || '';
+          document.getElementById('settings-private-sign').value = property.privateSign || '';
+          document.getElementById('settings-no-smoking-sign').value = property.noSmokingSign || '';
+          document.getElementById('settings-no-junk-mail-sign').value = property.noJunkMailSign || '';
+          document.getElementById('settings-al-ah-sign').value = property.alAhSign || '';
+          document.getElementById('settings-keys-notice').value = property.keysNotice || '';
+          document.getElementById('settings-wc-sign').value = property.wcSign || '';
+          document.getElementById('settings-condominium').value = property.condominiumName || '';
+          document.getElementById('settings-condominium-email').value = property.condominiumEmail || '';
+          document.getElementById('settings-condominium-phone').value = property.condominiumPhone || '';
         } else {
           console.error('Property not found');
           document.getElementById('property-name-display').textContent = 'Property not found';
@@ -662,7 +941,31 @@
         onlineComplaintBooksEnabled: document.getElementById('settings-online-complaint-books-enabled').value,
         onlineComplaintBooksEmail: document.getElementById('settings-online-complaint-books-email').value,
         onlineComplaintBooksPassword: document.getElementById('settings-online-complaint-books-password').value,
-        airbnbLinksStatus: document.getElementById('settings-airbnb-links-status').value
+        airbnbLinksStatus: document.getElementById('settings-airbnb-links-status').value,
+        wifiSpeed: document.getElementById('settings-wifi-speed').value,
+        energySource: document.getElementById('settings-energy-source').value,
+        keyBoxCode: document.getElementById('settings-key-box-code').value,
+        parkingSpot: document.getElementById('settings-parking-spot').value,
+        parkingFloor: document.getElementById('settings-parking-floor').value,
+        airConditioning: parseInt(document.getElementById('settings-air-conditioning').value) || 0,
+        fans: parseInt(document.getElementById('settings-fans').value) || 0,
+        heaters: parseInt(document.getElementById('settings-heaters').value) || 0,
+        crib: parseInt(document.getElementById('settings-crib').value) || 0,
+        cribMattress: parseInt(document.getElementById('settings-crib-mattress').value) || 0,
+        babyChair: parseInt(document.getElementById('settings-baby-chair').value) || 0,
+        wifiFrame: document.getElementById('settings-wifi-frame').value,
+        recommendationsFrame: document.getElementById('settings-recommendations-frame').value,
+        investmentFrame: document.getElementById('settings-investment-frame').value,
+        breakfastBox: document.getElementById('settings-breakfast-box').value,
+        privateSign: document.getElementById('settings-private-sign').value,
+        noSmokingSign: document.getElementById('settings-no-smoking-sign').value,
+        noJunkMailSign: document.getElementById('settings-no-junk-mail-sign').value,
+        alAhSign: document.getElementById('settings-al-ah-sign').value,
+        keysNotice: document.getElementById('settings-keys-notice').value,
+        wcSign: document.getElementById('settings-wc-sign').value,
+        condominiumName: document.getElementById('settings-condominium').value,
+        condominiumEmail: document.getElementById('settings-condominium-email').value,
+        condominiumPhone: document.getElementById('settings-condominium-phone').value
       };
       
       try {
@@ -685,6 +988,19 @@
     
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', loadPropertyData);
+    // Scroll to and highlight anchored section
+    document.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const id = hash.substring(1);
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('highlight');
+          setTimeout(() => el.classList.remove('highlight'), 3000);
+        }
+      }
+    });
   </script>
 </body>
 </html> 

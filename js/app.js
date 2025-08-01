@@ -235,6 +235,122 @@ function setupGlobalEventListeners() {
         }, 100); // Small delay to ensure DOM is ready
     });
 
+    // All Info page initializer
+    document.addEventListener('allInfoPageOpened', () => initAllInfoUI());
+    function initAllInfoUI() {
+        const properties = window.propertiesManager?.properties || [];
+        const nav = document.getElementById('allinfo-nav');
+        const content = document.getElementById('allinfo-content');
+        if (!nav || !content) return;
+        nav.innerHTML = '';
+        content.innerHTML = '';
+        const categories = [
+            { title: 'Basic Info', slug: 'basic-info', fields: ['location','type','typology','rooms','bathrooms','floor'], icon: 'fas fa-info-circle' },
+            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','energySource'], icon: 'fas fa-wifi' },
+            { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode','parkingSpot','parkingFloor'], icon: 'fas fa-parking' },
+            { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
+            { title: 'Frames', slug: 'frames', fields: ['wifiFrame','recommendationsFrame','investmentFrame'], icon: 'fas fa-border-all' },
+            { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox'], icon: 'fas fa-concierge-bell' },
+            { title: 'Signage', slug: 'signage', fields: ['privateSign','noSmokingSign','noJunkMailSign','alAhSign','keysNotice','wcSign'], icon: 'fas fa-sign' },
+            { title: 'Condominium Info', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' },
+            { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos','bookingDescriptionStatus'], icon: 'fas fa-video' },
+            { title: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled','googleDriveLink','scannedDocsLink'], icon: 'fab fa-google-drive' },
+            { title: 'Recommendations', slug: 'recommendations', fields: ['recommendationsLink','recommendationsEditLink'], icon: 'fas fa-star' },
+            { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus','complaintBooksStatus','statisticsStatus','sefStatus'], icon: 'fas fa-gavel' },
+            { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled','onlineComplaintBooksEmail','onlineComplaintBooksPassword','airbnbLinksStatus'], icon: 'fas fa-globe' }
+        ];
+        // Category navigation buttons
+        categories.forEach((cat, idx) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = `<i class="${cat.icon} mr-2"></i>${cat.title}`;
+            btn.className = 'flex items-center px-4 py-2 rounded hover:bg-gray-100';
+            if (idx === 0) btn.classList.add('bg-gray-100');
+            btn.onclick = () => {
+                Array.from(nav.children).forEach((c,i) => c.classList.toggle('bg-gray-100', i === idx));
+                renderCategory(idx);
+            };
+            nav.appendChild(btn);
+        });
+        // Filter input
+        const filterWrapper = document.createElement('div'); filterWrapper.className = 'mb-4';
+        const filterInput = document.createElement('input');
+        filterInput.id = 'allinfo-filter'; filterInput.type = 'text';
+        filterInput.placeholder = 'Filter properties...';
+        filterInput.className = 'px-3 py-2 border rounded-md w-full';
+        filterWrapper.appendChild(filterInput);
+        // Attach filter to dedicated wrapper
+        const filterParent = document.getElementById('allinfo-filter-wrapper');
+        if (filterParent) { filterParent.innerHTML = ''; filterParent.appendChild(filterWrapper); }
+        // Table container
+        const tableContainer = document.getElementById('allinfo-content');
+        if (tableContainer) { tableContainer.innerHTML = ''; }
+        // Sorting helper
+        function sortTable(table, colIndex, asc) {
+            const tbody = table.querySelector('tbody');
+            Array.from(tbody.querySelectorAll('tr')).sort((a,b) => {
+                const aText = a.cells[colIndex].textContent.trim();
+                const bText = b.cells[colIndex].textContent.trim();
+                return asc
+                    ? aText.localeCompare(bText, undefined, { numeric:true })
+                    : bText.localeCompare(aText, undefined, { numeric:true });
+            }).forEach(r => tbody.appendChild(r));
+        }
+        // Render table for a category
+        function renderCategory(idx) {
+            tableContainer.innerHTML = '';
+            const cat = categories[idx];
+            const displayFields = ['name', ...cat.fields];
+            const wrap = document.createElement('div'); wrap.className = 'shadow overflow-x-auto border-b border-gray-200 sm:rounded-lg';
+            const table = document.createElement('table'); table.className = 'min-w-full divide-y divide-gray-200';
+            // Header with sticky sort icons
+            const thead = document.createElement('thead');
+            thead.className = 'bg-gray-900 text-white';
+            const tr = document.createElement('tr');
+            displayFields.forEach((key, i) => {
+                const th = document.createElement('th');
+                th.className = 'sticky top-0 z-10 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer bg-gray-900';
+                const label = key === 'name'
+                    ? 'Property Name'
+                    : key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+                th.innerHTML = `${label} <i class="fas fa-sort ml-1 text-gray-400"></i>`;
+                th.onclick = () => { const asc = !th.asc; th.asc = asc; sortTable(table, i, asc); };
+                tr.appendChild(th);
+            });
+            const thA = document.createElement('th');
+            thA.className = 'sticky top-0 z-10 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider bg-gray-900';
+            thA.textContent = 'Actions';
+            tr.appendChild(thA);
+            thead.appendChild(tr);
+            table.appendChild(thead);
+            // Body
+            const tbody = document.createElement('tbody'); tbody.className='bg-white divide-y divide-gray-200';
+            properties.forEach(prop=>{
+                const row = document.createElement('tr'); row.className='hover:bg-gray-50';
+                displayFields.forEach(key=>{ const td=document.createElement('td'); td.className='px-6 py-4 whitespace-nowrap text-sm text-gray-700'; td.textContent=prop[key]??''; row.appendChild(td); });
+                const actionTd=document.createElement('td'); actionTd.className='px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
+                [
+                    { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => window.location.href = `property-settings.html?id=${prop.id}#section-${categories[idx].slug}`, title: 'Edit' },
+                    { icon: 'fas fa-eye', cls: 'text-green-600', fn: () => { sessionStorage.setItem('currentProperty', JSON.stringify(prop)); window.location.href = `property-settings.html?id=${prop.id}`; }, title: 'View' },
+                    { icon: 'fas fa-file-pdf', cls: 'text-red-600', fn: () => console.log('PDF for', prop.id), title: 'Download PDF' }
+                ].forEach(({ icon, cls, fn, title }) => {
+                    const btn = document.createElement('button');
+                    btn.innerHTML = `<i class="${icon}"></i>`;
+                    btn.className = `${cls} hover:text-gray-800 px-2 py-1 rounded`;
+                    btn.title = title;
+                    btn.onclick = fn;
+                    actionTd.appendChild(btn);
+                });
+                row.appendChild(actionTd);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody); wrap.appendChild(table); tableContainer.appendChild(wrap);
+        }
+        // Filter logic
+        filterInput.addEventListener('input',e=>{const term=e.target.value.toLowerCase(); tableContainer.querySelectorAll('tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(term)?'':'none';});});
+        // Initial render
+        renderCategory(0);
+    }
+
     // Properties management toggle buttons
     const quickAddToggleBtn = document.getElementById('quick-add-toggle-btn');
     const bulkImportToggleBtn = document.getElementById('bulk-import-toggle-btn');
@@ -726,10 +842,11 @@ function setupGlobalEventListeners() {
     
     // Make functions globally available for onclick handlers
     window.editProperty = (propertyId) => {
+        // Redirect to standalone settings page for full editing
         const property = propertiesManager.getPropertyById(propertyId);
         if (property) {
-            populateEditModal(property);
-            document.getElementById('edit-property-modal').classList.remove('hidden');
+            sessionStorage.setItem('currentProperty', JSON.stringify(property));
+            window.location.href = `property-settings.html?id=${propertyId}`;
         }
     };
     

@@ -1040,7 +1040,10 @@ export class PropertiesManager {
         // Populate list pane
         listPane.innerHTML = this.filteredProperties.map(property => `
             <div class="p-4 border-b cursor-pointer property-list-item" data-id="${property.id}">
-                <h4 class="font-semibold text-gray-900">${property.name}</h4>
+                <div class="flex items-center mb-1">
+                    ${property.latitude && property.longitude ? `<span class="text-blue-600 mr-2" title="Pinned on map">📍</span>` : ``}
+                    <h4 class="font-semibold text-gray-900">${property.name}</h4>
+                </div>
                 <p class="text-sm text-gray-600">${property.location}</p>
                 <p class="text-xs text-gray-500">${property.typology || property.type}</p>
                 <p class="text-xs text-gray-400">Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}</p>
