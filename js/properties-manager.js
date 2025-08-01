@@ -196,9 +196,16 @@ export class PropertiesManager {
                 propertiesList.classList.remove('hidden');
                 this.renderListView();
             }
+        } else if (this.currentView === 'map') {
+            propertiesGrid.classList.add('hidden');
+            propertiesTable.classList.add('hidden');
+            document.getElementById('properties-list')?.classList.add('hidden');
+            document.getElementById('properties-map-list')?.classList.remove('hidden');
+            this.renderMapListView();
         } else {
             propertiesTable.classList.add('hidden');
             document.getElementById('properties-list')?.classList.add('hidden');
+            document.getElementById('properties-map-list')?.classList.add('hidden');
             propertiesGrid.classList.remove('hidden');
             propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
         }
@@ -206,56 +213,15 @@ export class PropertiesManager {
 
     createPropertyCard(property) {
         const displayType = property.typology || property.type;
-        
-        // Status badge with appropriate colors
-        const getStatusBadge = (status) => {
-            const statusConfig = {
-                'available': { color: 'green', text: 'Available' },
-                'occupied': { color: 'blue', text: 'Occupied' },
-                'maintenance': { color: 'yellow', text: 'Maintenance' },
-                'renovation': { color: 'orange', text: 'Renovation' },
-                'inactive': { color: 'gray', text: 'Inactive' }
-            };
-            const config = statusConfig[status] || statusConfig['available'];
-            return `<span class="text-xs text-${config.color}-600 px-2 py-1 bg-${config.color}-50 rounded-full font-medium">${config.text}</span>`;
-        };
 
-        // Format WiFi speed display
-        const getWifiDisplay = (speed) => {
-            if (!speed) return '';
-            const speedLabels = {
-                'basic': '📶 Basic',
-                'standard': '📶 Standard',
-                'fast': '📶 Fast',
-                'very-fast': '📶 Very Fast',
-                'fiber': '📶 Fiber'
-            };
-            return speedLabels[speed] || '';
-        };
-
-        // Format energy source display
-        const getEnergyDisplay = (source) => {
-            if (!source) return '';
-            const energyLabels = {
-                'electric': '⚡ Electric',
-                'gas': '🔥 Gas',
-                'mixed': '⚡🔥 Mixed',
-                'solar': '☀️ Solar',
-                'heat-pump': '🌡️ Heat Pump'
-            };
-            return energyLabels[source] || '';
-        };
-        
+        // Simplified property card: only name, location, typology, and date added
         return `
             <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow property-card">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex-1">
                         <h3 class="text-lg font-semibold text-gray-900 mb-1">${property.name}</h3>
                         <p class="text-sm text-gray-600 mb-2">${property.location}</p>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xs text-blue-600 uppercase px-3 py-1 bg-blue-50 rounded-full font-medium">${displayType}</span>
-                            ${getStatusBadge(property.status || 'available')}
-                        </div>
+                        <span class="text-xs text-blue-600 uppercase px-3 py-1 bg-blue-50 rounded-full font-medium">${displayType}</span>
                     </div>
                     <div class="flex flex-col gap-2">
                         <button onclick="editProperty('${property.id}')" class="text-blue-600 hover:text-blue-800 text-sm" title="Edit Property">
@@ -270,52 +236,6 @@ export class PropertiesManager {
                         </button>
                     </div>
                 </div>
-                
-                <!-- Property Details Grid -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                        <div class="flex items-center">
-                            <span class="text-gray-500 min-w-0 truncate">Bedrooms:</span>
-                            <span class="ml-2 font-medium">${property.rooms === 0 ? 'Studio' : (property.rooms || 0)}</span>
-                        </div>
-                        ${property.bathrooms ? `
-                        <div class="flex items-center">
-                            <span class="text-gray-500 min-w-0 truncate">Bathrooms:</span>
-                            <span class="ml-2 font-medium">${property.bathrooms}</span>
-                        </div>
-                        ` : ''}
-                        ${property.floor ? `
-                        <div class="flex items-center">
-                            <span class="text-gray-500 min-w-0 truncate">Floor:</span>
-                            <span class="ml-2 font-medium">${property.floor}</span>
-                        </div>
-                        ` : ''}
-                        ${property.parkingSpot ? `
-                        <div class="flex items-center">
-                            <span class="text-gray-500 min-w-0 truncate">Parking:</span>
-                            <span class="ml-2 font-medium">${property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <!-- Tech & Features -->
-                <div class="space-y-2 text-sm">
-                    ${getWifiDisplay(property.wifiSpeed) ? `
-                    <div class="flex items-center justify-between">
-                        <span>${getWifiDisplay(property.wifiSpeed)}</span>
-                        ${property.wifiAirbnb === 'yes' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Listed on Airbnb</span>' : ''}
-                        ${property.wifiAirbnb === 'featured' ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">⭐ Featured</span>' : ''}
-                    </div>
-                    ` : ''}
-                    
-                    <div class="flex items-center justify-between">
-                        ${getEnergyDisplay(property.energySource) ? `<span>${getEnergyDisplay(property.energySource)}</span>` : '<span class="text-gray-400">Energy: Not specified</span>'}
-                        ${property.smartTv === 'yes' ? '<span class="text-sm">📺 Smart TV</span>' : ''}
-                        ${property.smartTv === 'multiple' ? '<span class="text-sm">📺 Multiple TVs</span>' : ''}
-                    </div>
-                </div>
-                
                 <div class="pt-3 mt-4 border-t border-gray-100 text-xs text-gray-500">
                     Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}
                 </div>
@@ -886,6 +806,7 @@ export class PropertiesManager {
         const cardViewBtn = document.getElementById('card-view-btn');
         const listViewBtn = document.getElementById('list-view-btn');
         const tableViewBtn = document.getElementById('table-view-btn');
+        const mapViewBtn = document.getElementById('map-view-btn');
         
         if (cardViewBtn) {
             cardViewBtn.addEventListener('click', () => {
@@ -915,6 +836,16 @@ export class PropertiesManager {
                 listViewBtn?.classList.remove('active');
                 this.renderProperties();
                 this.updateTableSortIndicators();
+            });
+        }
+        if (mapViewBtn) {
+            mapViewBtn.addEventListener('click', () => {
+                this.currentView = 'map';
+                mapViewBtn.classList.add('active');
+                cardViewBtn?.classList.remove('active');
+                listViewBtn?.classList.remove('active');
+                tableViewBtn?.classList.remove('active');
+                this.renderProperties();
             });
         }
 
@@ -1099,5 +1030,56 @@ export class PropertiesManager {
         
         // Re-render with cleared filters
         this.renderProperties();
+    }
+
+    // Render split List & Map view of properties
+    renderMapListView() {
+        const listPane = document.getElementById('properties-list-pane');
+        const mapPane = document.getElementById('properties-map-pane');
+        if (!listPane || !mapPane) return;
+        // Populate list pane
+        listPane.innerHTML = this.filteredProperties.map(property => `
+            <div class="p-4 border-b cursor-pointer property-list-item" data-id="${property.id}">
+                <h4 class="font-semibold text-gray-900">${property.name}</h4>
+                <p class="text-sm text-gray-600">${property.location}</p>
+                <p class="text-xs text-gray-500">${property.typology || property.type}</p>
+                <p class="text-xs text-gray-400">Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}</p>
+            </div>
+        `).join('');
+        // Initialize map on first load
+        if (!this.map) {
+            this.map = L.map('properties-map-pane').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(this.map);
+        }
+        // Clear existing markers
+        if (this.mapMarkers) {
+            this.mapMarkers.forEach(m => this.map.removeLayer(m));
+        }
+        this.mapMarkers = [];
+        const bounds = [];
+        this.filteredProperties.forEach(property => {
+            if (property.latitude && property.longitude) {
+                const marker = L.marker([property.latitude, property.longitude]).addTo(this.map);
+                marker.bindPopup(`<strong>${property.name}</strong><br/>${property.location}`);
+                this.mapMarkers.push(marker);
+                bounds.push([property.latitude, property.longitude]);
+            }
+        });
+        // Adjust map view to fit markers
+        if (bounds.length) {
+            this.map.fitBounds(bounds, { padding: [50, 50] });
+        }
+        // Center map on list item click
+        document.querySelectorAll('.property-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const prop = this.filteredProperties.find(p => p.id === id);
+                if (prop && prop.latitude && prop.longitude) {
+                    this.map.setView([prop.latitude, prop.longitude], 12);
+                }
+            });
+        });
     }
 } 
