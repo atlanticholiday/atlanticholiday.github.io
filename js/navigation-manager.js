@@ -9,7 +9,8 @@ export class NavigationManager {
             reservations: 'reservations-page',
             login: 'login-screen',
             setup: 'setup-screen',
-            allinfo: 'allinfo-page'
+            allinfo: 'allinfo-page',
+            userManagement: 'user-management-page'
         };
     }
 
@@ -56,6 +57,10 @@ export class NavigationManager {
 
     showSetupPage() {
         this.showPage('setup');
+    }
+
+    showUserManagementPage() {
+        this.showPage('userManagement');
     }
 
     getCurrentPage() {
@@ -114,6 +119,15 @@ export class NavigationManager {
                 document.dispatchEvent(event);
             });
         }
+        // User Management navigation
+        const goToUserManagementBtn = document.getElementById('go-to-user-management-btn');
+        if (goToUserManagementBtn) {
+            goToUserManagementBtn.addEventListener('click', () => {
+                this.showUserManagementPage();
+                const event = new CustomEvent('userManagementPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
 
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
@@ -152,11 +166,19 @@ export class NavigationManager {
                 this.showLandingPage();
             });
         }
+        // Back from User Management
+        const backToLandingFromUserManagementBtn = document.getElementById('back-to-landing-from-user-management-btn');
+        if (backToLandingFromUserManagementBtn) {
+            backToLandingFromUserManagementBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
 
         // Sign out buttons
         const landingSignOutBtn = document.getElementById('landing-sign-out-btn');
         const propertiesSignOutBtn = document.getElementById('properties-sign-out-btn');
         const operationsSignOutBtn = document.getElementById('operations-sign-out-btn');
+        const userManagementSignOutBtn = document.getElementById('user-management-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -174,6 +196,12 @@ export class NavigationManager {
 
         if (operationsSignOutBtn) {
             operationsSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (userManagementSignOutBtn) {
+            userManagementSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

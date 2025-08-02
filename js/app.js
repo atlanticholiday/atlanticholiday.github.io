@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { Config } from './config.js';
@@ -12,6 +12,8 @@ import { NavigationManager } from './navigation-manager.js';
 import { PropertiesManager } from './properties-manager.js';
 import { OperationsManager } from './operations-manager.js';
 import { ReservationsManager } from './reservations-manager.js';
+import { AccessManager } from './access-manager.js';
+import { RoleManager } from './role-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -19,7 +21,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -35,6 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
         auth = getAuth(app);
+        // Initialize access manager for allowed email checks
+        accessManager = new AccessManager(db);
+        window.accessManager = accessManager;
+        roleManager = new RoleManager(db);
+        window.roleManager = roleManager;
         // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
         await setPersistence(auth, browserLocalPersistence);
         setLogLevel('error');
@@ -105,9 +112,170 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup global event listeners
         setupGlobalEventListeners();
 
+        // User Management Page: populate allowed emails list when opened
+        document.addEventListener('userManagementPageOpened', async () => {
+            // Fetch roles definitions
+            const roles = await roleManager.listRoles();
+            // Fetch user emails
+            const emails = await accessManager.listEmails();
+            const listEl = document.getElementById('user-list');
+            if (listEl) {
+                listEl.innerHTML = '';
+                emails.forEach(async (email) => {
+                    const userRoles = await accessManager.getRoles(email);
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center mb-2';
+                    // Roles checkboxes
+                    const rolesContainer = document.createElement('span');
+                    rolesContainer.className = 'mx-4';
+                    roles.forEach(role => {
+                        const cb = document.createElement('input');
+                        cb.type = 'checkbox';
+                        cb.id = `role-${email}-${role.key}`;
+                        cb.value = role.key;
+                        cb.checked = userRoles.includes(role.key);
+                        cb.addEventListener('change', async () => {
+                            const selected = Array.from(rolesContainer.querySelectorAll('input[type=checkbox]:checked')).map(i => i.value);
+                            await accessManager.setRoles(email, selected);
+                        });
+                        const lbl = document.createElement('label');
+                        lbl.htmlFor = cb.id;
+                        lbl.textContent = role.key;
+                        rolesContainer.appendChild(cb);
+                        rolesContainer.appendChild(lbl);
+                    });
+                    // Email text
+                    const span = document.createElement('span');
+                    span.textContent = email;
+                    // Buttons container
+                    const btnGroup = document.createElement('span');
+                    // Reset password button
+                    const resetBtn = document.createElement('button');
+                    resetBtn.textContent = 'Reset Password';
+                    resetBtn.className = 'text-sm text-blue-600 mr-2 hover:underline';
+                    resetBtn.addEventListener('click', async () => {
+                        try {
+                            await sendPasswordResetEmail(auth, email);
+                            alert(`Password reset email sent to ${email}`);
+                        } catch (err) {
+                            console.error(err);
+                            alert(`Failed to send reset email: ${err.message}`);
+                        }
+                    });
+                    // Delete user access button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.className = 'text-sm text-red-600 hover:underline';
+                    deleteBtn.addEventListener('click', async () => {
+                        if (!confirm(`Remove access for ${email}?`)) return;
+                        try {
+                            await accessManager.removeEmail(email);
+                            // Refresh the list
+                            document.dispatchEvent(new CustomEvent('userManagementPageOpened'));
+                        } catch (err) {
+                            console.error(err);
+                            alert(`Failed to remove user: ${err.message}`);
+                        }
+                    });
+                    btnGroup.appendChild(resetBtn);
+                    btnGroup.appendChild(deleteBtn);
+                    li.appendChild(span);
+                    li.insertBefore(rolesContainer, btnGroup);
+                    li.appendChild(btnGroup);
+                    listEl.appendChild(li);
+                });
+            }
+        });
+        // Handle creation of new access entries
+        const createUserBtn = document.getElementById('create-user-btn');
+        if (createUserBtn) {
+            createUserBtn.addEventListener('click', async () => {
+                const emailInput = document.getElementById('new-user-email');
+                const passwordInput = document.getElementById('new-user-password');
+                const listEl = document.getElementById('user-list');
+                const errorEl = document.getElementById('create-user-error');
+                const email = emailInput?.value.trim();
+                const password = passwordInput?.value;
+                errorEl.textContent = '';
+                if (!email) {
+                    errorEl.textContent = 'Please enter a valid email address.';
+                    return;
+                }
+                if (!password) {
+                    errorEl.textContent = 'Please enter a password.';
+                    return;
+                }
+                try {
+                    // Create Auth user
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    // Then add to Firestore allowed list
+                    await accessManager.addEmail(email);
+                    emailInput.value = '';
+                    passwordInput.value = '';
+                    const emails = await accessManager.listEmails();
+                    if (listEl) {
+                        listEl.innerHTML = '';
+                        emails.forEach(e => {
+                            const li = document.createElement('li');
+                            li.textContent = e;
+                            listEl.appendChild(li);
+                        });
+                    }
+                } catch (err) {
+                    errorEl.textContent = err.message;
+                }
+            });
+        }
+        // Handle creation of new role entries
+        const addRoleBtn = document.getElementById('add-role-btn');
+        if (addRoleBtn) {
+            addRoleBtn.addEventListener('click', async () => {
+                const keyInput = document.getElementById('new-role-key');
+                const titleInput = document.getElementById('new-role-title');
+                const errorEl = document.getElementById('add-role-error');
+                const key = keyInput.value.trim();
+                const title = titleInput.value.trim();
+                errorEl.textContent = '';
+                if (!key || !title) {
+                    errorEl.textContent = 'Please specify both key and title.';
+                    return;
+                }
+                try {
+                    await roleManager.addRole(key, title);
+                    keyInput.value = '';
+                    titleInput.value = '';
+                    // Refresh lists
+                    document.dispatchEvent(new CustomEvent('userManagementPageOpened'));
+                } catch (err) {
+                    errorEl.textContent = err.message;
+                }
+            });
+        }
+
         // Setup authentication listener
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // Seed or verify allowed emails for access control
+                let allow = true;
+                try {
+                    const emails = await accessManager.listEmails();
+                    const userEmailKey = user.email.toLowerCase();
+                    if (emails.length === 0) {
+                        // First-time login: seed allowed list
+                        await accessManager.addEmail(user.email);
+                    } else if (!emails.includes(userEmailKey)) {
+                        console.warn(`Access denied for user: ${user.email}`);
+                        allow = false;
+                    }
+                } catch (err) {
+                    // If Firestore check fails, allow login to avoid lockout
+                    console.warn('AccessManager error, skipping email check:', err);
+                }
+                if (!allow) {
+                    await signOut(auth);
+                    document.getElementById('login-error').textContent = 'Access not granted';
+                    return;
+                }
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 
