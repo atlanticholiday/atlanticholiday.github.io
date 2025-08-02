@@ -146,14 +146,35 @@ export class EventManager {
         });
 
         document.getElementById('vacation-planner-container').addEventListener('click', e => {
+            const editBtn = e.target.closest('.edit-vacation-btn');
             const scheduleBtn = e.target.closest('.schedule-vacation-btn');
             const deleteBtn = e.target.closest('.delete-vacation-btn');
-
+            // Handle edit click: populate inputs and switch button to update mode
+            if (editBtn) {
+                const employeeId = editBtn.dataset.employeeId;
+                const vacationIndex = parseInt(editBtn.dataset.vacationIndex);
+                const emp = this.dataManager.getActiveEmployees().find(emp => emp.id === employeeId);
+                if (!emp) return;
+                const vac = emp.vacations[vacationIndex];
+                document.getElementById(`vacation-start-${employeeId}`).value = vac.startDate;
+                document.getElementById(`vacation-end-${employeeId}`).value = vac.endDate;
+                const btn = document.querySelector(`.schedule-vacation-btn[data-employee-id="${employeeId}"]`);
+                btn.textContent = 'Update';
+                btn.dataset.editIndex = vacationIndex;
+                return;
+            }
             if (scheduleBtn) {
                 const employeeId = scheduleBtn.dataset.employeeId;
                 const startDate = document.getElementById(`vacation-start-${employeeId}`).value;
                 const endDate = document.getElementById(`vacation-end-${employeeId}`).value;
-                this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
+                if (scheduleBtn.dataset.editIndex !== undefined) {
+                    const vacIndex = parseInt(scheduleBtn.dataset.editIndex);
+                    this.dataManager.handleUpdateVacation(employeeId, vacIndex, startDate, endDate);
+                    delete scheduleBtn.dataset.editIndex;
+                    scheduleBtn.textContent = 'Schedule';
+                } else {
+                    this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
+                }
             } else if (deleteBtn) {
                 const { employeeId, vacationIndex } = deleteBtn.dataset;
                 this.uiManager.showConfirmationModal('Delete Vacation', 'Are you sure you want to delete this vacation?', () => {

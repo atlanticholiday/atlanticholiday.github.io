@@ -154,6 +154,16 @@ export class DataManager {
         const docRef = doc(this.db, "employees", employeeId);
         await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to delete vacation", e));
     }
+    // Add a method to update an existing vacation entry
+    async handleUpdateVacation(employeeId, vacationIndex, startDate, endDate) {
+        const empDoc = this.activeEmployees.find(e => e.id === employeeId);
+        if (!empDoc) return;
+        const updatedVacations = empDoc.vacations.map((vac, idx) =>
+            idx === vacationIndex ? { startDate, endDate } : vac
+        );
+        const docRef = doc(this.db, "employees", employeeId);
+        await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to update vacation", e));
+    }
     
     async saveNewOrder() {
         const reorderedIds = [...document.querySelectorAll('#reorder-list-container .draggable')].map(el => el.dataset.employeeId);

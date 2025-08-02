@@ -44,6 +44,52 @@ export class UIManager {
         }
         
         const year = this.dataManager.getCurrentDate().getFullYear();
+        const currentView = this.dataManager.getCurrentView();
+        if (currentView === 'vacation') {
+            const allHolidays = this.dataManager.getAllHolidays();
+            listContainer.innerHTML = activeEmployees.map(emp => {
+                let usedDays = 0;
+                if (emp.vacations && emp.vacations.length > 0) {
+                    emp.vacations.forEach(vac => {
+                        let current = new Date(vac.startDate);
+                        const end = new Date(vac.endDate);
+                        while (current <= end) {
+                            const dayIndex = current.getDay();
+                            if (emp.workDays.includes(dayIndex)) {
+                                const dateKey = this.dataManager.getDateKey(current);
+                                const hols = allHolidays[current.getFullYear()] || {};
+                                if (!hols[dateKey]) {
+                                    usedDays++;
+                                }
+                            }
+                            current.setDate(current.getDate() + 1);
+                        }
+                    });
+                }
+                let entitled = 22;
+                if (emp.hireDate) {
+                    const hire = new Date(emp.hireDate);
+                    if (hire.getFullYear() === year) {
+                        const startOfProration = hire;
+                        const endOfYear = new Date(year, 11, 31);
+                        const totalDays = Math.floor((endOfYear - new Date(year, 0, 1)) / MS_PER_DAY) + 1;
+                        const remainingDays = Math.floor((endOfYear - startOfProration) / MS_PER_DAY) + 1;
+                        entitled = Math.round(22 * (remainingDays / totalDays));
+                    } else if (hire.getFullYear() > year) {
+                        entitled = 0;
+                    }
+                }
+                const remaining = entitled - usedDays;
+                return `
+                    <div class="stat-item bg-gray-100 p-4 rounded-lg mb-2">
+                        <p class="font-semibold">${emp.name}</p>
+                        <p class="text-sm">Used: ${usedDays} days</p>
+                        <p class="text-sm">Remaining: ${remaining >= 0 ? remaining : 0} days</p>
+                    </div>
+                `;
+            }).join('');
+            return;
+        }
         
         listContainer.innerHTML = activeEmployees.map(emp => {
             let stats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
@@ -234,8 +280,40 @@ export class UIManager {
     renderVacationPlanner() {
         const container = document.getElementById('vacation-planner-container');
         if(!container) return;
-        
-        container.innerHTML = `<div class="space-y-6">${this.dataManager.getActiveEmployees().map(emp => `
+        const employees = this.dataManager.getActiveEmployees();
+        const holidayMapAll = this.dataManager.getAllHolidays();
+        container.innerHTML = '<div class="space-y-6">' +
+            employees.map(emp => {
+                // sort and index vacations
+                const indexedVacations = (emp.vacations || []).map((vac, idx) => ({ vac, idx }));
+                indexedVacations.sort((a, b) => new Date(a.vac.startDate) - new Date(b.vac.startDate));
+                const vacationsHTML = indexedVacations.length > 0
+                    ? indexedVacations.map(({ vac, idx }) => {
+                        const start = new Date(vac.startDate);
+                        const end = new Date(vac.endDate);
+                        // count business days excluding holidays
+                        let daysCount = 0;
+                        let curr = new Date(vac.startDate);
+                        while (curr <= end) {
+                            const day = curr.getDay();
+                            const dateKey = this.dataManager.getDateKey(curr);
+                            const hols = holidayMapAll[curr.getFullYear()] || {};
+                            if (emp.workDays.includes(day) && !hols[dateKey]) {
+                                daysCount++;
+                            }
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                        return `
+                    <div class="flex justify-between items-center bg-white p-2 rounded-md text-sm">
+                        <span>${daysCount} day${daysCount!==1?'s':''}: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}</span>
+                        <div class="flex gap-2">
+                          <button class="edit-vacation-btn text-blue-500 hover:text-blue-700" data-employee-id="${emp.id}" data-vacation-index="${idx}">Edit</button>
+                          <button class="delete-vacation-btn text-red-500 hover:text-red-700" data-employee-id="${emp.id}" data-vacation-index="${idx}">Delete</button>
+                        </div>
+                    </div>`;
+                    }).join('')
+                    : '<p class="text-sm text-gray-500 italic">No vacations scheduled.</p>';
+                return `
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h4 class="font-bold text-lg">${emp.name}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-3">
@@ -245,17 +323,11 @@ export class UIManager {
                 </div>
                 <div class="mt-4 space-y-2">
                     <h5 class="font-semibold text-sm">Scheduled Vacations:</h5>
-                    ${(emp.vacations && emp.vacations.length > 0) ? emp.vacations.map((vac, index) => `
-                        <div class="flex justify-between items-center bg-white p-2 rounded-md text-sm">
-                            <span>${new Date(vac.startDate + 'T00:00:00').toLocaleDateString()} - ${new Date(vac.endDate + 'T00:00:00').toLocaleDateString()}</span>
-                            <button class="delete-vacation-btn text-red-500 hover:text-red-700" data-employee-id="${emp.id}" data-vacation-index="${index}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                    `).join('') : '<p class="text-sm text-gray-500 italic">No vacations scheduled.</p>'}
+                    ${vacationsHTML}
                 </div>
-            </div>
-        `).join('')}</div>`;
+            </div>`;
+            }).join('') +
+            '</div>';
     }
     
     renderReorderList() {
@@ -538,7 +610,7 @@ export class UIManager {
             mainViews.madeiraHolidays.classList.remove('hidden');
             this.renderMadeiraHolidays();
         } else if (currentView === 'vacation') {
-            summaryTitle.textContent = "Team List";
+            summaryTitle.textContent = "Vacation Summary";
             mainViews.vacation.classList.remove('hidden');
             this.renderVacationPlanner();
         } else if (currentView === 'reorder') {
