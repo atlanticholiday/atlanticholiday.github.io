@@ -1098,3 +1098,8 @@ header h1, header h2, header h3 {
   gap: 1rem !important;
   overflow-x: visible !important;
 } 
+
+/* Ensure landing page dashboard buttons have a uniform width */
+.landing-card .btn-primary {
+    width: 14rem;
+} 
