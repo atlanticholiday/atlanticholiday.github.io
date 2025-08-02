@@ -240,13 +240,11 @@ export class ReservationsManager {
                 }
             });
         }
-        // Restore UI from local backup if records exist
+        // If backup loadedRecords exist (e.g., after refresh), render them immediately
         if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            console.log('[ReservationsManager] Restoring UI from localStorage backup');
-            // Update dataset name display
+            console.log('[ReservationsManager] Rendering backup records on page init');
             const dsDisplay = document.getElementById('dataset-name-display');
             if (dsDisplay) dsDisplay.textContent = this.currentDatasetName;
-            // Render selector and table for backup data
             this.renderWeekOptions();
             this.renderTable();
         }
