@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { Config } from './config.js';
@@ -12,7 +12,6 @@ import { NavigationManager } from './navigation-manager.js';
 import { PropertiesManager } from './properties-manager.js';
 import { OperationsManager } from './operations-manager.js';
 import { ReservationsManager } from './reservations-manager.js';
-import { AccessManager } from './access-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -20,7 +19,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,9 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
         auth = getAuth(app);
-        // Initialize access manager for allowed email checks
-        accessManager = new AccessManager(db);
-        window.accessManager = accessManager;
         // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
         await setPersistence(auth, browserLocalPersistence);
         setLogLevel('error');
@@ -109,121 +105,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup global event listeners
         setupGlobalEventListeners();
 
-        // User Management Page: populate allowed emails list when opened
-        document.addEventListener('userManagementPageOpened', async () => {
-            const emails = await accessManager.listEmails();
-            const listEl = document.getElementById('user-list');
-            if (listEl) {
-                listEl.innerHTML = '';
-                emails.forEach(email => {
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center mb-2';
-                    // Email text
-                    const span = document.createElement('span');
-                    span.textContent = email;
-                    // Buttons container
-                    const btnGroup = document.createElement('span');
-                    // Reset password button
-                    const resetBtn = document.createElement('button');
-                    resetBtn.textContent = 'Reset Password';
-                    resetBtn.className = 'text-sm text-blue-600 mr-2 hover:underline';
-                    resetBtn.addEventListener('click', async () => {
-                        try {
-                            await sendPasswordResetEmail(auth, email);
-                            alert(`Password reset email sent to ${email}`);
-                        } catch (err) {
-                            console.error(err);
-                            alert(`Failed to send reset email: ${err.message}`);
-                        }
-                    });
-                    // Delete user access button
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.textContent = 'Delete';
-                    deleteBtn.className = 'text-sm text-red-600 hover:underline';
-                    deleteBtn.addEventListener('click', async () => {
-                        if (!confirm(`Remove access for ${email}?`)) return;
-                        try {
-                            await accessManager.removeEmail(email);
-                            // Refresh the list
-                            document.dispatchEvent(new CustomEvent('userManagementPageOpened'));
-                        } catch (err) {
-                            console.error(err);
-                            alert(`Failed to remove user: ${err.message}`);
-                        }
-                    });
-                    btnGroup.appendChild(resetBtn);
-                    btnGroup.appendChild(deleteBtn);
-                    li.appendChild(span);
-                    li.appendChild(btnGroup);
-                    listEl.appendChild(li);
-                });
-            }
-        });
-        // Handle creation of new access entries
-        const createUserBtn = document.getElementById('create-user-btn');
-        if (createUserBtn) {
-            createUserBtn.addEventListener('click', async () => {
-                const emailInput = document.getElementById('new-user-email');
-                const passwordInput = document.getElementById('new-user-password');
-                const listEl = document.getElementById('user-list');
-                const errorEl = document.getElementById('create-user-error');
-                const email = emailInput?.value.trim();
-                const password = passwordInput?.value;
-                errorEl.textContent = '';
-                if (!email) {
-                    errorEl.textContent = 'Please enter a valid email address.';
-                    return;
-                }
-                if (!password) {
-                    errorEl.textContent = 'Please enter a password.';
-                    return;
-                }
-                try {
-                    // Create Auth user
-                    await createUserWithEmailAndPassword(auth, email, password);
-                    // Then add to Firestore allowed list
-                    await accessManager.addEmail(email);
-                    emailInput.value = '';
-                    passwordInput.value = '';
-                    const emails = await accessManager.listEmails();
-                    if (listEl) {
-                        listEl.innerHTML = '';
-                        emails.forEach(e => {
-                            const li = document.createElement('li');
-                            li.textContent = e;
-                            listEl.appendChild(li);
-                        });
-                    }
-                } catch (err) {
-                    errorEl.textContent = err.message;
-                }
-            });
-        }
-
         // Setup authentication listener
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, user => {
             if (user) {
-                // Seed or verify allowed emails for access control
-                let allow = true;
-                try {
-                    const emails = await accessManager.listEmails();
-                    const userEmailKey = user.email.toLowerCase();
-                    if (emails.length === 0) {
-                        // First-time login: seed allowed list
-                        await accessManager.addEmail(user.email);
-                    } else if (!emails.includes(userEmailKey)) {
-                        console.warn(`Access denied for user: ${user.email}`);
-                        allow = false;
-                    }
-                } catch (err) {
-                    // If Firestore check fails, allow login to avoid lockout
-                    console.warn('AccessManager error, skipping email check:', err);
-                }
-                if (!allow) {
-                    await signOut(auth);
-                    document.getElementById('login-error').textContent = 'Access not granted';
-                    return;
-                }
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 
