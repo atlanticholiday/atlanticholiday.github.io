@@ -149,6 +149,17 @@
                     Open All Info
                   </button>
                 </div>
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <i class="fas fa-calendar-week text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Weekly Reservations</h3>
+                    <p class="text-gray-600 mb-6">View and manage weekly reservations</p>
+                    <button id="go-to-reservations-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <i class="fas fa-arrow-right mr-2"></i>
+                        Open Weekly Reservations
+                    </button>
+                </div>
             </div>
 
             <!-- Second Row: Property Operations -->
@@ -1340,6 +1351,61 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
       </div>
     </div>
 
+    <!-- Weekly Reservations Page Container -->
+    <div id="reservations-page" class="reservations-page hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
+                <div class="flex items-center">
+                    <button id="back-to-landing-from-reservations-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gradient">Weekly Reservations</h1>
+                        <p class="text-gray-500 text-sm">Weekly Reservations Dashboard</p>
+                    </div>
+                </div>
+                <button id="reservations-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"/></svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <div id="reservations-controls" class="bg-white rounded-xl shadow-md p-6 mb-6 modal-content">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    <div>
+                        <label for="reservations-week-select" class="block text-sm font-medium text-gray-700 mb-2">Week</label>
+                        <select id="reservations-week-select" class="w-full p-3 border rounded-md focus-ring transition-all">
+                            <option value="" disabled selected>Select a Week</option>
+                        </select>
+                    </div>
+                    <div>
+                        <input type="file" id="reservations-file-input" accept=".xlsx,.xls" style="position:absolute; width:0; height:0; opacity:0;" />
+                    </div>
+                    <div class="flex items-end">
+                        <button id="load-reservations-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                            <i class="fas fa-file-excel mr-2"></i>Upload Excel
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="save-reservations-week-btn" class="w-full btn-secondary py-3 rounded-md transition-all hover-lift">
+                            <i class="fas fa-save mr-2"></i>Save This Week
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <span id="dataset-name-display" class="px-3 py-2 border rounded-md bg-gray-50">No Dataset Selected</span>
+                        <button id="edit-dataset-name-btn" class="ml-2 text-sm text-blue-600 hover:underline">Edit Name</button>
+                    </div>
+                </div>
+            </div>
+            <div id="reservations-table" class="bg-white rounded-xl shadow-md p-6 modal-content overflow-x-auto">
+                <!-- Reservations table will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- XLSX (SheetJS) for Excel file parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

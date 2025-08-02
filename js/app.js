@@ -11,6 +11,7 @@ import { EventManager } from './event-manager.js';
 import { NavigationManager } from './navigation-manager.js';
 import { PropertiesManager } from './properties-manager.js';
 import { OperationsManager } from './operations-manager.js';
+import { ReservationsManager } from './reservations-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -18,7 +19,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -117,6 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 console.log(`⚙️ [INITIALIZATION] Creating OperationsManager...`);
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
+                console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
+                reservationsManager = new ReservationsManager(db, userId);
                 
                 navigationManager.showLandingPage();
                 setupApp();
@@ -157,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn') {
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn') {
             signOut(auth);
         }
     });
@@ -233,6 +236,13 @@ function setupGlobalEventListeners() {
                 console.log('📅 [SCHEDULE PAGE] Employee data exists, skipping expensive initialization');
             }
         }, 100); // Small delay to ensure DOM is ready
+    });
+
+    document.addEventListener('reservationsPageOpened', () => {
+        if (reservationsManager) {
+            console.log('Reservations page opened, initializing...');
+            reservationsManager.initializeEventListeners();
+        }
     });
 
     // All Info page initializer

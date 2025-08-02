@@ -6,6 +6,7 @@ export class NavigationManager {
             properties: 'properties-page',
             operations: 'operations-page',
             schedule: 'app-content',
+            reservations: 'reservations-page',
             login: 'login-screen',
             setup: 'setup-screen',
             allinfo: 'allinfo-page'
@@ -43,6 +44,10 @@ export class NavigationManager {
 
     showSchedulePage() {
         this.showPage('schedule');
+    }
+
+    showReservationsPage() {
+        this.showPage('reservations');
     }
 
     showLoginPage() {
@@ -100,11 +105,28 @@ export class NavigationManager {
             });
         }
 
+        // Reservations navigation
+        const goToReservationsBtn = document.getElementById('go-to-reservations-btn');
+        if (goToReservationsBtn) {
+            goToReservationsBtn.addEventListener('click', () => {
+                this.showReservationsPage();
+                const event = new CustomEvent('reservationsPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
+        const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
         
+        if (backToLandingFromReservationsBtn) {
+            backToLandingFromReservationsBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         if (backToLandingBtn) {
             backToLandingBtn.addEventListener('click', () => {
                 this.showLandingPage();
