@@ -882,6 +882,17 @@ p, span, div {
     transform: translateY(-4px);
 }
 
+/* Expand landing-card height and push button to bottom */
+.landing-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+}
+
+.landing-card .btn-primary {
+    margin-top: auto;
+}
+
 /* Property form styles */
 #property-name:focus,
 #property-location:focus,
@@ -1097,4 +1108,24 @@ header h1, header h2, header h3 {
   flex-wrap: wrap !important;
   gap: 1rem !important;
   overflow-x: visible !important;
+} 
+
+/* Uniform dashboard button sizing */
+.landing-card .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    width: auto !important;
+    white-space: normal;
+    flex-wrap: wrap;
+    padding: 16px 24px; /* consistent padding */
+} 
+
+/* Force 5 landing cards per row at large screens */
+@media (min-width: 1024px) {
+    #landing-page .container > .grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        max-width: 100% !important;
+    }
 } 
