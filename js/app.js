@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Setup global event listeners
         setupGlobalEventListeners();
+        // Setup application event listeners for schedule page
+        eventManager.setupAppEventListeners();
 
         // User Management Page: populate allowed emails list when opened
         document.addEventListener('userManagementPageOpened', async () => {
