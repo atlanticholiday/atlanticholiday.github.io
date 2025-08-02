@@ -405,6 +405,8 @@ function setupGlobalEventListeners() {
             } else {
                 console.log('📅 [SCHEDULE PAGE] Employee data exists, skipping expensive initialization');
             }
+            // Ensure schedule view toggle listeners are bound
+            eventManager.setupAppEventListeners();
         }, 100); // Small delay to ensure DOM is ready
     });
 
