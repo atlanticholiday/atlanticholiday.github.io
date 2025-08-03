@@ -1,0 +1,68 @@
+/* Custom FullCalendar Styling for Vacation Planner */
+#vacation-calendar {
+  --fc-border-color: transparent; /* remove default borders */
+}
+
+#vacation-calendar .fc-toolbar {
+  margin-bottom: 1rem;
+}
+
+#vacation-calendar .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--brand-color);
+}
+
+#vacation-calendar .fc-button {
+  background: var(--gradient-brand);
+  border: none;
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-button);
+  padding: 0.45rem 0.75rem;
+  transition: var(--transition-smooth);
+}
+
+#vacation-calendar .fc-button:hover,
+#vacation-calendar .fc-button:focus {
+  background: var(--brand-color-dark);
+  transform: translateY(-1px);
+}
+
+#vacation-calendar .fc-button:disabled {
+  background: rgba(233, 75, 90, 0.4);
+  cursor: not-allowed;
+}
+
+/* Event appearance */
+#vacation-calendar .vacation-event {
+  background: var(--gradient-brand) !important;
+  border: none !important;
+  color: #ffffff !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-glass);
+  transition: var(--transition-smooth);
+}
+
+#vacation-calendar .vacation-event:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Today cell highlight */
+#vacation-calendar .fc-day-today {
+  background: var(--gradient-brand-soft) !important;
+}
+
+/* Remove grid borders for a cleaner look */
+#vacation-calendar .fc-scrollgrid,
+#vacation-calendar .fc-scrollgrid td,
+#vacation-calendar .fc-col-header-cell {
+  border-color: transparent !important;
+}
+
+/* Day number styling */
+#vacation-calendar .fc-daygrid-day-number {
+  font-weight: 500;
+  color: #374151;
+}
