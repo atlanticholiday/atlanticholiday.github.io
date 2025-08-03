@@ -4,6 +4,7 @@ import { Config } from './config.js';
 
 export class EventManager {
     constructor(auth, dataManager, uiManager) {
+        this.appListenersInitialized = false;
         this.auth = auth;
         this.dataManager = dataManager;
         this.uiManager = uiManager;
@@ -39,6 +40,8 @@ export class EventManager {
     }
 
     setupAppEventListeners() {
+        if (this.appListenersInitialized) return;
+        this.appListenersInitialized = true;
         document.getElementById('add-employee-btn').addEventListener('click', () => this.addEmployee());
         document.getElementById('sign-out-btn').addEventListener('click', () => signOut(this.auth));
         document.getElementById('pdf-download-btn').addEventListener('click', () => {

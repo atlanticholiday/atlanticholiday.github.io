@@ -655,6 +655,22 @@ export class UIManager {
 
         const currentView = this.dataManager.getCurrentView();
         const showSidePanel = ['monthly', 'yearly', 'vacation'].includes(currentView);
+        const leftPanel = document.getElementById('summary-title')?.parentElement;
+        if (leftPanel) leftPanel.style.display = showSidePanel ? '' : 'none';
+        // Center single-column views by adjusting grid template columns
+        const gridContainer = document.querySelector('#main-app .grid');
+        if (gridContainer) {
+            const center = !showSidePanel;  // views with single column
+            gridContainer.classList.toggle('justify-center', center);
+            gridContainer.classList.toggle('justify-items-center', center);
+            if (showSidePanel) {
+                gridContainer.classList.add('lg:grid-cols-3');
+                gridContainer.classList.remove('lg:grid-cols-1');
+            } else {
+                gridContainer.classList.add('lg:grid-cols-1');
+                gridContainer.classList.remove('lg:grid-cols-3');
+            }
+        }
         document.getElementById('summary-title').style.display = showSidePanel ? '' : 'none';
         document.getElementById('employee-list').style.display = showSidePanel ? '' : 'none';
         // Only allow adding colleagues in the Reorder/List management view
