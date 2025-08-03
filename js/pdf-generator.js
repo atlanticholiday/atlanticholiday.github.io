@@ -1,5 +1,8 @@
 import { Config } from './config.js';
 
+// Month names in European Portuguese
+const MONTHS_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
 export class PDFGenerator {
     constructor() {
         this.calculateHoursFromShift = this.calculateHoursFromShift.bind(this);
@@ -7,19 +10,40 @@ export class PDFGenerator {
 
     generateTeamReportPDF(dataManager) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        // --- Layout & Brand Variables ---
+        const pageHeight = 297;
+        const pageWidth = 210;
+        const margin = 15;
+        const brandColor = [233, 75, 90];
+        const softGray = [248, 250, 252];
+        const textDark = [29, 29, 31];
+        const textGray = [107, 114, 128];
+
+        // Soft background
+        doc.setFillColor(250, 250, 252);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
         const month = dataManager.getCurrentDate().getMonth();
         const year = dataManager.getCurrentDate().getFullYear();
-        const monthName = Config.MONTHS_OF_YEAR[month];
+        const monthName = MONTHS_PT[month];
 
-        doc.setFontSize(18);
-        doc.text("Atlantic Holiday", 14, 22);
-        doc.setFontSize(14);
-        doc.text(`Monthly Team Work Report`, 14, 30);
+        // --- Branded Header ---
+        doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
+        doc.rect(margin, 12, pageWidth - margin * 2, 28, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Atlantic Holiday', pageWidth / 2, 22, { align: 'center' });
+
         doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Period: ${monthName} ${year}`, 14, 36);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Relatório Mensal da Equipa', pageWidth / 2, 29, { align: 'center' });
+
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Período: ${monthName} de ${year}`, pageWidth / 2, 37, { align: 'center' });
 
         const tableData = dataManager.getActiveEmployees().map(emp => {
             let workDays = 0;
@@ -39,7 +63,7 @@ export class PDFGenerator {
                 if (emp.extraHours && emp.extraHours[dateKey]) {
                     const hours = emp.extraHours[dateKey];
                     extraHoursTotal += hours;
-                    extraHoursDetails.push(`- Day ${day}: ${hours} hrs`);
+                    extraHoursDetails.push(`- Dia ${day}: ${hours} hrs`);
                 }
             }
             
@@ -53,11 +77,14 @@ export class PDFGenerator {
         });
 
         doc.autoTable({
-            head: [['Employee', 'Work Days', 'Vacation Days', 'Total Extra Hrs', 'Extra Hours Details']],
+            head: [['Colaborador', 'Dias Trabalhados', 'Dias de Férias', 'Horas Extra Totais', 'Detalhes Horas Extra']],
             body: tableData,
-            startY: 42,
-            theme: 'grid',
-            headStyles: { fillColor: [233, 75, 90] },
+            startY: 50,
+            margin: { left: margin, right: margin },
+            tableWidth: 'auto',
+            theme: 'striped',
+            alternateRowStyles: { fillColor: softGray },
+            headStyles: { fillColor: brandColor, textColor: [255,255,255], fontSize: 10, halign: 'center' },
             styles: { cellPadding: 2.5, fontSize: 9 },
             columnStyles: {
                 0: { cellWidth: 35 },
@@ -67,6 +94,11 @@ export class PDFGenerator {
                 4: { cellWidth: 'auto' },
             }
         });
+
+        // Footer tagline
+        doc.setFontSize(8);
+        doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+        doc.text('Gerado pelo Sistema de Escalas Atlantic Holiday', pageWidth / 2, pageHeight - 10, { align: 'center' });
 
         doc.save(`Team_Report_${monthName}_${year}.pdf`);
     }
@@ -80,7 +112,7 @@ export class PDFGenerator {
         
         const month = dataManager.getCurrentDate().getMonth();
         const year = dataManager.getCurrentDate().getFullYear();
-        const monthName = Config.MONTHS_OF_YEAR[month];
+        const monthName = MONTHS_PT[month];
 
         // Page dimensions and theme colors
         const pageHeight = 297;
@@ -112,7 +144,7 @@ export class PDFGenerator {
         
         doc.setFontSize(11);  // Smaller subtitle
         doc.setFont('helvetica', 'normal');
-        doc.text('Monthly Hours Report', pageWidth / 2, 30, { align: 'center' });
+        doc.text('Relatório Mensal de Horas', pageWidth / 2, 30, { align: 'center' });
         
         // Decorative line under header
         doc.setDrawColor(255, 255, 255);
@@ -132,13 +164,13 @@ export class PDFGenerator {
         doc.setTextColor(textDark[0], textDark[1], textDark[2]);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Employee: ${emp.name}`, margin + 6, infoY + 7);
-        doc.text(`Period: ${monthName} ${year}`, pageWidth - margin - 6, infoY + 7, { align: 'right' });
+        doc.text(`Colaborador: ${emp.name}`, margin + 6, infoY + 7);
+        doc.text(`Período: ${monthName} ${year}`, pageWidth - margin - 6, infoY + 7, { align: 'right' });
         
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-        doc.text(`Staff ID: ${emp.staffNumber || 'N/A'}`, margin + 6, infoY + 14);
-        doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth - margin - 6, infoY + 14, { align: 'right' });
+        doc.text(`Número de Funcionário: ${emp.staffNumber || 'N/A'}`, margin + 6, infoY + 14);
+        doc.text(`Gerado: ${new Date().toLocaleDateString('pt-PT')}`, pageWidth - margin - 6, infoY + 14, { align: 'right' });
 
         // Process work data
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -159,7 +191,7 @@ export class PDFGenerator {
 
                 tableData.push([
                     date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }),
-                    Config.DAYS_OF_WEEK[dayOfWeek],
+                    ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][dayOfWeek],
                     shift,
                     hours.toFixed(1)
                 ]);
@@ -187,7 +219,7 @@ export class PDFGenerator {
 
         // Extended table using full page width
         doc.autoTable({
-            head: [['Date', 'Day', 'Shift Time', 'Hours']],
+            head: [['Data', 'Dia', 'Turno', 'Horas']],
             body: tableData,
             startY: 78,  // Moved up due to smaller header
             theme: 'striped',
@@ -239,7 +271,7 @@ export class PDFGenerator {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-        doc.text('Work Summary', margin, summaryY);
+        doc.text('Resumo de Trabalho', margin, summaryY);
         
         // Decorative underline for summary
         doc.setDrawColor(brandColor[0], brandColor[1], brandColor[2]);
@@ -263,7 +295,7 @@ export class PDFGenerator {
         doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-        doc.text('Weekly Breakdown', cardX + 3, summaryY + 5);
+        doc.text('Distribuição Semanal', cardX + 3, summaryY + 5);
         
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
@@ -280,7 +312,7 @@ export class PDFGenerator {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 255, 255);
-        doc.text('Monthly Total', cardX + 3, summaryY + 7);
+        doc.text('Total Mensal', cardX + 3, summaryY + 7);
         
         doc.setFontSize(14);
         doc.text(`${monthlyTotal.toFixed(1)} hours`, cardX + 3, summaryY + 15);
@@ -305,13 +337,13 @@ export class PDFGenerator {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-        doc.text('Employee Confirmation', margin + 5, signatureY + 6);
+        doc.text('Confirmação do Colaborador', margin + 5, signatureY + 6);
         
         // Confirmation text
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-        doc.text('I confirm that the above working hours are accurate and complete.', margin + 5, signatureY + 12);
+        doc.text('Confirmo que as horas de trabalho acima estão corretas e completas.', margin + 5, signatureY + 12);
         
         // Signature lines - ensure plenty of space for signing
         doc.setDrawColor(brandColor[0], brandColor[1], brandColor[2]);
@@ -323,8 +355,8 @@ export class PDFGenerator {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-        doc.text('Employee Signature', margin + 5, signatureY + 25);
-        doc.text('Date', pageWidth - margin - 75, signatureY + 25);
+        doc.text('Assinatura do Colaborador', margin + 5, signatureY + 25);
+        doc.text('Data', pageWidth - margin - 75, signatureY + 25);
 
         doc.save(`Hours_Report_${emp.name.replace(/\s+/g, '_')}_${monthName}_${year}.pdf`);
     }
