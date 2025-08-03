@@ -1,0 +1,145 @@
+/* ----------------------------------
+   All Info Page Enhancements
+   ----------------------------------*/
+
+@keyframes fadeInUp {
+    from {opacity:0; transform:translateY(20px);}
+    to   {opacity:1; transform:translateY(0);}
+}
+
+#allinfo-page {
+    animation: fadeInUp .4s ease both;
+}
+
+/* Category navigation buttons */
+#allinfo-nav button {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;
+    font-weight: 500;
+    color: #374151; /* gray-700 */
+    transition: all .2s ease;
+}
+
+#allinfo-nav button i {
+    margin-right: 0.5rem;
+}
+
+#allinfo-nav button:hover {
+    background-color: #f3f4f6; /* gray-100 */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,.05);
+}
+
+/* Active category */
+#allinfo-nav button.bg-gray-100 {
+    background-image: linear-gradient(to right, #3b82f6, #06b6d4); /* brand gradient */
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0,0,0,.1);
+}
+
+/* Filter input styling */
+#allinfo-filter-wrapper {
+    position: relative;
+}
+
+#allinfo-filter-wrapper::before {
+    content: "\f002"; /* Font Awesome search icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af; /* gray-400 */
+}
+
+#allinfo-filter {
+    width: 100%;
+    border-radius: 9999px; /* full pill */
+    padding: 0.625rem 1rem 0.625rem 2.75rem; /* space for icon */
+    background-color: #ffffff;
+    border: 1px solid #d1d5db; /* gray-300 */
+    transition: box-shadow .2s ease;
+}
+
+#allinfo-filter:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.4); /* ring-brand */
+}
+
+/* Table container shadow */
+#allinfo-content > div {
+    border-radius: 0.75rem; /* rounded-lg */
+    box-shadow: 0 10px 15px -5px rgba(0,0,0,.1);
+    overflow: hidden; /* keep rounded corners */
+}
+
+/* Table styling */
+#allinfo-page thead {
+    background-color: #1e293b; /* slate-800 */
+}
+
+#allinfo-page thead th {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+#allinfo-page tbody tr:nth-child(even) {
+    background-color: #f9fafb; /* gray-50 */
+}
+
+#allinfo-page tbody tr:hover {
+    background-color: #eef2ff; /* indigo-50 */
+}
+
+#allinfo-page td, #allinfo-page th {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+/* DISTINCT CATEGORY SEARCH INPUT */
+#allinfo-cat-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+#allinfo-cat-search-wrapper::before {
+    content: "\f002";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: static;
+    margin-right: 0.5rem;
+    color:#ffffff;
+}
+    
+#allinfo-cat-search {
+    flex:1;
+    background: transparent;
+    border:none;
+    color:#ffffff;
+    padding: 0.25rem 0;
+}
+
+#allinfo-cat-search::placeholder {
+    color: #dbeafe;
+}
+
+#allinfo-cat-search:focus {
+    outline: none;
+    border-bottom-color: #3b82f6; /* brand */
+}
+
+/* Sort icon rotation when active (optional JS can toggle .asc/.desc) */
+#allinfo-page th.asc i {
+    color: #ffffff !important;
+    transform: rotate(180deg);
+}
+
+#allinfo-page th.desc i {
+    color: #ffffff !important;
+}

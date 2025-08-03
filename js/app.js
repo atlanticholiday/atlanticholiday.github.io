@@ -420,7 +420,8 @@ function setupGlobalEventListeners() {
     // All Info page initializer
     document.addEventListener('allInfoPageOpened', () => initAllInfoUI());
     function initAllInfoUI() {
-        const properties = window.propertiesManager?.properties || [];
+        const propertiesRaw = window.propertiesManager?.properties || [];
+        const properties = [...propertiesRaw].sort((a,b)=> (a.name ?? '').localeCompare(b.name ?? '', undefined,{numeric:true,sensitivity:'base'}));
         const nav = document.getElementById('allinfo-nav');
         const content = document.getElementById('allinfo-content');
         if (!nav || !content) return;
@@ -446,19 +447,55 @@ function setupGlobalEventListeners() {
             const btn = document.createElement('button');
             btn.innerHTML = `<i class="${cat.icon} mr-2"></i>${cat.title}`;
             btn.className = 'flex items-center px-4 py-2 rounded hover:bg-gray-100';
+            btn.dataset.idx = idx; // store index for filtering
             if (idx === 0) btn.classList.add('bg-gray-100');
             btn.onclick = () => {
-                Array.from(nav.children).forEach((c,i) => c.classList.toggle('bg-gray-100', i === idx));
-                renderCategory(idx);
+                Array.from(nav.children).forEach(c => c.classList.remove('bg-gray-100'));
+                btn.classList.add('bg-gray-100');
+                renderCategory(parseInt(btn.dataset.idx));
             };
             nav.appendChild(btn);
         });
+        // -------- Category search field --------
+        const catSearchWrapper = document.createElement('div');
+        catSearchWrapper.id = 'allinfo-cat-search-wrapper';
+        catSearchWrapper.className = 'mb-4';
+        const catSearch = document.createElement('input');
+        catSearch.id = 'allinfo-cat-search';
+        catSearch.type = 'text';
+        catSearch.placeholder = 'Search categories...';
+        catSearch.className = 'px-3 py-2 border rounded-md w-full pl-10';
+        const catLabel = document.createElement('label');
+        catLabel.textContent = 'Search categories';
+        catLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+        catSearchWrapper.appendChild(catLabel);
+        catSearchWrapper.appendChild(catSearch);
+        nav.parentNode.insertBefore(catSearchWrapper, nav);
+        catSearch.addEventListener('input', e => {
+            const term = e.target.value.toLowerCase();
+            Array.from(nav.children).forEach(btn => {
+                const idx = parseInt(btn.dataset.idx);
+                const cat = categories[idx];
+                const match = btn.textContent.toLowerCase().includes(term) ||
+                              cat.fields.some(f => f.toLowerCase().includes(term));
+                btn.style.display = match ? '' : 'none';
+            });
+            // auto-select first visible category if current active hidden
+            if (!Array.from(nav.children).some(btn => btn.classList.contains('bg-gray-100') && btn.style.display !== 'none')) {
+                const firstVisible = Array.from(nav.children).find(btn => btn.style.display !== 'none');
+                if (firstVisible) firstVisible.click();
+            }
+        });
         // Filter input
         const filterWrapper = document.createElement('div'); filterWrapper.className = 'mb-4';
+        const propFilterLabel = document.createElement('label');
+        propFilterLabel.textContent = 'Filter properties';
+        propFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
         const filterInput = document.createElement('input');
         filterInput.id = 'allinfo-filter'; filterInput.type = 'text';
         filterInput.placeholder = 'Filter properties...';
         filterInput.className = 'px-3 py-2 border rounded-md w-full';
+        filterWrapper.appendChild(propFilterLabel);
         filterWrapper.appendChild(filterInput);
         // Attach filter to dedicated wrapper
         const filterParent = document.getElementById('allinfo-filter-wrapper');
@@ -495,7 +532,15 @@ function setupGlobalEventListeners() {
                     ? 'Property Name'
                     : key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
                 th.innerHTML = `${label} <i class="fas fa-sort ml-1 text-gray-400"></i>`;
-                th.onclick = () => { const asc = !th.asc; th.asc = asc; sortTable(table, i, asc); };
+                th.onclick = () => {
+                    const asc = !th.asc;
+                    th.asc = asc;
+                    // Remove previous sort classes
+                    tr.querySelectorAll('th').forEach(t => t.classList.remove('asc', 'desc'));
+                    // Apply new sort class for styling icon rotation/color
+                    th.classList.add(asc ? 'asc' : 'desc');
+                    sortTable(table, i, asc);
+                };
                 tr.appendChild(th);
             });
             const thA = document.createElement('th');
@@ -512,7 +557,7 @@ function setupGlobalEventListeners() {
                 const actionTd=document.createElement('td'); actionTd.className='px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
                 [
                     { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => window.location.href = `property-settings.html?id=${prop.id}#section-${categories[idx].slug}`, title: 'Edit' },
-                    { icon: 'fas fa-eye', cls: 'text-green-600', fn: () => { sessionStorage.setItem('currentProperty', JSON.stringify(prop)); window.location.href = `property-settings.html?id=${prop.id}`; }, title: 'View' },
+                    
                     { icon: 'fas fa-file-pdf', cls: 'text-red-600', fn: () => console.log('PDF for', prop.id), title: 'Download PDF' }
                 ].forEach(({ icon, cls, fn, title }) => {
                     const btn = document.createElement('button');
