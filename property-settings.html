@@ -5,213 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Settings</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/property-settings.css">
+    <link rel="stylesheet" href="styles/property-settings-update.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<!-- legacy inline styles (deprecated)
-<!-- removed legacy styles
-(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        .header {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .header-icon {
-            background: #fef2f2;
-            color: #dc2626;
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-        
-        .header-text h1 {
-            color: #dc2626;
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0;
-        }
-        
-        .header-text p {
-            color: #6b7280;
-            margin: 0.25rem 0 0 0;
-            font-size: 1rem;
-        }
-        
-        .back-btn {
-            background: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        .back-btn:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-        
-        .property-info {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .section-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-        
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #111827;
-            margin: 0;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .info-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 1.5rem;
-        }
-        
-        .info-label {
-            color: #dc2626;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        
-        .info-value {
-            color: #111827;
-            font-size: 1.125rem;
-            font-weight: 600;
-        }
-        
-        .form-section {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .form-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #374151;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-        
-        .form-label i {
-            color: #dc2626;
-            width: 16px;
-        }
-        
-        .form-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-            background: white;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #dc2626;
-            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-        }
-        
-        .form-input::placeholder {
-            color: #9ca3af;
-        }
 
-        /* Highlight anchor section */
-        .highlight {
-          background-color: #fefcbf;
-          transition: background-color 2s ease-out;
-        }
-
-
-
--->
 <body>
   <div class="container">
-    <div class="top-grid">
     <!-- Header -->
     <div class="header">
       <div class="header-content">
@@ -224,14 +23,14 @@
             <p>Manage links, credentials, and advanced property details</p>
           </div>
         </div>
-        <div class="header-actions" style="display:flex;gap:0.75rem;align-items:center;">
-          <button id="back-to-dashboard" class="back-btn">
+        <div class="header-actions">
+          <button id="back-to-dashboard" class="btn">
             <i class="fas fa-arrow-left"></i>
             <span>Back</span>
           </button>
-          <button type="submit" form="property-settings-form" id="save-top-btn" class="btn btn-primary">
+          <button id="save-settings" class="btn btn-primary">
             <i class="fas fa-save"></i>
-            <span>Save</span>
+            <span>Save Changes</span>
           </button>
         </div>
       </div>
@@ -240,10 +39,12 @@
     <!-- Property Info -->
     <div id="section-basic-info" class="property-info">
       <div class="section-header">
-        <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
-          <i class="fas fa-home"></i>
+        <div class="section-header-title">
+            <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
+              <i class="fas fa-home"></i>
+            </div>
+            <h2 class="section-title">Property Information</h2>
         </div>
-        <h2 class="section-title">Property Information</h2>
       </div>
       <div class="info-grid">
         <div class="info-card">
@@ -259,11 +60,11 @@
           <div id="property-type-display" class="info-value">Loading...</div>
         </div>
       </div>
-    </div><!-- top-grid -->
+    </div>
 
     <form id="property-settings-form">
       <input type="hidden" id="settings-property-id" value="">
-      
+
       <!-- Maps & Location -->
       <div id="section-maps-location" class="form-section">
         <div class="section-header">
@@ -1014,5 +815,48 @@
     });
   </script>
   <script src="js/property-settings.js"></script>
+      <div class="actions">
+        <button type="submit" form="property-settings-form" id="save-bottom-btn" class="btn btn-primary">
+          <i class="fas fa-save"></i>
+          <span>Save All Settings</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="js/property-settings.js"></script>
+  <script type="module" src="js/property-settings-controller.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const formSections = document.querySelectorAll('.form-section');
+        formSections.forEach((section, index) => {
+            const header = section.querySelector('.section-header');
+            if (header) {
+                // Add a toggle icon if one doesn't already exist
+                if (!header.querySelector('.section-toggle')) {
+                    const toggleIcon = document.createElement('div');
+                    toggleIcon.classList.add('section-toggle');
+                    toggleIcon.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                    header.appendChild(toggleIcon);
+                }
+
+                header.addEventListener('click', (e) => {
+                    // Make sure we don't trigger this when clicking form elements inside the header
+                    if (e.target.closest('input, select, button, a')) return;
+                    section.classList.toggle('collapsed');
+                });
+
+                // Collapse all sections by default except for the first one
+                if (index > 0) {
+                    section.classList.add('collapsed');
+                }
+            }
+        });
+    });
+  </script>
+
 </body>
 </html> 

@@ -1,4 +1,34 @@
-// Property Settings page enhancements: collapsible accordion for each section
+document.addEventListener('DOMContentLoaded', function () {
+    const formSections = document.querySelectorAll('.form-section');
+
+    formSections.forEach((section, index) => {
+        const header = section.querySelector('.section-header');
+        if (header) {
+            // Add a toggle icon
+            const toggleIcon = document.createElement('div');
+            toggleIcon.classList.add('section-toggle');
+            toggleIcon.innerHTML = '<i class="fas fa-chevron-down"></i>';
+            header.appendChild(toggleIcon);
+
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+            });
+
+            // Collapse all sections by default except for the first one
+            if (index > 0) {
+                section.classList.add('collapsed');
+            }
+        }
+    });
+
+    // Handle back button
+    const backButton = document.getElementById('back-to-dashboard');
+    if(backButton) {
+        backButton.addEventListener('click', () => {
+            window.history.back();
+        });
+    }
+});
 // Creates a cleaner, shorter layout by collapsing sections and allowing users to expand when needed.
 // Author: Cascade AI
 
