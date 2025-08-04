@@ -20,10 +20,11 @@ body {
 .header {
   background: linear-gradient(135deg, var(--ps-brand-start) 0%, var(--ps-brand-end) 100%);
   color: #fff;
-  border-radius: 20px;
-  padding: 2.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 15px 25px -5px rgba(0,0,0,.1);
+  border-radius: 18px;
+  padding: 2rem 2.5rem;
+  margin: 0 auto 2rem;
+  max-width: 800px;
+  box-shadow: 0 12px 20px -6px rgba(0,0,0,.08);
 }
 .header .header-icon {
   background: rgba(255,255,255,.15);
@@ -44,23 +45,38 @@ body {
 /* Section cards -----------------------------------------*/
 .property-info, .form-section {
   background: var(--bg-card);
-  border-radius: 18px;
-  padding: 2rem;
-  box-shadow: 0 12px 20px -5px rgba(0,0,0,.08);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 8px -4px rgba(0,0,0,.05);
   border: 1px solid #e2e8f0;
+  margin: 0 auto 1rem; /* center and spacing */
+  max-width: 800px; /* prevent full-width stretch */
 }
 .section-header .section-icon {
-  background: linear-gradient(135deg, var(--ps-brand-start), var(--ps-brand-end));
-  color: #fff;
+  flex-shrink: 0;
+  width: 2rem; /* 32px */
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* white chip */
+  color: var(--ps-brand-start);
+  border: 2px solid var(--ps-brand-start);
+  border-radius: 9999px;
+  font-size: 0.875rem;
 }
-.section-title { color: var(--ps-brand-start); }
+.section-title {
+  color: var(--ps-brand-start);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
 
 /* Inputs -------------------------------------------------*/
 
 /* Collapsible sections ----------------------------------*/
-.section-header{cursor:pointer;user-select:none;}
+.section-header{cursor:pointer;user-select:none;gap:0.75rem;}
 .form-section.collapsed > :not(.section-header){display:none;}
-.form-section.collapsed{padding:0 2rem 1rem;}
+.form-section.collapsed{padding:0.5rem 1.25rem;}
 .form-input {
   border-radius: 12px;
   border: 1px solid #cbd5e1;
@@ -75,13 +91,19 @@ body {
 
 /* Info cards --------------------------------------------*/
 .info-card {
-  background: linear-gradient(135deg, var(--brand-color-ultra-light) 0%, var(--brand-color-light) 100%);
-  border: 1px solid var(--brand-color-light-border);
-  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
-  border: none;
-  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
 }
 .info-label { color: var(--ps-brand-start); }
+
+/* Actions -------------------------------------------------*/
+.actions{display:flex;justify-content:flex-end;gap:0.75rem;max-width:800px;margin:0 auto 2rem;}
+.action-buttons{display:flex;gap:0.75rem;}
+.btn{display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;font-weight:500;padding:0.6rem 1.25rem;border-radius:8px;border:1px solid transparent;transition:background .2s ease,border-color .2s ease;cursor:pointer;}
+.btn-primary{background:var(--ps-brand-start);color:#fff;border-color:var(--ps-brand-start);} .btn-primary:hover{background:var(--ps-brand-end);} 
+.btn-secondary{background:#fff;color:var(--ps-brand-start);border:1px solid var(--ps-brand-start);} .btn-secondary:hover{background:#f9fafb;}
 
 /* Anchor highlight animation */
 .highlight { background:#fef9c3; transition: background 2s ease-out; }

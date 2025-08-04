@@ -445,8 +445,8 @@ function setupGlobalEventListeners() {
         // Category navigation buttons
         categories.forEach((cat, idx) => {
             const btn = document.createElement('button');
-            btn.innerHTML = `<i class="${cat.icon} mr-2"></i>${cat.title}`;
-            btn.className = 'flex items-center px-4 py-2 rounded hover:bg-gray-100';
+            btn.innerHTML = `<i class="${cat.icon}"></i><span>${cat.title}</span>`;
+            btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100';
             btn.dataset.idx = idx; // store index for filtering
             if (idx === 0) btn.classList.add('bg-gray-100');
             btn.onclick = () => {
