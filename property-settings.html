@@ -6,6 +6,44 @@
     <title>Property Settings</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/property-settings-update.css">
+    <style>
+        /* Ensure all form sections are expanded */
+        .form-section .form-grid {
+            display: grid !important;
+        }
+
+        /* Hide any arrows in the section header */
+        .section-header::after {
+            content: none !important;
+        }
+
+        /* Collapsible section styles */
+        .section-header {
+            cursor: pointer;
+            position: relative;
+            padding-right: 30px; /* Space for single arrow */
+        }
+
+        .section-header .arrow {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.3s ease;
+        }
+
+        .section-header .arrow.expanded {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .form-section .form-grid {
+            display: none; /* Start hidden */
+        }
+
+        .form-section.expanded .form-grid {
+            display: grid;
+        }
+    </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 
@@ -858,5 +896,36 @@
     });
   </script>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const formSections = document.querySelectorAll('.form-section');
+      formSections.forEach((section) => {
+        section.classList.remove('collapsed');
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add arrow to each section header
+      document.querySelectorAll('.form-section .section-header').forEach(header => {
+        // Create arrow element
+        const arrow = document.createElement('div');
+        arrow.className = 'arrow';
+        arrow.innerHTML = '&#x25BC;';
+        header.appendChild(arrow);
+
+        // Set initial state: collapsed
+        const section = header.parentElement;
+        section.classList.remove('expanded');
+
+        // Add click event
+        header.addEventListener('click', () => {
+          section.classList.toggle('expanded');
+          arrow.classList.toggle('expanded');
+        });
+      });
+    });
+  </script>
 </body>
-</html> 
+</html>
