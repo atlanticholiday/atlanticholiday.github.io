@@ -556,7 +556,15 @@ function setupGlobalEventListeners() {
                 displayFields.forEach(key=>{ const td=document.createElement('td'); td.className='px-6 py-4 whitespace-nowrap text-sm text-gray-700'; td.textContent=prop[key]??''; row.appendChild(td); });
                 const actionTd=document.createElement('td'); actionTd.className='px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
                 [
-                    { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => window.location.href = `property-settings.html?id=${prop.id}#section-${categories[idx].slug}`, title: 'Edit' },
+                    { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => {
+                        // Store the selected property in sessionStorage so the settings page can load it accurately
+                        try {
+                            sessionStorage.setItem('currentProperty', JSON.stringify(prop));
+                        } catch (err) {
+                            console.warn('Failed to store property in sessionStorage:', err);
+                        }
+                        window.location.href = `property-settings.html?id=${prop.id}#section-${categories[idx].slug}`;
+                    }, title: 'Edit' },
                     
                     { icon: 'fas fa-file-pdf', cls: 'text-red-600', fn: () => console.log('PDF for', prop.id), title: 'Download PDF' }
                 ].forEach(({ icon, cls, fn, title }) => {
