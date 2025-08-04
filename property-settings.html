@@ -7,37 +7,13 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/property-settings-update.css">
     <style>
-        /* Ensure all form sections are expanded */
-        .form-section .form-grid {
-            display: grid !important;
-        }
-
-        /* Hide any arrows in the section header */
-        .section-header::after {
-            content: none !important;
-        }
-
         /* Collapsible section styles */
         .section-header {
             cursor: pointer;
-            position: relative;
-            padding-right: 30px; /* Space for single arrow */
-        }
-
-        .section-header .arrow {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            transition: transform 0.3s ease;
-        }
-
-        .section-header .arrow.expanded {
-            transform: translateY(-50%) rotate(180deg);
         }
 
         .form-section .form-grid {
-            display: none; /* Start hidden */
+            display: none;
         }
 
         .form-section.expanded .form-grid {
