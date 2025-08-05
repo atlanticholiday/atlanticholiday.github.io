@@ -165,6 +165,22 @@
                         Open Weekly Reservations
                     </button>
                 </div>
+                <!-- RNAL Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">RNAL</h3>
+                    <p class="text-gray-600 mb-6">Process and manage RNAL data for Madeira</p>
+                    <button id="go-to-rnal-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        Open RNAL Processor
+                    </button>
+                </div>
                 <!-- User Management Card -->
                 <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
                     <div class="w-16 h-16 bg-gradient-to-r from-gray-500 to-gray-700 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -1475,8 +1491,93 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
         </div>
     </div>
 
+    <!-- RNAL Page Container -->
+    <div id="rnal-page" class="rnal-page hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
+                <div class="flex items-center">
+                    <button id="back-to-landing-from-rnal-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gradient">RNAL Data Processor</h1>
+                        <p class="text-gray-500 text-sm">Process RNAL data for Madeira</p>
+                    </div>
+                </div>
+                <button id="rnal-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+            
+            <!-- Saved Tables Management Section -->
+            <div id="saved-tables-section" class="bg-white rounded-xl shadow-md p-6 mb-8">
+                 <h2 class="text-xl font-bold text-gray-900 mb-4">Gerir Tabelas Guardadas</h2>
+                 <div class="flex flex-col sm:flex-row gap-4">
+                    <select id="saved-tables-dropdown" class="w-full sm:flex-grow p-2 border border-gray-300 rounded-lg"></select>
+                    <button id="load-table-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">Carregar</button>
+                    <button id="delete-table-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition-colors">Apagar</button>
+                 </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Processador de Dados RNAL</h1>
+                <p class="mt-2 text-gray-600">
+                    1. Visite o <a href="https://rnt.turismodeportugal.pt/RNT/Pesquisa_AL.aspx" target="_blank" class="text-blue-600 hover:underline">site do RNT</a> e exporte o ficheiro Excel para a Madeira.
+                    <br>
+                    2. Arraste e largue o ficheiro descarregado (.xls, .xlsx, ou .csv) na área abaixo, ou clique para selecionar o ficheiro.
+                </p>
+                <div id="rnal-drop-zone" class="mt-4 w-full h-48 rounded-lg flex flex-col justify-center items-center cursor-pointer text-gray-500 hover:bg-gray-50" style="border: 2px dashed #cbd5e1; transition: border-color 0.3s, background-color 0.3s;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p class="mt-2">Arraste e largue o seu ficheiro aqui, ou clique para selecionar</p>
+                    <p id="rnal-file-name" class="mt-1 text-sm font-medium text-blue-600"></p>
+                </div>
+                <input type="file" id="rnal-file-input" class="hidden" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                <div id="rnal-save-section" class="mt-4 hidden">
+                    <input type="text" id="rnal-table-name-input" class="w-full sm:w-auto sm:flex-grow p-2 border border-gray-300 rounded-lg" placeholder="Dê um nome a esta tabela (ex: Licenças Agosto 2025)">
+                    <button id="rnal-save-table-btn" class="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">Guardar Tabela</button>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div id="rnal-output-section" class="bg-white rounded-xl shadow-md p-6 hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                     <h2 id="rnal-current-table-title" class="text-xl font-bold text-gray-900">Licenças de Alojamento Processadas</h2>
+                     <input type="text" id="rnal-search-input" class="w-full sm:w-64 mt-4 sm:mt-0 p-2 border border-gray-300 rounded-lg" placeholder="Escreva para filtrar resultados...">
+                </div>
+               
+                <div class="overflow-x-auto">
+                    <table id="rnal-licenses-table" class="min-w-full text-sm text-left text-gray-700">
+                        <thead id="rnal-table-head" class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <!-- Header will be generated by JavaScript -->
+                        </thead>
+                        <tbody id="rnal-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Data will be inserted here by JavaScript -->
+                        </tbody>
+                    </table>
+                     <div id="rnal-no-results" class="text-center p-10 hidden">
+                        <p class="text-gray-500">Não foram encontrados resultados correspondentes.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <!-- XLSX (SheetJS) for Excel file parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Papa Parse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>

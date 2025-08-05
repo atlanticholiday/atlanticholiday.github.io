@@ -14,6 +14,7 @@ import { OperationsManager } from './operations-manager.js';
 import { ReservationsManager } from './reservations-manager.js';
 import { AccessManager } from './access-manager.js';
 import { RoleManager } from './role-manager.js';
+import { RnalManager } from './rnal-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -21,7 +22,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
+        rnalManager = new RnalManager();
 
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();

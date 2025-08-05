@@ -10,7 +10,8 @@ export class NavigationManager {
             login: 'login-screen',
             setup: 'setup-screen',
             allinfo: 'allinfo-page',
-            userManagement: 'user-management-page'
+            userManagement: 'user-management-page',
+            rnal: 'rnal-page'
         };
     }
 
@@ -61,6 +62,10 @@ export class NavigationManager {
 
     showUserManagementPage() {
         this.showPage('userManagement');
+    }
+
+    showRnalPage() {
+        this.showPage('rnal');
     }
 
     getCurrentPage() {
@@ -129,6 +134,16 @@ export class NavigationManager {
             });
         }
 
+        // RNAL navigation
+        const goToRnalBtn = document.getElementById('go-to-rnal-btn');
+        if (goToRnalBtn) {
+            goToRnalBtn.addEventListener('click', () => {
+                this.showRnalPage();
+                const event = new CustomEvent('rnalPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
@@ -174,11 +189,20 @@ export class NavigationManager {
             });
         }
 
+        // Back from RNAL
+        const backToLandingFromRnalBtn = document.getElementById('back-to-landing-from-rnal-btn');
+        if (backToLandingFromRnalBtn) {
+            backToLandingFromRnalBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         // Sign out buttons
         const landingSignOutBtn = document.getElementById('landing-sign-out-btn');
         const propertiesSignOutBtn = document.getElementById('properties-sign-out-btn');
         const operationsSignOutBtn = document.getElementById('operations-sign-out-btn');
         const userManagementSignOutBtn = document.getElementById('user-management-sign-out-btn');
+        const rnalSignOutBtn = document.getElementById('rnal-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -202,6 +226,13 @@ export class NavigationManager {
         }
         if (userManagementSignOutBtn) {
             userManagementSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (rnalSignOutBtn) {
+            rnalSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });
