@@ -1,0 +1,33 @@
+# Environment variables containing sensitive information
+.env
+.env.local
+.env.production
+.env.development
+
+# Firebase configuration files (if auto-generated)
+firebase-config.js
+
+# Node modules (if using npm/yarn)
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp 

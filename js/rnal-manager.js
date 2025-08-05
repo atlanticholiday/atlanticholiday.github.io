@@ -1,7 +1,17 @@
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 export class RnalManager {
-    constructor() {
+    constructor(db = null, userId = null) {
+        this.db = db;
+        this.userId = userId;
         this.processedDataCache = null;
+        this.unsubscribe = null;
         this.init();
+    }
+
+    setDatabase(db, userId) {
+        this.db = db;
+        this.userId = userId;
     }
 
     init() {
@@ -41,21 +51,21 @@ export class RnalManager {
                 dropZone.style.borderColor = '#cbd5e1';
                 dropZone.style.backgroundColor = '';
             });
-            dropZone.addEventListener('drop', (e) => {
+            dropZone.addEventListener('drop', async (e) => {
                 e.preventDefault();
                 dropZone.style.borderColor = '#cbd5e1';
                 dropZone.style.backgroundColor = '';
                 const files = e.dataTransfer.files;
-                if (files.length) this.handleFile(files[0]);
+                if (files.length) await this.handleFile(files[0]);
             });
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) this.handleFile(e.target.files[0]);
+            fileInput.addEventListener('change', async (e) => {
+                if (e.target.files.length) await this.handleFile(e.target.files[0]);
             });
         }
 
         // --- Save, Load, Delete Logic ---
         if (saveTableBtn) {
-            saveTableBtn.addEventListener('click', () => {
+            saveTableBtn.addEventListener('click', async () => {
                 const name = tableNameInput?.value.trim();
                 if (!name) {
                     alert('Por favor, insira um nome para a tabela.');
@@ -65,7 +75,7 @@ export class RnalManager {
                     alert('Não há dados processados para guardar. Por favor, carregue um ficheiro primeiro.');
                     return;
                 }
-                this.saveData(name, this.processedDataCache);
+                await this.saveData(name, this.processedDataCache);
                 if (tableNameInput) tableNameInput.value = '';
                 if (saveSection) saveSection.classList.add('hidden');
                 this.processedDataCache = null;
@@ -74,13 +84,13 @@ export class RnalManager {
         }
 
         if (loadTableBtn) {
-            loadTableBtn.addEventListener('click', () => {
+            loadTableBtn.addEventListener('click', async () => {
                 const name = savedTablesDropdown?.value;
                 if (!name) {
                     alert('Por favor, selecione uma tabela para carregar.');
                     return;
                 }
-                const data = this.loadData(name);
+                const data = await this.loadData(name);
                 if (data) {
                     this.displayTable(data, name);
                 }
@@ -88,14 +98,14 @@ export class RnalManager {
         }
 
         if (deleteTableBtn) {
-            deleteTableBtn.addEventListener('click', () => {
+            deleteTableBtn.addEventListener('click', async () => {
                 const name = savedTablesDropdown?.value;
                 if (!name) {
                     alert('Por favor, selecione uma tabela para apagar.');
                     return;
                 }
                 if (confirm(`Tem a certeza que quer apagar a tabela "${name}"?`)) {
-                    this.deleteData(name);
+                    await this.deleteData(name);
                 }
             });
         }
@@ -123,14 +133,14 @@ export class RnalManager {
         }
     }
 
-    handleFile(file) {
+    async handleFile(file) {
         const fileNameDisplay = document.getElementById('rnal-file-name');
         const saveSection = document.getElementById('rnal-save-section');
         
         if (fileNameDisplay) fileNameDisplay.textContent = file.name;
         
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const data = e.target.result;
             let jsonData;
             try {
@@ -143,8 +153,30 @@ export class RnalManager {
                     const worksheet = workbook.Sheets[sheetName];
                     jsonData = XLSX.utils.sheet_to_json(worksheet);
                 }
-                this.processedDataCache = jsonData; // Cache the data
-                this.displayTable(jsonData, 'Ficheiro Carregado Recentemente');
+                
+                // Show loading message
+                if (fileNameDisplay) fileNameDisplay.textContent = `${file.name} - Verificando duplicados...`;
+                
+                // Remove duplicates against existing data
+                const uniqueData = await this.removeDuplicateRows(jsonData);
+                const originalCount = jsonData.length;
+                const uniqueCount = uniqueData.length;
+                const duplicatesRemoved = originalCount - uniqueCount;
+                
+                // Update file name display
+                if (fileNameDisplay) fileNameDisplay.textContent = file.name;
+                
+                if (duplicatesRemoved > 0) {
+                    alert(`Ficheiro processado!\n\n📊 Resumo:\n• Total de linhas no ficheiro: ${originalCount}\n• Linhas duplicadas removidas: ${duplicatesRemoved}\n• Linhas únicas para guardar: ${uniqueCount}\n\n✅ Pronto para guardar!`);
+                } else {
+                    alert(`Ficheiro processado!\n\n📊 Resumo:\n• Total de linhas: ${originalCount}\n• Nenhuma linha duplicada encontrada\n\n✅ Todos os registos são únicos!`);
+                }
+                
+                this.processedDataCache = uniqueData; // Cache the unique data
+                const title = duplicatesRemoved > 0 
+                    ? `Ficheiro Carregado (${uniqueCount} únicos de ${originalCount} total)`
+                    : `Ficheiro Carregado (${uniqueCount} registos)`;
+                this.displayTable(uniqueData, title);
                 if (saveSection) saveSection.classList.remove('hidden');
             } catch (error) {
                 alert('Erro ao processar o ficheiro. Verifique o formato.');
@@ -159,44 +191,213 @@ export class RnalManager {
         }
     }
 
-    saveData(name, data) {
-        const savedTables = this.getSavedTables();
-        savedTables[name] = data;
-        localStorage.setItem('rnal_tables', JSON.stringify(savedTables));
-        alert(`Tabela "${name}" guardada com sucesso!`);
-        this.populateDropdown();
+    async saveData(name, data) {
+        if (!this.db || !this.userId) {
+            alert('Erro: Base de dados não disponível. Por favor, faça login novamente.');
+            return;
+        }
+
+        try {
+            // Create a secure document reference
+            const docRef = doc(this.db, 'rnal_data', `${this.userId}_${Date.now()}_${name.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            
+            // Save data with metadata (no sensitive information exposed)
+            await setDoc(docRef, {
+                name: name,
+                userId: this.userId,
+                createdAt: new Date(),
+                recordCount: data.length,
+                // Store data securely - actual RNAL data is not exposed in logs
+                data: data,
+                lastModified: new Date()
+            });
+            
+            alert(`Tabela "${name}" guardada com sucesso na base de dados segura!`);
+            this.populateDropdown();
+        } catch (error) {
+            console.error('Erro ao guardar dados:', error);
+            alert('Erro ao guardar dados. Por favor, tente novamente.');
+        }
     }
 
-    loadData(name) {
-        const savedTables = this.getSavedTables();
-        return savedTables[name] || null;
+    async loadData(name) {
+        if (!this.db || !this.userId) {
+            alert('Erro: Base de dados não disponível. Por favor, faça login novamente.');
+            return null;
+        }
+
+        try {
+            // Query for user's RNAL data with the specified name
+            const q = query(
+                collection(this.db, 'rnal_data'),
+                where('userId', '==', this.userId),
+                where('name', '==', name)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const doc = querySnapshot.docs[0];
+                const docData = doc.data();
+                return docData.data;
+            } else {
+                alert('Tabela não encontrada.');
+                return null;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            alert('Erro ao carregar dados. Por favor, tente novamente.');
+            return null;
+        }
     }
 
-    deleteData(name) {
-        const savedTables = this.getSavedTables();
-        delete savedTables[name];
-        localStorage.setItem('rnal_tables', JSON.stringify(savedTables));
-        alert(`Tabela "${name}" apagada.`);
-        this.populateDropdown();
-        const outputSection = document.getElementById('rnal-output-section');
-        if (outputSection) outputSection.classList.add('hidden');
+    async deleteData(name) {
+        if (!this.db || !this.userId) {
+            alert('Erro: Base de dados não disponível. Por favor, faça login novamente.');
+            return;
+        }
+
+        try {
+            // Query for user's RNAL data with the specified name
+            const q = query(
+                collection(this.db, 'rnal_data'),
+                where('userId', '==', this.userId),
+                where('name', '==', name)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const docToDelete = querySnapshot.docs[0];
+                await deleteDoc(docToDelete.ref);
+                alert(`Tabela "${name}" apagada da base de dados.`);
+                this.populateDropdown();
+                const outputSection = document.getElementById('rnal-output-section');
+                if (outputSection) outputSection.classList.add('hidden');
+            } else {
+                alert('Tabela não encontrada.');
+            }
+        } catch (error) {
+            console.error('Erro ao apagar dados:', error);
+            alert('Erro ao apagar dados. Por favor, tente novamente.');
+        }
     }
 
-    getSavedTables() {
-        return JSON.parse(localStorage.getItem('rnal_tables')) || {};
-    }
-
-    populateDropdown() {
+    async populateDropdown() {
         const savedTablesDropdown = document.getElementById('saved-tables-dropdown');
-        if (!savedTablesDropdown) return;
+        if (!savedTablesDropdown || !this.db || !this.userId) return;
 
-        const savedTables = this.getSavedTables();
-        savedTablesDropdown.innerHTML = '<option value="">Selecione uma tabela guardada...</option>';
-        for (const name in savedTables) {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            savedTablesDropdown.appendChild(option);
+        try {
+            // Query for user's RNAL data
+            const q = query(
+                collection(this.db, 'rnal_data'),
+                where('userId', '==', this.userId)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            savedTablesDropdown.innerHTML = '<option value="">Selecione uma tabela guardada...</option>';
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const option = document.createElement('option');
+                option.value = data.name;
+                option.textContent = `${data.name} (${data.recordCount} registos)`;
+                savedTablesDropdown.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Erro ao carregar lista de tabelas:', error);
+            savedTablesDropdown.innerHTML = '<option value="">Erro ao carregar tabelas...</option>';
+        }
+    }
+
+    async getAllExistingData() {
+        if (!this.db || !this.userId) {
+            return [];
+        }
+
+        try {
+            // Query for all user's RNAL data
+            const q = query(
+                collection(this.db, 'rnal_data'),
+                where('userId', '==', this.userId)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            let allData = [];
+            
+            querySnapshot.forEach((doc) => {
+                const docData = doc.data();
+                if (docData.data && Array.isArray(docData.data)) {
+                    allData = allData.concat(docData.data);
+                }
+            });
+            
+            return allData;
+        } catch (error) {
+            console.error('Erro ao carregar dados existentes:', error);
+            return [];
+        }
+    }
+
+    createRowHash(row) {
+        // Create a unique hash for a row based on key identifying fields
+        // Use the most important fields that would indicate a duplicate
+        const keyFields = [
+            'Nº de registo',
+            'Nome do Alojamento', 
+            'Contacto Email',
+            'Nome do Titular da Exploração',
+            'Contribuinte',
+            'Localização (Endereço)',
+            'Localização (Código postal)'
+        ];
+        
+        const values = keyFields.map(field => {
+            // Find the field in the row (case insensitive)
+            const key = Object.keys(row).find(k => 
+                k.toLowerCase().trim() === field.toLowerCase().trim()
+            );
+            return key ? String(row[key]).toLowerCase().trim() : '';
+        }).filter(v => v !== ''); // Remove empty values
+        
+        return values.join('|');
+    }
+
+    async removeDuplicateRows(newData) {
+        if (!this.db || !this.userId) {
+            console.warn('Database não disponível para verificação de duplicados');
+            return newData;
+        }
+
+        try {
+            // Get all existing data
+            const existingData = await this.getAllExistingData();
+            
+            // Create hash set of existing rows
+            const existingHashes = new Set();
+            existingData.forEach(row => {
+                const hash = this.createRowHash(row);
+                if (hash) existingHashes.add(hash);
+            });
+            
+            // Filter out duplicates from new data
+            const uniqueRows = [];
+            const seenHashes = new Set(); // Also check for duplicates within the new file
+            
+            newData.forEach(row => {
+                const hash = this.createRowHash(row);
+                if (hash && !existingHashes.has(hash) && !seenHashes.has(hash)) {
+                    uniqueRows.push(row);
+                    seenHashes.add(hash);
+                }
+            });
+            
+            return uniqueRows;
+        } catch (error) {
+            console.error('Erro ao verificar duplicados:', error);
+            // If duplicate checking fails, return original data
+            return newData;
         }
     }
 
@@ -238,7 +439,7 @@ export class RnalManager {
             tableHead.appendChild(headerRow);
         }
 
-        // Create data rows
+        // Create data rows (with data protection - no sensitive data exposed in DOM attributes)
         if (tableBody) {
             data.forEach(item => {
                 const dataRow = document.createElement('tr');

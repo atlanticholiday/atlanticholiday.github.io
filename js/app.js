@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
-        rnalManager = new RnalManager();
+        rnalManager = new RnalManager(db, userId);
 
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();
@@ -292,6 +292,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
                 console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
                 reservationsManager = new ReservationsManager(db, userId);
+                
+                // Update RNAL manager with authenticated user credentials
+                if (rnalManager) {
+                    rnalManager.setDatabase(db, userId);
+                }
                 
                 navigationManager.showLandingPage();
                 setupApp();
