@@ -457,21 +457,47 @@ function setupGlobalEventListeners() {
             };
             nav.appendChild(btn);
         });
+        // Create search bars container for side-by-side layout
+        const searchBarsContainer = document.createElement('div');
+        searchBarsContainer.className = 'search-bars-container';
+        
+        // -------- Property filter input --------
+        const filterWrapper = document.createElement('div');
+        filterWrapper.className = 'flex-1';
+        const propFilterLabel = document.createElement('label');
+        propFilterLabel.textContent = 'Filter properties';
+        propFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+        const filterInput = document.createElement('input');
+        filterInput.id = 'allinfo-filter';
+        filterInput.type = 'text';
+        filterInput.placeholder = 'Filter properties...';
+        filterInput.className = 'px-3 py-2 border rounded-md w-full';
+        filterWrapper.appendChild(propFilterLabel);
+        filterWrapper.appendChild(filterInput);
+        
         // -------- Category search field --------
         const catSearchWrapper = document.createElement('div');
         catSearchWrapper.id = 'allinfo-cat-search-wrapper';
-        catSearchWrapper.className = 'mb-4';
         const catSearch = document.createElement('input');
         catSearch.id = 'allinfo-cat-search';
         catSearch.type = 'text';
         catSearch.placeholder = 'Search categories...';
-        catSearch.className = 'px-3 py-2 border rounded-md w-full pl-10';
-        const catLabel = document.createElement('label');
-        catLabel.textContent = 'Search categories';
-        catLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
-        catSearchWrapper.appendChild(catLabel);
         catSearchWrapper.appendChild(catSearch);
-        nav.parentNode.insertBefore(catSearchWrapper, nav);
+        
+        // Add both search bars to the container
+        searchBarsContainer.appendChild(filterWrapper);
+        searchBarsContainer.appendChild(catSearchWrapper);
+        
+        // Insert the search container before the navigation
+        nav.parentNode.insertBefore(searchBarsContainer, nav);
+        
+        // Attach filter to dedicated wrapper (for styling compatibility)
+        const filterParent = document.getElementById('allinfo-filter-wrapper');
+        if (filterParent) { 
+            filterParent.innerHTML = ''; 
+            filterParent.appendChild(searchBarsContainer); 
+        }
+        
         catSearch.addEventListener('input', e => {
             const term = e.target.value.toLowerCase();
             Array.from(nav.children).forEach(btn => {
@@ -487,20 +513,6 @@ function setupGlobalEventListeners() {
                 if (firstVisible) firstVisible.click();
             }
         });
-        // Filter input
-        const filterWrapper = document.createElement('div'); filterWrapper.className = 'mb-4';
-        const propFilterLabel = document.createElement('label');
-        propFilterLabel.textContent = 'Filter properties';
-        propFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
-        const filterInput = document.createElement('input');
-        filterInput.id = 'allinfo-filter'; filterInput.type = 'text';
-        filterInput.placeholder = 'Filter properties...';
-        filterInput.className = 'px-3 py-2 border rounded-md w-full';
-        filterWrapper.appendChild(propFilterLabel);
-        filterWrapper.appendChild(filterInput);
-        // Attach filter to dedicated wrapper
-        const filterParent = document.getElementById('allinfo-filter-wrapper');
-        if (filterParent) { filterParent.innerHTML = ''; filterParent.appendChild(filterWrapper); }
         // Table container
         const tableContainer = document.getElementById('allinfo-content');
         if (tableContainer) { tableContainer.innerHTML = ''; }
