@@ -7,17 +7,122 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/property-settings-update.css">
     <style>
-        /* Collapsible section styles */
-        .section-header {
-            cursor: pointer;
-        }
-
+        /* Form sections are always visible */
         .form-section .form-grid {
-            display: none;
-        }
-
-        .form-section.expanded .form-grid {
             display: grid;
+        }
+        
+        /* Modern improvements */
+        .section-header {
+            cursor: default;
+            justify-content: center !important;
+            text-align: center;
+            margin-bottom: 1rem !important;
+        }
+        
+        .section-header-title {
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+            align-items: center;
+        }
+        
+        .section-icon {
+            width: 48px !important;
+            height: 48px !important;
+            border-radius: 12px !important;
+            font-size: 1.5rem !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .section-title {
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+        }
+        
+        .form-section {
+            padding: 1.5rem !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .form-grid {
+            gap: 1rem !important;
+        }
+        
+        .form-group {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Consistent two column layout for all sections */
+        .form-section .form-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        /* Responsive: single column on smaller screens */
+        @media (max-width: 768px) {
+            .form-section .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Better form input styling */
+        .form-input {
+            padding: 0.875rem 1rem !important;
+            border-radius: 8px !important;
+            border: 1.5px solid #e2e8f0 !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .form-input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .form-label {
+            font-weight: 600 !important;
+            color: #374151 !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* Sticky floating save button - consolidated styles */
+        
+        #save-bottom-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4) !important;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        }
+        
+        #save-bottom-btn:active {
+            transform: translateY(0) !important;
+        }
+        
+        /* Hide the original action buttons since we have the floating one */
+        .actions {
+            display: none !important;
+        }
+        
+        /* Ensure the floating button is always on top */
+        #save-bottom-btn {
+            position: fixed !important;
+            bottom: 2rem !important;
+            right: 2rem !important;
+            z-index: 9999 !important;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: white !important;
+            border: none !important;
+            padding: 1rem 2rem !important;
+            border-radius: 50px !important;
+            font-weight: 600 !important;
+            font-size: 1rem !important;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3) !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -82,13 +187,86 @@
     <form id="property-settings-form">
       <input type="hidden" id="settings-property-id" value="">
 
+      <!-- Basic Info -->
+      <div id="section-basic-info-edit" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+              <i class="fas fa-home"></i>
+            </div>
+            <h2 class="section-title">Basic Information</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-home"></i>
+              <span>Property Name *</span>
+            </label>
+            <input type="text" id="settings-property-name" class="form-input" placeholder="Enter property name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>Location *</span>
+            </label>
+            <input type="text" id="settings-location" class="form-input" placeholder="Enter location" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-building"></i>
+              <span>Property Type</span>
+            </label>
+            <select id="settings-type" class="form-input">
+              <option value="">Select Type</option>
+              <option value="apartment">Apartment</option>
+              <option value="house">House</option>
+              <option value="studio">Studio</option>
+              <option value="villa">Villa</option>
+              <option value="room">Room</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-tag"></i>
+              <span>Typology</span>
+            </label>
+            <input type="text" id="settings-typology" class="form-input" placeholder="e.g. T1, T2, T3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-bed"></i>
+              <span>Rooms</span>
+            </label>
+            <input type="number" id="settings-rooms" class="form-input" min="0" placeholder="Number of rooms">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-bath"></i>
+              <span>Bathrooms</span>
+            </label>
+            <input type="number" id="settings-bathrooms" class="form-input" min="0" step="0.5" placeholder="Number of bathrooms">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-layer-group"></i>
+              <span>Floor</span>
+            </label>
+            <input type="text" id="settings-floor" class="form-input" placeholder="e.g. Ground, 1st, 2nd">
+          </div>
+        </div>
+      </div>
+
       <!-- Maps & Location -->
       <div id="section-maps-location" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
-            <i class="fas fa-map-marker-alt"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: #fff;">
+              <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <h2 class="section-title">Maps & Location</h2>
           </div>
-          <h2 class="section-title">Maps & Location</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -118,10 +296,12 @@
       <!-- Media & Content -->
       <div id="section-media-content" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #f3e8ff; color: #9333ea;">
-            <i class="fas fa-video"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%); color: #fff;">
+              <i class="fas fa-photo-video"></i>
+            </div>
+            <h2 class="section-title">Media & Content</h2>
           </div>
-          <h2 class="section-title">Media & Content</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -150,10 +330,12 @@
       <!-- Google Drive -->
       <div id="section-google-drive" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #f0fdf4; color: #16a34a;">
-            <i class="fab fa-google-drive"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff;">
+              <i class="fab fa-google-drive"></i>
+            </div>
+            <h2 class="section-title">Google Drive</h2>
           </div>
-          <h2 class="section-title">Google Drive</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -186,10 +368,12 @@
       <!-- Recommendations -->
       <div id="section-recommendations" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #fefce8; color: #ca8a04;">
-            <i class="fas fa-star"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff;">
+              <i class="fas fa-thumbs-up"></i>
+            </div>
+            <h2 class="section-title">Recommendations</h2>
           </div>
-          <h2 class="section-title">Recommendations</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -212,10 +396,12 @@
       <!-- Legal & Compliance -->
       <div id="section-legal-compliance" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
-            <i class="fas fa-gavel"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff;">
+              <i class="fas fa-balance-scale"></i>
+            </div>
+            <h2 class="section-title">Legal & Compliance</h2>
           </div>
-          <h2 class="section-title">Legal & Compliance</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -270,10 +456,12 @@
       <!-- Online Services -->
       <div id="section-online-services" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #eef2ff; color: #6366f1;">
-            <i class="fas fa-globe"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff;">
+              <i class="fas fa-cloud"></i>
+            </div>
+            <h2 class="section-title">Online Services</h2>
           </div>
-          <h2 class="section-title">Online Services</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -317,10 +505,12 @@
       <!-- Connectivity & Utilities -->
       <div id="section-connectivity-utilities" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #eef2ff; color: #1d4ed8;">
-            <i class="fas fa-wifi"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff;">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <h2 class="section-title">Connectivity & Utilities</h2>
           </div>
-          <h2 class="section-title">Connectivity & Utilities</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -357,10 +547,12 @@
       <!-- Access & Parking -->
       <div id="section-access-parking" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #f0fdf4; color: #059669;">
-            <i class="fas fa-parking"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff;">
+              <i class="fas fa-key"></i>
+            </div>
+            <h2 class="section-title">Access & Parking</h2>
           </div>
-          <h2 class="section-title">Access & Parking</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -390,10 +582,12 @@
       <!-- Equipment -->
       <div id="section-equipment" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #fef2f2; color: #dc2626;">
-            <i class="fas fa-toolbox"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: #fff;">
+              <i class="fas fa-tools"></i>
+            </div>
+            <h2 class="section-title">Equipment</h2>
           </div>
-          <h2 class="section-title">Equipment</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -444,10 +638,12 @@
       <!-- Frames -->
       <div id="section-frames" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #f3e8ff; color: #7e22ce;">
-            <i class="fas fa-border-all"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #fff;">
+              <i class="fas fa-images"></i>
+            </div>
+            <h2 class="section-title">Frames</h2>
           </div>
-          <h2 class="section-title">Frames</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -494,10 +690,12 @@
       <!-- Services & Extras -->
       <div id="section-services-extras" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #fefce8; color: #a16207;">
-            <i class="fas fa-concierge-bell"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: #fff;">
+              <i class="fas fa-gift"></i>
+            </div>
+            <h2 class="section-title">Services & Extras</h2>
           </div>
-          <h2 class="section-title">Services & Extras</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -517,10 +715,12 @@
       <!-- Signage -->
       <div id="section-signage" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #eef2ff; color: #2563eb;">
-            <i class="fas fa-sign"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #fff;">
+              <i class="fas fa-tags"></i>
+            </div>
+            <h2 class="section-title">Signage</h2>
           </div>
-          <h2 class="section-title">Signage</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -601,10 +801,12 @@
       <!-- Condominium Info -->
       <div id="section-condominium-info" class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background: #f3e8ff; color: #7c3aed;">
-            <i class="fas fa-building"></i>
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #fff;">
+              <i class="fas fa-city"></i>
+            </div>
+            <h2 class="section-title">Condominium Info</h2>
           </div>
-          <h2 class="section-title">Condominium Info</h2>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -651,172 +853,6 @@
     document.getElementById('back-to-dashboard').addEventListener('click', () => window.location.href = 'index.html');
     document.getElementById('settings-cancel-btn').addEventListener('click', () => window.location.href = 'index.html');
     
-    // Load property data when page loads
-    async function loadPropertyData() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const propertyId = urlParams.get('id');
-      
-      if (!propertyId) {
-        console.error('No property ID provided');
-        return;
-      }
-      
-      // Store property ID for form submission
-      document.getElementById('settings-property-id').value = propertyId;
-      
-      try {
-        // Get property data from the properties manager
-        // Since we're on a separate page, we need to get the data from the main app
-        // For now, let's try to get it from the parent window or use a different approach
-        
-        // Try to get from sessionStorage (if passed from main app)
-        const propertyData = sessionStorage.getItem('currentProperty');
-        let property = null;
-        
-        if (propertyData) {
-          property = JSON.parse(propertyData);
-        } else {
-          // Fallback: try to get from localStorage with a different key
-          const properties = JSON.parse(localStorage.getItem('firestore_properties') || '[]');
-          property = properties.find(p => p.id === propertyId);
-        }
-        
-        if (property) {
-          // Populate property info display
-          document.getElementById('property-name-display').textContent = property.name || 'Not specified';
-          document.getElementById('property-location-display').textContent = property.location || 'Not specified';
-          document.getElementById('property-type-display').textContent = property.typology || property.type || 'Not specified';
-          
-          // Populate form fields with existing data
-          document.getElementById('settings-google-maps-link').value = property.googleMapsLink || '';
-          document.getElementById('settings-garbage-location-link').value = property.garbageLocationLink || '';
-          document.getElementById('settings-garbage-floor').value = property.garbageFloor || '';
-          document.getElementById('settings-checkin-videos').value = property.checkinVideos || '';
-          document.getElementById('settings-booking-description-status').value = property.bookingDescriptionStatus || '';
-          document.getElementById('settings-google-drive-enabled').value = property.googleDriveEnabled || 'no';
-          document.getElementById('settings-google-drive-link').value = property.googleDriveLink || '';
-          document.getElementById('settings-scanned-docs-link').value = property.scannedDocsLink || '';
-          document.getElementById('settings-recommendations-link').value = property.recommendationsLink || '';
-          document.getElementById('settings-recommendations-edit-link').value = property.recommendationsEditLink || '';
-          document.getElementById('settings-contracts-status').value = property.contractsStatus || '';
-          document.getElementById('settings-complaint-books-status').value = property.complaintBooksStatus || '';
-          document.getElementById('settings-statistics-status').value = property.statisticsStatus || '';
-          document.getElementById('settings-sef-status').value = property.sefStatus || '';
-          document.getElementById('settings-online-complaint-books-enabled').value = property.onlineComplaintBooksEnabled || 'no';
-          document.getElementById('settings-online-complaint-books-email').value = property.onlineComplaintBooksEmail || '';
-          document.getElementById('settings-online-complaint-books-password').value = property.onlineComplaintBooksPassword || '';
-          document.getElementById('settings-airbnb-links-status').value = property.airbnbLinksStatus || '';
-          document.getElementById('settings-wifi-speed').value = property.wifiSpeed || '';
-          document.getElementById('settings-energy-source').value = property.energySource || '';
-          document.getElementById('settings-key-box-code').value = property.keyBoxCode || '';
-          document.getElementById('settings-parking-spot').value = property.parkingSpot || '';
-          document.getElementById('settings-parking-floor').value = property.parkingFloor || '';
-          document.getElementById('settings-air-conditioning').value = property.airConditioning || '0';
-          document.getElementById('settings-fans').value = property.fans || '0';
-          document.getElementById('settings-heaters').value = property.heaters || '0';
-          document.getElementById('settings-crib').value = property.crib || '0';
-          document.getElementById('settings-crib-mattress').value = property.cribMattress || '0';
-          document.getElementById('settings-baby-chair').value = property.babyChair || '0';
-          document.getElementById('settings-wifi-frame').value = property.wifiFrame || '';
-          document.getElementById('settings-recommendations-frame').value = property.recommendationsFrame || '';
-          document.getElementById('settings-investment-frame').value = property.investmentFrame || '';
-          document.getElementById('settings-breakfast-box').value = property.breakfastBox || '';
-          document.getElementById('settings-private-sign').value = property.privateSign || '';
-          document.getElementById('settings-no-smoking-sign').value = property.noSmokingSign || '';
-          document.getElementById('settings-no-junk-mail-sign').value = property.noJunkMailSign || '';
-          document.getElementById('settings-al-ah-sign').value = property.alAhSign || '';
-          document.getElementById('settings-keys-notice').value = property.keysNotice || '';
-          document.getElementById('settings-wc-sign').value = property.wcSign || '';
-          document.getElementById('settings-condominium').value = property.condominiumName || '';
-          document.getElementById('settings-condominium-email').value = property.condominiumEmail || '';
-          document.getElementById('settings-condominium-phone').value = property.condominiumPhone || '';
-        } else {
-          console.error('Property not found');
-          document.getElementById('property-name-display').textContent = 'Property not found';
-          document.getElementById('property-location-display').textContent = 'Property not found';
-          document.getElementById('property-type-display').textContent = 'Property not found';
-        }
-      } catch (error) {
-        console.error('Error loading property data:', error);
-      }
-    }
-    
-    // Handle form submission
-    document.getElementById('property-settings-form').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const propertyId = document.getElementById('settings-property-id').value;
-      if (!propertyId) {
-        alert('No property ID found');
-        return;
-      }
-      
-      // Collect form data
-      const formData = {
-        googleMapsLink: document.getElementById('settings-google-maps-link').value,
-        garbageLocationLink: document.getElementById('settings-garbage-location-link').value,
-        garbageFloor: document.getElementById('settings-garbage-floor').value,
-        checkinVideos: parseInt(document.getElementById('settings-checkin-videos').value) || 0,
-        bookingDescriptionStatus: document.getElementById('settings-booking-description-status').value,
-        googleDriveEnabled: document.getElementById('settings-google-drive-enabled').value,
-        googleDriveLink: document.getElementById('settings-google-drive-link').value,
-        scannedDocsLink: document.getElementById('settings-scanned-docs-link').value,
-        recommendationsLink: document.getElementById('settings-recommendations-link').value,
-        recommendationsEditLink: document.getElementById('settings-recommendations-edit-link').value,
-        contractsStatus: document.getElementById('settings-contracts-status').value,
-        complaintBooksStatus: document.getElementById('settings-complaint-books-status').value,
-        statisticsStatus: document.getElementById('settings-statistics-status').value,
-        sefStatus: document.getElementById('settings-sef-status').value,
-        onlineComplaintBooksEnabled: document.getElementById('settings-online-complaint-books-enabled').value,
-        onlineComplaintBooksEmail: document.getElementById('settings-online-complaint-books-email').value,
-        onlineComplaintBooksPassword: document.getElementById('settings-online-complaint-books-password').value,
-        airbnbLinksStatus: document.getElementById('settings-airbnb-links-status').value,
-        wifiSpeed: document.getElementById('settings-wifi-speed').value,
-        energySource: document.getElementById('settings-energy-source').value,
-        keyBoxCode: document.getElementById('settings-key-box-code').value,
-        parkingSpot: document.getElementById('settings-parking-spot').value,
-        parkingFloor: document.getElementById('settings-parking-floor').value,
-        airConditioning: parseInt(document.getElementById('settings-air-conditioning').value) || 0,
-        fans: parseInt(document.getElementById('settings-fans').value) || 0,
-        heaters: parseInt(document.getElementById('settings-heaters').value) || 0,
-        crib: parseInt(document.getElementById('settings-crib').value) || 0,
-        cribMattress: parseInt(document.getElementById('settings-crib-mattress').value) || 0,
-        babyChair: parseInt(document.getElementById('settings-baby-chair').value) || 0,
-        wifiFrame: document.getElementById('settings-wifi-frame').value,
-        recommendationsFrame: document.getElementById('settings-recommendations-frame').value,
-        investmentFrame: document.getElementById('settings-investment-frame').value,
-        breakfastBox: document.getElementById('settings-breakfast-box').value,
-        privateSign: document.getElementById('settings-private-sign').value,
-        noSmokingSign: document.getElementById('settings-no-smoking-sign').value,
-        noJunkMailSign: document.getElementById('settings-no-junk-mail-sign').value,
-        alAhSign: document.getElementById('settings-al-ah-sign').value,
-        keysNotice: document.getElementById('settings-keys-notice').value,
-        wcSign: document.getElementById('settings-wc-sign').value,
-        condominiumName: document.getElementById('settings-condominium').value,
-        condominiumEmail: document.getElementById('settings-condominium-email').value,
-        condominiumPhone: document.getElementById('settings-condominium-phone').value
-      };
-      
-      try {
-        // Store the updated data in sessionStorage for the main app to pick up
-        const currentProperty = sessionStorage.getItem('currentProperty');
-        if (currentProperty) {
-          const property = JSON.parse(currentProperty);
-          const updatedProperty = { ...property, ...formData };
-          sessionStorage.setItem('currentProperty', JSON.stringify(updatedProperty));
-          sessionStorage.setItem('propertySettingsUpdated', 'true');
-        }
-        
-        alert('Settings saved successfully! Please return to the main page to see the changes.');
-        window.location.href = 'index.html';
-      } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('Error saving settings. Please try again.');
-      }
-    });
-    
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', loadPropertyData);
     // Scroll to and highlight anchored section
     document.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash;
@@ -833,79 +869,22 @@
   </script>
   <script src="js/property-settings.js"></script>
       <div class="actions">
-        <button type="submit" form="property-settings-form" id="save-bottom-btn" class="btn btn-primary">
-          <i class="fas fa-save"></i>
-          <span>Save All Settings</span>
-        </button>
+        <!-- Original action buttons are hidden -->
       </div>
     </form>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Floating Save Button (outside form for better positioning) -->
+  <button type="submit" form="property-settings-form" id="save-bottom-btn" class="btn btn-primary">
+    <i class="fas fa-save"></i>
+    <span>Save All Settings</span>
+  </button>
+
+  <!-- Firebase v11.6.1 is loaded via ES6 modules in the controller script -->
   <script src="js/property-settings.js"></script>
   <script type="module" src="js/property-settings-controller.js"></script>
   <script src="js/property-settings-sidebar.js"></script>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const formSections = document.querySelectorAll('.form-section');
-        formSections.forEach((section, index) => {
-            const header = section.querySelector('.section-header');
-            if (header) {
-                // Add a toggle icon if one doesn't already exist
-                if (!header.querySelector('.section-toggle')) {
-                    const toggleIcon = document.createElement('div');
-                    toggleIcon.classList.add('section-toggle');
-                    toggleIcon.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                    header.appendChild(toggleIcon);
-                }
-
-                header.addEventListener('click', (e) => {
-                    // Make sure we don't trigger this when clicking form elements inside the header
-                    if (e.target.closest('input, select, button, a')) return;
-                    section.classList.toggle('collapsed');
-                });
-
-                // Collapse all sections by default except for the first one
-                if (index > 0) {
-                    section.classList.add('collapsed');
-                }
-            }
-        });
-    });
-  </script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const formSections = document.querySelectorAll('.form-section');
-      formSections.forEach((section) => {
-        section.classList.remove('collapsed');
-      });
-    });
-  </script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Add arrow to each section header
-      document.querySelectorAll('.form-section .section-header').forEach(header => {
-        // Create arrow element
-        const arrow = document.createElement('div');
-        arrow.className = 'arrow';
-        arrow.innerHTML = '&#x25BC;';
-        header.appendChild(arrow);
-
-        // Set initial state: collapsed
-        const section = header.parentElement;
-        section.classList.remove('expanded');
-
-        // Add click event
-        header.addEventListener('click', () => {
-          section.classList.toggle('expanded');
-          arrow.classList.toggle('expanded');
-        });
-      });
-    });
-  </script>
+  <!-- Removed collapsible behavior scripts - sections are now always visible -->
 </body>
 </html>

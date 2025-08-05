@@ -429,6 +429,7 @@ function setupGlobalEventListeners() {
         content.innerHTML = '';
         const categories = [
             { title: 'Basic Info', slug: 'basic-info', fields: ['location','type','typology','rooms','bathrooms','floor'], icon: 'fas fa-info-circle' },
+            { title: 'Maps & Location', slug: 'maps-location', fields: ['googleMapsLink','garbageLocationLink','garbageFloor'], icon: 'fas fa-map-marker-alt' },
             { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','energySource'], icon: 'fas fa-wifi' },
             { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode','parkingSpot','parkingFloor'], icon: 'fas fa-parking' },
             { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
@@ -563,7 +564,7 @@ function setupGlobalEventListeners() {
                         } catch (err) {
                             console.warn('Failed to store property in sessionStorage:', err);
                         }
-                        window.location.href = `property-settings.html?id=${prop.id}#section-${categories[idx].slug}`;
+                        window.location.href = `property-settings.html?propertyId=${prop.id}#section-${categories[idx].slug}`;
                     }, title: 'Edit' },
                     
                     { icon: 'fas fa-file-pdf', cls: 'text-red-600', fn: () => console.log('PDF for', prop.id), title: 'Download PDF' }
@@ -1032,7 +1033,7 @@ function setupGlobalEventListeners() {
         if (property) {
           // Store the property data in sessionStorage for the settings page
           sessionStorage.setItem('currentProperty', JSON.stringify(property));
-          window.location.href = `property-settings.html?id=${propertyId}`;
+          window.location.href = `property-settings.html?propertyId=${propertyId}`;
         } else {
           alert('Property not found. Please try again.');
         }
@@ -1077,11 +1078,31 @@ function setupGlobalEventListeners() {
     
     // Make functions globally available for onclick handlers
     window.editProperty = (propertyId) => {
+        console.log('🔧 [EDIT PROPERTY] Called with propertyId:', propertyId);
+        console.log('🔧 [EDIT PROPERTY] Available properties:', propertiesManager.properties?.length || 0);
+        
         // Redirect to standalone settings page for full editing
         const property = propertiesManager.getPropertyById(propertyId);
+        console.log('🔧 [EDIT PROPERTY] Found property:', property);
+        
         if (property) {
-            sessionStorage.setItem('currentProperty', JSON.stringify(property));
-            window.location.href = `property-settings.html?id=${propertyId}`;
+            // Clear any existing property data first to avoid conflicts
+            sessionStorage.removeItem('currentProperty');
+            
+            // Store the exact property with matching ID
+            const propertyToStore = { ...property };
+            sessionStorage.setItem('currentProperty', JSON.stringify(propertyToStore));
+            console.log('🔧 [EDIT PROPERTY] ✅ Stored property in sessionStorage:', {
+                id: propertyToStore.id,
+                name: propertyToStore.name,
+                stored: JSON.parse(sessionStorage.getItem('currentProperty'))
+            });
+            
+            window.location.href = `property-settings.html?propertyId=${propertyId}`;
+        } else {
+            console.error('🔧 [EDIT PROPERTY] Property not found for ID:', propertyId);
+            console.log('🔧 [EDIT PROPERTY] Available property IDs:', propertiesManager.properties?.map(p => p.id) || []);
+            alert('Property not found. Please try again.');
         }
     };
     
