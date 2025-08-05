@@ -1,5 +1,5 @@
 // Add Firestore imports
-import { collection, addDoc, onSnapshot, updateDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, addDoc, onSnapshot, updateDoc, doc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class ReservationsManager {
     constructor(db, userId) {
@@ -9,6 +9,12 @@ export class ReservationsManager {
         this.loadedRecords = [];        // records loaded from XLSX file
         this.unsubscribe = null;
         this.currentDatasetName = '';
+        this.changeHistory = [];        // Track changes for history tab
+        this.autoSaveTimeout = null;    // Debounce auto-save
+        this.currentSearchTerm = '';    // Search functionality
+        this.currentSortColumn = null;  // Sorting functionality
+        this.currentSortDirection = 'asc';
+        
         // Restore backup from localStorage if exists
         try {
             const backup = localStorage.getItem('reservations_backup');
@@ -16,6 +22,7 @@ export class ReservationsManager {
                 const parsed = JSON.parse(backup);
                 this.currentDatasetName = parsed.name || '';
                 this.loadedRecords = parsed.records || [];
+                this.changeHistory = parsed.changeHistory || [];
                 console.log('[ReservationsManager] Loaded backup from localStorage', this.currentDatasetName, this.loadedRecords.length);
             }
         } catch (e) {
@@ -287,57 +294,541 @@ export class ReservationsManager {
         // Subscription delayed until after user selects a week
     }
 
+    // Auto-save with debounce
+    scheduleAutoSave(recordId, field, value, oldValue) {
+        if (this.autoSaveTimeout) {
+            clearTimeout(this.autoSaveTimeout);
+        }
+        
+        // Track change in history
+        this.addToChangeHistory(recordId, field, oldValue, value);
+        
+        this.autoSaveTimeout = setTimeout(async () => {
+            try {
+                if (recordId) {
+                    await this.updateReservationField(recordId, field, value);
+                    this.showSaveStatus('Auto-saved', 'success');
+                }
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+                this.showSaveStatus('Auto-save failed', 'error');
+            }
+        }, 1000); // 1 second debounce
+    }
+
+    // Add change to history
+    addToChangeHistory(recordId, field, oldValue, newValue) {
+        if (oldValue === newValue) return;
+        
+        const change = {
+            id: Date.now() + Math.random(),
+            recordId,
+            field,
+            oldValue,
+            newValue,
+            timestamp: new Date().toISOString(),
+            user: this.userId
+        };
+        
+        this.changeHistory.unshift(change);
+        
+        // Keep only last 100 changes
+        if (this.changeHistory.length > 100) {
+            this.changeHistory = this.changeHistory.slice(0, 100);
+        }
+        
+        // Update backup
+        this.updateBackup();
+        
+        // Update history tab if visible
+        if (document.querySelector('.history-tab.active')) {
+            this.renderHistoryTab();
+        }
+    }
+
+    // Show save status
+    showSaveStatus(message, type = 'success') {
+        let statusEl = document.getElementById('save-status');
+        if (!statusEl) {
+            statusEl = document.createElement('div');
+            statusEl.id = 'save-status';
+            statusEl.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300';
+            document.body.appendChild(statusEl);
+        }
+        
+        statusEl.textContent = message;
+        statusEl.className = `fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300 ${
+            type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`;
+        
+        setTimeout(() => {
+            statusEl.style.opacity = '0';
+            setTimeout(() => statusEl.remove(), 300);
+        }, 2000);
+    }
+
+    // Update backup with change history
+    updateBackup() {
+        try {
+            localStorage.setItem('reservations_backup', JSON.stringify({
+                name: this.currentDatasetName,
+                records: this.loadedRecords,
+                changeHistory: this.changeHistory
+            }));
+        } catch (e) {
+            console.warn('[ReservationsManager] Failed to update backup', e);
+        }
+    }
+
+    // Enhanced renderTable with better styling and features
     renderTable() {
         console.log("[ReservationsManager] renderTable called");
         const container = document.getElementById('reservations-table');
-        container.innerHTML = '';
-        const sel = document.getElementById('reservations-week-select');
-        const weekVal = sel ? sel.value : '';
-        console.log("[ReservationsManager] Selected week value:", weekVal);
-        let rows;
-        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            // Display all loaded records for the selected dataset
-            rows = this.loadedRecords;
-            console.log("[ReservationsManager] Displaying loadedRecords rows count:", rows.length);
-            if (rows.length === 0) {
-                container.innerHTML = '<p>No preview data for selected dataset.</p>';
-                return;
-            }
-        } else {
-            rows = this.subscribedData.filter(r => weekVal === 'all' || r._week === weekVal);
-            console.log("[ReservationsManager] Using subscribedData rows count:", rows.length);
-            if (rows.length === 0) {
-                container.innerHTML = '<p>No reservations to display.</p>';
-                return;
-            }
-        }
-        const table = document.createElement('table');
-        table.className = 'min-w-full bg-white';
-        const thead = table.createTHead();
-        const headerRow = thead.insertRow();
-        // Use keys from first row
-        Object.keys(rows[0]).filter(k => k !== '_week').forEach(key => {
-            const th = document.createElement('th');
-            th.textContent = key;
-            th.className = 'px-4 py-2 text-left text-sm font-medium text-gray-600 uppercase tracking-wider';
-            headerRow.appendChild(th);
-        });
-        const tbody = table.createTBody();
-        rows.forEach(record => {
-            const row = tbody.insertRow();
-            Object.entries(record).forEach(([key, value]) => {
-                if (key === '_week') return;
-                const td = row.insertCell();
-                const inp = document.createElement('input');
-                inp.value = value;
-                inp.className = 'px-2 py-1 border rounded text-sm w-full';
-                inp.addEventListener('change', () => {
-                    if (record.id) this.updateReservationField(record.id, key, inp.value);
-                });
-                td.appendChild(inp);
+        
+        // Create enhanced container structure
+        container.innerHTML = `
+            <div class="reservations-table-enhanced">
+                <div class="table-header">
+                    <div class="table-controls">
+                        <div class="tab-controls">
+                            <button class="tab-btn active table-tab" data-tab="table">
+                                <i class="fas fa-table mr-2"></i>Table View
+                            </button>
+                            <button class="tab-btn history-tab" data-tab="history">
+                                <i class="fas fa-history mr-2"></i>Change History
+                                <span class="history-badge">${this.changeHistory.length}</span>
+                            </button>
+                        </div>
+                        <div class="table-actions">
+                            <div class="search-container">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="text" id="table-search" placeholder="Search reservations..." class="search-input">
+                            </div>
+                            <button id="export-btn" class="action-btn">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-content">
+                    <div id="table-view" class="tab-content active">
+                        <div id="actual-table-container"></div>
+                    </div>
+                    <div id="history-view" class="tab-content">
+                        <div id="history-container"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.setupTabControls();
+        this.setupSearchControls();
+        this.renderTableContent();
+    }
+
+    // Setup tab controls
+    setupTabControls() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Update active states
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(`${tabName}-view`).classList.add('active');
+                
+                if (tabName === 'history') {
+                    this.renderHistoryTab();
+                }
             });
         });
-        container.appendChild(table);
+    }
+
+    // Setup search controls
+    setupSearchControls() {
+        const searchInput = document.getElementById('table-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.currentSearchTerm = e.target.value.toLowerCase();
+                this.renderTableContent();
+            });
+        }
+
+        // Setup export button
+        const exportBtn = document.getElementById('export-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportData();
+            });
+        }
+    }
+
+    // Render actual table content
+    renderTableContent() {
+        const container = document.getElementById('actual-table-container');
+        const sel = document.getElementById('reservations-week-select');
+        const weekVal = sel ? sel.value : '';
+        
+        let rows;
+        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
+            // Show all loaded records, don't filter by week for uploaded data
+            rows = [...this.loadedRecords];
+            console.log('[ReservationsManager] Showing loaded records:', rows.length);
+        } else {
+            rows = this.subscribedData.filter(r => !weekVal || weekVal === 'all' || r._week === weekVal);
+            console.log('[ReservationsManager] Showing filtered data:', rows.length);
+        }
+
+        // Show welcome message if no data at all
+        if (this.loadedRecords.length === 0 && this.subscribedData.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-table empty-icon"></i>
+                    <h3>Welcome to Weekly Reservations</h3>
+                    <p>Upload an Excel file to get started, or your saved reservations will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Apply search filter
+        if (this.currentSearchTerm) {
+            rows = rows.filter(row => 
+                Object.values(row).some(value => 
+                    String(value).toLowerCase().includes(this.currentSearchTerm)
+                )
+            );
+        }
+
+        // Apply sorting
+        if (this.currentSortColumn) {
+            rows = this.sortData([...rows], this.currentSortColumn, this.currentSortDirection);
+        }
+
+        if (rows.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times empty-icon"></i>
+                    <h3>No reservations found</h3>
+                    <p>Try adjusting your search or select a different week.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Create enhanced table
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-wrapper';
+        
+        const table = document.createElement('table');
+        table.className = 'enhanced-reservations-table';
+        
+        // Create header
+        const thead = table.createTHead();
+        const headerRow = thead.insertRow();
+        
+        const columns = Object.keys(rows[0]).filter(k => k !== '_week');
+        columns.forEach((key, index) => {
+            const th = document.createElement('th');
+            th.style.width = this.getColumnWidth(key);
+            th.innerHTML = `
+                <div class="header-content" data-column="${key}">
+                    <span class="header-text">${this.formatColumnName(key)}</span>
+                    <div class="sort-icons">
+                        <i class="fas fa-caret-up sort-up ${this.currentSortColumn === key && this.currentSortDirection === 'asc' ? 'active' : ''}"></i>
+                        <i class="fas fa-caret-down sort-down ${this.currentSortColumn === key && this.currentSortDirection === 'desc' ? 'active' : ''}"></i>
+                    </div>
+                </div>
+            `;
+            th.addEventListener('click', () => this.sortTable(key));
+            headerRow.appendChild(th);
+        });
+
+        // Create body with optimized rendering
+        const tbody = table.createTBody();
+        
+        // Use document fragment for better performance
+        const fragment = document.createDocumentFragment();
+        
+        rows.forEach((record, rowIndex) => {
+            const row = document.createElement('tr');
+            row.className = 'table-row';
+            
+            columns.forEach(key => {
+                const td = document.createElement('td');
+                td.className = 'table-cell';
+                td.style.width = this.getColumnWidth(key);
+                
+                const cellWrapper = document.createElement('div');
+                cellWrapper.className = 'cell-wrapper';
+                
+                const input = document.createElement('input');
+                input.type = this.getInputType(key);
+                input.value = record[key] || '';
+                input.className = 'cell-input';
+                input.placeholder = this.getShortPlaceholder(key);
+                
+                // Use debounced event handling for better performance
+                let inputTimeout;
+                input.addEventListener('focus', () => {
+                    input.dataset.originalValue = input.value;
+                    cellWrapper.classList.add('focused');
+                });
+                
+                input.addEventListener('blur', () => {
+                    cellWrapper.classList.remove('focused');
+                });
+                
+                input.addEventListener('input', () => {
+                    cellWrapper.classList.add('modified');
+                    
+                    // Clear previous timeout
+                    if (inputTimeout) clearTimeout(inputTimeout);
+                    
+                    // Debounce the auto-save for better performance
+                    inputTimeout = setTimeout(() => {
+                        const oldValue = input.dataset.originalValue || '';
+                        this.scheduleAutoSave(record.id, key, input.value, oldValue);
+                        
+                        // Update local data
+                        record[key] = input.value;
+                    }, 500); // Increased debounce time
+                });
+                
+                cellWrapper.appendChild(input);
+                td.appendChild(cellWrapper);
+                row.appendChild(td);
+            });
+            
+            fragment.appendChild(row);
+        });
+        
+        tbody.appendChild(fragment);
+
+        tableWrapper.appendChild(table);
+        container.innerHTML = '';
+        container.appendChild(tableWrapper);
+    }
+
+    // Render history tab
+    renderHistoryTab() {
+        const container = document.getElementById('history-container');
+        
+        if (this.changeHistory.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-history empty-icon"></i>
+                    <h3>No changes yet</h3>
+                    <p>Changes to your reservations will appear here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const historyList = document.createElement('div');
+        historyList.className = 'history-list';
+        
+        this.changeHistory.forEach(change => {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            
+            const timeAgo = this.getTimeAgo(change.timestamp);
+            
+            historyItem.innerHTML = `
+                <div class="history-header">
+                    <div class="change-info">
+                        <span class="field-name">${this.formatColumnName(change.field)}</span>
+                        <span class="change-type">modified</span>
+                    </div>
+                    <span class="change-time">${timeAgo}</span>
+                </div>
+                <div class="history-content">
+                    <div class="value-change">
+                        <span class="old-value">${change.oldValue || '(empty)'}</span>
+                        <i class="fas fa-arrow-right change-arrow"></i>
+                        <span class="new-value">${change.newValue || '(empty)'}</span>
+                    </div>
+                </div>
+            `;
+            
+            historyList.appendChild(historyItem);
+        });
+        
+        container.innerHTML = '';
+        container.appendChild(historyList);
+    }
+
+    // Utility functions
+    formatColumnName(key) {
+        return key.replace(/([A-Z])/g, ' $1')
+                 .replace(/^./, str => str.toUpperCase())
+                 .replace(/[-_]/g, ' ');
+    }
+
+    getInputType(key) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('email')) return 'email';
+        if (lowerKey.includes('phone') || lowerKey.includes('tel')) return 'tel';
+        if (lowerKey.includes('date') || lowerKey.includes('check')) return 'date';
+        if (lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount')) return 'number';
+        return 'text';
+    }
+
+    getTimeAgo(timestamp) {
+        const now = new Date();
+        const changeDate = new Date(timestamp);
+        const diffMs = now - changeDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return changeDate.toLocaleDateString();
+    }
+
+    // Get appropriate column width based on content type
+    getColumnWidth(key) {
+        const lowerKey = key.toLowerCase();
+        
+        // Date columns
+        if (lowerKey.includes('date') || lowerKey.includes('check')) return '110px';
+        
+        // Time columns
+        if (lowerKey.includes('time') || lowerKey.includes('hora')) return '80px';
+        
+        // Status columns
+        if (lowerKey.includes('estado') || lowerKey.includes('status')) return '100px';
+        
+        // Name/location columns
+        if (lowerKey.includes('nome') || lowerKey.includes('name') || lowerKey.includes('alojamento')) return '150px';
+        
+        // Property/room columns
+        if (lowerKey.includes('voo') || lowerKey.includes('resp') || lowerKey.includes('cofre')) return '90px';
+        
+        // Default width
+        return '120px';
+    }
+
+    // Get short placeholder text
+    getShortPlaceholder(key) {
+        const lowerKey = key.toLowerCase();
+        
+        if (lowerKey.includes('nome') || lowerKey.includes('name')) return 'Name';
+        if (lowerKey.includes('estado') || lowerKey.includes('status')) return 'Status';
+        if (lowerKey.includes('check')) return 'Date';
+        if (lowerKey.includes('time') || lowerKey.includes('hora')) return 'Time';
+        if (lowerKey.includes('voo')) return 'Flight';
+        if (lowerKey.includes('resp')) return 'Person';
+        if (lowerKey.includes('cofre')) return 'Safe';
+        if (lowerKey.includes('chegada')) return 'Arrival';
+        if (lowerKey.includes('alojamento')) return 'Property';
+        
+        return '';
+    }
+
+    sortTable(column) {
+        if (this.currentSortColumn === column) {
+            this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.currentSortColumn = column;
+            this.currentSortDirection = 'asc';
+        }
+        this.renderTableContent();
+    }
+
+    // Sort data array by column
+    sortData(rows, column, direction) {
+        return rows.sort((a, b) => {
+            let aVal = a[column] || '';
+            let bVal = b[column] || '';
+            
+            // Try to parse as numbers for numeric sorting
+            const aNum = parseFloat(aVal);
+            const bNum = parseFloat(bVal);
+            
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return direction === 'asc' ? aNum - bNum : bNum - aNum;
+            }
+            
+            // Try to parse as dates
+            const aDate = new Date(aVal);
+            const bDate = new Date(bVal);
+            
+            if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+                return direction === 'asc' ? aDate - bDate : bDate - aDate;
+            }
+            
+            // Default to string comparison
+            aVal = String(aVal).toLowerCase();
+            bVal = String(bVal).toLowerCase();
+            
+            if (direction === 'asc') {
+                return aVal.localeCompare(bVal);
+            } else {
+                return bVal.localeCompare(aVal);
+            }
+        });
+    }
+
+    // Export table data
+    exportData() {
+        const sel = document.getElementById('reservations-week-select');
+        const weekVal = sel ? sel.value : '';
+        
+        let rows;
+        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
+            rows = this.loadedRecords;
+        } else {
+            rows = this.subscribedData.filter(r => weekVal === 'all' || r._week === weekVal);
+        }
+
+        // Apply search filter
+        if (this.currentSearchTerm) {
+            rows = rows.filter(row => 
+                Object.values(row).some(value => 
+                    String(value).toLowerCase().includes(this.currentSearchTerm)
+                )
+            );
+        }
+
+        if (rows.length === 0) {
+            alert('No data to export');
+            return;
+        }
+
+        // Create CSV content
+        const columns = Object.keys(rows[0]).filter(k => k !== '_week' && k !== 'id');
+        const csvContent = [
+            columns.map(col => this.formatColumnName(col)).join(','),
+            ...rows.map(row => 
+                columns.map(col => {
+                    const value = row[col] || '';
+                    // Escape quotes and wrap in quotes if contains comma
+                    return value.toString().includes(',') 
+                        ? `"${value.toString().replace(/"/g, '""')}"` 
+                        : value;
+                }).join(',')
+            )
+        ].join('\n');
+
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `reservations_${weekVal || 'all'}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     // Update a field in Firestore

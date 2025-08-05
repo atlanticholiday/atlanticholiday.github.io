@@ -1,0 +1,603 @@
+/* Enhanced Reservations Table Styles */
+
+.reservations-table-enhanced {
+    background: white;
+    border: 2px solid #e94b5a;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 0;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(233, 75, 90, 0.15);
+}
+
+/* Table Header */
+.table-header {
+    background: linear-gradient(135deg, #ffffff 0%, #fef9f9 100%);
+    border-bottom: 2px solid #e94b5a;
+    padding: 1rem;
+}
+
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Tab Controls */
+.tab-controls {
+    display: flex;
+    background: white;
+    border: 2px solid #e94b5a;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(233, 75, 90, 0.1);
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: white;
+    color: #374151;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    border-right: 1px solid #fde8ea;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    background: #fde8ea;
+    color: #e94b5a;
+}
+
+.tab-btn.active {
+    background: #e94b5a;
+    color: white;
+}
+
+.tab-btn:last-child {
+    border-right: none;
+}
+
+.history-badge {
+    background: var(--brand-color);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 10px;
+    margin-left: 0.5rem;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+/* Table Actions */
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    color: #64748b;
+    font-size: 0.875rem;
+    z-index: 1;
+}
+
+.search-input {
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    width: 250px;
+    transition: var(--transition-smooth);
+    background: white;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #e94b5a;
+    box-shadow: 0 0 0 3px rgba(233, 75, 90, 0.1);
+    background: white;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #e94b5a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(233, 75, 90, 0.2);
+}
+
+.action-btn:hover {
+    background: #d3414f;
+    box-shadow: 0 4px 8px rgba(233, 75, 90, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Tab Content */
+.table-content {
+    position: relative;
+    height: calc(100vh - 300px);
+    overflow-y: auto;
+}
+
+.tab-content {
+    display: none;
+    padding: 1.5rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Table */
+.table-wrapper {
+    background: white;
+    border: 1px solid #e5e7eb;
+    height: 100%;
+    overflow: auto;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.enhanced-reservations-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: white;
+    font-family: Arial, sans-serif;
+}
+
+.enhanced-reservations-table th {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 12px 8px;
+    white-space: nowrap;
+    font-size: 13px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    height: 100%;
+    width: 100%;
+}
+
+.header-content:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.header-text {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.sort-icons {
+    display: flex;
+    flex-direction: column;
+    margin-left: 4px;
+    opacity: 0.7;
+}
+
+.sort-up, .sort-down {
+    font-size: 8px;
+    line-height: 1;
+}
+
+.sort-up.active, .sort-down.active {
+    opacity: 1;
+    color: #fbbf24;
+}
+
+.table-row {
+    background: white;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-row:hover {
+    background: #fef9f9 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(233, 75, 90, 0.1);
+}
+
+.table-row:nth-child(even) {
+    background: #fafafa;
+}
+
+.table-row:nth-child(even):hover {
+    background: #fef9f9 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(233, 75, 90, 0.1);
+}
+
+.table-cell {
+    border: 1px solid #e5e7eb;
+    vertical-align: middle;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.cell-wrapper {
+    position: relative;
+    background: transparent;
+}
+
+.cell-wrapper.focused {
+    background: #fde8ea !important;
+    border-radius: 4px;
+}
+
+.cell-wrapper.modified::after {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.2);
+    }
+}
+
+.cell-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: #1f2937;
+    outline: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 36px;
+    box-sizing: border-box;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.cell-input:focus {
+    background: white !important;
+    outline: 2px solid #e94b5a;
+    outline-offset: -2px;
+    box-shadow: 0 0 0 3px rgba(233, 75, 90, 0.1);
+}
+
+.cell-input::placeholder {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* History Tab */
+.history-list {
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid #e2e8f0;
+}
+
+.history-item {
+    background: white;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 1rem;
+    transition: var(--transition-smooth);
+}
+
+.history-item:hover {
+    background: rgba(233, 75, 90, 0.02);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.change-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.change-type {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.change-time {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.history-content {
+    margin-left: 1rem;
+}
+
+.value-change {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.old-value {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+    font-size: 0.8125rem;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.new-value {
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.change-arrow {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Save Status */
+#save-status {
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(10px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .tab-controls {
+        justify-content: center;
+    }
+
+    .table-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        width: 200px;
+    }
+
+    .enhanced-reservations-table {
+        font-size: 0.8125rem;
+    }
+
+    .header-content {
+        padding: 0.75rem 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .sort-icons {
+        align-self: flex-end;
+        margin-left: 0;
+    }
+
+    .cell-wrapper {
+        padding: 0.5rem;
+    }
+
+    .cell-input {
+        min-width: 100px;
+        font-size: 0.8125rem;
+    }
+
+    .value-change {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .change-arrow {
+        transform: rotate(90deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-controls {
+        flex-direction: column;
+    }
+
+    .tab-btn {
+        justify-content: center;
+        padding: 0.75rem;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .table-actions {
+        width: 100%;
+    }
+
+    .action-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .reservations-table-enhanced {
+        background: #1e293b;
+        color: #f1f5f9;
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-bottom-color: #334155;
+    }
+
+    .tab-controls {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .tab-btn {
+        color: #94a3b8;
+    }
+
+    .tab-btn:hover {
+        background: rgba(233, 75, 90, 0.1);
+    }
+
+    .search-input {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f1f5f9;
+    }
+
+    .search-input::placeholder {
+        color: #64748b;
+    }
+
+    .table-wrapper {
+        border-color: #334155;
+    }
+
+    .table-row {
+        border-bottom-color: #334155;
+    }
+
+    .table-row:nth-child(even) {
+        background: rgba(15, 23, 42, 0.5);
+    }
+
+    .cell-input {
+        color: #f1f5f9;
+    }
+
+    .history-item {
+        background: #1e293b;
+        border-bottom-color: #334155;
+    }
+
+    .field-name {
+        color: #f1f5f9;
+    }
+
+    .change-type {
+        background: #1e3a8a;
+        color: #93c5fd;
+    }
+
+    .old-value {
+        background: #450a0a;
+        color: #fca5a5;
+    }
+
+    .new-value {
+        background: #052e16;
+        color: #86efac;
+    }
+} 
