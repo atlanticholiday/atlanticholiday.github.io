@@ -97,6 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Services & Extras
         breakfastBox: 'settings-breakfast-box',
 
+        // Safety Maintenance
+        fireExtinguisherExpiration: 'settings-fire-extinguisher-expiration',
+        fireExtinguisherLocation: 'settings-fire-extinguisher-location',
+        fireExtinguisherNotes: 'settings-fire-extinguisher-notes',
+        firstAidStatus: 'settings-first-aid-status',
+        firstAidLastChecked: 'settings-first-aid-last-checked',
+        firstAidNotes: 'settings-first-aid-notes',
+
         // Signage
         privateSign: 'settings-private-sign',
         noSmokingSign: 'settings-no-smoking-sign',

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Maintenance Dashboard Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        [contenteditable="true"] {
+            background-color: #f0f8ff;
+            outline: 2px solid #3b82f6;
+            border-radius: 4px;
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+        <div class="text-center">
+            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-2 text-lg font-medium text-gray-700">Loading Safety Dashboard...</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="bg-white shadow-sm rounded-xl mb-8 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Safety Maintenance Dashboard</h1>
+                    <p class="text-gray-500 text-sm mt-2">Fire extinguisher and first aid kit maintenance tracking</p>
+                </div>
+                <div class="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-medium">
+                    🛡️ Safety First
+                </div>
+            </div>
+        </header>
+
+        <!-- Legend -->
+        <div class="bg-white p-4 rounded-lg shadow-sm mb-8 border border-gray-200">
+            <h3 class="font-semibold text-lg mb-2">Color Key</h3>
+            <div class="flex flex-wrap gap-4 text-sm">
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-red-200 border border-red-300"></span><span>Expired / Action Required</span></div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-yellow-200 border border-yellow-300"></span><span>Expiring Soon / Incomplete</span></div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-green-200 border border-green-300"></span><span>OK / Complete</span></div>
+            </div>
+        </div>
+
+        <!-- Fire Extinguishers Section -->
+        <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 mb-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">Fire Extinguisher Maintenance</h2>
+                <button id="addExtinguisherBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">Add New</button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="searchExtinguishers" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search by accommodation, location...">
+            </div>
+            <div class="table-container">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Accommodation</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Expiration Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Location</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Notes</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extinguishersTable" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- First Aid Kits Section -->
+        <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">First Aid Kit Status</h2>
+                <button id="addKitBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">Add New</button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="searchKits" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search by accommodation...">
+            </div>
+            <div class="table-container">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Accommodation</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Last Checked</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Notes</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kitsTable" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding/editing -->
+    <div id="entryModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="text-lg font-bold">Add Safety Item</h3>
+                <button id="modalClose" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="safetyForm" class="space-y-4">
+                <div id="formFields">
+                    <!-- Fields will be populated by JavaScript -->
+                </div>
+                <div class="flex justify-end gap-4 mt-6">
+                    <button type="button" id="modalCancel" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation modal -->
+    <div id="confirmModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4">Confirm Action</h3>
+            <p id="confirmMessage" class="mb-6">Are you sure you want to delete this item?</p>
+            <div class="flex justify-end gap-4">
+                <button id="confirmCancel" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                <button id="confirmOk" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        let extinguishersData = [
+            {
+                id: '1',
+                accommodation: 'Ocean View Apartment',
+                expirationDate: '2024-12-15',
+                location: 'Kitchen',
+                notes: 'ABC type extinguisher'
+            },
+            {
+                id: '2',
+                accommodation: 'Mountain Villa',
+                expirationDate: '2024-02-10',
+                location: 'Main entrance',
+                notes: 'Needs inspection'
+            },
+            {
+                id: '3',
+                accommodation: 'City Center Loft',
+                expirationDate: '2025-06-20',
+                location: 'Hallway',
+                notes: 'Recently serviced'
+            }
+        ];
+
+        let kitsData = [
+            {
+                id: '1',
+                accommodation: 'Ocean View Apartment',
+                status: 'Complete',
+                lastChecked: '2024-01-15',
+                notes: 'All items present'
+            },
+            {
+                id: '2',
+                accommodation: 'Mountain Villa',
+                status: 'Needs Restocking',
+                lastChecked: '2024-01-10',
+                notes: 'Missing bandages'
+            },
+            {
+                id: '3',
+                accommodation: 'City Center Loft',
+                status: 'Complete',
+                lastChecked: '2024-01-20',
+                notes: 'Recently checked'
+            }
+        ];
+
+        let currentEditingItem = null;
+        let currentEditingType = null;
+
+        // Mock properties for demonstration
+        const mockProperties = [
+            { name: 'Ocean View Apartment' },
+            { name: 'Mountain Villa' },
+            { name: 'City Center Loft' },
+            { name: 'Beach House' },
+            { name: 'Downtown Studio' }
+        ];
+
+        function renderExtinguisherTable() {
+            const table = document.getElementById('extinguishersTable');
+            const searchInput = document.getElementById('searchExtinguishers');
+            const filter = searchInput.value.toLowerCase();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const threeMonthsFromNow = new Date();
+            threeMonthsFromNow.setMonth(today.getMonth() + 3);
+
+            const filteredData = extinguishersData.filter(row =>
+                (row.accommodation || '').toLowerCase().includes(filter) ||
+                (row.location || '').toLowerCase().includes(filter)
+            );
+
+            table.innerHTML = '';
+            if (filteredData.length === 0) {
+                table.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No fire extinguishers found.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach(row => {
+                const expDateStr = row.expirationDate;
+                let rowClass = 'bg-gray-50';
+                let formattedDate = '';
+
+                if (expDateStr && expDateStr !== '-') {
+                    const expDate = new Date(expDateStr);
+                    if (!isNaN(expDate.getTime())) {
+                        formattedDate = expDate.toLocaleDateString();
+                        if (expDate < today) rowClass = 'bg-red-200';
+                        else if (expDate < threeMonthsFromNow) rowClass = 'bg-yellow-200';
+                        else rowClass = 'bg-green-200';
+                    }
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = `${rowClass} transition-colors duration-200`;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${row.accommodation || ''}</td>
+                    <td class="px-4 py-3 text-sm">${formattedDate || 'Not set'}</td>
+                    <td class="px-4 py-3 text-sm">${row.location || ''}</td>
+                    <td class="px-4 py-3 text-sm">${row.notes || ''}</td>
+                    <td class="px-4 py-3 text-sm text-center space-x-2">
+                        <button class="edit-btn text-blue-600 hover:text-blue-800 transition-colors" data-id="${row.id}" data-type="extinguisher">Edit</button>
+                        <button class="delete-btn text-red-600 hover:text-red-800 transition-colors" data-id="${row.id}" data-type="extinguisher">Delete</button>
+                    </td>
+                `;
+                table.appendChild(tr);
+            });
+        }
+
+        function renderKitTable() {
+            const table = document.getElementById('kitsTable');
+            const searchInput = document.getElementById('searchKits');
+            const filter = searchInput.value.toLowerCase();
+            const filteredData = kitsData.filter(row =>
+                (row.accommodation || '').toLowerCase().includes(filter)
+            );
+
+            table.innerHTML = '';
+            if (filteredData.length === 0) {
+                table.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No first aid kits found.</td></tr>`;
+                return;
+            }
+            
+            filteredData.forEach(row => {
+                const status = (row.status || '').toLowerCase().trim();
+                let rowClass = 'bg-gray-50';
+
+                if (!status) rowClass = 'bg-red-200';
+                else if (status === 'complete' || status === 'completo') rowClass = 'bg-green-200';
+                else rowClass = 'bg-yellow-200';
+
+                let formattedDate = '';
+                if (row.lastChecked) {
+                    const checkDate = new Date(row.lastChecked);
+                    if (!isNaN(checkDate.getTime())) {
+                        formattedDate = checkDate.toLocaleDateString();
+                    }
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = `${rowClass} transition-colors duration-200`;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${row.accommodation || ''}</td>
+                    <td class="px-4 py-3 text-sm">${row.status || ''}</td>
+                    <td class="px-4 py-3 text-sm">${formattedDate || 'Not checked'}</td>
+                    <td class="px-4 py-3 text-sm">${row.notes || ''}</td>
+                    <td class="px-4 py-3 text-sm text-center space-x-2">
+                        <button class="edit-btn text-blue-600 hover:text-blue-800 transition-colors" data-id="${row.id}" data-type="kit">Edit</button>
+                        <button class="delete-btn text-red-600 hover:text-red-800 transition-colors" data-id="${row.id}" data-type="kit">Delete</button>
+                    </td>
+                `;
+                table.appendChild(tr);
+            });
+        }
+
+        function showAddModal(type) {
+            currentEditingItem = null;
+            currentEditingType = type;
+            
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('modalTitle');
+            const fieldsContainer = document.getElementById('formFields');
+
+            title.textContent = type === 'extinguisher' ? 'Add Fire Extinguisher' : 'Add First Aid Kit';
+            
+            const propertyOptions = mockProperties.map(prop => 
+                `<option value="${prop.name}">${prop.name}</option>`
+            ).join('');
+
+            if (type === 'extinguisher') {
+                fieldsContainer.innerHTML = `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation</label>
+                        <select name="accommodation" class="w-full p-2 border rounded" required>
+                            <option value="">Select Property</option>
+                            ${propertyOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
+                        <input type="date" name="expirationDate" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                        <input type="text" name="location" class="w-full p-2 border rounded" placeholder="e.g., Kitchen, Entrance">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea name="notes" class="w-full p-2 border rounded" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                `;
+            } else {
+                fieldsContainer.innerHTML = `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation</label>
+                        <select name="accommodation" class="w-full p-2 border rounded" required>
+                            <option value="">Select Property</option>
+                            ${propertyOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full p-2 border rounded">
+                            <option value="">Select Status</option>
+                            <option value="Complete">Complete</option>
+                            <option value="Incomplete">Incomplete</option>
+                            <option value="Needs Restocking">Needs Restocking</option>
+                            <option value="Missing">Missing</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Checked</label>
+                        <input type="date" name="lastChecked" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea name="notes" class="w-full p-2 border rounded" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function showEditModal(id, type) {
+            currentEditingItem = id;
+            currentEditingType = type;
+            
+            const item = type === 'extinguisher' 
+                ? extinguishersData.find(item => item.id === id)
+                : kitsData.find(item => item.id === id);
+
+            if (!item) return;
+
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('modalTitle');
+            const fieldsContainer = document.getElementById('formFields');
+
+            title.textContent = type === 'extinguisher' ? 'Edit Fire Extinguisher' : 'Edit First Aid Kit';
+            
+            const propertyOptions = mockProperties.map(prop => 
+                `<option value="${prop.name}" ${prop.name === item.accommodation ? 'selected' : ''}>${prop.name}</option>`
+            ).join('');
+
+            if (type === 'extinguisher') {
+                const expDate = item.expirationDate ? new Date(item.expirationDate).toISOString().split('T')[0] : '';
+                fieldsContainer.innerHTML = `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation</label>
+                        <select name="accommodation" class="w-full p-2 border rounded" required>
+                            <option value="">Select Property</option>
+                            ${propertyOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
+                        <input type="date" name="expirationDate" value="${expDate}" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                        <input type="text" name="location" value="${item.location || ''}" class="w-full p-2 border rounded" placeholder="e.g., Kitchen, Entrance">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea name="notes" class="w-full p-2 border rounded" rows="3" placeholder="Additional notes...">${item.notes || ''}</textarea>
+                    </div>
+                `;
+            } else {
+                const lastChecked = item.lastChecked ? new Date(item.lastChecked).toISOString().split('T')[0] : '';
+                fieldsContainer.innerHTML = `
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation</label>
+                        <select name="accommodation" class="w-full p-2 border rounded" required>
+                            <option value="">Select Property</option>
+                            ${propertyOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status" class="w-full p-2 border rounded">
+                            <option value="">Select Status</option>
+                            <option value="Complete" ${item.status === 'Complete' ? 'selected' : ''}>Complete</option>
+                            <option value="Incomplete" ${item.status === 'Incomplete' ? 'selected' : ''}>Incomplete</option>
+                            <option value="Needs Restocking" ${item.status === 'Needs Restocking' ? 'selected' : ''}>Needs Restocking</option>
+                            <option value="Missing" ${item.status === 'Missing' ? 'selected' : ''}>Missing</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Checked</label>
+                        <input type="date" name="lastChecked" value="${lastChecked}" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea name="notes" class="w-full p-2 border rounded" rows="3" placeholder="Additional notes...">${item.notes || ''}</textarea>
+                    </div>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const form = document.getElementById('safetyForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            if (currentEditingItem) {
+                // Update existing item
+                if (currentEditingType === 'extinguisher') {
+                    const index = extinguishersData.findIndex(item => item.id === currentEditingItem);
+                    if (index !== -1) {
+                        extinguishersData[index] = { ...extinguishersData[index], ...data };
+                    }
+                } else {
+                    const index = kitsData.findIndex(item => item.id === currentEditingItem);
+                    if (index !== -1) {
+                        kitsData[index] = { ...kitsData[index], ...data };
+                    }
+                }
+            } else {
+                // Add new item
+                const newItem = { id: Date.now().toString(), ...data };
+                if (currentEditingType === 'extinguisher') {
+                    extinguishersData.push(newItem);
+                } else {
+                    kitsData.push(newItem);
+                }
+            }
+
+            hideModal();
+            renderExtinguisherTable();
+            renderKitTable();
+        }
+
+        function showDeleteConfirmation(id, type) {
+            currentEditingItem = id;
+            currentEditingType = type;
+            
+            const modal = document.getElementById('confirmModal');
+            const message = document.getElementById('confirmMessage');
+            
+            message.textContent = `Are you sure you want to delete this ${type === 'extinguisher' ? 'fire extinguisher' : 'first aid kit'}?`;
+            modal.classList.remove('hidden');
+        }
+
+        function confirmDelete() {
+            if (!currentEditingItem || !currentEditingType) return;
+
+            if (currentEditingType === 'extinguisher') {
+                extinguishersData = extinguishersData.filter(item => item.id !== currentEditingItem);
+            } else {
+                kitsData = kitsData.filter(item => item.id !== currentEditingItem);
+            }
+
+            hideConfirmModal();
+            renderExtinguisherTable();
+            renderKitTable();
+        }
+
+        function hideModal() {
+            document.getElementById('entryModal').classList.add('hidden');
+            currentEditingItem = null;
+            currentEditingType = null;
+        }
+
+        function hideConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            currentEditingItem = null;
+            currentEditingType = null;
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hide loading overlay
+            setTimeout(() => {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }, 1000);
+
+            // Search functionality
+            document.getElementById('searchExtinguishers').addEventListener('keyup', renderExtinguisherTable);
+            document.getElementById('searchKits').addEventListener('keyup', renderKitTable);
+
+            // Add new item buttons
+            document.getElementById('addExtinguisherBtn').addEventListener('click', () => showAddModal('extinguisher'));
+            document.getElementById('addKitBtn').addEventListener('click', () => showAddModal('kit'));
+
+            // Modal close buttons
+            document.getElementById('modalClose').addEventListener('click', hideModal);
+            document.getElementById('modalCancel').addEventListener('click', hideModal);
+            document.getElementById('confirmCancel').addEventListener('click', hideConfirmModal);
+            document.getElementById('confirmOk').addEventListener('click', confirmDelete);
+
+            // Form submission
+            document.getElementById('safetyForm').addEventListener('submit', handleFormSubmit);
+
+            // Table button clicks
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('edit-btn')) {
+                    const id = e.target.dataset.id;
+                    const type = e.target.dataset.type;
+                    showEditModal(id, type);
+                } else if (e.target.classList.contains('delete-btn')) {
+                    const id = e.target.dataset.id;
+                    const type = e.target.dataset.type;
+                    showDeleteConfirmation(id, type);
+                }
+            });
+
+            // Initial render
+            renderExtinguisherTable();
+            renderKitTable();
+        });
+    </script>
+</body>
+</html> 

@@ -15,6 +15,7 @@ import { ReservationsManager } from './reservations-manager.js';
 import { AccessManager } from './access-manager.js';
 import { RoleManager } from './role-manager.js';
 import { RnalManager } from './rnal-manager.js';
+import { SafetyManager } from './safety-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -22,7 +23,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -300,6 +301,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
                 reservationsManager = new ReservationsManager(db, userId);
                 
+                console.log(`🔥 [INITIALIZATION] Creating SafetyManager...`);
+                safetyManager = new SafetyManager(db, propertiesManager);
+                window.safetyManager = safetyManager;
+                
                 // Update RNAL manager with authenticated user credentials
                 if (rnalManager) {
                     try {
@@ -432,6 +437,32 @@ function setupGlobalEventListeners() {
         if (reservationsManager) {
             console.log('Reservations page opened, initializing...');
             reservationsManager.initializeEventListeners();
+        }
+    });
+
+    document.addEventListener('safetyPageOpened', () => {
+        if (safetyManager) {
+            console.log('Safety page opened, initializing...');
+            safetyManager.initialize();
+        }
+    });
+
+    // Handle opening property edit modal from safety dashboard
+    document.addEventListener('openPropertyEdit', (event) => {
+        const propertyId = event.detail.propertyId;
+        if (propertiesManager && propertyId) {
+            console.log('Opening property edit modal for:', propertyId);
+            
+            // Find the property
+            const property = propertiesManager.properties.find(p => p.id === propertyId);
+            if (property) {
+                // Trigger the edit modal - this would normally be done by the properties manager
+                // We'll dispatch an event that the properties page can listen for
+                setTimeout(() => {
+                    const editEvent = new CustomEvent('triggerPropertyEdit', { detail: { property } });
+                    document.dispatchEvent(editEvent);
+                }, 200);
+            }
         }
     });
 
@@ -1007,12 +1038,16 @@ function setupGlobalEventListeners() {
     if (editPropertyCloseBtn) {
         editPropertyCloseBtn.addEventListener('click', () => {
             editPropertyModal.classList.add('hidden');
+            // Clear the safety flag if it was set
+            editPropertyModal.dataset.fromSafety = 'false';
         });
     }
 
     if (editPropertyCancelBtn) {
         editPropertyCancelBtn.addEventListener('click', () => {
             editPropertyModal.classList.add('hidden');
+            // Clear the safety flag if it was set
+            editPropertyModal.dataset.fromSafety = 'false';
         });
     }
 
@@ -1024,6 +1059,15 @@ function setupGlobalEventListeners() {
             if (window.propertiesManager) {
                 window.propertiesManager.renderProperties();
             }
+            // If opened from safety page, refresh safety tables
+            const modal = document.getElementById('edit-property-modal');
+            if (modal.dataset.fromSafety === 'true') {
+                if (window.safetyManager) {
+                    window.safetyManager.renderSafetyTables();
+                }
+                // Clear the flag
+                modal.dataset.fromSafety = 'false';
+            }
         });
     }
 
@@ -1032,6 +1076,8 @@ function setupGlobalEventListeners() {
         editPropertyModal.addEventListener('click', (e) => {
             if (e.target === editPropertyModal) {
                 editPropertyModal.classList.add('hidden');
+                // Clear the safety flag if it was set
+                editPropertyModal.dataset.fromSafety = 'false';
             }
         });
     }
@@ -1192,6 +1238,8 @@ async function saveAdvancedProperty() {
     propertyData.smartTv = document.getElementById('advanced-property-smart-tv').value || 'no';
     propertyData.status = document.getElementById('advanced-property-status').value || 'available';
     
+
+    
     // Collect amenities
     const amenities = [];
     const amenityCheckboxes = [
@@ -1303,6 +1351,8 @@ function populateEditModal(property) {
     // Populate latitude/longitude fields
     document.getElementById('edit-property-latitude').value = property.latitude ?? '';
     document.getElementById('edit-property-longitude').value = property.longitude ?? '';
+    
+
     document.getElementById('edit-property-wifi-speed').value = property.wifiSpeed || '';
     document.getElementById('edit-property-wifi-airbnb').value = property.wifiAirbnb || 'no';
     document.getElementById('edit-property-parking-spot').value = property.parkingSpot || '';
@@ -1373,6 +1423,9 @@ async function savePropertyChanges() {
     propertyData.latitude = isNaN(latVal) ? null : latVal;
     const lngVal = parseFloat(document.getElementById('edit-property-longitude').value);
     propertyData.longitude = isNaN(lngVal) ? null : lngVal;
+    
+
+    
     propertyData.wifiSpeed = document.getElementById('edit-property-wifi-speed').value || null;
     propertyData.wifiAirbnb = document.getElementById('edit-property-wifi-airbnb').value;
     propertyData.parkingSpot = document.getElementById('edit-property-parking-spot').value.trim() || null;
