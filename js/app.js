@@ -14,7 +14,7 @@ import { OperationsManager } from './operations-manager.js';
 import { ReservationsManager } from './reservations-manager.js';
 import { AccessManager } from './access-manager.js';
 import { RoleManager } from './role-manager.js';
-// import { RnalManager } from './rnal-manager.js';
+import { RnalManager } from './rnal-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -103,8 +103,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
-        // Temporarily comment out RNAL manager to debug login issue
-        // rnalManager = new RnalManager(db, userId);
+        
+        // Initialize RNAL manager with error handling
+        try {
+            rnalManager = new RnalManager(db, userId);
+        } catch (error) {
+            console.warn('RNAL Manager initialization failed:', error);
+            rnalManager = null;
+        }
 
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();
@@ -295,9 +301,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 reservationsManager = new ReservationsManager(db, userId);
                 
                 // Update RNAL manager with authenticated user credentials
-                // if (rnalManager) {
-                //     rnalManager.setDatabase(db, userId);
-                // }
+                if (rnalManager) {
+                    try {
+                        rnalManager.setDatabase(db, userId);
+                    } catch (error) {
+                        console.warn('RNAL Manager update failed:', error);
+                    }
+                }
                 
                 navigationManager.showLandingPage();
                 setupApp();
