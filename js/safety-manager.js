@@ -8,6 +8,12 @@ export class SafetyManager {
         this.currentEditingItem = null;
         this.currentEditingType = null;
         
+        // Sorting state
+        this.extinguisherSortField = 'name';
+        this.extinguisherSortDirection = 'asc';
+        this.kitSortField = 'name';
+        this.kitSortDirection = 'asc';
+        
         this.initializeEventListeners();
     }
 
@@ -73,13 +79,15 @@ export class SafetyManager {
         const threeMonthsFromNow = new Date();
         threeMonthsFromNow.setMonth(today.getMonth() + 3);
 
-        // Show ALL properties, filter by search term
-        const filteredData = this.properties.filter(property => {
-            const propertyName = (property.name || property.propertyName || '').toLowerCase();
-            const location = (property.fireExtinguisherLocation || '').toLowerCase();
-            
-            return propertyName.includes(filter) || location.includes(filter);
-        });
+        // Show ALL properties, filter by search term, and apply sorting
+        const filteredData = this.properties
+            .filter(property => {
+                const propertyName = (property.name || property.propertyName || '').toLowerCase();
+                const location = (property.fireExtinguisherLocation || '').toLowerCase();
+                
+                return propertyName.includes(filter) || location.includes(filter);
+            })
+            .sort(this.getSortFunction(this.extinguisherSortField, this.extinguisherSortDirection));
 
         table.innerHTML = '';
         if (filteredData.length === 0) {
@@ -133,12 +141,14 @@ export class SafetyManager {
 
         const filter = searchInput.value.toLowerCase();
         
-        // Show ALL properties, filter by search term
-        const filteredData = this.properties.filter(property => {
-            const propertyName = (property.name || property.propertyName || '').toLowerCase();
-            
-            return propertyName.includes(filter);
-        });
+        // Show ALL properties, filter by search term, and apply sorting
+        const filteredData = this.properties
+            .filter(property => {
+                const propertyName = (property.name || property.propertyName || '').toLowerCase();
+                
+                return propertyName.includes(filter);
+            })
+            .sort(this.getSortFunction(this.kitSortField, this.kitSortDirection));
 
         table.innerHTML = '';
         if (filteredData.length === 0) {
@@ -207,6 +217,21 @@ export class SafetyManager {
                 const id = e.target.dataset.id;
                 const type = e.target.dataset.type;
                 this.showDeleteConfirmation(id, type);
+            }
+        });
+
+        // Sorting functionality
+        document.addEventListener('click', (e) => {
+            const sortHeader = e.target.closest('[data-sort]');
+            if (sortHeader) {
+                const sortField = sortHeader.dataset.sort;
+                const table = sortHeader.closest('table');
+                
+                if (table.querySelector('#extinguishersTable')) {
+                    this.handleSort('extinguisher', sortField);
+                } else if (table.querySelector('#kitsTable')) {
+                    this.handleSort('kit', sortField);
+                }
             }
         });
 
@@ -304,6 +329,68 @@ export class SafetyManager {
         document.getElementById('safetyConfirmModal').classList.add('hidden');
         this.currentEditingItem = null;
         this.currentEditingType = null;
+    }
+
+    handleSort(type, field) {
+        if (type === 'extinguisher') {
+            if (this.extinguisherSortField === field) {
+                this.extinguisherSortDirection = this.extinguisherSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.extinguisherSortField = field;
+                this.extinguisherSortDirection = 'asc';
+            }
+            this.renderExtinguisherTable();
+        } else if (type === 'kit') {
+            if (this.kitSortField === field) {
+                this.kitSortDirection = this.kitSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.kitSortField = field;
+                this.kitSortDirection = 'asc';
+            }
+            this.renderKitTable();
+        }
+    }
+
+    getSortFunction(field, direction) {
+        return (a, b) => {
+            let valueA, valueB;
+            
+            switch (field) {
+                case 'name':
+                    valueA = (a.name || a.propertyName || '').toLowerCase();
+                    valueB = (b.name || b.propertyName || '').toLowerCase();
+                    break;
+                case 'expiration':
+                    valueA = a.fireExtinguisherExpiration || '';
+                    valueB = b.fireExtinguisherExpiration || '';
+                    break;
+                case 'location':
+                    valueA = (a.fireExtinguisherLocation || '').toLowerCase();
+                    valueB = (b.fireExtinguisherLocation || '').toLowerCase();
+                    break;
+                case 'notes':
+                    valueA = (a.fireExtinguisherNotes || '').toLowerCase();
+                    valueB = (b.fireExtinguisherNotes || '').toLowerCase();
+                    break;
+                case 'status':
+                    valueA = (a.firstAidStatus || '').toLowerCase();
+                    valueB = (b.firstAidStatus || '').toLowerCase();
+                    break;
+                case 'lastChecked':
+                    valueA = a.firstAidLastChecked || '';
+                    valueB = b.firstAidLastChecked || '';
+                    break;
+                default:
+                    valueA = '';
+                    valueB = '';
+            }
+            
+            if (direction === 'asc') {
+                return valueA.localeCompare(valueB);
+            } else {
+                return valueB.localeCompare(valueA);
+            }
+        };
     }
 
     cleanup() {
