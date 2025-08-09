@@ -388,6 +388,13 @@
               <option value="needs-updating">Needs updating</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Self Check-in Instructions</span>
+            </label>
+            <textarea id="settings-self-checkin-instructions" class="form-input" rows="4" placeholder="Provide detailed self check in steps for guests"></textarea>
+          </div>
         </div>
       </div>
 
@@ -513,6 +520,13 @@
               <option value="on-platform">On the platform</option>
               <option value="missing">Missing</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-euro-sign"></i>
+              <span>Tourist Tax Instructions</span>
+            </label>
+            <textarea id="settings-tourist-tax-instructions" class="form-input" rows="3" placeholder="Explain where guests should leave the tourist tax payment and any relevant details"></textarea>
           </div>
         </div>
       </div>
@@ -773,6 +787,29 @@
               <option value="no">No</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-hot-tub"></i>
+              <span>Pool/Jacuzzi Maintenance Day</span>
+            </label>
+            <select id="settings-pool-maintenance-day" class="form-input">
+              <option value="">Select day</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+              <option value="Sunday">Sunday</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Pool/Jacuzzi Maintenance Notes</span>
+            </label>
+            <textarea id="settings-pool-maintenance-notes" class="form-input" rows="3" placeholder="Optional notes (e.g., time window, provider, access details)"></textarea>
+          </div>
         </div>
       </div>
 
@@ -858,6 +895,41 @@
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contacts -->
+      <div id="section-contacts" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff;">
+              <i class="fas fa-address-book"></i>
+            </div>
+            <h2 class="section-title">Contacts</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-user"></i>
+              <span>Owner Contact</span>
+            </label>
+            <textarea id="settings-owner-contact" class="form-input" rows="3" placeholder="Name, phone, email, notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-broom"></i>
+              <span>Cleaning Company Contact</span>
+            </label>
+            <textarea id="settings-cleaning-company-contact" class="form-input" rows="3" placeholder="Company name, phone, email, notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-file-invoice-dollar"></i>
+              <span>Accounting Contact</span>
+            </label>
+            <textarea id="settings-accounting-contact" class="form-input" rows="3" placeholder="Name/company, phone, email, notes"></textarea>
           </div>
         </div>
       </div>

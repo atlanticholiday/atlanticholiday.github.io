@@ -3,18 +3,32 @@ function initSettingsSidebar() {
   const sidebar = document.getElementById('settings-sidebar');
   if (!sidebar) return;
 
-  // List of sections with their display names
+  // List of sections with their display names (reordered for clearer flow)
   const sections = [
+    // Core basics
+    { id: 'section-basic-info-edit', name: 'Basic Information' },
     { id: 'section-maps-location', name: 'Maps & Location' },
+    { id: 'section-access-parking', name: 'Access & Parking' },
+
+    // Guest-facing content
     { id: 'section-media-content', name: 'Media & Content' },
     { id: 'section-google-drive', name: 'Google Drive' },
     { id: 'section-recommendations', name: 'Recommendations' },
-    { id: 'section-legal-compliance', name: 'Legal & Compliance' },
-    { id: 'section-online-services', name: 'Online Services' },
-    { id: 'section-connectivity-utilities', name: 'Connectivity & Utilities' },
-    { id: 'section-access-parking', name: 'Access & Parking' },
+    { id: 'section-frames', name: 'Frames' },
+    { id: 'section-signage', name: 'Signage' },
+
+    // Operations & utilities
     { id: 'section-equipment', name: 'Equipment' },
     { id: 'section-services-extras', name: 'Services & Extras' },
+    { id: 'section-connectivity-utilities', name: 'Connectivity & Utilities' },
+
+    // Platforms and compliance
+    { id: 'section-online-services', name: 'Online Services' },
+    { id: 'section-legal-compliance', name: 'Legal & Compliance' },
+    { id: 'section-safety-maintenance', name: 'Safety Maintenance' },
+
+    // Admin and building
+    { id: 'section-contacts', name: 'Contacts' },
     { id: 'section-condominium-info', name: 'Condominium Information' }
   ];
 

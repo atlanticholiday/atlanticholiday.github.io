@@ -116,7 +116,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Condominium Info
         condominiumName: 'settings-condominium',
         condominiumEmail: 'settings-condominium-email',
-        condominiumPhone: 'settings-condominium-phone'
+        condominiumPhone: 'settings-condominium-phone',
+
+        // NEW: Contacts
+        ownerContact: 'settings-owner-contact',
+        cleaningCompanyContact: 'settings-cleaning-company-contact',
+        accountingContact: 'settings-accounting-contact',
+
+        // NEW: Self Check-in (Media & Content)
+        selfCheckinInstructions: 'settings-self-checkin-instructions',
+
+        // NEW: Services & Extras - Pool/Jacuzzi Maintenance
+        poolMaintenanceDay: 'settings-pool-maintenance-day',
+        poolMaintenanceNotes: 'settings-pool-maintenance-notes',
+
+        // NEW: Legal & Compliance - Tourist Tax
+        touristTaxInstructions: 'settings-tourist-tax-instructions'
     };
 
     // Function to populate the entire page from a single property object
@@ -137,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (element) {
                 const value = propertyData[dbKey];
                 // Handle display divs vs input/select fields
-                if (element.tagName === 'INPUT' || element.tagName === 'SELECT') {
+                if (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
                     if (value !== undefined && value !== null) {
                         element.value = value;
                     } else {
@@ -269,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const dbKey in SETTINGS_MAP) {
             const elementId = SETTINGS_MAP[dbKey];
             const element = document.getElementById(elementId);
-            if (element && (element.tagName === 'INPUT' || element.tagName === 'SELECT')) {
+            if (element && (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA')) {
                 let value = element.value;
                 // Convert numeric fields
                 if (element.type === 'number' && value !== '') {

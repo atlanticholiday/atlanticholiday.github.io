@@ -174,8 +174,8 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1.25rem;
-    background: var(--ps-brand-start) !important; /* Override inline styles */
-    color: #fff !important;
+    /* Use per-section inline styles from HTML (do not override here) */
+    /* background and color are intentionally not set to preserve unique icons */
 }
 
 .section-title {
@@ -287,4 +287,29 @@ body {
 
 #settings-sidebar .category-list a:hover {
   background-color: #f0f0f0;
+}
+
+/* Normalize typography for Safety Maintenance section to match the rest (without affecting icons) */
+#section-safety-maintenance .section-title,
+#section-safety-maintenance .form-label,
+#section-safety-maintenance .form-input,
+#section-safety-maintenance label,
+#section-safety-maintenance p,
+#section-safety-maintenance textarea,
+#section-safety-maintenance input,
+#section-safety-maintenance select {
+  font-family: inherit;
+  letter-spacing: normal;
+  font-style: normal;
+  text-transform: none;
+}
+
+/* Do not override icon fonts; allow Font Awesome to control them */
+
+/* Ensure the Safety Maintenance link in the sidebar matches typography */
+#settings-sidebar .category-list a[data-section="section-safety-maintenance"] {
+  font-family: inherit;
+  letter-spacing: normal;
+  font-style: normal;
+  text-transform: none;
 }
