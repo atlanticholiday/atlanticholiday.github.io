@@ -477,20 +477,31 @@ function setupGlobalEventListeners() {
         nav.innerHTML = '';
         content.innerHTML = '';
         const categories = [
-            { title: 'Basic Info', slug: 'basic-info', fields: ['location','type','typology','rooms','bathrooms','floor'], icon: 'fas fa-info-circle' },
+            // Core basics
+            { title: 'Basic Information', slug: 'basic-info-edit', fields: ['location','type','typology','rooms','bathrooms','floor'], icon: 'fas fa-info-circle' },
             { title: 'Maps & Location', slug: 'maps-location', fields: ['googleMapsLink','garbageLocationLink','garbageFloor'], icon: 'fas fa-map-marker-alt' },
-            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','energySource'], icon: 'fas fa-wifi' },
             { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode','parkingSpot','parkingFloor'], icon: 'fas fa-parking' },
-            { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
-            { title: 'Frames', slug: 'frames', fields: ['wifiFrame','recommendationsFrame','investmentFrame'], icon: 'fas fa-border-all' },
-            { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox'], icon: 'fas fa-concierge-bell' },
-            { title: 'Signage', slug: 'signage', fields: ['privateSign','noSmokingSign','noJunkMailSign','alAhSign','keysNotice','wcSign'], icon: 'fas fa-sign' },
-            { title: 'Condominium Info', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' },
-            { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos','bookingDescriptionStatus'], icon: 'fas fa-video' },
+
+            // Guest-facing content
+            { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos','bookingDescriptionStatus','selfCheckinInstructions'], icon: 'fas fa-video' },
             { title: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled','googleDriveLink','scannedDocsLink'], icon: 'fab fa-google-drive' },
             { title: 'Recommendations', slug: 'recommendations', fields: ['recommendationsLink','recommendationsEditLink'], icon: 'fas fa-star' },
-            { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus','complaintBooksStatus','statisticsStatus','sefStatus'], icon: 'fas fa-gavel' },
-            { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled','onlineComplaintBooksEmail','onlineComplaintBooksPassword','airbnbLinksStatus'], icon: 'fas fa-globe' }
+            { title: 'Frames', slug: 'frames', fields: ['wifiFrame','recommendationsFrame','investmentFrame'], icon: 'fas fa-border-all' },
+            { title: 'Signage', slug: 'signage', fields: ['privateSign','noSmokingSign','noJunkMailSign','alAhSign','keysNotice','wcSign'], icon: 'fas fa-sign' },
+
+            // Operations & utilities
+            { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
+            { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox','poolMaintenanceDay','poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
+            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','energySource'], icon: 'fas fa-wifi' },
+
+            // Platforms and compliance
+            { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled','onlineComplaintBooksEmail','onlineComplaintBooksPassword','airbnbLinksStatus'], icon: 'fas fa-globe' },
+            { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus','complaintBooksStatus','statisticsStatus','sefStatus','touristTaxInstructions'], icon: 'fas fa-gavel' },
+            { title: 'Safety Maintenance', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration','fireExtinguisherLocation','fireExtinguisherNotes','firstAidStatus','firstAidLastChecked','firstAidNotes'], icon: 'fas fa-shield-alt' },
+
+            // Admin and building
+            { title: 'Contacts', slug: 'contacts', fields: ['ownerContact','cleaningCompanyContact','accountingContact'], icon: 'fas fa-address-book' },
+            { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons
         categories.forEach((cat, idx) => {
