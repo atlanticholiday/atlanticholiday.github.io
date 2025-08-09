@@ -172,6 +172,19 @@
                     </button>
                 </div>
 
+                <!-- Checklists Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-teal-500 to-teal-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <i class="fas fa-clipboard-check text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Checklists</h3>
+                    <p class="text-gray-600 mb-6">Property and cleaning checklists</p>
+                    <button id="go-to-checklists-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <i class="fas fa-arrow-right mr-2"></i>
+                        Open Checklists
+                    </button>
+                </div>
+
                 <!-- Safety Maintenance Card -->
                 <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
                     <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -1581,6 +1594,41 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Checklists Page Container -->
+    <div id="checklists-page" class="hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
+                <div class="flex items-center">
+                    <button id="back-to-landing-from-checklists-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gradient">Checklists</h1>
+                        <p class="text-gray-500 text-sm">Property and cleaning checklists</p>
+                    </div>
+                </div>
+                <button id="checklists-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <div class="bg-white rounded-xl shadow-md p-6 modal-content">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold text-gradient">Dashboard Checklists</h2>
+                    <div id="checklists-progress-summary" class="text-sm text-gray-500"></div>
+                </div>
+                <div id="checklists-content"></div>
+            </div>
         </div>
     </div>
 

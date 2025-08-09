@@ -12,7 +12,8 @@ export class NavigationManager {
             allinfo: 'allinfo-page',
             userManagement: 'user-management-page',
             rnal: 'rnal-page',
-            safety: 'safety-page'
+            safety: 'safety-page',
+            checklists: 'checklists-page'
         };
     }
 
@@ -73,6 +74,12 @@ export class NavigationManager {
         this.showPage('safety');
     }
 
+    showChecklistsPage() {
+        this.showPage('checklists');
+        const event = new CustomEvent('checklistsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -82,6 +89,7 @@ export class NavigationManager {
         const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
+        const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -106,6 +114,14 @@ export class NavigationManager {
                 this.showSchedulePage();
                 // Trigger schedule page initialization if needed
                 const event = new CustomEvent('schedulePageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (goToChecklistsBtn) {
+            goToChecklistsBtn.addEventListener('click', () => {
+                this.showChecklistsPage();
+                const event = new CustomEvent('checklistsPageOpened');
                 document.dispatchEvent(event);
             });
         }
@@ -164,6 +180,7 @@ export class NavigationManager {
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
+        const backToLandingFromChecklistsBtn = document.getElementById('back-to-landing-from-checklists-btn');
         
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -185,6 +202,12 @@ export class NavigationManager {
 
         if (backToLandingFromScheduleBtn) {
             backToLandingFromScheduleBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromChecklistsBtn) {
+            backToLandingFromChecklistsBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }
@@ -227,6 +250,7 @@ export class NavigationManager {
         const userManagementSignOutBtn = document.getElementById('user-management-sign-out-btn');
         const rnalSignOutBtn = document.getElementById('rnal-sign-out-btn');
         const safetySignOutBtn = document.getElementById('safety-sign-out-btn');
+        const checklistsSignOutBtn = document.getElementById('checklists-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -268,5 +292,11 @@ export class NavigationManager {
                 document.dispatchEvent(event);
             });
         }
+        if (checklistsSignOutBtn) {
+            checklistsSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
     }
-} 
+}

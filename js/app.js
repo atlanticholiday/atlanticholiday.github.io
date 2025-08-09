@@ -16,6 +16,7 @@ import { AccessManager } from './access-manager.js';
 import { RoleManager } from './role-manager.js';
 import { RnalManager } from './rnal-manager.js';
 import { SafetyManager } from './safety-manager.js';
+import { ChecklistsManager } from './checklists-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -23,7 +24,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -104,6 +105,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
+        // Initialize Checklists manager (localStorage-backed + Firestore sync)
+        checklistsManager = new ChecklistsManager(userId);
+        window.checklistsManager = checklistsManager;
+        // Provide Firestore DB so it can start syncing once user is set
+        checklistsManager.setDatabase(db);
         
         // Initialize RNAL manager with error handling
         try {
@@ -123,6 +129,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupGlobalEventListeners();
         // Setup application event listeners for schedule page
         eventManager.setupAppEventListeners();
+        
+        // Render Checklists when page is opened
+        document.addEventListener('checklistsPageOpened', () => {
+            try { checklistsManager.render(); } catch (e) { console.warn('Checklists render failed:', e); }
+        });
 
         // User Management Page: populate allowed emails list when opened
         document.addEventListener('userManagementPageOpened', async () => {
@@ -290,6 +301,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
+                // Bind user to Checklists manager for per-user persistence key
+                if (checklistsManager) {
+                    checklistsManager.setUser(userId);
+                }
                 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
@@ -341,6 +356,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     operationsManager.stopListening();
                     operationsManager = null;
                 }
+                if (checklistsManager) {
+                    // Reset user to stop any Firestore sync
+                    try { checklistsManager.setUser(null); } catch {}
+                }
             }
         });
 
@@ -356,6 +375,10 @@ function setupGlobalEventListeners() {
         if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn') {
             signOut(auth);
         }
+    });
+    // Also listen for custom navigation sign-out events
+    document.addEventListener('signOutRequested', () => {
+        signOut(auth);
     });
 
     // Landing page navigation
