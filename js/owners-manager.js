@@ -29,6 +29,9 @@ export class OwnersManager {
     this.paymentsDraft = null; // {source, name, vat, iban, notes}
     this.editingEmailIndex = null; // null when not editing; -1 for new
     this.emailDraft = null; // {cc, subject, htmlBody}
+    this.paymentErrors = {};
+    this.emailErrors = {};
+    this.quill = null;
 
     document.addEventListener('ownersPageOpened', () => {
       this.render();
@@ -238,9 +241,16 @@ export class OwnersManager {
 
   async savePayments() {
     if (!this.selectedOwnerId || !this.paymentsDraft) return;
+    const errors = this.validatePayments(this.paymentsDraft);
+    this.paymentErrors = errors;
+    if (Object.keys(errors).length) { this.render(); return; }
+    const cleaned = {
+      ...this.paymentsDraft,
+      iban: (this.paymentsDraft.iban || '').replace(/\s+/g, '').toUpperCase()
+    };
     try {
       await setDoc(doc(this.db, `owners/${this.selectedOwnerId}/secure/sensitive`), {
-        payments: { ...this.paymentsDraft },
+        payments: cleaned,
         updatedAt: serverTimestamp()
       }, { merge: true });
       this.editingPayments = false;
@@ -256,6 +266,7 @@ export class OwnersManager {
   cancelPayments() {
     this.editingPayments = false;
     this.paymentsDraft = null;
+    this.paymentErrors = {};
     this.render();
   }
 
@@ -276,6 +287,13 @@ export class OwnersManager {
 
   async saveEmail() {
     if (!this.selectedOwnerId || this.emailDraft == null || this.editingEmailIndex == null) return;
+    // Sync from Quill if present
+    if (this.quill) {
+      this.emailDraft.htmlBody = this.quill.root.innerHTML;
+    }
+    const errs = this.validateEmailDraft(this.emailDraft);
+    this.emailErrors = errs;
+    if (Object.keys(errs).length) { this.render(); return; }
     const emails = Array.isArray(this.selectedSensitive?.emails) ? [...this.selectedSensitive.emails] : [];
     if (this.editingEmailIndex === -1) {
       emails.push({ ...this.emailDraft });
@@ -289,6 +307,8 @@ export class OwnersManager {
       }, { merge: true });
       this.editingEmailIndex = null;
       this.emailDraft = null;
+      this.emailErrors = {};
+      this.quill = null;
       await this.loadSensitive(this.selectedOwnerId);
       this.render();
     } catch (e) {
@@ -300,7 +320,55 @@ export class OwnersManager {
   cancelEmailEdit() {
     this.editingEmailIndex = null;
     this.emailDraft = null;
+    this.emailErrors = {};
+    this.quill = null;
     this.render();
+  }
+
+  // --- Validation helpers & utilities ---
+  formatIBAN(raw) {
+    const up = (raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return up.replace(/(.{4})/g, '$1 ').trim();
+  }
+  isValidIBAN(raw) {
+    const v = (raw || '').toUpperCase().replace(/\s+/g, '');
+    if (!v) return true; // empty allowed
+    if (!/^[A-Z0-9]{15,34}$/.test(v)) return false;
+    // Basic mod-97 check could be added; keep lightweight for now
+    return true;
+  }
+  validatePayments(draft) {
+    const errors = {};
+    if (draft.iban && !this.isValidIBAN(draft.iban)) errors.iban = 'Invalid IBAN';
+    return errors;
+  }
+  validateEmailDraft(d) {
+    const errors = {};
+    if (!d.subject || !d.subject.trim()) errors.subject = 'Subject is required';
+    // CC optional, HTML optional but recommended; allow empty
+    return errors;
+  }
+
+  async ensureQuillLoaded() {
+    if (window.Quill) return;
+    await new Promise((resolve, reject) => {
+      const cssId = 'quill-css';
+      if (!document.getElementById(cssId)) {
+        const link = document.createElement('link');
+        link.id = cssId;
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css';
+        document.head.appendChild(link);
+      }
+      const scriptId = 'quill-js';
+      if (document.getElementById(scriptId)) { resolve(); return; }
+      const s = document.createElement('script');
+      s.id = scriptId;
+      s.src = 'https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js';
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load Quill'));
+      document.body.appendChild(s);
+    });
   }
 
   async deleteEmail(index) {
@@ -453,20 +521,21 @@ export class OwnersManager {
                     </div>
                     <div>
                       <label class="block text-xs text-gray-500 mb-1">Account Holder Name</label>
-                      <input id="pay-name" class="w-full border rounded px-2 py-1" value="${(this.paymentsDraft?.name||'').replace(/"/g,'&quot;')}">
+                      <input id="pay-name" placeholder="e.g. John Doe" class="w-full border rounded px-2 py-1" value="${(this.paymentsDraft?.name||'').replace(/\"/g,'&quot;')}">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-500 mb-1">VAT</label>
-                      <input id="pay-vat" class="w-full border rounded px-2 py-1" value="${(this.paymentsDraft?.vat||'').replace(/"/g,'&quot;')}">
+                      <input id="pay-vat" placeholder="e.g. PT123456789" class="w-full border rounded px-2 py-1" value="${(this.paymentsDraft?.vat||'').replace(/\"/g,'&quot;')}">
                     </div>
                     <div>
                       <label class="block text-xs text-gray-500 mb-1">IBAN</label>
-                      <input id="pay-iban" class="w-full border rounded px-2 py-1" value="${(this.paymentsDraft?.iban||'').replace(/"/g,'&quot;')}">
+                      <input id="pay-iban" placeholder="e.g. PT50 0002 0123 1234 5678 9015 4" class="w-full rounded px-2 py-1 ${this.paymentErrors?.iban ? 'border-red-500 border' : 'border'}" value="${this.formatIBAN(this.paymentsDraft?.iban||'')}">
+                      ${this.paymentErrors?.iban ? `<div class="text-xs text-red-600 mt-1">${this.paymentErrors.iban}</div>` : ''}
                     </div>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-500 mb-1">Important Notes</label>
-                    <textarea id="pay-notes" rows="3" class="w-full border rounded px-2 py-1">${(this.paymentsDraft?.notes||'')}</textarea>
+                    <textarea id="pay-notes" rows="3" placeholder="Helpful notes for payments" class="w-full border rounded px-2 py-1">${(this.paymentsDraft?.notes||'')}</textarea>
                   </div>
                   <div class="pt-2 flex gap-2">
                     <button id="owners-save-payments" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
@@ -480,8 +549,8 @@ export class OwnersManager {
                   <div class="text-sm flex items-center gap-2">VAT: <span>${sensitive.payments?.vat || ''}</span>
                     ${sensitive.payments?.vat ? `<button data-action="copy-payment" data-field="vat" class="text-blue-600 hover:underline text-xs">Copy</button>` : ''}
                   </div>
-                  <div class="text-sm flex items-center gap-2">IBAN: <span>${sensitive.payments?.iban || ''}</span>
-                    ${sensitive.payments?.iban ? `<button data-action\="copy-payment\" data-field\="iban" class\="text-blue-600 hover:underline text-xs">Copy</button>` : ''}
+                  <div class="text-sm flex items-center gap-2">IBAN: <span>${this.formatIBAN(sensitive.payments?.iban || '')}</span>
+                    ${sensitive.payments?.iban ? `<button data-action="copy-payment" data-field="iban" class="text-blue-600 hover:underline text-xs">Copy</button>` : ''}
                   </div>
                   <div class="text-sm">Notes: ${sensitive.payments?.notes || ''}</div>
                   <div class="pt-2"><button id="owners-edit-payments" class="text-blue-600 hover:underline text-sm">Edit Payments</button></div>
@@ -493,16 +562,18 @@ export class OwnersManager {
                   <div class="grid grid-cols-2 gap-3">
                     <div class="col-span-2">
                       <label class="block text-xs text-gray-500 mb-1">CC (comma separated)</label>
-                      <input id="email-cc" class="w-full border rounded px-2 py-1" value="${(this.emailDraft?.cc||'').replace(/"/g,'&quot;')}">
+                      <input id="email-cc" placeholder="name@example.com, billing@example.com" class="w-full border rounded px-2 py-1" value="${(this.emailDraft?.cc||'').replace(/\"/g,'&quot;')}">
                     </div>
                     <div class="col-span-2">
                       <label class="block text-xs text-gray-500 mb-1">Subject</label>
-                      <input id="email-subject" class="w-full border rounded px-2 py-1" value="${(this.emailDraft?.subject||'').replace(/"/g,'&quot;')}">
+                      <input id="email-subject" placeholder="Email subject" class="w-full rounded px-2 py-1 ${this.emailErrors?.subject ? 'border-red-500 border' : 'border'}" value="${(this.emailDraft?.subject||'').replace(/\"/g,'&quot;')}">
+                      ${this.emailErrors?.subject ? `<div class="text-xs text-red-600 mt-1">${this.emailErrors.subject}</div>` : ''}
                     </div>
                   </div>
                   <div>
                     <label class="block text-xs text-gray-500 mb-1">HTML Body</label>
-                    <textarea id="email-body" rows="8" class="w-full border rounded px-2 py-1">${(this.emailDraft?.htmlBody||'')}</textarea>
+                    <div id="email-body-editor" class="w-full bg-white border rounded px-0 py-0 min-h-[200px]"></div>
+                    <div class="text-xs text-gray-400 mt-1">Use the toolbar to format the email content.</div>
                   </div>
                   <div class="pt-2 flex gap-2">
                     <button id="owners-save-email" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
@@ -778,11 +849,10 @@ export class OwnersManager {
       saveEmailBtn.onclick = async () => {
         const ccEl = root.querySelector('#email-cc');
         const subjEl = root.querySelector('#email-subject');
-        const bodyEl = root.querySelector('#email-body');
         this.emailDraft = {
           cc: (ccEl?.value || '').trim(),
           subject: (subjEl?.value || '').trim(),
-          htmlBody: bodyEl?.value || ''
+          htmlBody: this.emailDraft?.htmlBody || ''
         };
         await this.saveEmail();
       };
@@ -790,6 +860,45 @@ export class OwnersManager {
     const cancelEmailBtn = root.querySelector('#owners-cancel-email');
     if (cancelEmailBtn) {
       cancelEmailBtn.onclick = () => { this.cancelEmailEdit(); };
+    }
+
+    // Initialize Quill editor when editing emails
+    if (this.editingEmailIndex !== null) {
+      const mount = root.querySelector('#email-body-editor');
+      if (mount) {
+        (async () => {
+          try {
+            await this.ensureQuillLoaded();
+            if (!this.quill) {
+              this.quill = new window.Quill(mount, {
+                theme: 'snow',
+                modules: {
+                  toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'header': [1, 2, 3, false] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    [{ 'align': [] }]
+                  ]
+                }
+              });
+              const initial = this.emailDraft?.htmlBody || '';
+              if (initial) this.quill.root.innerHTML = initial; else this.quill.setText('');
+            }
+          } catch (_) { /* ignore load errors */ }
+        })();
+      }
+    }
+
+    // IBAN input auto-formatting
+    const ibanInput = root.querySelector('#pay-iban');
+    if (ibanInput) {
+      ibanInput.addEventListener('input', () => {
+        const start = ibanInput.selectionStart || 0;
+        const before = ibanInput.value;
+        ibanInput.value = this.formatIBAN(before);
+        try { ibanInput.setSelectionRange(start, start); } catch (_) {}
+      });
     }
   }
 }
