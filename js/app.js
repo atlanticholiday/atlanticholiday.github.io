@@ -530,7 +530,7 @@ function setupGlobalEventListeners() {
             // Operations & utilities
             { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
             { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox','poolMaintenanceDay','poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
-            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','energySource'], icon: 'fas fa-wifi' },
+            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','internetProvider','energySource'], icon: 'fas fa-wifi' },
 
             // Platforms and compliance
             { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled','onlineComplaintBooksEmail','onlineComplaintBooksPassword','airbnbLinksStatus'], icon: 'fas fa-globe' },
@@ -538,7 +538,8 @@ function setupGlobalEventListeners() {
             { title: 'Safety Maintenance', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration','fireExtinguisherLocation','fireExtinguisherNotes','firstAidStatus','firstAidLastChecked','firstAidNotes'], icon: 'fas fa-shield-alt' },
 
             // Admin and building
-            { title: 'Contacts', slug: 'contacts', fields: ['ownerContact','cleaningCompanyContact','accountingContact'], icon: 'fas fa-address-book' },
+            { title: 'Owner', slug: 'owner', fields: ['ownerFirstName','ownerLastName','ownerVatNumber','ownerPropertyAddress','ownerContact'], icon: 'fas fa-user-tie' },
+            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','accountingContact'], icon: 'fas fa-address-book' },
             { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons

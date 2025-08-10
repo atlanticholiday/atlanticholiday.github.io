@@ -607,6 +607,17 @@
           </div>
           <div class="form-group">
             <label class="form-label">
+              <i class="fas fa-wifi"></i>
+              <span>Internet Provider</span>
+            </label>
+            <select id="settings-internet-provider" class="form-input">
+              <option value="">Select Provider</option>
+              <option value="MEO">MEO</option>
+              <option value="NOS">NOS</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
               <i class="fas fa-bolt"></i>
               <span>Energy Source</span>
             </label>
@@ -899,6 +910,51 @@
         </div>
       </div>
 
+      <!-- Owner -->
+      <div id="section-owner" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff;">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <h2 class="section-title">Owner</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-user"></i>
+              <span>Owner Name</span>
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+              <input type="text" id="settings-owner-first-name" class="form-input" placeholder="First name">
+              <input type="text" id="settings-owner-last-name" class="form-input" placeholder="Last name">
+            </div>
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-user"></i>
+              <span>Owner Contact</span>
+            </label>
+            <textarea id="settings-owner-contact" class="form-input" rows="3" placeholder="Name, phone, email, notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-id-card"></i>
+              <span>Owner VAT Number</span>
+            </label>
+            <input type="text" id="settings-owner-vat-number" class="form-input" placeholder="VAT number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-map-marked-alt"></i>
+              <span>Owner Property Address</span>
+            </label>
+            <textarea id="settings-owner-property-address" class="form-input" rows="2" placeholder="Street, city, postal code"></textarea>
+          </div>
+        </div>
+      </div>
+
       <!-- Contacts -->
       <div id="section-contacts" class="form-section">
         <div class="section-header">
@@ -910,13 +966,6 @@
           </div>
         </div>
         <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">
-              <i class="fas fa-user"></i>
-              <span>Owner Contact</span>
-            </label>
-            <textarea id="settings-owner-contact" class="form-input" rows="3" placeholder="Name, phone, email, notes"></textarea>
-          </div>
           <div class="form-group">
             <label class="form-label">
               <i class="fas fa-broom"></i>

@@ -131,7 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
         poolMaintenanceNotes: 'settings-pool-maintenance-notes',
 
         // NEW: Legal & Compliance - Tourist Tax
-        touristTaxInstructions: 'settings-tourist-tax-instructions'
+        touristTaxInstructions: 'settings-tourist-tax-instructions',
+
+        // NEW: Connectivity & Utilities - Internet Provider
+        internetProvider: 'settings-internet-provider',
+
+        // NEW: Contacts - Owner Details
+        ownerFirstName: 'settings-owner-first-name',
+        ownerLastName: 'settings-owner-last-name',
+        ownerVatNumber: 'settings-owner-vat-number',
+        ownerPropertyAddress: 'settings-owner-property-address'
     };
 
     // Function to populate the entire page from a single property object

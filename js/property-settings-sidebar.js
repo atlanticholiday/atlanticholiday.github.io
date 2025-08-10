@@ -28,6 +28,7 @@ function initSettingsSidebar() {
     { id: 'section-safety-maintenance', name: 'Safety Maintenance' },
 
     // Admin and building
+    { id: 'section-owner', name: 'Owner' },
     { id: 'section-contacts', name: 'Contacts' },
     { id: 'section-condominium-info', name: 'Condominium Information' }
   ];
