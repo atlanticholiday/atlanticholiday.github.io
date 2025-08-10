@@ -198,6 +198,19 @@
                     </button>
                 </div>
 
+                <!-- Owners Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
+                    <div class="w-16 h-16 bg-gradient-to-r from-amber-500 to-rose-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <i class="fas fa-user-tie text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">Owners</h3>
+                    <p class="text-gray-600 mb-6">Confidential owner info: payments and property emails</p>
+                    <button id="go-to-owners-btn" class="w-full btn-primary py-3 rounded-md transition-all hover-lift">
+                        <i class="fas fa-arrow-right mr-2"></i>
+                        Open Owners
+                    </button>
+                </div>
+
                 <!-- Safety Maintenance Card -->
                 <div class="bg-white rounded-xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow hover-lift modal-content landing-card">
                     <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -1041,9 +1054,9 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
             </div>
             <p id="edit-property-error" class="text-red-500 text-sm text-center h-5"></p>
             <div class="p-5 border-t flex justify-between gap-3">
-                <button type="button" id="manage-links-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Manage Links & Credentials</button>
+                <button type="button" id="manage-links-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md">Manage Links & Credentials</button>
                 <div class="flex gap-3">
-                    <button type="button" id="edit-property-cancel-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="button" id="edit-property-cancel-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-md">Cancel</button>
                     <button type="button" id="edit-property-save-btn" class="px-6 py-2 btn-primary rounded-md">Save Changes</button>
                 </div>
             </div>
@@ -1669,6 +1682,32 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
             </div>
         </header>
         <!-- VehiclesManager will render into this page container by creating #vehicles-root -->
+    </div>
+
+    <!-- Owners Page Container -->
+    <div id="owners-page" class="hidden min-h-screen bg-gray-50">
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
+                <div class="flex items-center">
+                    <button id="back-to-landing-from-owners-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gradient">Owners</h1>
+                        <p class="text-gray-500 text-sm">Confidential owner information</p>
+                    </div>
+                </div>
+                <button id="owners-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </header>
+        <!-- OwnersManager will render into this page container by creating #owners-root -->
     </div>
 
     <!-- Safety Maintenance Page -->

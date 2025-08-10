@@ -18,6 +18,7 @@ import { RnalManager } from './rnal-manager.js';
 import { SafetyManager } from './safety-manager.js';
 import { ChecklistsManager } from './checklists-manager.js';
 import { VehiclesManager } from './vehicles-manager.js';
+import { OwnersManager } from './owners-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -25,7 +26,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -114,6 +115,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Vehicles manager (Firestore user-scoped)
         vehiclesManager = new VehiclesManager(db, userId);
         window.vehiclesManager = vehiclesManager;
+        // Initialize Owners manager (shared owners collection)
+        ownersManager = new OwnersManager(db, userId);
+        window.ownersManager = ownersManager;
         
         // Initialize RNAL manager with error handling
         try {
@@ -141,6 +145,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Vehicles page render is handled inside VehiclesManager on event, but keep a light touch hook if needed
         document.addEventListener('vehiclesPageOpened', () => {
             try { vehiclesManager?.render(); } catch (e) { console.warn('Vehicles render failed:', e); }
+        });
+        // Owners page render is handled inside OwnersManager on event, but keep a light touch hook if needed
+        document.addEventListener('ownersPageOpened', () => {
+            try { ownersManager?.render(); } catch (e) { console.warn('Owners render failed:', e); }
         });
 
         // User Management Page: populate allowed emails list when opened
@@ -317,6 +325,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (vehiclesManager) {
                     vehiclesManager.setUser(userId);
                 }
+                // Bind user to Owners manager (for any user-scoped logic if added later)
+                if (ownersManager) {
+                    ownersManager.setUser(userId);
+                }
                 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
@@ -375,6 +387,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (vehiclesManager) {
                     try { vehiclesManager.stopListening(); vehiclesManager.setUser(null); } catch {}
                 }
+                if (ownersManager) {
+                    try { ownersManager.stopListening(); ownersManager.setUser(null); } catch {}
+                }
             }
         });
 
@@ -387,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn') {
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn' || e.target.id === 'owners-sign-out-btn') {
             signOut(auth);
         }
     });
