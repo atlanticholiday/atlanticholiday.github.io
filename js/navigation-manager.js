@@ -13,7 +13,8 @@ export class NavigationManager {
             userManagement: 'user-management-page',
             rnal: 'rnal-page',
             safety: 'safety-page',
-            checklists: 'checklists-page'
+            checklists: 'checklists-page',
+            vehicles: 'vehicles-page'
         };
     }
 
@@ -80,6 +81,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showVehiclesPage() {
+        this.showPage('vehicles');
+        const event = new CustomEvent('vehiclesPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -90,6 +97,7 @@ export class NavigationManager {
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
+        const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
         
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -122,6 +130,14 @@ export class NavigationManager {
             goToChecklistsBtn.addEventListener('click', () => {
                 this.showChecklistsPage();
                 const event = new CustomEvent('checklistsPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (goToVehiclesBtn) {
+            goToVehiclesBtn.addEventListener('click', () => {
+                this.showVehiclesPage();
+                const event = new CustomEvent('vehiclesPageOpened');
                 document.dispatchEvent(event);
             });
         }
@@ -181,6 +197,7 @@ export class NavigationManager {
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
         const backToLandingFromChecklistsBtn = document.getElementById('back-to-landing-from-checklists-btn');
+        const backToLandingFromVehiclesBtn = document.getElementById('back-to-landing-from-vehicles-btn');
         
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -208,6 +225,12 @@ export class NavigationManager {
 
         if (backToLandingFromChecklistsBtn) {
             backToLandingFromChecklistsBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromVehiclesBtn) {
+            backToLandingFromVehiclesBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }
@@ -251,6 +274,7 @@ export class NavigationManager {
         const rnalSignOutBtn = document.getElementById('rnal-sign-out-btn');
         const safetySignOutBtn = document.getElementById('safety-sign-out-btn');
         const checklistsSignOutBtn = document.getElementById('checklists-sign-out-btn');
+        const vehiclesSignOutBtn = document.getElementById('vehicles-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -294,6 +318,12 @@ export class NavigationManager {
         }
         if (checklistsSignOutBtn) {
             checklistsSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (vehiclesSignOutBtn) {
+            vehiclesSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

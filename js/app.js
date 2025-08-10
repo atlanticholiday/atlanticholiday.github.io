@@ -17,6 +17,7 @@ import { RoleManager } from './role-manager.js';
 import { RnalManager } from './rnal-manager.js';
 import { SafetyManager } from './safety-manager.js';
 import { ChecklistsManager } from './checklists-manager.js';
+import { VehiclesManager } from './vehicles-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -24,7 +25,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -110,6 +111,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.checklistsManager = checklistsManager;
         // Provide Firestore DB so it can start syncing once user is set
         checklistsManager.setDatabase(db);
+        // Initialize Vehicles manager (Firestore user-scoped)
+        vehiclesManager = new VehiclesManager(db, userId);
+        window.vehiclesManager = vehiclesManager;
         
         // Initialize RNAL manager with error handling
         try {
@@ -133,6 +137,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Render Checklists when page is opened
         document.addEventListener('checklistsPageOpened', () => {
             try { checklistsManager.render(); } catch (e) { console.warn('Checklists render failed:', e); }
+        });
+        // Vehicles page render is handled inside VehiclesManager on event, but keep a light touch hook if needed
+        document.addEventListener('vehiclesPageOpened', () => {
+            try { vehiclesManager?.render(); } catch (e) { console.warn('Vehicles render failed:', e); }
         });
 
         // User Management Page: populate allowed emails list when opened
@@ -305,6 +313,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (checklistsManager) {
                     checklistsManager.setUser(userId);
                 }
+                // Bind user to Vehicles manager for per-user Firestore path
+                if (vehiclesManager) {
+                    vehiclesManager.setUser(userId);
+                }
                 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
@@ -360,6 +372,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Reset user to stop any Firestore sync
                     try { checklistsManager.setUser(null); } catch {}
                 }
+                if (vehiclesManager) {
+                    try { vehiclesManager.stopListening(); vehiclesManager.setUser(null); } catch {}
+                }
             }
         });
 
@@ -372,7 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn') {
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn') {
             signOut(auth);
         }
     });
