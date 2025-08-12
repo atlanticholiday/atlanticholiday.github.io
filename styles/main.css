@@ -1196,3 +1196,18 @@ header h1, header h2, header h3 {
 /* Ensure pointer and native focus */
 .dashboard-card { cursor: pointer; }
 .dashboard-card:focus { outline: 2px solid rgba(233, 75, 90, 0.35); outline-offset: 2px; } 
+
+.brand-red { color: var(--brand-color); -webkit-text-fill-color: initial; }
+.page-mini { color: #6b7280; font-size: 0.875rem; } 
+
+/* Header reset: compact, non-sticky, centered brand */
+.dashboard-header{position:static!important;background:var(--gradient-glass);backdrop-filter:var(--blur-glass);-webkit-backdrop-filter:var(--blur-glass);border-bottom:1px solid rgba(233,75,90,.08)}
+.dashboard-header .container{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;position:static;padding:10px 16px!important}
+.dashboard-logo{width:40px!important;height:40px!important;object-fit:contain}
+.dashboard-logo--xl{width:52px!important;height:52px!important}
+.header-left,.header-right{display:flex;align-items:center;gap:8px;z-index:1}
+.header-left{justify-self:start}
+.header-right{justify-self:end}
+.header-brand{justify-self:center;display:flex;align-items:center;gap:10px;text-align:center}
+.header-title{font-weight:800;letter-spacing:-.02em}
+.header-sub{color:#6b7280;font-size:.875rem} 

@@ -83,19 +83,24 @@
     <!-- Landing Page -->
     <div id="landing-page" class="hidden min-h-screen bg-gray-50">
       <header class="dashboard-header">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-          <div class="flex items-center gap-3">
-            <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo"/>
-            <div class="hidden sm:block leading-tight">
-              <div class="brand-name text-gradient" style="-webkit-text-fill-color: initial; color: var(--brand-color);">Atlantic Holiday</div>
+        <div class="container mx-auto px-4 py-4 max-w-7xl">
+          <div class="header-left">
+            <!-- empty on landing -->
+          </div>
+          <div class="header-brand">
+            <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+            <div class="leading-tight">
+              <div class="header-title brand-red">Atlantic Holiday</div>
             </div>
           </div>
-          <button id="landing-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
-            <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
-            </svg>
-            Sign Out
-          </button>
+          <div class="header-right">
+            <button id="landing-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+              <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -218,18 +223,19 @@
 
     <!-- User Management Pages -->
     <div id="user-management-page" class="hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-user-management-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="flex items-center gap-3">
+                    <button id="back-to-landing-from-user-management-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">User Management</h1>
-                        <p class="text-gray-500 text-sm">List and add application users</p>
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo"/>
+                    <div class="leading-tight">
+                        <div class="brand-name brand-red">User Management</div>
+                        <div class="page-mini">List and add application users</div>
                     </div>
                 </div>
-                <button id="user-management-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <button id="user-management-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"/></svg>
                     Sign Out
                 </button>
@@ -272,20 +278,25 @@
 
     <!-- Properties Management Page -->
     <div id="properties-page" class="properties-page hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Properties</h1>
-                        <p class="text-gray-500 text-sm">Manage your short rental properties</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Properties</div>
+                        <div class="header-sub">Manage your short rental properties</div>
                     </div>
                 </div>
-                <button id="properties-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="properties-sign_out_btn_fix" class="hidden"></button>
+                    <button id="properties-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -644,22 +655,25 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
         </div>
     </div>
 
-    <div id="app-content" class="hidden container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-8 flex justify-between items-center">
-            <div class="flex items-center">
-                <button id="back-to-landing-from-schedule-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <div class="text-center">
-                    <h1 class="text-5xl font-bold text-gradient mb-2">Atlantic Holiday</h1>
-                    <div class="w-20 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-2"></div>
-                    <p class="text-gray-500 mt-2">Work Schedule Calculator</p>
+    <div id="app-content" class="hidden min-h-screen bg-gray-50">
+        <header class="dashboard-header">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-schedule-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
                 </div>
-            </div>
-            <div>
-                 <button id="sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Work Schedule</div>
+                        <div class="header-sub">Work Schedule Calculator</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -1203,24 +1217,25 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
     </div>
 
     <div id="operations-page" class="operations-page hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-operations-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-operations-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Property Operations</h1>
-                        <p class="text-gray-500 text-sm">Operational details and access information</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Property Operations</div>
+                        <div class="header-sub">Operational details and access information</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
-                        🔒 Sensitive Information
-                    </div>
-                    <button id="operations-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right items-center gap-4">
+                    <div class="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">🔒 Sensitive Information</div>
+                    <button id="operations-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                         <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                         </svg>
@@ -1413,20 +1428,24 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- All Info Page Container -->
     <div id="allinfo-page" class="allinfo-page hidden min-h-screen bg-gray-50">
-      <header class="bg-white shadow-sm">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-          <div class="flex items-center">
-            <button id="back-to-landing-from-allinfo-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 class="text-2xl font-bold text-gradient">All Property Info</h1>
-              <p class="text-gray-500 text-sm">View all property data in one place</p>
-            </div>
-          </div>
-        </header>
+      <header class="dashboard-header">
+                    <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-allinfo-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                      <div class="header-title brand-red">All Property Info</div>
+                      <div class="header-sub">View all property data in one place</div>
+                    </div>
+                </div>
+                <div class="header-right"></div>
+                </header>
       <!-- All Info Layout: Top-nav + Table -->
       <div class="container mx-auto px-4 py-8 max-w-7xl">
         <!-- Filter Input Wrapper -->
@@ -1442,18 +1461,22 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- Weekly Reservations Page Container -->
     <div id="reservations-page" class="reservations-page hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-reservations-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-reservations-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Weekly Reservations</h1>
-                        <p class="text-gray-500 text-sm">Weekly Reservations Dashboard</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Weekly Reservations</div>
+                        <div class="header-sub">Weekly Reservations Dashboard</div>
                     </div>
                 </div>
-                <button id="reservations-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="reservations-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"/></svg>
                     Sign Out
                 </button>
@@ -1495,20 +1518,21 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- RNAL Page Container -->
     <div id="rnal-page" class="rnal-page hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-rnal-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="flex items-center gap-3">
+                    <button id="back-to-landing-from-rnal-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">RNAL Data Processor</h1>
-                        <p class="text-gray-500 text-sm">Process RNAL data for Madeira</p>
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo"/>
+                    <div class="leading-tight">
+                        <div class="brand-name brand-red">RNAL Data Processor</div>
+                        <div class="page-mini">Process RNAL data for Madeira</div>
                     </div>
                 </div>
-                <button id="rnal-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <button id="rnal-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -1578,20 +1602,24 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- Checklists Page Container -->
     <div id="checklists-page" class="hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-checklists-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-checklists-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Checklists</h1>
-                        <p class="text-gray-500 text-sm">Property and cleaning checklists</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Checklists</div>
+                        <div class="header-sub">Property and cleaning checklists</div>
                     </div>
                 </div>
-                <button id="checklists-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="checklists-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -1613,20 +1641,24 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- Vehicles Page Container -->
     <div id="vehicles-page" class="hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-vehicles-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-vehicles-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Vehicles</h1>
-                        <p class="text-gray-500 text-sm">Manage vehicles, insurance and inspections</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Vehicles</div>
+                        <div class="header-sub">Manage vehicles, insurance and inspections</div>
                     </div>
                 </div>
-                <button id="vehicles-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="vehicles-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -1639,20 +1671,24 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- Owners Page Container -->
     <div id="owners-page" class="hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-owners-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-owners-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Owners</h1>
-                        <p class="text-gray-500 text-sm">Confidential owner information</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Owners</div>
+                        <div class="header-sub">Confidential owner information</div>
                     </div>
                 </div>
-                <button id="owners-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="owners-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
@@ -1665,20 +1701,24 @@ Mountain Villa, Sintra Hills, V4" class="w-full p-3 border rounded-md focus-ring
 
     <!-- Safety Maintenance Page -->
     <div id="safety-page" class="hidden min-h-screen bg-gray-50">
-        <header class="bg-white shadow-sm">
+        <header class="dashboard-header">
             <div class="container mx-auto px-4 py-6 flex justify-between items-center max-w-7xl">
-                <div class="flex items-center">
-                    <button id="back-to-landing-from-safety-btn" class="mr-4 p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-left">
+                    <button id="back-to-landing-from-safety-btn" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gradient">Safety Maintenance</h1>
-                        <p class="text-gray-500 text-sm">Fire extinguisher and first aid kit maintenance</p>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png" onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday" class="dashboard-logo dashboard-logo--xl"/>
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Safety Maintenance</div>
+                        <div class="header-sub">Fire extinguisher and first aid kit maintenance</div>
                     </div>
                 </div>
-                <button id="safety-sign-out-btn" class="text-sm text-gray-600 hover:text-brand transition-colors hover-lift">
+                <div class="header-right">
+                    <button id="safety-sign-out-btn" class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                     <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                     </svg>
