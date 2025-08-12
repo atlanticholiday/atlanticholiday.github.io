@@ -1129,3 +1129,70 @@ header h1, header h2, header h3 {
         max-width: 100% !important;
     }
 } 
+
+/* === Redesigned Landing Dashboard === */
+.dashboard-header {
+  background: var(--gradient-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border-bottom: 1px solid rgba(233, 75, 90, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.dashboard-logo { width: 202px; height: 202px; object-fit: contain; }
+.brand-name { font-weight: 800; letter-spacing: -0.02em; font-size: 1.125rem; }
+.brand-subtitle { font-size: 0.75rem; color: #ef7180; margin-top: -2px; }
+
+.dashboard-hero {
+  background:
+    radial-gradient(circle at 20% 80%, rgba(233, 75, 90, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(233, 75, 90, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%);
+  padding: 3rem 0 1.5rem;
+}
+.hero-inner {
+  background: var(--gradient-glass);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-glass);
+  padding: 2rem 1.5rem;
+}
+.hero-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+.hero-subtitle { color: #6b7280; margin-top: .25rem; }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (min-width: 640px) { .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .dashboard-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .dashboard-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.dashboard-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  background: var(--gradient-glass);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass);
+  transition: var(--transition-smooth);
+  text-align: left;
+}
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-hover);
+  border-color: rgba(233, 75, 90, 0.12);
+  background: rgba(255,255,255,.98);
+}
+.card-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+.card-icon i { font-size: 18px; }
+.card-body h3 { font-weight: 700; font-size: 1rem; }
+.card-body p { color: #6b7280; font-size: 0.875rem; margin-top: 2px; }
+
+/* Ensure pointer and native focus */
+.dashboard-card { cursor: pointer; }
+.dashboard-card:focus { outline: 2px solid rgba(233, 75, 90, 0.35); outline-offset: 2px; } 

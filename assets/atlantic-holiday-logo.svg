@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="Atlantic Holiday">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e94b5a"/>
+      <stop offset="100%" stop-color="#d3414f"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <g transform="translate(0,4)">
+      <path d="M24 0c13.255 0 24 10.745 24 24v24H24C10.745 48 0 37.255 0 24S10.745 0 24 0z" fill="#ef6b79"/>
+      <path d="M24 12c6.627 0 12 5.373 12 12v12H24c-6.627 0-12-5.373-12-12S17.373 12 24 12z" fill="#fff"/>
+    </g>
+    <g fill="#ef6b79" transform="translate(60,18)">
+      <rect x="0" y="0" width="1.5" height="28" rx="0.75"/>
+      <text x="6" y="14" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">atlantic</text>
+      <text x="6" y="28" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">holiday</text>
+    </g>
+  </g>
+</svg> 
