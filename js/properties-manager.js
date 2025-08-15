@@ -101,6 +101,11 @@ export class PropertiesManager {
             if (this.filteredProperties.length === 0) {
                 this.filteredProperties = [...this.properties];
             }
+            // Notify other modules that properties data has updated (e.g., VisitsManager)
+            try {
+                const evt = new CustomEvent('propertiesDataUpdated', { detail: { count: this.properties.length } });
+                document.dispatchEvent(evt);
+            } catch (e) { /* no-op */ }
             this.renderProperties();
         }, (error) => {
             console.error("❌ Error listening for property changes:", error);

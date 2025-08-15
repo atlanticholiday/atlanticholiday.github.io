@@ -19,6 +19,7 @@ import { SafetyManager } from './safety-manager.js';
 import { ChecklistsManager } from './checklists-manager.js';
 import { VehiclesManager } from './vehicles-manager.js';
 import { OwnersManager } from './owners-manager.js';
+import { VisitsManager } from './visits-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -26,7 +27,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -107,6 +108,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
+        // Initialize Visits manager early so it can inject its page and landing button before nav listeners are wired
+        visitsManager = new VisitsManager(db, userId);
+        window.visitsManager = visitsManager;
+        try { visitsManager.ensureDomScaffold?.(); } catch {}
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
         checklistsManager = new ChecklistsManager(userId);
         window.checklistsManager = checklistsManager;
@@ -130,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();
         
-        // Setup navigation listeners
+        // Setup navigation listeners (after Visits injected its button)
         navigationManager.setupNavigationListeners();
         
         // Setup global event listeners
@@ -149,6 +154,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Owners page render is handled inside OwnersManager on event, but keep a light touch hook if needed
         document.addEventListener('ownersPageOpened', () => {
             try { ownersManager?.render(); } catch (e) { console.warn('Owners render failed:', e); }
+        });
+        // Visits page render is also handled inside VisitsManager on event; keep a light touch hook
+        document.addEventListener('visitsPageOpened', () => {
+            try { visitsManager?.render(); } catch (e) { console.warn('Visits render failed:', e); }
         });
 
         // User Management Page: populate allowed emails list when opened
@@ -329,6 +338,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (ownersManager) {
                     ownersManager.setUser(userId);
                 }
+                // Bind user to Visits manager (for per-user Firestore path)
+                if (visitsManager) {
+                    visitsManager.setUser(userId);
+                }
                 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
@@ -389,6 +402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (ownersManager) {
                     try { ownersManager.stopListening(); ownersManager.setUser(null); } catch {}
+                }
+                if (visitsManager) {
+                    try { visitsManager.stopListening(); visitsManager.setUser(null); } catch {}
                 }
             }
         });
