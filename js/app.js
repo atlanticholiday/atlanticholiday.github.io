@@ -20,6 +20,7 @@ import { ChecklistsManager } from './checklists-manager.js';
 import { VehiclesManager } from './vehicles-manager.js';
 import { OwnersManager } from './owners-manager.js';
 import { VisitsManager } from './visits-manager.js';
+import { CleaningBillsManager } from './cleaning-bills-manager.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -27,7 +28,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -112,6 +113,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         visitsManager = new VisitsManager(db, userId);
         window.visitsManager = visitsManager;
         try { visitsManager.ensureDomScaffold?.(); } catch {}
+        // Initialize Cleaning Bills manager early to inject page and landing button before nav listeners are wired
+        cleaningBillsManager = new CleaningBillsManager();
+        window.cleaningBillsManager = cleaningBillsManager;
+        try { cleaningBillsManager.ensureDomScaffold?.(); } catch {}
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
         checklistsManager = new ChecklistsManager(userId);
         window.checklistsManager = checklistsManager;
@@ -158,6 +163,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Visits page render is also handled inside VisitsManager on event; keep a light touch hook
         document.addEventListener('visitsPageOpened', () => {
             try { visitsManager?.render(); } catch (e) { console.warn('Visits render failed:', e); }
+        });
+        // Cleaning Bills page render
+        document.addEventListener('cleaningBillsPageOpened', () => {
+            try { cleaningBillsManager?.render(); } catch (e) { console.warn('Cleaning Bills render failed:', e); }
         });
 
         // User Management Page: populate allowed emails list when opened

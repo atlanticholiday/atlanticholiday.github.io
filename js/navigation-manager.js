@@ -16,7 +16,8 @@ export class NavigationManager {
             checklists: 'checklists-page',
             vehicles: 'vehicles-page',
             owners: 'owners-page',
-            visits: 'visits-page'
+            visits: 'visits-page',
+            cleaningBills: 'cleaning-bills-page'
         };
     }
 
@@ -101,6 +102,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showCleaningBillsPage() {
+        this.showPage('cleaningBills');
+        const event = new CustomEvent('cleaningBillsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -114,6 +121,7 @@ export class NavigationManager {
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
         const goToOwnersBtn = document.getElementById('go-to-owners-btn');
         const goToVisitsBtn = document.getElementById('go-to-visits-btn');
+        const goToCleaningBillsBtn = document.getElementById('go-to-cleaning-bills-btn');
         
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -170,6 +178,14 @@ export class NavigationManager {
             goToVisitsBtn.addEventListener('click', () => {
                 this.showVisitsPage();
                 const event = new CustomEvent('visitsPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (goToCleaningBillsBtn) {
+            goToCleaningBillsBtn.addEventListener('click', () => {
+                this.showCleaningBillsPage();
+                const event = new CustomEvent('cleaningBillsPageOpened');
                 document.dispatchEvent(event);
             });
         }
@@ -232,6 +248,7 @@ export class NavigationManager {
         const backToLandingFromVehiclesBtn = document.getElementById('back-to-landing-from-vehicles-btn');
         const backToLandingFromOwnersBtn = document.getElementById('back-to-landing-from-owners-btn');
         const backToLandingFromVisitsBtn = document.getElementById('back-to-landing-from-visits-btn');
+        const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
         
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -281,6 +298,12 @@ export class NavigationManager {
             });
         }
 
+        if (backToLandingFromCleaningBillsBtn) {
+            backToLandingFromCleaningBillsBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         // Back from All Info
         const backToLandingFromAllInfoBtn = document.getElementById('back-to-landing-from-allinfo-btn');
         if (backToLandingFromAllInfoBtn) {
@@ -323,6 +346,7 @@ export class NavigationManager {
         const vehiclesSignOutBtn = document.getElementById('vehicles-sign-out-btn');
         const ownersSignOutBtn = document.getElementById('owners-sign-out-btn');
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
+        const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -384,6 +408,12 @@ export class NavigationManager {
         }
         if (visitsSignOutBtn) {
             visitsSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (cleaningBillsSignOutBtn) {
+            cleaningBillsSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });
