@@ -971,7 +971,22 @@
               <i class="fas fa-broom"></i>
               <span>Cleaning Company Contact</span>
             </label>
-            <textarea id="settings-cleaning-company-contact" class="form-input" rows="3" placeholder="Company name, phone, email, notes"></textarea>
+            <select id="settings-cleaning-company-contact" class="form-input">
+              <option value="">Select a company...</option>
+              <option value="Seletivo & Cristalino">Seletivo & Cristalino</option>
+              <option value="That's Maid">That's Maid</option>
+              <option value="Mystic/Mar Yam">Mystic/Mar Yam</option>
+              <option value="Sweet Home Madeira">Sweet Home Madeira</option>
+              <option value="Fajã do Amo">Fajã do Amo</option>
+              <option value="Owners">Owners</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-euro-sign"></i>
+              <span>Cleaning Company Price (€)</span>
+            </label>
+            <input type="number" id="settings-cleaning-company-price" class="form-input" step="0.01" min="0" placeholder="Enter price for this property">
           </div>
           <div class="form-group">
             <label class="form-label">

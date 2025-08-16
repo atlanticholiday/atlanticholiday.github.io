@@ -121,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // NEW: Contacts
         ownerContact: 'settings-owner-contact',
         cleaningCompanyContact: 'settings-cleaning-company-contact',
+        cleaningCompanyPrice: 'settings-cleaning-company-price',
         accountingContact: 'settings-accounting-contact',
 
         // NEW: Self Check-in (Media & Content)
@@ -295,9 +296,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const element = document.getElementById(elementId);
             if (element && (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA')) {
                 let value = element.value;
-                // Convert numeric fields
+                // Convert numeric fields (allow decimals for prices)
                 if (element.type === 'number' && value !== '') {
-                    value = parseInt(value) || 0;
+                    const parsed = parseFloat(value);
+                    value = Number.isFinite(parsed) ? parsed : 0;
                 }
                 updates[dbKey] = value;
             }

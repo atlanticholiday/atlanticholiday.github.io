@@ -579,7 +579,7 @@ function setupGlobalEventListeners() {
 
             // Admin and building
             { title: 'Owner', slug: 'owner', fields: ['ownerFirstName','ownerLastName','ownerVatNumber','ownerPropertyAddress','ownerContact'], icon: 'fas fa-user-tie' },
-            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','accountingContact'], icon: 'fas fa-address-book' },
+            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','accountingContact'], icon: 'fas fa-address-book' },
             { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons
@@ -659,8 +659,17 @@ function setupGlobalEventListeners() {
         function sortTable(table, colIndex, asc) {
             const tbody = table.querySelector('tbody');
             Array.from(tbody.querySelectorAll('tr')).sort((a,b) => {
-                const aText = a.cells[colIndex].textContent.trim();
-                const bText = b.cells[colIndex].textContent.trim();
+                const aCell = a.cells[colIndex];
+                const bCell = b.cells[colIndex];
+                const aSort = aCell?.dataset?.sort;
+                const bSort = bCell?.dataset?.sort;
+                if (aSort !== undefined || bSort !== undefined) {
+                    const av = parseFloat(aSort ?? '0');
+                    const bv = parseFloat(bSort ?? '0');
+                    return asc ? (av - bv) : (bv - av);
+                }
+                const aText = aCell.textContent.trim();
+                const bText = bCell.textContent.trim();
                 return asc
                     ? aText.localeCompare(bText, undefined, { numeric:true })
                     : bText.localeCompare(aText, undefined, { numeric:true });
@@ -705,7 +714,20 @@ function setupGlobalEventListeners() {
             const tbody = document.createElement('tbody'); tbody.className='bg-white divide-y divide-gray-200';
             properties.forEach(prop=>{
                 const row = document.createElement('tr'); row.className='hover:bg-gray-50';
-                displayFields.forEach(key=>{ const td=document.createElement('td'); td.className='px-6 py-4 whitespace-nowrap text-sm text-gray-700'; td.textContent=prop[key]??''; row.appendChild(td); });
+                const eurFmt = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' });
+                displayFields.forEach(key=>{
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
+                    if (key === 'cleaningCompanyPrice') {
+                        const val = parseFloat(prop[key]);
+                        const isNum = Number.isFinite(val);
+                        td.textContent = isNum ? eurFmt.format(val) : '';
+                        if (isNum) td.dataset.sort = String(val);
+                    } else {
+                        td.textContent = prop[key] ?? '';
+                    }
+                    row.appendChild(td);
+                });
                 const actionTd=document.createElement('td'); actionTd.className='px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
                 [
                     { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => {

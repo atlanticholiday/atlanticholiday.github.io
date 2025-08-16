@@ -17,7 +17,7 @@ export class NavigationManager {
             vehicles: 'vehicles-page',
             owners: 'owners-page',
             visits: 'visits-page',
-            cleaningBills: 'cleaning-bills-page'
+            cleaningBills: 'cleaning-bills-page',
         };
     }
 
@@ -108,6 +108,13 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showCommissionCalculatorPage() {
+        // Redirect legacy navigation to Cleaning Bills where the Commission Calculator now lives
+        this.showPage('cleaningBills');
+        const event = new CustomEvent('cleaningBillsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -122,6 +129,7 @@ export class NavigationManager {
         const goToOwnersBtn = document.getElementById('go-to-owners-btn');
         const goToVisitsBtn = document.getElementById('go-to-visits-btn');
         const goToCleaningBillsBtn = document.getElementById('go-to-cleaning-bills-btn');
+        const goToCommissionCalculatorBtn = document.getElementById('go-to-commission-calculator-btn');
         
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -190,6 +198,14 @@ export class NavigationManager {
             });
         }
 
+        if (goToCommissionCalculatorBtn) {
+            goToCommissionCalculatorBtn.addEventListener('click', () => {
+                this.showCommissionCalculatorPage();
+                const event = new CustomEvent('commissionCalculatorPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
         // All Info navigation
         const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
         if (goToAllInfoBtn) {
@@ -249,6 +265,7 @@ export class NavigationManager {
         const backToLandingFromOwnersBtn = document.getElementById('back-to-landing-from-owners-btn');
         const backToLandingFromVisitsBtn = document.getElementById('back-to-landing-from-visits-btn');
         const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
+        const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
         
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -304,6 +321,12 @@ export class NavigationManager {
             });
         }
 
+        if (backToLandingFromCommissionCalculatorBtn) {
+            backToLandingFromCommissionCalculatorBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         // Back from All Info
         const backToLandingFromAllInfoBtn = document.getElementById('back-to-landing-from-allinfo-btn');
         if (backToLandingFromAllInfoBtn) {
@@ -347,6 +370,7 @@ export class NavigationManager {
         const ownersSignOutBtn = document.getElementById('owners-sign-out-btn');
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
         const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
+        const commissionCalculatorSignOutBtn = document.getElementById('commission-calculator-sign-out-btn');
         
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -418,5 +442,13 @@ export class NavigationManager {
                 document.dispatchEvent(event);
             });
         }
+        if (commissionCalculatorSignOutBtn) {
+            commissionCalculatorSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
     }
+
+    
 }
