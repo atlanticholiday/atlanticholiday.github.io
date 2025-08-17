@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { Config } from './config.js';
 import { LOCATIONS } from './locations.js';
 
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get propertyId from URL - support both 'propertyId' and 'id' parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const propertyId = urlParams.get('propertyId') || urlParams.get('id');
+    let propertyId = urlParams.get('propertyId') || urlParams.get('id');
 
     console.log('🔧 [PROPERTY SETTINGS] Property ID from URL:', propertyId);
 
@@ -26,6 +26,288 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const settingsForm = document.getElementById('property-settings-form');
     const saveButton = document.getElementById('save-settings');
+    let allProperties = [];
+
+    // Inject minimal, scoped styles for the Property Switcher (avoids large CSS/HTML edits)
+    const injectPropertySwitcherStyles = () => {
+        if (document.getElementById('property-switcher-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'property-switcher-styles';
+        style.textContent = `
+          .property-switcher { display: inline-flex; align-items: center; margin: 0 0 0 0.5rem; flex: 0 1 auto; }
+          .property-switcher .ps-control { position: relative; display: inline-flex; align-items: center; }
+          .property-switcher .ps-select { -webkit-appearance: none; appearance: none; background: #fff; color: #111827; border: 1px solid #e5e7eb; border-radius: 9999px; min-width: 200px; max-width: clamp(180px, 28vw, 320px); padding: 8px 36px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: border-color .2s ease, box-shadow .2s ease; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .property-switcher .ps-select:hover { border-color: #cbd5e1; }
+          .property-switcher .ps-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.20); }
+          .property-switcher .ps-icon { position: absolute; left: 12px; color: #6b7280; pointer-events: none; font-size: 0.95rem; }
+          .property-switcher .ps-chevron { position: absolute; right: 12px; color: #6b7280; pointer-events: none; font-size: 0.85rem; }
+          .property-switcher .ps-control .ps-select { padding-left: 36px; padding-right: 36px; }
+          .property-switcher .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); white-space: nowrap; border: 0; }
+          .property-switcher.ps-compact .ps-select { min-width: 140px; max-width: 200px; padding: 6px 28px; font-size: 0.9rem; }
+          .property-switcher.ps-compact .ps-icon, .property-switcher.ps-compact .ps-chevron { display: none; }
+          /* Floating container to sit near the green save button */
+          .property-switcher-fab { position: fixed; bottom: 2rem; right: 2rem; z-index: 9999; display: inline-flex; align-items: center; }
+          @media (max-width: 640px) { .property-switcher .ps-select { min-width: 160px; padding: 6px 32px; font-size: 0.9rem; } }
+        `;
+        document.head.appendChild(style);
+    };
+
+    // Inject a property switcher into the header so users can switch without going back
+    const initPropertySwitcher = async () => {
+        try {
+            const headerActions = document.querySelector('.header-actions');
+            if (!headerActions) {
+                console.warn('🔧 [PROPERTY SETTINGS] header-actions not found; skipping switcher');
+                return;
+            }
+
+            // Ensure styles are present
+            injectPropertySwitcherStyles();
+
+            // Wait for auth to be available before listing properties (respects Firestore rules)
+            const user = await new Promise((resolve) => {
+                const unsub = onAuthStateChanged(auth, (u) => { unsub(); resolve(u); });
+            });
+            if (!user) {
+                console.warn('🔧 [PROPERTY SETTINGS] Not authenticated; cannot list properties');
+                return;
+            }
+
+            // Fetch properties from shared collection
+            const snap = await getDocs(collection(db, 'properties'));
+            allProperties = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Sort by name (fallback to id)
+            allProperties.sort((a, b) => (a.name || a.id || '').localeCompare(b.name || b.id || ''));
+
+            // If switcher already exists, just refresh options
+            let wrapper = document.getElementById('property-switcher-wrapper');
+            let selectEl;
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.id = 'property-switcher-wrapper';
+                wrapper.className = 'property-switcher';
+
+                // Accessible (visually hidden) label
+                const srLabel = document.createElement('label');
+                srLabel.setAttribute('for', 'property-switcher-select');
+                srLabel.className = 'sr-only';
+                srLabel.textContent = 'Property';
+
+                // Control wrapper for icon + select + chevron
+                const control = document.createElement('div');
+                control.className = 'ps-control';
+
+                selectEl = document.createElement('select');
+                selectEl.id = 'property-switcher-select';
+                selectEl.className = 'form-input ps-select';
+                selectEl.setAttribute('aria-label', 'Property');
+                selectEl.title = 'Switch property';
+
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-building ps-icon';
+
+                const chevron = document.createElement('i');
+                chevron.className = 'fas fa-chevron-down ps-chevron';
+
+                control.appendChild(selectEl);
+                control.appendChild(icon);
+                control.appendChild(chevron);
+                wrapper.appendChild(srLabel);
+                wrapper.appendChild(control);
+                // Placement: prefer near floating green save button if present, else in header next to Save
+                const backBtn = document.getElementById('back-to-dashboard');
+                const saveBtn = document.getElementById('save-settings');
+                const bottomSave = document.getElementById('save-bottom-btn');
+                if (bottomSave) {
+                    let fab = document.getElementById('property-switcher-fab');
+                    if (!fab) {
+                        fab = document.createElement('div');
+                        fab.id = 'property-switcher-fab';
+                        fab.className = 'property-switcher-fab';
+                        document.body.appendChild(fab);
+                    }
+                    // Ensure wrapper is placed inside FAB container
+                    fab.appendChild(wrapper);
+                    // Force compact mode when floating near the save button
+                    wrapper.classList.add('ps-compact');
+
+                    // Dynamically position to the left of the green button
+                    const positionFab = () => {
+                        try {
+                            const btnRect = bottomSave.getBoundingClientRect();
+                            const rootFont = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                            const gap = 12; // px vertical gap between switcher and button
+                            const baseRightPx = (() => {
+                                const val = getComputedStyle(bottomSave).right;
+                                if (val.endsWith('px')) return parseFloat(val);
+                                if (val.endsWith('rem')) return parseFloat(val) * rootFont;
+                                return 2 * rootFont; // fallback to 2rem
+                            })();
+                            const baseBottomPx = (() => {
+                                const val = getComputedStyle(bottomSave).bottom;
+                                if (val.endsWith('px')) return parseFloat(val);
+                                if (val.endsWith('rem')) return parseFloat(val) * rootFont;
+                                return 2 * rootFont;
+                            })();
+                            // Place switcher above the button, right-aligned
+                            fab.style.right = `${baseRightPx}px`;
+                            fab.style.bottom = `${baseBottomPx + btnRect.height + gap}px`;
+                            const z = parseInt(getComputedStyle(bottomSave).zIndex) || 9999;
+                            fab.style.zIndex = String(z);
+                        } catch (_) { /* noop */ }
+                    };
+                    positionFab();
+                    if ('ResizeObserver' in window) {
+                        const ro = new ResizeObserver(() => positionFab());
+                        ro.observe(bottomSave);
+                    }
+                    window.addEventListener('resize', positionFab);
+                } else if (saveBtn && headerActions.contains(saveBtn)) {
+                    saveBtn.insertAdjacentElement('afterend', wrapper);
+                } else if (backBtn && headerActions.contains(backBtn)) {
+                    backBtn.insertAdjacentElement('afterend', wrapper);
+                } else {
+                    headerActions.appendChild(wrapper);
+                }
+                // If the floating green save button appears later, move the switcher next to it
+                if (!bottomSave) {
+                    const mo = new MutationObserver(() => {
+                        const laterBottom = document.getElementById('save-bottom-btn');
+                        if (laterBottom) {
+                            let fab = document.getElementById('property-switcher-fab');
+                            if (!fab) {
+                                fab = document.createElement('div');
+                                fab.id = 'property-switcher-fab';
+                                fab.className = 'property-switcher-fab';
+                                document.body.appendChild(fab);
+                            }
+                            fab.appendChild(wrapper);
+                            // Force compact mode when floating near the save button
+                            wrapper.classList.add('ps-compact');
+                            // Position relative to the button
+                            const positionFab = () => {
+                                try {
+                                    const btnRect = laterBottom.getBoundingClientRect();
+                                    const rootFont = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                                    const gap = 12;
+                                    const baseRightPx = (() => {
+                                        const val = getComputedStyle(laterBottom).right;
+                                        if (val.endsWith('px')) return parseFloat(val);
+                                        if (val.endsWith('rem')) return parseFloat(val) * rootFont;
+                                        return 2 * rootFont;
+                                    })();
+                                    const baseBottomPx = (() => {
+                                        const val = getComputedStyle(laterBottom).bottom;
+                                        if (val.endsWith('px')) return parseFloat(val);
+                                        if (val.endsWith('rem')) return parseFloat(val) * rootFont;
+                                        return 2 * rootFont;
+                                    })();
+                                    const rightPx = baseRightPx + btnRect.width + gap;
+                                    fab.style.right = `${rightPx}px`;
+                                    fab.style.bottom = `${baseBottomPx}px`;
+                                    const z = parseInt(getComputedStyle(laterBottom).zIndex) || 9999;
+                                    fab.style.zIndex = String(z);
+                                } catch (_) { /* noop */ }
+                            };
+                            positionFab();
+                            if ('ResizeObserver' in window) {
+                                const ro = new ResizeObserver(() => positionFab());
+                                ro.observe(laterBottom);
+                            }
+                            window.addEventListener('resize', positionFab);
+                            mo.disconnect();
+                        }
+                    });
+                    mo.observe(document.body, { childList: true, subtree: true });
+                }
+            } else {
+                selectEl = wrapper.querySelector('#property-switcher-select');
+            }
+
+            // Build options
+            if (selectEl) {
+                selectEl.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Select a property';
+                selectEl.appendChild(placeholder);
+
+                for (const p of allProperties) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    const fullLabel = [p.name, p.location].filter(Boolean).join(' • ');
+                    opt.textContent = (p.name || p.id);
+                    opt.title = fullLabel || p.id;
+                    selectEl.appendChild(opt);
+                }
+
+                // Preselect current
+                if (propertyId) {
+                    selectEl.value = propertyId;
+                }
+
+                // Handle change
+                selectEl.onchange = (e) => {
+                    const newId = e.target.value;
+                    if (!newId || newId === propertyId) return;
+                    propertyId = newId;
+
+                    // Update sessionStorage cache for faster load
+                    const selected = allProperties.find(p => p.id === newId);
+                    if (selected) {
+                        try {
+                            sessionStorage.setItem('currentProperty', JSON.stringify(selected));
+                        } catch (err) {
+                            console.warn('🔧 [PROPERTY SETTINGS] Failed to set sessionStorage currentProperty', err);
+                        }
+                    }
+
+                    // Update URL without navigating back
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('propertyId', newId);
+                    // Remove legacy 'id' param if present to avoid ambiguity
+                    url.searchParams.delete('id');
+                    window.history.replaceState({}, '', url.toString());
+
+                    // Reload the form data for the newly selected property
+                    loadAndPopulate();
+                };
+
+                // Responsive layout: toggle compact mode when placed in header (skip when using FAB placement)
+                const bottomSave = document.getElementById('save-bottom-btn');
+                if (!bottomSave) {
+                    const updateSwitcherLayout = () => {
+                        try {
+                            const container = headerActions;
+                            if (!container || !wrapper) return;
+                            const containerWidth = container.clientWidth || 0;
+                            let used = 0;
+                            container.childNodes.forEach((n) => {
+                                if (!(n instanceof HTMLElement)) return;
+                                if (n === wrapper) return; // exclude the switcher
+                                used += n.offsetWidth || 0;
+                            });
+                            const available = containerWidth - used - 16; // breathing room
+                            if (available < 220) {
+                                wrapper.classList.add('ps-compact');
+                            } else {
+                                wrapper.classList.remove('ps-compact');
+                            }
+                        } catch (_) { /* noop */ }
+                    };
+                    if ('ResizeObserver' in window) {
+                        const ro = new ResizeObserver(() => updateSwitcherLayout());
+                        ro.observe(headerActions);
+                    }
+                    window.addEventListener('resize', updateSwitcherLayout);
+                    // Initial check after layout settles
+                    setTimeout(updateSwitcherLayout, 0);
+                }
+            }
+        } catch (err) {
+            console.error('🔧 [PROPERTY SETTINGS] Failed to initialize property switcher:', err);
+        }
+    };
 
     // --- Helpers for canonical locations ---
     const normalizeLocation = (name) => {
@@ -586,5 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureGuestCleaningFeeField();
     ensureAccountingFields();
     ensureLocationField();
+    // Initialize the in-page property switcher UI
+    initPropertySwitcher();
     loadAndPopulate();
 });
