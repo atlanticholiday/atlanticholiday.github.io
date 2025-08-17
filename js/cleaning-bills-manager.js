@@ -1,3 +1,4 @@
+ import { LOCATIONS, TRAVEL_FEES } from './locations.js';
 export class CleaningBillsManager {
   constructor() {
     this.defaultKg = 8.5;
@@ -53,34 +54,7 @@ export class CleaningBillsManager {
       V6: 150.00,
     };
 
-    // Travel fees
-    this.TRAVEL_FEES = {
-      'Água de Pena': 18.00,
-      'Arco da Calheta': 22.00,
-      'Arco de São Jorge': 30.00,
-      'Calheta': 19.00,
-      'Câmara de Lobos': 5.00,
-      'Caniçal': 22.00,
-      'Caniço': 11.00,
-      'Fajã da Ovelha': 27.00,
-      'Funchal': 5.00,
-      'Gaula': 15.00,
-      'Ilha': 37.00,
-      'Machico': 20.00,
-      'Madalena do Mar': 13.00,
-      'Paul Do Mar': 31.00,
-      'Ponta Delgada': 23.00,
-      'Ponta do Sol': 13.00,
-      'Porto Moniz': 31.00,
-      'Porto novo': 15.00,
-      'Ribeira Brava': 8.00,
-      'Ribeira da Janela': 37.00,
-      'Santa Cruz': 16.00,
-      'Santa do Porto Moniz': 33.00,
-      'Santana': 33.00,
-      'São Jorge': 34.00,
-      'São Vicente': 20.00,
-    };
+    // Travel fees are imported from locations.js as TRAVEL_FEES
 
     if (typeof window !== 'undefined') {
       window.setTimeout(() => this.ensureDomScaffold(), 50);
@@ -92,6 +66,18 @@ export class CleaningBillsManager {
       document.addEventListener('propertiesDataUpdated', () => {
         const comp = this.getSelectedCompany();
         if (comp?.propertyBased) {
+          const props = Array.isArray(window.propertiesManager?.properties) ? window.propertiesManager.properties : [];
+          const norm = (s) => String(s || '').trim().toLowerCase();
+          const labelNorm = norm(comp.label);
+          const companyProps = props.filter(p => {
+            const c = norm(p.cleaningCompanyContact);
+            if (c === labelNorm) return true;
+            if (comp.id === 'thatsMaid' && (c === 'thats maid')) return true;
+            return false;
+          });
+          const activeProp = companyProps.find(p => p.id === this.activePropertyId) || companyProps[0] || null;
+          const autoLoc = this.normalizeLocation(activeProp?.location);
+          if (autoLoc) this.location = autoLoc;
           this.render();
         }
       });
@@ -100,6 +86,15 @@ export class CleaningBillsManager {
 
   getSelectedCompany() {
     return this.COMPANIES.find(c => c.id === this.companyId) || this.COMPANIES[0];
+  }
+
+  // Normalize any incoming location to the canonical value in LOCATIONS (case-insensitive)
+  normalizeLocation(name) {
+    const s = String(name || '').trim();
+    if (!s) return '';
+    const lower = s.toLowerCase();
+    const exact = LOCATIONS.find(loc => loc.toLowerCase() === lower);
+    return exact || '';
   }
 
   loadPrefs() {
@@ -209,16 +204,23 @@ export class CleaningBillsManager {
       .map(k => `<option value="${k}" ${k===this.type?'selected':''}>${k} — ${this.formatCurrency(this.CLEANING_FEES[k])}</option>`)
       .join('');
 
-    const locations = Object.keys(this.TRAVEL_FEES);
-    const locationOptions = [''].concat(locations)
-      .map(name => `<option value="${name}">${name || 'Select location'}</option>`)
+    // If a property is selected, auto-fill location from the property when none chosen yet
+    const activeProp = selectedCompanyProps.find(p => p.id === this.activePropertyId) || selectedCompanyProps[0] || null;
+    const autoLoc = this.normalizeLocation(activeProp?.location);
+    if (!this.location && autoLoc) this.location = autoLoc;
+
+    const locationOptions = [''].concat(LOCATIONS)
+      .map(name => {
+        const sel = name === this.location ? 'selected' : '';
+        const label = name || 'Select location';
+        return `<option value="${name}" ${sel}>${label}</option>`;
+      })
       .join('');
 
     const companyOptions = this.COMPANIES
       .map(c => `<option value="${c.id}" ${this.companyId===c.id?'selected':''}>${c.label}</option>`)
       .join('');
 
-    const activeProp = selectedCompanyProps.find(p => p.id === this.activePropertyId) || selectedCompanyProps[0] || null;
     const selectedPrice = Number((activeProp?.cleaningCompanyPrice ?? this.thatsMaidPrices[this.activePropertyId] ?? 0) || 0);
     const propertyOptions = selectedCompanyProps.length
       ? selectedCompanyProps.map(p => `<option value="${p.id}" ${p.id===this.activePropertyId?'selected':''}>${p.name || p.displayName || p.id}</option>`).join('')
@@ -340,6 +342,15 @@ export class CleaningBillsManager {
         const price = Number((prop?.cleaningCompanyPrice ?? this.thatsMaidPrices[this.activePropertyId] ?? 0) || 0);
         priceInput.value = price;
       }
+      // Auto-fill travel location from the property's location
+      const props = Array.isArray(window.propertiesManager?.properties) ? window.propertiesManager.properties : [];
+      const prop = props.find(p => p.id === this.activePropertyId);
+      const propLoc = this.normalizeLocation(prop?.location);
+      this.location = propLoc || '';
+      const locSelect = document.getElementById('cb-location');
+      if (locSelect) {
+        locSelect.value = this.location || '';
+      }
       this.savePrefs();
       this.updateBreakdown();
     });
@@ -390,7 +401,7 @@ export class CleaningBillsManager {
           return Number.isFinite(price) ? price : (Number(this.thatsMaidPrices[this.activePropertyId]) || 0);
         })()
       : (this.CLEANING_FEES[this.type] || 0);
-    const travel = this.location ? (this.TRAVEL_FEES[this.location] || 0) : 0;
+    const travel = this.location ? (TRAVEL_FEES[this.location] || 0) : 0;
     const total = laundry + cleaning + travel;
     return { kg, priceKg, laundry, cleaning, travel, total };
   }

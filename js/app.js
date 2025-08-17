@@ -579,7 +579,8 @@ function setupGlobalEventListeners() {
 
             // Admin and building
             { title: 'Owner', slug: 'owner', fields: ['ownerFirstName','ownerLastName','ownerVatNumber','ownerPropertyAddress','ownerContact'], icon: 'fas fa-user-tie' },
-            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','accountingContact'], icon: 'fas fa-address-book' },
+            { title: 'Accounting', slug: 'accounting', fields: ['accountingName','accountingPhone','accountingEmail','accountingContact'], icon: 'fas fa-file-invoice-dollar' },
+            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','guestCleaningFee'], icon: 'fas fa-address-book' },
             { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons
@@ -718,7 +719,7 @@ function setupGlobalEventListeners() {
                 displayFields.forEach(key=>{
                     const td = document.createElement('td');
                     td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
-                    if (key === 'cleaningCompanyPrice') {
+                    if (key === 'cleaningCompanyPrice' || key === 'guestCleaningFee') {
                         const val = parseFloat(prop[key]);
                         const isNum = Number.isFinite(val);
                         td.textContent = isNum ? eurFmt.format(val) : '';

@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', function () {
     'section-online-services',
     'section-legal-compliance',
     'section-safety-maintenance',
+    'section-owner',
+    'section-accounting',
     'section-contacts',
     'section-condominium-info'
   ];
