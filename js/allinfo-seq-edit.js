@@ -1,6 +1,8 @@
 // All Info Sequential Edit Enhancements
 // Provides a fast, in-page sequential editor for the active category, with Prev/Next navigation.
 // Avoids large HTML edits by hooking into the 'allInfoCategoryRendered' event from app.js.
+import { LOCATIONS } from './locations.js';
+import { getEnumOptions } from './enums.js';
 
 (() => {
   const state = {
@@ -85,6 +87,68 @@
           </div>
         `;
       }
+      // Constrained select for Cleaning Company Contact
+      // Constrained select for Cleaning Company Contact
+      if (field === 'cleaningCompanyContact') {
+        const companies = (window.cleaningBillsManager?.COMPANIES || []).map(c => c.label);
+        if (companies.length > 0) {
+          const norm = (s) => String(s || '').trim().toLowerCase();
+          const options = [''].concat(companies)
+            .map(label => {
+              const isSel = (label === val) || (label === "That's Maid" && norm(val) === 'thats maid');
+              const l = label || 'Select company';
+              return `<option value="${label}" ${isSel ? 'selected' : ''}>${l}</option>`;
+            })
+            .join('');
+          return `
+            <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100/50 flex flex-col gap-2 transition">
+              <label class="text-xs font-medium text-gray-700" for="seq-field-${field}">${human}</label>
+              <select id="seq-field-${field}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${options}</select>
+            </div>
+          `;
+        }
+        // Fallback to text input if companies not available
+      }
+      // Constrained select for Location
+      if (field === 'location') {
+        const options = [''].concat(LOCATIONS || [])
+          .map(loc => `<option value="${loc}" ${loc === val ? 'selected' : ''}>${loc || 'Select location'}</option>`) 
+          .join('');
+        return `
+          <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100/50 flex flex-col gap-2 transition">
+            <label class="text-xs font-medium text-gray-700" for="seq-field-${field}">${human}</label>
+            <select id="seq-field-${field}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${options}</select>
+          </div>
+        `;
+      }
+      // Yes/No select for boolean-like fields (ending with Enabled)
+      if (/Enabled$/.test(field)) {
+        const current = typeof val === 'boolean' ? String(val) : '';
+        return `
+          <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100/50 flex flex-col gap-2 transition">
+            <label class="text-xs font-medium text-gray-700" for="seq-field-${field}">${human}</label>
+            <select id="seq-field-${field}" data-boolean="true" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="" ${current===''?'selected':''}>Select</option>
+              <option value="true" ${current==='true'?'selected':''}>Yes</option>
+              <option value="false" ${current==='false'?'selected':''}>No</option>
+            </select>
+          </div>
+        `;
+      }
+      // Enumerated selects from shared enums
+      const enumOpts = getEnumOptions(field);
+      if (enumOpts) {
+        const options = ['']
+          .concat(enumOpts.map(o => o.value))
+          .map(v => `<option value="${v}" ${v === val ? 'selected' : ''}>${v || 'Select'}</option>`)
+          .join('');
+        return `
+          <div class="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100/50 flex flex-col gap-2 transition">
+            <label class="text-xs font-medium text-gray-700" for="seq-field-${field}">${human}</label>
+            <select id="seq-field-${field}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${options}</select>
+          </div>
+        `;
+      }
       const isNumber = numberKeys.has(field) || /price|fee|amount|count|number|kg|weight|speed|rooms|bathrooms/i.test(field);
       const typeAttr = isNumber ? 'number' : 'text';
       const stepAttr = isNumber ? ' step="0.01"' : '';
@@ -153,6 +217,8 @@
         if (el.tagName === 'INPUT' && el.type === 'number') {
           const num = parseFloat(val);
           val = Number.isFinite(num) ? num : null;
+        } else if (el.tagName === 'SELECT' && el.dataset?.boolean === 'true') {
+          if (val === 'true') val = true; else if (val === 'false') val = false; else val = '';
         }
         updates[field] = val;
       });

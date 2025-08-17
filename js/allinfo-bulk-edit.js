@@ -2,6 +2,8 @@
 // This module augments the All Property Info page with a per-tab Bulk Edit mode,
 // without large HTML edits. It listens for the custom 'allInfoCategoryRendered'
 // event dispatched by app.js, and injects UI + selection checkboxes.
+import { LOCATIONS } from './locations.js';
+import { getEnumOptions } from './enums.js';
 
 (() => {
   const state = {
@@ -99,13 +101,83 @@
 
       const item = document.createElement('div');
       item.className = 'p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100/50 flex flex-col gap-2 transition';
-      item.innerHTML = `
-        <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
-        <input id="${fieldId}" type="${isNumber ? 'number' : 'text'}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" ${isNumber ? 'step="0.01"' : ''} placeholder="Set ${human}..." />
-        <label class="text-xs text-gray-600 inline-flex items-center gap-2">
-          <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
-        </label>
-      `;
+
+      const isBooleanField = /Enabled$/.test(field);
+      const isCleaningCompany = (field === 'cleaningCompanyContact');
+      const isLocationField = (field === 'location');
+      if (isCleaningCompany) {
+        const companies = (window.cleaningBillsManager?.COMPANIES || []).map(c => c.label);
+        if (companies.length > 0) {
+          const options = [''].concat(companies)
+            .map(label => `<option value="${label}">${label || 'Select company'}</option>`) 
+            .join('');
+          item.innerHTML = `
+            <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+            <select id="${fieldId}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              ${options}
+            </select>
+            <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+              <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+            </label>
+          `;
+        } else {
+          // Fallback to text input if companies not available yet
+          item.innerHTML = `
+            <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+            <input id="${fieldId}" type="text" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Set ${human}..." />
+            <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+              <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+            </label>
+          `;
+        }
+      } else if (isLocationField) {
+        const options = [''].concat(LOCATIONS || [])
+          .map(loc => `<option value="${loc}">${loc || 'Select location'}</option>`)
+          .join('');
+        item.innerHTML = `
+          <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+          <select id="${fieldId}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            ${options}
+          </select>
+          <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+            <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+          </label>
+        `;
+      } else if (isBooleanField) {
+        item.innerHTML = `
+          <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+          <select id="${fieldId}" data-boolean="true" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Select</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+          <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+            <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+          </label>
+        `;
+      } else if (getEnumOptions(field)) {
+        const enumOpts = getEnumOptions(field);
+        const options = [`<option value="">Select</option>`]
+          .concat(enumOpts.map(o => `<option value="${o.value}">${o.label}</option>`))
+          .join('');
+        item.innerHTML = `
+          <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+          <select id="${fieldId}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            ${options}
+          </select>
+          <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+            <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+          </label>
+        `;
+      } else {
+        item.innerHTML = `
+          <label for="${fieldId}" class="text-xs font-medium text-gray-700">${human}</label>
+          <input id="${fieldId}" type="${isNumber ? 'number' : 'text'}" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" ${isNumber ? 'step=\"0.01\"' : ''} placeholder="Set ${human}..." />
+          <label class="text-xs text-gray-600 inline-flex items-center gap-2">
+            <input id="${applyId}" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded"> Apply this field
+          </label>
+        `;
+      }
       grid.appendChild(item);
     });
 
@@ -122,8 +194,8 @@
 
       const updates = {};
       cat.fields.forEach((field) => {
-        const apply = panel.querySelector(`#bulk-apply-${field}`);
-        const input = panel.querySelector(`#bulk-field-${field}`);
+        const apply = panel.querySelector(`#${'bulk-apply-' + field}`);
+        const input = panel.querySelector(`#${'bulk-field-' + field}`);
         if (apply && apply.checked) {
           let val = input?.value ?? '';
           if (val === '' || val === null) {
@@ -131,6 +203,9 @@
           } else if (input?.type === 'number') {
             const num = parseFloat(val);
             val = Number.isFinite(num) ? num : null;
+          } else if (input?.tagName === 'SELECT' && input?.dataset?.boolean === 'true') {
+            if (val === 'true') val = true;
+            else if (val === 'false') val = false;
           }
           updates[field] = val;
         }
