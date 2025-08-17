@@ -312,27 +312,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup authentication listener
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Seed or verify allowed emails for access control
-                let allow = true;
-                try {
-                    const emails = await accessManager.listEmails();
-                    const userEmailKey = user.email.toLowerCase();
-                    if (emails.length === 0) {
-                        // First-time login: seed allowed list
-                        await accessManager.addEmail(user.email);
-                    } else if (!emails.includes(userEmailKey)) {
-                        console.warn(`Access denied for user: ${user.email}`);
-                        allow = false;
-                    }
-                } catch (err) {
-                    // If Firestore check fails, allow login to avoid lockout
-                    console.warn('AccessManager error, skipping email check:', err);
-                }
-                if (!allow) {
-                    await signOut(auth);
-                    document.getElementById('login-error').textContent = 'Access not granted';
-                    return;
-                }
+                // Allow all authenticated Firebase Auth users
+                // If you want to require verified emails, uncomment below:
+                // if (!user.emailVerified) {
+                //     await signOut(auth);
+                //     document.getElementById('login-error').textContent = 'Please verify your email.';
+                //     return;
+                // }
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 // Bind user to Checklists manager for per-user persistence key
