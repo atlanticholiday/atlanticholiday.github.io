@@ -597,6 +597,15 @@ function setupGlobalEventListeners() {
             };
             nav.appendChild(btn);
         });
+        // Fallback: if any nav entry still says 'Contacts', rename to 'Cleaning'
+        Array.from(nav.querySelectorAll('span')).forEach(span => {
+            if (span.textContent && span.textContent.trim() === 'Contacts') {
+                span.textContent = 'Cleaning';
+                const parentBtn = span.closest('button');
+                const iconEl = parentBtn?.querySelector('i');
+                if (iconEl) iconEl.className = 'fas fa-broom';
+            }
+        });
         // Create search bars container for side-by-side layout
         const searchBarsContainer = document.createElement('div');
         searchBarsContainer.className = 'search-bars-container';
