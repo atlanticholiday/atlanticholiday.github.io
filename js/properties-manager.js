@@ -1,4 +1,5 @@
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class PropertiesManager {
     constructor(db) {
@@ -55,6 +56,40 @@ export class PropertiesManager {
             });
         } catch (error) {
             console.error('Error updating property:', error);
+            throw error;
+        }
+    }
+
+    async updatePropertiesBatch(propertyIds, updates) {
+        try {
+            if (!Array.isArray(propertyIds) || propertyIds.length === 0) return;
+            const batch = writeBatch(this.db);
+            const now = new Date();
+            propertyIds.forEach((id) => {
+                const ref = doc(this.db, "properties", id);
+                batch.update(ref, { ...updates, updatedAt: now });
+            });
+            await batch.commit();
+        } catch (error) {
+            console.error('Error performing bulk update:', error);
+            throw error;
+        }
+    }
+
+    async updatePropertiesBatchMixed(items) {
+        // items: Array<{ id: string, updates: object }>
+        try {
+            if (!Array.isArray(items) || items.length === 0) return;
+            const batch = writeBatch(this.db);
+            const now = new Date();
+            items.forEach(({ id, updates }) => {
+                if (!id || !updates || typeof updates !== 'object') return;
+                const ref = doc(this.db, "properties", id);
+                batch.update(ref, { ...updates, updatedAt: now });
+            });
+            await batch.commit();
+        } catch (error) {
+            console.error('Error performing mixed bulk update:', error);
             throw error;
         }
     }

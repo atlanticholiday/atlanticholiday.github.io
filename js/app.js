@@ -21,6 +21,9 @@ import { VehiclesManager } from './vehicles-manager.js';
 import { OwnersManager } from './owners-manager.js';
 import { VisitsManager } from './visits-manager.js';
 import { CleaningBillsManager } from './cleaning-bills-manager.js';
+import './allinfo-bulk-edit.js';
+import './allinfo-seq-edit.js';
+import './allinfo-accordion-edit.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
@@ -749,6 +752,13 @@ function setupGlobalEventListeners() {
                 tbody.appendChild(row);
             });
             table.appendChild(tbody); wrap.appendChild(table); tableContainer.appendChild(wrap);
+            // Notify bulk-edit enhancer that a category was rendered
+            try {
+                const evt = new CustomEvent('allInfoCategoryRendered', {
+                    detail: { category: cat, index: idx, properties, table }
+                });
+                document.dispatchEvent(evt);
+            } catch (e) { /* no-op */ }
         }
         // Filter logic
         filterInput.addEventListener('input',e=>{const term=e.target.value.toLowerCase(); tableContainer.querySelectorAll('tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(term)?'':'none';});});
