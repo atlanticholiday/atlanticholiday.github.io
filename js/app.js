@@ -580,7 +580,7 @@ function setupGlobalEventListeners() {
             // Admin and building
             { title: 'Owner', slug: 'owner', fields: ['ownerFirstName','ownerLastName','ownerVatNumber','ownerPropertyAddress','ownerContact'], icon: 'fas fa-user-tie' },
             { title: 'Accounting', slug: 'accounting', fields: ['accountingName','accountingPhone','accountingEmail','accountingContact'], icon: 'fas fa-file-invoice-dollar' },
-            { title: 'Contacts', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','guestCleaningFee'], icon: 'fas fa-address-book' },
+            { title: 'Cleaning', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','guestCleaningFee'], icon: 'fas fa-broom' },
             { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons

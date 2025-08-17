@@ -30,7 +30,7 @@ function initSettingsSidebar() {
     // Admin and building
     { id: 'section-owner', name: 'Owner' },
     { id: 'section-accounting', name: 'Accounting' },
-    { id: 'section-contacts', name: 'Contacts' },
+    { id: 'section-contacts', name: 'Cleaning' },
     { id: 'section-condominium-info', name: 'Condominium Information' }
   ];
 

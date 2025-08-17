@@ -36,6 +36,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return exact || '';
     };
 
+    // Rename the Contacts section to Cleaning in the UI without heavy HTML edits
+    const ensureCleaningSectionHeader = () => {
+        const section = document.getElementById('section-contacts');
+        if (!section) return;
+        const titleEl = section.querySelector('.section-title');
+        if (titleEl) titleEl.textContent = 'Cleaning';
+        const iconWrap = section.querySelector('.section-icon');
+        if (iconWrap) {
+            let iEl = iconWrap.querySelector('i');
+            if (!iEl) {
+                iEl = document.createElement('i');
+                iconWrap.appendChild(iEl);
+            }
+            iEl.className = 'fas fa-broom';
+        }
+    };
+
     // Ensure a dedicated Accounting section exists in the form (avoids heavy HTML edits)
     const ensureAccountingSection = () => {
         const form = document.getElementById('property-settings-form');
@@ -160,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
             targetGrid.appendChild(notesGroup);
         }
     };
+
+    // Apply quick UI adjustments immediately
+    ensureCleaningSectionHeader();
     const ensureLocationField = () => {
         const el = document.getElementById('settings-location');
         if (!el) {
