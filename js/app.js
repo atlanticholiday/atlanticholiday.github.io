@@ -497,6 +497,8 @@ function setupGlobalEventListeners() {
             }
             // Ensure schedule view toggle listeners are bound
             eventManager.setupAppEventListeners();
+            // Ensure work day selection checkboxes are rendered for the Add Colleague form
+            try { uiManager.populateDayCheckboxes(); } catch (e) { console.warn('Failed to populate day checkboxes:', e); }
         }, 100); // Small delay to ensure DOM is ready
     });
 
