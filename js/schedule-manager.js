@@ -107,9 +107,9 @@ export class ScheduleManager {
                     <h2 class="text-2xl font-bold text-gradient">Vacation Planner</h2>
                     <p class="text-gray-600">Visualise and manage team vacations</p>
                 </div>
-                <button id="main-book-vacation-btn" class="btn-primary shadow-lg hover-lift px-6 py-2 rounded-full flex items-center gap-2">
+                <button id="main-book-vacation-btn" class="btn-primary shadow-lg hover-lift px-6 py-2 rounded-full flex items-center gap-2" style="background: linear-gradient(135deg, #e94b5a 0%, #d3414f 100%) !important; color: white !important;">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Book Vacation
+                    Book New Vacation
                 </button>
             </div>
             <div id="vacation-calendar" class="bg-white rounded-xl shadow-lg p-4 min-h-[600px]"></div>

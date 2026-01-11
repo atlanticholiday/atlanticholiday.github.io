@@ -1182,11 +1182,11 @@ export class UIManager {
             <div class="bg-white rounded-xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold text-gray-800">Yearly Statistics (${year})</h3>
-                    <button id="export-stats-csv-btn" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                    <button id="export-stats-csv-btn" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2 text-sm" style="background: linear-gradient(135deg, #e94b5a 0%, #d3414f 100%) !important; color: white !important;">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        Export CSV
+                        Export Stats to CSV
                     </button>
                 </div>
                 <div class="overflow-x-auto">
