@@ -7,13 +7,13 @@ export class ScheduleManager {
 
     setupEventListeners() {
         // Add Employee Modal Triggers
-        const openBtn = document.getElementById('open-add-employee-modal-btn');
-        if (openBtn) {
-            openBtn.addEventListener('click', () => {
+        // Add Employee Modal Triggers (Delegated for dynamic button)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#open-add-employee-modal-btn')) {
                 const modal = document.getElementById('add-employee-modal');
                 if (modal) modal.classList.remove('hidden');
-            });
-        }
+            }
+        });
 
         // Add Employee Modal Close Handlers
         const closeBtn = document.getElementById('add-employee-close-btn');

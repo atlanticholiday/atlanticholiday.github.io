@@ -283,7 +283,15 @@ export class UIManager {
         const container = document.getElementById('reorder-list-container');
         if (!container) return;
 
-        container.innerHTML = `<div class="space-y-2">${this.dataManager.getActiveEmployees().map(emp => `
+        container.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+             <h3 class="text-xl font-semibold text-gray-800">Manage Colleague List</h3>
+             <button id="open-add-employee-modal-btn" class="btn-primary shadow flex items-center gap-2 hover-lift" style="background: var(--gradient-brand); color: white; padding: 0.5rem 1rem;">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add Colleague
+             </button>
+        </div>
+        <div class="space-y-2 text-left">${this.dataManager.getActiveEmployees().map(emp => `
             <div class="draggable bg-white p-4 rounded-lg shadow flex items-center" draggable="true" data-employee-id="${emp.id}">
                 <svg class="w-5 h-5 text-gray-400 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 <div class="flex-grow">
