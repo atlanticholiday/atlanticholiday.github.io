@@ -79,7 +79,12 @@ export class UIManager {
                         entitled = 0;
                     }
                 }
-                const remaining = entitled - usedDays;
+
+                // Add adjustment
+                const adjustment = emp.vacationAdjustment || 0;
+                const totalEntitled = entitled + adjustment;
+                const remaining = totalEntitled - usedDays;
+
                 return `
                     <div class="stat-item bg-gray-100 p-4 rounded-lg mb-2">
                         <p class="font-semibold">${emp.name}</p>
@@ -650,6 +655,7 @@ export class UIManager {
         document.getElementById('edit-employee-employment-type').value = emp.employmentType || '';
         document.getElementById('edit-employee-shift').value = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
         document.getElementById('edit-employee-notes').value = emp.notes || '';
+        document.getElementById('edit-employee-vacation-adjustment').value = emp.vacationAdjustment || 0;
 
         // Populate Shift Dropdown if it exists (for editing) or create it if missing
         this.populateShiftDropdowns(emp.shifts?.default);

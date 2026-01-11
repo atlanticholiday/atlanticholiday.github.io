@@ -141,10 +141,12 @@ export class EventManager {
         // Edit employee modal event listeners
         document.getElementById('edit-employee-close-btn').addEventListener('click', () => {
             document.getElementById('edit-employee-modal').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         });
 
         document.getElementById('edit-employee-cancel-btn').addEventListener('click', () => {
             document.getElementById('edit-employee-modal').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         });
 
         document.getElementById('edit-employee-save-btn').addEventListener('click', () => {
@@ -420,6 +422,7 @@ export class EventManager {
         const employmentType = document.getElementById('edit-employee-employment-type').value.trim();
         const defaultShift = document.getElementById('edit-employee-shift').value.trim();
         const notes = document.getElementById('edit-employee-notes').value.trim();
+        const vacationAdjustment = document.getElementById('edit-employee-vacation-adjustment').value;
 
         // Validate required fields
         if (!name) {
@@ -458,7 +461,8 @@ export class EventManager {
             employmentType,
             defaultShift,
             notes,
-            workDays
+            workDays,
+            vacationAdjustment
         };
 
         try {

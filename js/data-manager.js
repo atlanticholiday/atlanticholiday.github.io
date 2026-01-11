@@ -166,7 +166,9 @@ export class DataManager {
             position: null,
             hireDate: null,
             employmentType: null,
-            notes: null
+            employmentType: null,
+            notes: null,
+            vacationAdjustment: 0 // Default adjustment
         };
         return await addDoc(this.getEmployeesCollectionRef(), newEmployeeData);
     }
@@ -305,6 +307,13 @@ export class DataManager {
         }
         if (updatedData.notes && updatedData.notes.trim() !== '') {
             cleanData.notes = updatedData.notes.trim();
+        }
+
+        // Vacation Adjustment
+        if (updatedData.vacationAdjustment !== undefined && updatedData.vacationAdjustment !== null && updatedData.vacationAdjustment !== '') {
+            cleanData.vacationAdjustment = parseInt(updatedData.vacationAdjustment);
+        } else {
+            cleanData.vacationAdjustment = 0;
         }
 
         // Handle shifts object
