@@ -29,6 +29,29 @@
 </head>
 
 <body class="bg-gray-50 text-gray-800">
+    <script>
+        if (window.location.protocol === 'file:') {
+            alert("⚠️ SETUP ERROR ⚠️\n\nYou are running this file directly (file://). This application requires a local web server to function correctly.\n\nPlease right-click 'index.html' in VS Code and select 'Open with Live Server'.");
+            document.body.innerHTML = `
+                <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#fef2f2;flex-direction:column;font-family:sans-serif;text-align:center;padding:20px;">
+                    <h1 style="color:#dc2626;font-size:2rem;margin-bottom:1rem;">⚠️ Application Setup Error</h1>
+                    <p style="color:#4b5563;font-size:1.2rem;max-width:600px;">
+                        You have opened <code>index.html</code> directly from your file system.
+                        <br><br>
+                        Due to security headers and module requirements, this application <strong>must</strong> be run via a local web server.
+                    </p>
+                    <div style="margin-top:2rem;padding:1.5rem;background:white;border-radius:0.5rem;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+                        <h3 style="font-weight:bold;margin-bottom:0.5rem;">How to fix:</h3>
+                        <ol style="text-align:left;list-style-position:inside;color:#374151;">
+                            <li>Right-click <strong>index.html</strong> in VS Code</li>
+                            <li>Select <strong>"Open with Live Server"</strong></li>
+                        </ol>
+                    </div>
+                </div>
+            `;
+            throw new Error("Halting execution due to file protocol");
+        }
+    </script>
 
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg modal-content">
@@ -491,7 +514,8 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                         <p class="text-sm text-gray-600 mb-4">Enter one property per line in the format:
-                            <strong>Property Name, Location, Typology</strong></p>
+                            <strong>Property Name, Location, Typology</strong>
+                        </p>
                         <div class="bg-gray-50 p-3 rounded-md mb-4">
                             <p class="text-xs text-gray-600 mb-2">Example format:</p>
                             <code class="text-xs bg-white px-2 py-1 rounded block">
