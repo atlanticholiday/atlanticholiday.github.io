@@ -21,6 +21,7 @@ import { VehiclesManager } from './vehicles-manager.js';
 import { OwnersManager } from './owners-manager.js';
 import { VisitsManager } from './visits-manager.js';
 import { CleaningBillsManager } from './cleaning-bills-manager.js';
+import { ScheduleManager } from './schedule-manager.js';
 import './allinfo-bulk-edit.js';
 import './allinfo-seq-edit.js';
 import './allinfo-accordion-edit.js';
@@ -31,7 +32,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, scheduleManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,36 +56,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
         await setPersistence(auth, browserLocalPersistence);
         setLogLevel('error');
-        
+
         // Add global Firestore read tracking
         let globalReadCount = 0;
         console.log("🔍 [GLOBAL READ TRACKER] Initialized - tracking all Firestore reads");
-        
+
         // Monitor Firebase console directly if possible
         if (typeof window !== 'undefined') {
             // Track any console network activity
             const originalFetch = window.fetch;
-            window.fetch = async function(...args) {
+            window.fetch = async function (...args) {
                 const url = args[0];
                 if (typeof url === 'string' && url.includes('firestore')) {
                     console.log(`🌐 [NETWORK TRACKER] Firestore request to:`, url);
                 }
                 return originalFetch.apply(this, args);
             };
-            
+
             // Track XMLHttpRequest as well
             const originalXHR = window.XMLHttpRequest.prototype.open;
-            window.XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            window.XMLHttpRequest.prototype.open = function (method, url, ...args) {
                 if (typeof url === 'string' && url.includes('firestore')) {
                     console.log(`🌐 [XHR TRACKER] Firestore ${method} request to:`, url);
                 }
                 return originalXHR.apply(this, [method, url, ...args]);
             };
         }
-        
+
         // Wrap getDocs to count reads
         const originalGetDocs = window.getDocs || getDocs;
-        window.getDocsTracked = async function(query) {
+        window.getDocsTracked = async function (query) {
             const result = await originalGetDocs(query);
             const readCount = result.docs.length || 1;
             globalReadCount += readCount;
@@ -92,10 +93,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`📊 [GLOBAL READ TRACKER] getDocs source: ${result.metadata?.fromCache ? 'CACHE' : 'SERVER'}`);
             return result;
         };
-        
+
         // Wrap onSnapshot to count reads
         const originalOnSnapshot = window.onSnapshot || onSnapshot;
-        window.onSnapshotTracked = function(query, callback, errorCallback) {
+        window.onSnapshotTracked = function (query, callback, errorCallback) {
             return originalOnSnapshot(query, (snapshot) => {
                 const readCount = snapshot.docs.length || 1;
                 globalReadCount += readCount;
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 callback(snapshot);
             }, errorCallback);
         };
-        
+
         // Initialize managers
         dataManager = new DataManager(db);
         holidayCalculator = new HolidayCalculator();
@@ -115,11 +116,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Visits manager early so it can inject its page and landing button before nav listeners are wired
         visitsManager = new VisitsManager(db, userId);
         window.visitsManager = visitsManager;
-        try { visitsManager.ensureDomScaffold?.(); } catch {}
+        try { visitsManager.ensureDomScaffold?.(); } catch { }
         // Initialize Cleaning Bills manager early to inject page and landing button before nav listeners are wired
         cleaningBillsManager = new CleaningBillsManager();
         window.cleaningBillsManager = cleaningBillsManager;
-        try { cleaningBillsManager.ensureDomScaffold?.(); } catch {}
+        try { cleaningBillsManager.ensureDomScaffold?.(); } catch { }
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
         checklistsManager = new ChecklistsManager(userId);
         window.checklistsManager = checklistsManager;
@@ -131,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Owners manager (shared owners collection)
         ownersManager = new OwnersManager(db, userId);
         window.ownersManager = ownersManager;
-        
+
         // Initialize RNAL manager with error handling
         try {
             rnalManager = new RnalManager(db, userId);
@@ -142,15 +143,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();
-        
+
         // Setup navigation listeners (after Visits injected its button)
         navigationManager.setupNavigationListeners();
-        
+
         // Setup global event listeners
         setupGlobalEventListeners();
         // Setup application event listeners for schedule page
         eventManager.setupAppEventListeners();
-        
+
         // Render Checklists when page is opened
         document.addEventListener('checklistsPageOpened', () => {
             try { checklistsManager.render(); } catch (e) { console.warn('Checklists render failed:', e); }
@@ -340,21 +341,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (visitsManager) {
                     visitsManager.setUser(userId);
                 }
-                
+
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
                 propertiesManager = new PropertiesManager(db);
                 window.propertiesManager = propertiesManager;
-                
+
                 console.log(`⚙️ [INITIALIZATION] Creating OperationsManager...`);
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
                 console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
                 reservationsManager = new ReservationsManager(db, userId);
-                
+
                 console.log(`🔥 [INITIALIZATION] Creating SafetyManager...`);
                 safetyManager = new SafetyManager(db, propertiesManager);
                 window.safetyManager = safetyManager;
-                
+
                 // Update RNAL manager with authenticated user credentials
                 if (rnalManager) {
                     try {
@@ -363,10 +364,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.warn('RNAL Manager update failed:', error);
                     }
                 }
-                
+
                 navigationManager.showLandingPage();
                 setupApp();
-                
+
                 // OPTIMIZATION: Run migration AFTER properties have loaded to avoid duplicate reads
                 console.log(`⏰ [OPTIMIZATION] Scheduling migration check after properties load...`);
                 setTimeout(() => {
@@ -380,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log(`🔐 [INITIALIZATION] User logged out`);
                 userId = null;
                 navigationManager.showLoginPage();
-                if (unsubscribe) unsubscribe(); 
+                if (unsubscribe) unsubscribe();
                 if (propertiesManager) {
                     console.log(`📋 [CLEANUP] Stopping PropertiesManager...`);
                     propertiesManager.stopListening();
@@ -393,21 +394,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (checklistsManager) {
                     // Reset user to stop any Firestore sync
-                    try { checklistsManager.setUser(null); } catch {}
+                    try { checklistsManager.setUser(null); } catch { }
                 }
                 if (vehiclesManager) {
-                    try { vehiclesManager.stopListening(); vehiclesManager.setUser(null); } catch {}
+                    try { vehiclesManager.stopListening(); vehiclesManager.setUser(null); } catch { }
                 }
                 if (ownersManager) {
-                    try { ownersManager.stopListening(); ownersManager.setUser(null); } catch {}
+                    try { ownersManager.stopListening(); ownersManager.setUser(null); } catch { }
                 }
                 if (visitsManager) {
-                    try { visitsManager.stopListening(); visitsManager.setUser(null); } catch {}
+                    try { visitsManager.stopListening(); visitsManager.setUser(null); } catch { }
                 }
             }
         });
 
-    } catch(error) {
+    } catch (error) {
         console.error("Firebase init failed:", error);
         document.getElementById('login-error').textContent = 'Could not connect to services.';
     }
@@ -497,6 +498,13 @@ function setupGlobalEventListeners() {
             }
             // Ensure schedule view toggle listeners are bound
             eventManager.setupAppEventListeners();
+
+            // Initialize Schedule Manager (New)
+            if (!scheduleManager) {
+                console.log('📅 [SCHEDULE PAGE] Initializing ScheduleManager');
+                scheduleManager = new ScheduleManager(dataManager, uiManager);
+            }
+
             // Ensure work day selection checkboxes are rendered for the Add Colleague form
             try { uiManager.populateDayCheckboxes(); } catch (e) { console.warn('Failed to populate day checkboxes:', e); }
         }, 100); // Small delay to ensure DOM is ready
@@ -521,7 +529,7 @@ function setupGlobalEventListeners() {
         const propertyId = event.detail.propertyId;
         if (propertiesManager && propertyId) {
             console.log('Opening property edit modal for:', propertyId);
-            
+
             // Find the property
             const property = propertiesManager.properties.find(p => p.id === propertyId);
             if (property) {
@@ -539,7 +547,7 @@ function setupGlobalEventListeners() {
     document.addEventListener('allInfoPageOpened', () => initAllInfoUI());
     function initAllInfoUI() {
         const propertiesRaw = window.propertiesManager?.properties || [];
-        const properties = [...propertiesRaw].sort((a,b)=> (a.name ?? '').localeCompare(b.name ?? '', undefined,{numeric:true,sensitivity:'base'}));
+        const properties = [...propertiesRaw].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', undefined, { numeric: true, sensitivity: 'base' }));
         const nav = document.getElementById('allinfo-nav');
         const content = document.getElementById('allinfo-content');
         if (!nav || !content) return;
@@ -547,32 +555,32 @@ function setupGlobalEventListeners() {
         content.innerHTML = '';
         const categories = [
             // Core basics
-            { title: 'Basic Information', slug: 'basic-info-edit', fields: ['location','type','typology','rooms','bathrooms','floor'], icon: 'fas fa-info-circle' },
-            { title: 'Maps & Location', slug: 'maps-location', fields: ['googleMapsLink','garbageLocationLink','garbageFloor'], icon: 'fas fa-map-marker-alt' },
-            { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode','parkingSpot','parkingFloor'], icon: 'fas fa-parking' },
+            { title: 'Basic Information', slug: 'basic-info-edit', fields: ['location', 'type', 'typology', 'rooms', 'bathrooms', 'floor'], icon: 'fas fa-info-circle' },
+            { title: 'Maps & Location', slug: 'maps-location', fields: ['googleMapsLink', 'garbageLocationLink', 'garbageFloor'], icon: 'fas fa-map-marker-alt' },
+            { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode', 'parkingSpot', 'parkingFloor'], icon: 'fas fa-parking' },
 
             // Guest-facing content
-            { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos','bookingDescriptionStatus','selfCheckinInstructions'], icon: 'fas fa-video' },
-            { title: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled','googleDriveLink','scannedDocsLink'], icon: 'fab fa-google-drive' },
-            { title: 'Recommendations', slug: 'recommendations', fields: ['recommendationsLink','recommendationsEditLink'], icon: 'fas fa-star' },
-            { title: 'Frames', slug: 'frames', fields: ['wifiFrame','recommendationsFrame','investmentFrame'], icon: 'fas fa-border-all' },
-            { title: 'Signage', slug: 'signage', fields: ['privateSign','noSmokingSign','noJunkMailSign','alAhSign','keysNotice','wcSign'], icon: 'fas fa-sign' },
+            { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos', 'bookingDescriptionStatus', 'selfCheckinInstructions'], icon: 'fas fa-video' },
+            { title: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled', 'googleDriveLink', 'scannedDocsLink'], icon: 'fab fa-google-drive' },
+            { title: 'Recommendations', slug: 'recommendations', fields: ['recommendationsLink', 'recommendationsEditLink'], icon: 'fas fa-star' },
+            { title: 'Frames', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame'], icon: 'fas fa-border-all' },
+            { title: 'Signage', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'alAhSign', 'keysNotice', 'wcSign'], icon: 'fas fa-sign' },
 
             // Operations & utilities
-            { title: 'Equipment', slug: 'equipment', fields: ['airConditioning','fans','heaters','crib','cribMattress','babyChair'], icon: 'fas fa-toolbox' },
-            { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox','poolMaintenanceDay','poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
-            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed','internetProvider','energySource'], icon: 'fas fa-wifi' },
+            { title: 'Equipment', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair'], icon: 'fas fa-toolbox' },
+            { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox', 'poolMaintenanceDay', 'poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
+            { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
 
             // Platforms and compliance
-            { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled','onlineComplaintBooksEmail','onlineComplaintBooksPassword','airbnbLinksStatus'], icon: 'fas fa-globe' },
-            { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus','complaintBooksStatus','statisticsStatus','sefStatus','touristTaxInstructions'], icon: 'fas fa-gavel' },
-            { title: 'Safety Maintenance', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration','fireExtinguisherLocation','fireExtinguisherNotes','firstAidStatus','firstAidLastChecked','firstAidNotes'], icon: 'fas fa-shield-alt' },
+            { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled', 'onlineComplaintBooksEmail', 'onlineComplaintBooksPassword', 'airbnbLinksStatus'], icon: 'fas fa-globe' },
+            { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus', 'complaintBooksStatus', 'statisticsStatus', 'sefStatus', 'touristTaxInstructions'], icon: 'fas fa-gavel' },
+            { title: 'Safety Maintenance', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration', 'fireExtinguisherLocation', 'fireExtinguisherNotes', 'firstAidStatus', 'firstAidLastChecked', 'firstAidNotes'], icon: 'fas fa-shield-alt' },
 
             // Admin and building
-            { title: 'Owner', slug: 'owner', fields: ['ownerFirstName','ownerLastName','ownerVatNumber','ownerPropertyAddress','ownerContact'], icon: 'fas fa-user-tie' },
-            { title: 'Accounting', slug: 'accounting', fields: ['accountingName','accountingPhone','accountingEmail','accountingContact'], icon: 'fas fa-file-invoice-dollar' },
-            { title: 'Cleaning', slug: 'contacts', fields: ['cleaningCompanyContact','cleaningCompanyPrice','guestCleaningFee'], icon: 'fas fa-broom' },
-            { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName','condominiumEmail','condominiumPhone'], icon: 'fas fa-building' }
+            { title: 'Owner', slug: 'owner', fields: ['ownerFirstName', 'ownerLastName', 'ownerVatNumber', 'ownerPropertyAddress', 'ownerContact'], icon: 'fas fa-user-tie' },
+            { title: 'Accounting', slug: 'accounting', fields: ['accountingName', 'accountingPhone', 'accountingEmail', 'accountingContact'], icon: 'fas fa-file-invoice-dollar' },
+            { title: 'Cleaning', slug: 'contacts', fields: ['cleaningCompanyContact', 'cleaningCompanyPrice', 'guestCleaningFee'], icon: 'fas fa-broom' },
+            { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName', 'condominiumEmail', 'condominiumPhone'], icon: 'fas fa-building' }
         ];
         // Category navigation buttons
         categories.forEach((cat, idx) => {
@@ -600,7 +608,7 @@ function setupGlobalEventListeners() {
         // Create search bars container for side-by-side layout
         const searchBarsContainer = document.createElement('div');
         searchBarsContainer.className = 'search-bars-container';
-        
+
         // -------- Property filter input --------
         const filterWrapper = document.createElement('div');
         filterWrapper.className = 'flex-1';
@@ -614,7 +622,7 @@ function setupGlobalEventListeners() {
         filterInput.className = 'px-3 py-2 border rounded-md w-full';
         filterWrapper.appendChild(propFilterLabel);
         filterWrapper.appendChild(filterInput);
-        
+
         // -------- Category search field --------
         const catSearchWrapper = document.createElement('div');
         catSearchWrapper.id = 'allinfo-cat-search-wrapper';
@@ -623,28 +631,28 @@ function setupGlobalEventListeners() {
         catSearch.type = 'text';
         catSearch.placeholder = 'Search categories...';
         catSearchWrapper.appendChild(catSearch);
-        
+
         // Add both search bars to the container
         searchBarsContainer.appendChild(filterWrapper);
         searchBarsContainer.appendChild(catSearchWrapper);
-        
+
         // Insert the search container before the navigation
         nav.parentNode.insertBefore(searchBarsContainer, nav);
-        
+
         // Attach filter to dedicated wrapper (for styling compatibility)
         const filterParent = document.getElementById('allinfo-filter-wrapper');
-        if (filterParent) { 
-            filterParent.innerHTML = ''; 
-            filterParent.appendChild(searchBarsContainer); 
+        if (filterParent) {
+            filterParent.innerHTML = '';
+            filterParent.appendChild(searchBarsContainer);
         }
-        
+
         catSearch.addEventListener('input', e => {
             const term = e.target.value.toLowerCase();
             Array.from(nav.children).forEach(btn => {
                 const idx = parseInt(btn.dataset.idx);
                 const cat = categories[idx];
                 const match = btn.textContent.toLowerCase().includes(term) ||
-                              cat.fields.some(f => f.toLowerCase().includes(term));
+                    cat.fields.some(f => f.toLowerCase().includes(term));
                 btn.style.display = match ? '' : 'none';
             });
             // auto-select first visible category if current active hidden
@@ -659,7 +667,7 @@ function setupGlobalEventListeners() {
         // Sorting helper
         function sortTable(table, colIndex, asc) {
             const tbody = table.querySelector('tbody');
-            Array.from(tbody.querySelectorAll('tr')).sort((a,b) => {
+            Array.from(tbody.querySelectorAll('tr')).sort((a, b) => {
                 const aCell = a.cells[colIndex];
                 const bCell = b.cells[colIndex];
                 const aSort = aCell?.dataset?.sort;
@@ -672,8 +680,8 @@ function setupGlobalEventListeners() {
                 const aText = aCell.textContent.trim();
                 const bText = bCell.textContent.trim();
                 return asc
-                    ? aText.localeCompare(bText, undefined, { numeric:true })
-                    : bText.localeCompare(aText, undefined, { numeric:true });
+                    ? aText.localeCompare(bText, undefined, { numeric: true })
+                    : bText.localeCompare(aText, undefined, { numeric: true });
             }).forEach(r => tbody.appendChild(r));
         }
         // Render table for a category
@@ -712,11 +720,11 @@ function setupGlobalEventListeners() {
             thead.appendChild(tr);
             table.appendChild(thead);
             // Body
-            const tbody = document.createElement('tbody'); tbody.className='bg-white divide-y divide-gray-200';
-            properties.forEach(prop=>{
-                const row = document.createElement('tr'); row.className='hover:bg-gray-50';
+            const tbody = document.createElement('tbody'); tbody.className = 'bg-white divide-y divide-gray-200';
+            properties.forEach(prop => {
+                const row = document.createElement('tr'); row.className = 'hover:bg-gray-50';
                 const eurFmt = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' });
-                displayFields.forEach(key=>{
+                displayFields.forEach(key => {
                     const td = document.createElement('td');
                     td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
                     if (key === 'cleaningCompanyPrice' || key === 'guestCleaningFee') {
@@ -729,18 +737,20 @@ function setupGlobalEventListeners() {
                     }
                     row.appendChild(td);
                 });
-                const actionTd=document.createElement('td'); actionTd.className='px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
+                const actionTd = document.createElement('td'); actionTd.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-4';
                 [
-                    { icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => {
-                        // Store the selected property in sessionStorage so the settings page can load it accurately
-                        try {
-                            sessionStorage.setItem('currentProperty', JSON.stringify(prop));
-                        } catch (err) {
-                            console.warn('Failed to store property in sessionStorage:', err);
-                        }
-                        window.location.href = `property-settings.html?propertyId=${prop.id}#section-${categories[idx].slug}`;
-                    }, title: 'Edit' },
-                    
+                    {
+                        icon: 'fas fa-edit', cls: 'text-blue-600', fn: () => {
+                            // Store the selected property in sessionStorage so the settings page can load it accurately
+                            try {
+                                sessionStorage.setItem('currentProperty', JSON.stringify(prop));
+                            } catch (err) {
+                                console.warn('Failed to store property in sessionStorage:', err);
+                            }
+                            window.location.href = `property-settings.html?propertyId=${prop.id}#section-${categories[idx].slug}`;
+                        }, title: 'Edit'
+                    },
+
                     { icon: 'fas fa-file-pdf', cls: 'text-red-600', fn: () => console.log('PDF for', prop.id), title: 'Download PDF' }
                 ].forEach(({ icon, cls, fn, title }) => {
                     const btn = document.createElement('button');
@@ -763,7 +773,7 @@ function setupGlobalEventListeners() {
             } catch (e) { /* no-op */ }
         }
         // Filter logic
-        filterInput.addEventListener('input',e=>{const term=e.target.value.toLowerCase(); tableContainer.querySelectorAll('tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(term)?'':'none';});});
+        filterInput.addEventListener('input', e => { const term = e.target.value.toLowerCase(); tableContainer.querySelectorAll('tbody tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none'; }); });
         // Initial render
         renderCategory(0);
     }
@@ -772,19 +782,19 @@ function setupGlobalEventListeners() {
     const quickAddToggleBtn = document.getElementById('quick-add-toggle-btn');
     const bulkImportToggleBtn = document.getElementById('bulk-import-toggle-btn');
     const filtersToggleBtn = document.getElementById('filters-toggle-btn');
-    
+
     // Quick Add Section
     const quickAddSection = document.getElementById('quick-add-section');
     const quickAddCloseBtn = document.getElementById('quick-add-close-btn');
-    
+
     if (quickAddToggleBtn && quickAddSection) {
         quickAddToggleBtn.addEventListener('click', () => {
             const isHidden = quickAddSection.classList.contains('hidden');
-            
+
             // Hide other sections
             document.getElementById('bulk-import-section')?.classList.add('hidden');
             document.getElementById('filters-section')?.classList.add('hidden');
-            
+
             // Toggle quick add section
             if (isHidden) {
                 quickAddSection.classList.remove('hidden');
@@ -797,7 +807,7 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     if (quickAddCloseBtn && quickAddSection) {
         quickAddCloseBtn.addEventListener('click', () => {
             quickAddSection.classList.add('hidden');
@@ -805,23 +815,23 @@ function setupGlobalEventListeners() {
             quickAddToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
         });
     }
-    
+
     // Bulk Import Section
     const bulkImportSection = document.getElementById('bulk-import-section');
     const bulkImportCloseBtn = document.getElementById('bulk-import-close-btn');
-    
+
     if (bulkImportToggleBtn && bulkImportSection) {
         bulkImportToggleBtn.addEventListener('click', () => {
             const isHidden = bulkImportSection.classList.contains('hidden');
-            
+
             // Hide other sections
             document.getElementById('quick-add-section')?.classList.add('hidden');
             document.getElementById('filters-section')?.classList.add('hidden');
-            
+
             // Reset quick add button
             quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
             quickAddToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
-            
+
             // Toggle bulk import section
             if (isHidden) {
                 bulkImportSection.classList.remove('hidden');
@@ -834,7 +844,7 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     if (bulkImportCloseBtn && bulkImportSection) {
         bulkImportCloseBtn.addEventListener('click', () => {
             bulkImportSection.classList.add('hidden');
@@ -842,26 +852,26 @@ function setupGlobalEventListeners() {
             bulkImportToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
         });
     }
-    
+
     // Filters Section
     const filtersSection = document.getElementById('filters-section');
     const filtersCloseBtn = document.getElementById('filters-close-btn');
     const filterCountBadge = document.getElementById('filter-count-badge');
-    
+
     if (filtersToggleBtn && filtersSection) {
         filtersToggleBtn.addEventListener('click', () => {
             const isHidden = filtersSection.classList.contains('hidden');
-            
+
             // Hide other sections
             document.getElementById('quick-add-section')?.classList.add('hidden');
             document.getElementById('bulk-import-section')?.classList.add('hidden');
-            
+
             // Reset other buttons
             quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
             quickAddToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
             bulkImportToggleBtn?.classList.remove('bg-brand', 'text-white');
             bulkImportToggleBtn?.classList.add('bg-gray-100', 'text-gray-700');
-            
+
             // Toggle filters section
             if (isHidden) {
                 filtersSection.classList.remove('hidden');
@@ -874,7 +884,7 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     if (filtersCloseBtn && filtersSection) {
         filtersCloseBtn.addEventListener('click', () => {
             filtersSection.classList.add('hidden');
@@ -882,14 +892,14 @@ function setupGlobalEventListeners() {
             filtersToggleBtn.classList.add('bg-gray-100', 'text-gray-700');
         });
     }
-    
+
     // Advanced Property Modal
     const advancedAddBtn = document.getElementById('advanced-add-btn');
     const advancedPropertyModal = document.getElementById('advanced-property-modal');
     const advancedPropertyCloseBtn = document.getElementById('advanced-property-close-btn');
     const advancedPropertyCancelBtn = document.getElementById('advanced-property-cancel-btn');
     const advancedPropertySaveBtn = document.getElementById('advanced-property-save-btn');
-    
+
     if (advancedAddBtn && advancedPropertyModal) {
         advancedAddBtn.addEventListener('click', () => {
             // Copy values from quick add form to advanced form if they exist
@@ -897,28 +907,28 @@ function setupGlobalEventListeners() {
             const quickLocation = document.getElementById('property-location')?.value;
             const quickType = document.getElementById('property-type')?.value;
             const quickRooms = document.getElementById('property-rooms')?.value;
-            
+
             if (quickName) document.getElementById('advanced-property-name').value = quickName;
             if (quickLocation) document.getElementById('advanced-property-location').value = quickLocation;
             if (quickType) document.getElementById('advanced-property-type').value = quickType;
             if (quickRooms) document.getElementById('advanced-property-rooms').value = quickRooms;
-            
+
             advancedPropertyModal.classList.remove('hidden');
         });
     }
-    
+
     if (advancedPropertyCloseBtn && advancedPropertyModal) {
         advancedPropertyCloseBtn.addEventListener('click', () => {
             advancedPropertyModal.classList.add('hidden');
         });
     }
-    
+
     if (advancedPropertyCancelBtn && advancedPropertyModal) {
         advancedPropertyCancelBtn.addEventListener('click', () => {
             advancedPropertyModal.classList.add('hidden');
         });
     }
-    
+
     // Close modal when clicking outside
     if (advancedPropertyModal) {
         advancedPropertyModal.addEventListener('click', (e) => {
@@ -927,7 +937,7 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     // Properties management event listeners
     const addPropertyBtn = document.getElementById('add-property-btn');
 
@@ -941,7 +951,7 @@ function setupGlobalEventListeners() {
                 // Portuguese typology format (apartment-T2, villa-V3, etc.)
                 const [baseType, typology] = selectedType.split('-');
                 const bedrooms = parseInt(typology.substring(1)); // Extract number from T2, V3 etc.
-                
+
                 propertyData = {
                     name: document.getElementById('property-name').value,
                     location: document.getElementById('property-location').value,
@@ -974,20 +984,20 @@ function setupGlobalEventListeners() {
                     smartTv: document.getElementById('property-smart-tv')?.value || 'no'
                 };
             }
-            
+
             const errors = propertiesManager.validatePropertyData(propertyData);
             const errorElement = document.getElementById('add-property-error');
-            
+
             if (errors.length > 0) {
                 errorElement.textContent = errors[0];
                 return;
             }
-            
+
             try {
                 await propertiesManager.addProperty(propertyData);
                 propertiesManager.clearForm();
                 errorElement.textContent = '';
-                
+
                 // Close the quick add section after successful add
                 document.getElementById('quick-add-section')?.classList.add('hidden');
                 quickAddToggleBtn?.classList.remove('bg-brand', 'text-white');
@@ -997,7 +1007,7 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     // Advanced Property Save
     if (advancedPropertySaveBtn) {
         advancedPropertySaveBtn.addEventListener('click', async () => {
@@ -1011,12 +1021,12 @@ function setupGlobalEventListeners() {
         propertyTypeSelect.addEventListener('change', (e) => {
             const selectedType = e.target.value;
             const roomsInput = document.getElementById('property-rooms');
-            
+
             if (selectedType.includes('-T') || selectedType.includes('-V')) {
                 // Extract bedroom count from typology (T2 = 2 bedrooms, V3 = 3 bedrooms)
                 const typology = selectedType.split('-')[1];
                 const bedrooms = parseInt(typology.substring(1));
-                
+
                 if (roomsInput && !isNaN(bedrooms)) {
                     roomsInput.value = bedrooms;
                     roomsInput.disabled = true; // Disable manual editing when typology is selected
@@ -1036,12 +1046,12 @@ function setupGlobalEventListeners() {
         advancedPropertyTypeSelect.addEventListener('change', (e) => {
             const selectedType = e.target.value;
             const roomsInput = document.getElementById('advanced-property-rooms');
-            
+
             if (selectedType.includes('-T') || selectedType.includes('-V')) {
                 // Extract bedroom count from typology
                 const typology = selectedType.split('-')[1];
                 const bedrooms = parseInt(typology.substring(1));
-                
+
                 if (roomsInput && !isNaN(bedrooms)) {
                     roomsInput.value = bedrooms;
                     roomsInput.disabled = true;
@@ -1062,11 +1072,11 @@ function setupGlobalEventListeners() {
 
     function updateBulkPropertyCount() {
         if (!bulkPropertyInput || !bulkPropertyCount) return;
-        
+
         const inputText = bulkPropertyInput.value.trim();
         const lines = inputText.split('\n').filter(line => line.trim()).length;
         bulkPropertyCount.textContent = lines;
-        
+
         if (bulkAddPropertiesBtn) {
             bulkAddPropertiesBtn.disabled = lines === 0;
         }
@@ -1092,9 +1102,9 @@ function setupGlobalEventListeners() {
             }
 
             const { properties, errors } = propertiesManager.parseBulkPropertyData(inputText);
-            
+
             if (errors.length > 0) {
-                const errorMessages = errors.map(error => 
+                const errorMessages = errors.map(error =>
                     `Line ${error.lineNumber}: ${error.error}`
                 ).join('<br>');
                 errorElement.innerHTML = `<div class="text-red-500 bg-red-50 border border-red-200 rounded p-2">${errorMessages}</div>`;
@@ -1122,7 +1132,7 @@ function setupGlobalEventListeners() {
 
                 // Show completion status
                 progressStatus.textContent = `Import complete! ${results.successful} properties added successfully.`;
-                
+
                 if (results.failed > 0) {
                     errorElement.innerHTML = `<div class="text-yellow-600 bg-yellow-50 border border-yellow-200 rounded p-2">${results.failed} properties failed to import. Check console for details.</div>`;
                     console.error('Bulk import errors:', results.errors);
@@ -1201,90 +1211,90 @@ function setupGlobalEventListeners() {
             }
         });
     }
-    
+
     // Setup Edit Property modal tabs
     const basicTab = document.getElementById('edit-basic-tab');
     const advancedTab = document.getElementById('edit-advanced-tab');
     basicTab.addEventListener('click', () => {
-      document.getElementById('edit-basic-section').classList.remove('hidden');
-      document.getElementById('edit-advanced-section').classList.add('hidden');
-      basicTab.classList.add('border-blue-500', 'text-black');
-      advancedTab.classList.remove('border-blue-500', 'text-black');
+        document.getElementById('edit-basic-section').classList.remove('hidden');
+        document.getElementById('edit-advanced-section').classList.add('hidden');
+        basicTab.classList.add('border-blue-500', 'text-black');
+        advancedTab.classList.remove('border-blue-500', 'text-black');
     });
     advancedTab.addEventListener('click', () => {
-      document.getElementById('edit-basic-section').classList.add('hidden');
-      document.getElementById('edit-advanced-section').classList.remove('hidden');
-      advancedTab.classList.add('border-blue-500', 'text-black');
-      basicTab.classList.remove('border-blue-500', 'text-black');
+        document.getElementById('edit-basic-section').classList.add('hidden');
+        document.getElementById('edit-advanced-section').classList.remove('hidden');
+        advancedTab.classList.add('border-blue-500', 'text-black');
+        basicTab.classList.remove('border-blue-500', 'text-black');
     });
 
     // Manage Links & Credentials button
     const manageLinksBtn = document.getElementById('manage-links-btn');
     manageLinksBtn.addEventListener('click', () => {
-      const propertyId = document.getElementById('edit-property-modal').dataset.propertyId;
-      
-      // Get the current property data from the properties manager
-      if (window.propertiesManager && window.propertiesManager.properties) {
-        const property = window.propertiesManager.properties.find(p => p.id === propertyId);
-        if (property) {
-          // Store the property data in sessionStorage for the settings page
-          sessionStorage.setItem('currentProperty', JSON.stringify(property));
-          window.location.href = `property-settings.html?propertyId=${propertyId}`;
+        const propertyId = document.getElementById('edit-property-modal').dataset.propertyId;
+
+        // Get the current property data from the properties manager
+        if (window.propertiesManager && window.propertiesManager.properties) {
+            const property = window.propertiesManager.properties.find(p => p.id === propertyId);
+            if (property) {
+                // Store the property data in sessionStorage for the settings page
+                sessionStorage.setItem('currentProperty', JSON.stringify(property));
+                window.location.href = `property-settings.html?propertyId=${propertyId}`;
+            } else {
+                alert('Property not found. Please try again.');
+            }
         } else {
-          alert('Property not found. Please try again.');
+            alert('Unable to load property data. Please try again.');
         }
-      } else {
-        alert('Unable to load property data. Please try again.');
-      }
     });
 
     // Add Property modal wizard logic
     let addWizardStep = 1;
     const totalAddSteps = 2;
     function showAddStep(step) {
-      document.getElementById('add-wizard-step-1').classList.toggle('hidden', step !== 1);
-      document.getElementById('add-wizard-step-2').classList.toggle('hidden', step !== 2);
-      document.getElementById('advanced-back-btn').classList.toggle('hidden', step === 1);
-      document.getElementById('advanced-next-btn').classList.toggle('hidden', step === totalAddSteps);
-      document.getElementById('advanced-property-save-btn').classList.toggle('hidden', step !== totalAddSteps);
+        document.getElementById('add-wizard-step-1').classList.toggle('hidden', step !== 1);
+        document.getElementById('add-wizard-step-2').classList.toggle('hidden', step !== 2);
+        document.getElementById('advanced-back-btn').classList.toggle('hidden', step === 1);
+        document.getElementById('advanced-next-btn').classList.toggle('hidden', step === totalAddSteps);
+        document.getElementById('advanced-property-save-btn').classList.toggle('hidden', step !== totalAddSteps);
     }
 
     document.getElementById('advanced-next-btn').addEventListener('click', () => {
-      if (addWizardStep < totalAddSteps) {
-        addWizardStep++;
-        showAddStep(addWizardStep);
-      }
+        if (addWizardStep < totalAddSteps) {
+            addWizardStep++;
+            showAddStep(addWizardStep);
+        }
     });
 
     document.getElementById('advanced-back-btn').addEventListener('click', () => {
-      if (addWizardStep > 1) {
-        addWizardStep--;
-        showAddStep(addWizardStep);
-      }
+        if (addWizardStep > 1) {
+            addWizardStep--;
+            showAddStep(addWizardStep);
+        }
     });
 
     // Reset wizard when opening add modal
     const advancedModal = document.getElementById('advanced-property-modal');
     advancedModal.addEventListener('transitionend', () => {
-      if (!advancedModal.classList.contains('hidden')) {
-        addWizardStep = 1;
-        showAddStep(addWizardStep);
-      }
+        if (!advancedModal.classList.contains('hidden')) {
+            addWizardStep = 1;
+            showAddStep(addWizardStep);
+        }
     });
-    
+
     // Make functions globally available for onclick handlers
     window.editProperty = (propertyId) => {
         console.log('🔧 [EDIT PROPERTY] Called with propertyId:', propertyId);
         console.log('🔧 [EDIT PROPERTY] Available properties:', propertiesManager.properties?.length || 0);
-        
+
         // Redirect to standalone settings page for full editing
         const property = propertiesManager.getPropertyById(propertyId);
         console.log('🔧 [EDIT PROPERTY] Found property:', property);
-        
+
         if (property) {
             // Clear any existing property data first to avoid conflicts
             sessionStorage.removeItem('currentProperty');
-            
+
             // Store the exact property with matching ID
             const propertyToStore = { ...property };
             sessionStorage.setItem('currentProperty', JSON.stringify(propertyToStore));
@@ -1293,7 +1303,7 @@ function setupGlobalEventListeners() {
                 name: propertyToStore.name,
                 stored: JSON.parse(sessionStorage.getItem('currentProperty'))
             });
-            
+
             window.location.href = `property-settings.html?propertyId=${propertyId}`;
         } else {
             console.error('🔧 [EDIT PROPERTY] Property not found for ID:', propertyId);
@@ -1301,7 +1311,7 @@ function setupGlobalEventListeners() {
             alert('Property not found. Please try again.');
         }
     };
-    
+
     window.deleteProperty = async (propertyId) => {
         if (confirm('Are you sure you want to delete this property?')) {
             try {
@@ -1316,10 +1326,10 @@ function setupGlobalEventListeners() {
 async function saveAdvancedProperty() {
     const modal = document.getElementById('advanced-property-modal');
     const errorElement = document.getElementById('advanced-property-error');
-    
+
     // Clear previous errors
     errorElement.textContent = '';
-    
+
     // Gather form data
     const selectedType = document.getElementById('advanced-property-type').value;
     let propertyData;
@@ -1329,7 +1339,7 @@ async function saveAdvancedProperty() {
         // Portuguese typology format (apartment-T2, villa-V3, etc.)
         const [baseType, typology] = selectedType.split('-');
         const bedrooms = parseInt(typology.substring(1)); // Extract number from T2, V3 etc.
-        
+
         propertyData = {
             name: document.getElementById('advanced-property-name').value.trim(),
             location: document.getElementById('advanced-property-location').value.trim(),
@@ -1357,14 +1367,14 @@ async function saveAdvancedProperty() {
     propertyData.energySource = document.getElementById('advanced-property-energy-source').value || null;
     propertyData.smartTv = document.getElementById('advanced-property-smart-tv').value || 'no';
     propertyData.status = document.getElementById('advanced-property-status').value || 'available';
-    
 
-    
+
+
     // Collect amenities
     const amenities = [];
     const amenityCheckboxes = [
         'advanced-amenity-wifi',
-        'advanced-amenity-pool', 
+        'advanced-amenity-pool',
         'advanced-amenity-garden',
         'advanced-amenity-balcony',
         'advanced-amenity-ac',
@@ -1372,21 +1382,21 @@ async function saveAdvancedProperty() {
         'advanced-amenity-washing-machine',
         'advanced-amenity-sea-view'
     ];
-    
+
     amenityCheckboxes.forEach(id => {
         const checkbox = document.getElementById(id);
         if (checkbox && checkbox.checked) {
             amenities.push(id.replace('advanced-amenity-', ''));
         }
     });
-    
+
     if (amenities.length > 0) {
         propertyData.amenities = amenities;
     }
 
     // Validate property data
     const errors = propertiesManager.validatePropertyData(propertyData);
-    
+
     if (errors.length > 0) {
         errorElement.textContent = errors[0];
         return;
@@ -1394,14 +1404,14 @@ async function saveAdvancedProperty() {
 
     try {
         await propertiesManager.addProperty(propertyData);
-        
+
         // Clear form and close modal
         clearAdvancedPropertyForm();
         modal.classList.add('hidden');
-        
+
         // Success notification (optional)
         console.log('Property added successfully via advanced form');
-        
+
     } catch (error) {
         console.error('Error adding property:', error);
         errorElement.textContent = 'Failed to add property. Please try again.';
@@ -1423,11 +1433,11 @@ function clearAdvancedPropertyForm() {
     document.getElementById('advanced-property-parking-floor').value = '';
     document.getElementById('advanced-property-energy-source').value = '';
     document.getElementById('advanced-property-smart-tv').value = 'no';
-    
+
     // Clear amenity checkboxes
     const amenityCheckboxes = [
         'advanced-amenity-wifi',
-        'advanced-amenity-pool', 
+        'advanced-amenity-pool',
         'advanced-amenity-garden',
         'advanced-amenity-balcony',
         'advanced-amenity-ac',
@@ -1435,14 +1445,14 @@ function clearAdvancedPropertyForm() {
         'advanced-amenity-washing-machine',
         'advanced-amenity-sea-view'
     ];
-    
+
     amenityCheckboxes.forEach(id => {
         const checkbox = document.getElementById(id);
         if (checkbox) {
             checkbox.checked = false;
         }
     });
-    
+
     // Clear error message
     document.getElementById('advanced-property-error').textContent = '';
 }
@@ -1450,11 +1460,11 @@ function clearAdvancedPropertyForm() {
 function populateEditModal(property) {
     // Store the property ID for saving
     document.getElementById('edit-property-modal').dataset.propertyId = property.id;
-    
+
     // Basic information
     document.getElementById('edit-property-name').value = property.name || '';
     document.getElementById('edit-property-location').value = property.location || '';
-    
+
     // Set property type dropdown
     const typeSelect = document.getElementById('edit-property-type');
     if (property.typology && property.type) {
@@ -1464,14 +1474,14 @@ function populateEditModal(property) {
         // For other property types
         typeSelect.value = property.type || '';
     }
-    
+
     document.getElementById('edit-property-rooms').value = property.rooms || '';
     document.getElementById('edit-property-bathrooms').value = property.bathrooms || '';
     document.getElementById('edit-property-floor').value = property.floor || '';
     // Populate latitude/longitude fields
     document.getElementById('edit-property-latitude').value = property.latitude ?? '';
     document.getElementById('edit-property-longitude').value = property.longitude ?? '';
-    
+
 
     document.getElementById('edit-property-wifi-speed').value = property.wifiSpeed || '';
     document.getElementById('edit-property-wifi-airbnb').value = property.wifiAirbnb || 'no';
@@ -1543,9 +1553,9 @@ async function savePropertyChanges() {
     propertyData.latitude = isNaN(latVal) ? null : latVal;
     const lngVal = parseFloat(document.getElementById('edit-property-longitude').value);
     propertyData.longitude = isNaN(lngVal) ? null : lngVal;
-    
 
-    
+
+
     propertyData.wifiSpeed = document.getElementById('edit-property-wifi-speed').value || null;
     propertyData.wifiAirbnb = document.getElementById('edit-property-wifi-airbnb').value;
     propertyData.parkingSpot = document.getElementById('edit-property-parking-spot').value.trim() || null;
@@ -1612,25 +1622,25 @@ async function setupApp() {
             console.error('❌ [INITIALIZATION] Required managers not available:', { dataManager: !!dataManager, uiManager: !!uiManager });
             return;
         }
-        
+
         console.log(`👥 [INITIALIZATION] Setting up employee data listener...`);
         // Set up data change callback and start listening
         dataManager.setOnDataChangeCallback(() => {
             console.log(`🔄 [DATA CHANGE] Employee data changed, updating UI`);
             if (uiManager) uiManager.updateView();
         });
-        
+
         dataManager.listenForEmployeeChanges();
-        
+
         // Show the main app interface
         const loadingEl = document.getElementById('loading');
         const mainAppEl = document.getElementById('main-app');
-        
+
         console.log(`🎯 DOM elements: loading=${!!loadingEl}, mainApp=${!!mainAppEl}`);
-        
+
         if (loadingEl) loadingEl.classList.add('hidden');
         if (mainAppEl) mainAppEl.classList.remove('hidden');
-        
+
         // Force UI refresh after a brief delay to ensure holidays are loaded
         setTimeout(() => {
             if (uiManager) {
@@ -1643,20 +1653,20 @@ async function setupApp() {
 
         // Check for settings updates when returning from settings page
         if (sessionStorage.getItem('propertySettingsUpdated') === 'true') {
-          const updatedProperty = sessionStorage.getItem('currentProperty');
-          if (updatedProperty && window.propertiesManager) {
-            try {
-              const property = JSON.parse(updatedProperty);
-              // Update the property in Firestore
-              await window.propertiesManager.updateProperty(property.id, property);
-              console.log('Property settings updated successfully');
-            } catch (error) {
-              console.error('Error updating property settings:', error);
+            const updatedProperty = sessionStorage.getItem('currentProperty');
+            if (updatedProperty && window.propertiesManager) {
+                try {
+                    const property = JSON.parse(updatedProperty);
+                    // Update the property in Firestore
+                    await window.propertiesManager.updateProperty(property.id, property);
+                    console.log('Property settings updated successfully');
+                } catch (error) {
+                    console.error('Error updating property settings:', error);
+                }
             }
-          }
-          // Clear the session storage
-          sessionStorage.removeItem('propertySettingsUpdated');
-          sessionStorage.removeItem('currentProperty');
+            // Clear the session storage
+            sessionStorage.removeItem('propertySettingsUpdated');
+            sessionStorage.removeItem('currentProperty');
         }
     } catch (error) {
         console.error('💥 Error initializing schedule app:', error);
@@ -1667,24 +1677,24 @@ async function setupApp() {
 async function initializeScheduleApp() {
     try {
         console.log('🔄 [INITIALIZATION] Schedule app requested...');
-        
+
         if (!dataManager) {
             console.error('❌ DataManager not available');
             return;
         }
-        
+
         // OPTIMIZATION: Instead of doing a fresh getDocs, check if we already have employee data
         console.log('📊 [OPTIMIZATION] Using existing employee data from DataManager instead of fresh query');
         const hasEmployees = dataManager.activeEmployees && dataManager.activeEmployees.length > 0;
-        
+
         console.log(`📊 [OPTIMIZATION] Found employees in memory: ${hasEmployees} (${dataManager.activeEmployees?.length || 0} active employees)`);
-        
+
         if (!hasEmployees) {
             console.log('📝 No employees found, showing setup page');
             navigationManager.showSetupPage();
         } else {
             console.log('👥 Employees found, initializing main schedule app');
-            
+
             // Start listening for employee changes if not already listening
             if (!dataManager.unsubscribe) {
                 console.log('🔄 [OPTIMIZATION] Starting employee listener for first time');
@@ -1692,16 +1702,16 @@ async function initializeScheduleApp() {
             } else {
                 console.log('✅ [OPTIMIZATION] Employee listener already active');
             }
-            
+
             // Show the main app interface
             const loadingEl = document.getElementById('loading');
             const mainAppEl = document.getElementById('main-app');
-            
+
             console.log(`🎯 DOM elements: loading=${!!loadingEl}, mainApp=${!!mainAppEl}`);
-            
+
             if (loadingEl) loadingEl.classList.add('hidden');
             if (mainAppEl) mainAppEl.classList.remove('hidden');
-            
+
             // Force UI refresh after a brief delay to ensure holidays are loaded
             setTimeout(() => {
                 if (uiManager) {
@@ -1724,25 +1734,25 @@ async function checkAndMigrateUserProperties() {
         console.log("❌ Database not available for auto-migration");
         return;
     }
-    
+
     try {
         console.log("🔍 [FIRESTORE READ TRACKING] Starting migration check...");
         let totalReads = 0;
-        
+
         // OPTIMIZATION: Use PropertiesManager data instead of separate query
         console.log("📊 [OPTIMIZATION] Waiting for PropertiesManager to load data instead of separate query...");
-        
+
         // Wait for properties manager to load data (max 3 seconds)
         let waitCount = 0;
         while ((!propertiesManager || !propertiesManager.properties || propertiesManager.properties.length === 0) && waitCount < 30) {
             await new Promise(resolve => setTimeout(resolve, 100));
             waitCount++;
         }
-        
+
         if (propertiesManager && propertiesManager.properties) {
             const existingProperties = propertiesManager.properties;
             console.log(`📊 [OPTIMIZATION] Using existing PropertiesManager data: ${existingProperties.length} properties (0 additional reads)`);
-            
+
             // If there are already 10+ properties, assume migration was completed
             if (existingProperties.length >= 10) {
                 console.log(`✅ [FIRESTORE READ TRACKING] Migration skipped - ${existingProperties.length} properties exist, Total additional reads: ${totalReads}`);
@@ -1764,14 +1774,14 @@ async function checkAndMigrateUserProperties() {
             });
             const existingProperties = existingSnapshots.docs.map(doc => doc.data());
             console.log(`📊 [FIRESTORE READ] Found ${existingProperties.length} existing properties (${totalReads} reads so far)`);
-            
+
             // If there are already 10+ properties, assume migration was completed
             if (existingProperties.length >= 10) {
                 console.log(`✅ [FIRESTORE READ TRACKING] Migration skipped - ${existingProperties.length} properties exist, Total reads: ${totalReads}`);
                 return;
             }
         }
-        
+
         // Check if we have permission to read users collection first
         try {
             console.log("🔐 [PERMISSION CHECK] Testing access to users collection...");
@@ -1783,60 +1793,60 @@ async function checkAndMigrateUserProperties() {
             console.log(`📊 [FIRESTORE READ TRACKING] Migration skipped due to permissions - Total reads: ${totalReads}`);
             return;
         }
-        
+
         // Get all user documents to check for properties in any user collection
         console.log("👥 [FIRESTORE READ] Reading users collection...");
         const usersRef = collection(db, "users");
         const userSnapshots = await getDocs(usersRef);
         totalReads += userSnapshots.docs.length || 1; // Count reads
-        
+
         console.log(`👥 [FIRESTORE READ] Found ${userSnapshots.docs.length} user collections (${totalReads} reads so far)`);
-        
+
         // Limit the number of user collections checked to prevent excessive reads
         const maxUsersToCheck = 10;
         const usersToCheck = userSnapshots.docs.slice(0, maxUsersToCheck);
-        
+
         if (userSnapshots.docs.length > maxUsersToCheck) {
             console.log(`⚠️ Limited migration check to first ${maxUsersToCheck} users to prevent excessive reads`);
         }
-        
+
         let totalMigrated = 0;
-        
+
         for (const userDoc of usersToCheck) {
             const userIdToCheck = userDoc.id;
-            
+
             try {
                 // Check if this user has properties in their personal collection
                 console.log(`🔍 [FIRESTORE READ] Reading properties for user: ${userIdToCheck}`);
                 const userPropertiesRef = collection(db, `users/${userIdToCheck}/properties`);
                 const propertySnapshots = await getDocs(userPropertiesRef);
                 totalReads += propertySnapshots.docs.length || 1; // Count reads
-                
+
                 console.log(`📋 [FIRESTORE READ] User ${userIdToCheck}: ${propertySnapshots.docs.length} properties (${totalReads} reads so far)`);
-                
+
                 if (propertySnapshots.docs.length === 0) {
                     console.log(`  ✅ No properties found for user: ${userIdToCheck}`);
                     continue;
                 }
-                
+
                 console.log(`  📋 Found ${propertySnapshots.docs.length} properties for user: ${userIdToCheck} - migrating...`);
-                
+
                 for (const propertyDoc of propertySnapshots.docs) {
                     try {
                         const propertyData = propertyDoc.data();
-                        
+
                         // Check if this property was already migrated to avoid duplicates
                         const alreadyExists = existingProperties.some(existing => {
-                            return existing.name === propertyData.name && 
-                                   existing.location === propertyData.location &&
-                                   existing.migratedFrom === userIdToCheck;
+                            return existing.name === propertyData.name &&
+                                existing.location === propertyData.location &&
+                                existing.migratedFrom === userIdToCheck;
                         });
-                        
+
                         if (alreadyExists) {
                             console.log(`    ⏭️  Property "${propertyData.name}" already migrated, skipping`);
                             continue;
                         }
-                        
+
                         // Add to shared collection with migration metadata
                         await addDoc(collection(db, "properties"), {
                             ...propertyData,
@@ -1844,23 +1854,23 @@ async function checkAndMigrateUserProperties() {
                             migratedAt: new Date(),
                             autoMigrated: true
                         });
-                        
+
                         totalMigrated++;
                         console.log(`    ✅ Auto-migrated: ${propertyData.name || 'Unnamed property'}`);
-                        
+
                     } catch (error) {
                         console.error(`    ❌ Error auto-migrating property ${propertyDoc.id}:`, error);
                     }
                 }
-                
+
             } catch (error) {
                 console.log(`  ⚠️  No properties collection for user ${userIdToCheck} or access denied`);
             }
         }
-        
+
         if (totalMigrated > 0) {
             console.log(`🎉 Auto-migration complete! Migrated ${totalMigrated} properties total to shared collection`);
-            
+
             // Refresh properties view if manager exists
             if (propertiesManager) {
                 setTimeout(() => {
@@ -1870,18 +1880,18 @@ async function checkAndMigrateUserProperties() {
         } else {
             console.log("✅ No new properties to migrate - all users are using shared collection");
         }
-        
+
     } catch (error) {
         console.error("💥 Auto-migration failed:", error);
     }
 }
 
 // Property Migration Functions - Available globally (DISABLED to prevent excessive reads)
-window.migratePropertiesToShared = async function() {
+window.migratePropertiesToShared = async function () {
     console.warn("⚠️ [MIGRATION DISABLED] This function has been disabled to prevent excessive Firestore reads.");
     console.warn("⚠️ If you need to migrate properties, please use the auto-migration feature that runs once per session.");
     return { success: false, error: "Migration disabled to prevent excessive reads" };
-    
+
     /* COMMENTED OUT TO PREVENT EXCESSIVE READS
     if (!db) {
         console.error("❌ Database not initialized. Please log in first.");
@@ -1893,11 +1903,11 @@ window.migratePropertiesToShared = async function() {
 };
 
 // Check what properties would be migrated (dry run) - DISABLED
-window.checkPropertiesForMigration = async function() {
+window.checkPropertiesForMigration = async function () {
     console.warn("⚠️ [DRY RUN DISABLED] This function has been disabled to prevent excessive Firestore reads.");
     console.warn("⚠️ Use the console logs from auto-migration instead for information about migrations.");
     return { success: false, error: "Dry run disabled to prevent excessive reads" };
-    
+
     /* COMMENTED OUT TO PREVENT EXCESSIVE READS
     if (!db) {
         console.error("❌ Database not initialized. Please log in first.");
@@ -1909,42 +1919,42 @@ window.checkPropertiesForMigration = async function() {
 };
 
 // Force refresh properties view
-window.refreshPropertiesView = function() {
+window.refreshPropertiesView = function () {
     if (!propertiesManager) {
         console.error("❌ Properties manager not initialized. Please log in first.");
         return;
     }
-    
+
     console.log("🔄 Force refreshing properties view...");
     propertiesManager.listenForPropertyChanges();
 };
 
 // Debug function to check shared properties collection directly
-window.checkSharedProperties = async function() {
+window.checkSharedProperties = async function () {
     if (!db) {
         console.error("❌ Database not initialized. Please log in first.");
         return;
     }
-    
+
     console.log("🔍 Checking shared properties collection directly...");
-    
+
     try {
         const sharedPropertiesRef = collection(db, "properties");
         const snapshot = await getDocs(sharedPropertiesRef);
-        
+
         console.log(`📋 Found ${snapshot.docs.length} properties in shared collection:`);
-        
+
         snapshot.docs.forEach(doc => {
             const data = doc.data();
             console.log(`  ✅ ${data.name} - ${data.location} (ID: ${doc.id})`);
         });
-        
+
         if (snapshot.docs.length === 0) {
             console.log("⚠️ No properties found in shared collection. Run migratePropertiesToShared() first.");
         }
-        
+
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
+
     } catch (error) {
         console.error("❌ Error checking shared properties:", error);
         return { error: error.message };

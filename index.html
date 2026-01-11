@@ -845,21 +845,24 @@ Mountain Villa, Sintra Hills, V4"
         </div>
 
         <div id="main-app" class="hidden fade-in-up">
-            <!-- View Toggles -->
-            <div class="mb-8 flex justify-center flex-wrap gap-2">
-                <div class="flex border border-gray-300 rounded-lg p-1 bg-gray-200 shadow-soft">
+            <!-- View Toggles (Segmented Control) -->
+            <div class="mb-8 flex justify-center">
+                <div class="inline-flex bg-gray-100 p-1 rounded-lg border border-gray-200">
                     <button id="monthly-view-btn"
-                        class="view-btn active px-4 py-2 text-sm font-medium rounded-md">Monthly View</button>
-                    <button id="yearly-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Yearly
-                        View</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment">Monthly</button>
+                    <button id="yearly-view-btn"
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Yearly</button>
                     <button id="madeira-holidays-view-btn"
-                        class="view-btn px-4 py-2 text-sm font-medium rounded-md">Madeira Holidays</button>
-                    <button id="vacation-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Vacation
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Madeira
+                        Holidays</button>
+                    <button id="vacation-view-btn"
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Vacation
                         Planner</button>
-                    <button id="reorder-view-btn" class="view-btn px-4 py-2 text-sm font-medium rounded-md">Manage
+                    <button id="reorder-view-btn"
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Manage
                         List</button>
                     <button id="history-view-btn"
-                        class="view-btn px-4 py-2 text-sm font-medium rounded-md">History</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">History</button>
                 </div>
             </div>
 
@@ -867,43 +870,29 @@ Mountain Villa, Sintra Hills, V4"
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 <!-- Left Column: Employee Management -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md modal-content">
-                    <h2 id="summary-title" class="text-2xl font-semibold mb-4 border-b pb-3 text-gradient">Monthly
-                        Summary</h2>
-                    <div id="employee-list" class="space-y-3 max-h-[calc(100vh-210px)] overflow-y-auto pr-2">
+                <div id="schedule-side-panel"
+                    class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md modal-content flex flex-col h-[calc(100vh-250px)]">
+                    <div class="flex justify-between items-center mb-4 border-b pb-3">
+                        <h2 id="summary-title" class="text-2xl font-semibold text-gradient">Monthly Summary</h2>
+                        <button id="open-add-employee-modal-btn"
+                            class="p-2 bg-brand text-white rounded-full hover:bg-brand-dark transition-colors shadow-md hover-lift"
+                            title="Add Colleague">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="employee-list" class="space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
                         <!-- Employee items will be inserted here -->
                     </div>
                 </div>
 
                 <!-- Right Column: Calendar & Controls -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md modal-content">
-                    <div id="add-colleague-section">
-                        <!-- Add Employee Form -->
-                        <div class="mb-6 border-b pb-6">
-                            <h3 class="text-lg font-medium mb-4 text-gradient">Add New Colleague</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <input type="text" id="new-employee-name" placeholder="Colleague's Name"
-                                    class="w-full p-3 border rounded-md focus-ring transition-all">
-                                <input type="number" id="new-employee-staff-number" placeholder="Staff Number"
-                                    class="w-full p-3 border rounded-md focus-ring transition-all">
-                            </div>
-                            <div class="mb-4">
-                                <p class="text-sm text-gray-600 mb-2">Select default working days:</p>
-                                <div id="work-day-checkboxes"
-                                    class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-sm">
-                                    <!-- Checkboxes will be inserted here by JS -->
-                                </div>
-                            </div>
-                            <button id="add-employee-btn"
-                                class="w-full btn-primary py-3 rounded-md transition-all disabled:opacity-50 hover-lift">
-                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Add Colleague
-                            </button>
-                            <p id="add-employee-error" class="text-red-500 text-sm mt-2 text-center h-5"></p>
-                        </div>
+                    <div id="add-colleague-section" class="hidden">
+                        <!-- Removed inline form, moved to modal -->
                     </div>
                     <!-- Main Content Area -->
                     <div>
@@ -1492,6 +1481,57 @@ Mountain Villa, Sintra Hills, V4"
                     <button id="advanced-property-save-btn" class="px-6 py-2 btn-primary rounded-md hidden">Save
                         Property</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="add-employee-modal"
+        class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+        <div class="relative w-full max-w-lg shadow-lg rounded-xl bg-white modal-content">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 class="text-xl leading-6 font-medium text-gray-900">Add New Colleague</h3>
+                <button id="add-employee-close-btn"
+                    class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                        <input type="text" id="new-employee-name" placeholder="Colleague's Name"
+                            class="w-full p-3 border rounded-md focus-ring transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Staff Number</label>
+                        <input type="number" id="new-employee-staff-number" placeholder="Staff Number"
+                            class="w-full p-3 border rounded-md focus-ring transition-all">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <p class="text-sm font-medium text-gray-700 mb-3">Default Working Days *</p>
+                    <div id="work-day-checkboxes" class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-sm">
+                        <!-- Checkboxes will be inserted here by JS -->
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button id="add-employee-cancel-btn"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                    <button id="add-employee-btn"
+                        class="px-6 py-2 btn-primary rounded-md transition-all disabled:opacity-50 hover-lift">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Colleague
+                    </button>
+                </div>
+                <p id="add-employee-error" class="text-red-500 text-sm mt-4 text-center h-5"></p>
             </div>
         </div>
     </div>

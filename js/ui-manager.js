@@ -5,24 +5,24 @@ export class UIManager {
         this.dataManager = dataManager;
         this.holidayCalculator = holidayCalculator;
         this.pdfGenerator = pdfGenerator;
-        
+
         // Set up data change callback
         this.dataManager.setOnDataChangeCallback(() => {
             this.updateView();
-            
+
             // Refresh day details modal if it's open
             if (document.getElementById('day-details-modal').classList.contains('hidden') === false) {
                 this.showDayDetailsModal(this.dataManager.getSelectedDateKey());
             }
         });
-        
+
 
     }
 
     populateDayCheckboxes() {
         const container = document.getElementById('work-day-checkboxes');
         if (!container) return;
-        
+
         container.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
             <label class="p-1 border rounded-md cursor-pointer">
                 <input type="checkbox" value="${index}" class="sr-only work-day-checkbox">
@@ -36,13 +36,13 @@ export class UIManager {
     renderEmployeeList() {
         const listContainer = document.getElementById('employee-list');
         if (!listContainer) return;
-        
+
         const activeEmployees = this.dataManager.getActiveEmployees();
         if (activeEmployees.length === 0) {
             listContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active colleagues.</p>`;
             return;
         }
-        
+
         const year = this.dataManager.getCurrentDate().getFullYear();
         const currentView = this.dataManager.getCurrentView();
         if (currentView === 'vacation') {
@@ -90,7 +90,7 @@ export class UIManager {
             }).join('');
             return;
         }
-        
+
         listContainer.innerHTML = activeEmployees.map(emp => {
             let stats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
             const currentView = this.dataManager.getCurrentView();
@@ -107,15 +107,15 @@ export class UIManager {
                     if (status === 'On Vacation') stats.vacation++;
                     else if (status === 'Working') stats.worked++;
                     else if (status === 'Absent') stats.absent++;
-                    else stats.off++; 
+                    else stats.off++;
 
                     const dateKey = this.dataManager.getDateKey(date);
-                    if(emp.extraHours && emp.extraHours[dateKey]) {
+                    if (emp.extraHours && emp.extraHours[dateKey]) {
                         stats.extraHours += emp.extraHours[dateKey];
                     }
                 }
             }
-            
+
             return `
                 <div class="employee-card bg-gray-100 rounded-lg p-4 hover-lift">
                     <div class="employee-card-main" data-employee-id="${emp.id}">
@@ -163,11 +163,11 @@ export class UIManager {
     renderCalendarGrid() {
         const month = this.dataManager.getCurrentDate().getMonth();
         const year = this.dataManager.getCurrentDate().getFullYear();
-        
+
         // Force re-initialization of holidays to ensure they're loaded
         this.dataManager.holidays[year] = this.dataManager.getHolidays(year);
         let currentYearHolidays = this.dataManager.holidays[year] || {};
-        
+
         // Verify holidays are loaded
         if (Object.keys(currentYearHolidays).length === 0) {
             this.dataManager.holidays[year] = this.dataManager.getHolidays(year);
@@ -175,25 +175,25 @@ export class UIManager {
         }
 
         const grid = document.getElementById('calendar-grid');
-        if(!grid) return;
+        if (!grid) return;
         grid.innerHTML = '';
         Config.DAYS_OF_WEEK.forEach(day => grid.innerHTML += `<div class="text-center font-bold text-gray-500 text-sm">${day}</div>`);
-        
+
         const firstDayIndex = new Date(year, month, 1).getDay();
         for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-        
+
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateKey = this.dataManager.getDateKey(date);
             const holidayName = currentYearHolidays[dateKey];
-            
 
-            
-            const workingCount = this.dataManager.getActiveEmployees().filter(emp => 
+
+
+            const workingCount = this.dataManager.getActiveEmployees().filter(emp =>
                 this.dataManager.getEmployeeStatusForDate(emp, date) === 'Working'
             ).length;
-            
+
             const dayCell = document.createElement('div');
             dayCell.className = `day-cell p-2 border rounded-lg flex flex-col items-center justify-center h-24 sm:h-28 relative`;
             if ([0, 6].includes(date.getDay()) && !holidayName) dayCell.classList.add('bg-gray-50');
@@ -235,12 +235,12 @@ export class UIManager {
             grid.appendChild(dayCell);
         }
     }
-    
+
     renderYearlySummary() {
         const year = this.dataManager.getCurrentDate().getFullYear();
         const container = document.getElementById('yearly-summary-container');
-        if(!container) return;
-        
+        if (!container) return;
+
         let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-sm text-left">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                                 <tr><th class="px-4 py-3">Month</th><th class="px-4 py-3">Worked</th><th class="px-4 py-3">Vacation</th><th class="px-4 py-3">Off</th><th class="px-4 py-3">Absent</th><th class="px-4 py-3">Extra Hours</th></tr>
@@ -259,7 +259,7 @@ export class UIManager {
                     else monthStats.off++;
 
                     const dateKey = this.dataManager.getDateKey(date);
-                    if(emp.extraHours && emp.extraHours[dateKey]) {
+                    if (emp.extraHours && emp.extraHours[dateKey]) {
                         monthStats.extraHours += emp.extraHours[dateKey];
                     }
                 });
@@ -398,11 +398,11 @@ export class UIManager {
             calendarWrapper._calendarInstance = calendar;
         }
     }
-    
+
     renderReorderList() {
         const container = document.getElementById('reorder-list-container');
-        if(!container) return;
-        
+        if (!container) return;
+
         container.innerHTML = `<div class="space-y-2">${this.dataManager.getActiveEmployees().map(emp => `
             <div class="draggable bg-white p-4 rounded-lg shadow flex items-center" draggable="true" data-employee-id="${emp.id}">
                 <svg class="w-5 h-5 text-gray-400 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -425,17 +425,17 @@ export class UIManager {
             </div>
         `).join('')}</div><p class="text-center text-sm text-gray-500 mt-4">Drag and drop to reorder the list. Edit or archive colleagues as needed.</p>`;
     }
-    
+
     renderHistoryList() {
         const container = document.getElementById('history-container');
-        if(!container) return;
-        
+        if (!container) return;
+
         const archivedEmployees = this.dataManager.getArchivedEmployees();
         if (archivedEmployees.length === 0) {
             container.innerHTML = `<p class="text-center text-gray-500 italic">No colleagues in the archive.</p>`;
             return;
         }
-        
+
         container.innerHTML = `<div class="space-y-2">${archivedEmployees.map(emp => `
             <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
                 <span class="font-medium text-gray-500">${emp.name}</span>
@@ -459,7 +459,7 @@ export class UIManager {
         const [year, month, day] = dateKey.split('-').map(Number);
         const date = new Date(year, month - 1, day);
         document.getElementById('modal-date-header').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        
+
         const listContainer = document.getElementById('modal-employee-list');
         listContainer.innerHTML = this.dataManager.getActiveEmployees().map(emp => {
             const onVacation = this.dataManager.isDateInVacation(date, emp.vacations);
@@ -468,7 +468,7 @@ export class UIManager {
             const isScheduled = emp.workDays.includes(date.getDay());
             const defaultStatusText = isScheduled ? "Working" : "Off";
             let effectiveStatus = currentStatus;
-            
+
             // If no override exists, use the default status based on schedule
             if (currentStatus === 'Scheduled Off' || (currentStatus === 'Working' && isScheduled && !emp.overrides[dateKey])) effectiveStatus = defaultStatusText;
 
@@ -482,13 +482,13 @@ export class UIManager {
                         ${status}
                     </label>
                 </div>`).join('');
-            
+
             const extraHours = (emp.extraHours && emp.extraHours[dateKey]) || '';
             const extraHoursNote = (emp.extraHoursNotes && emp.extraHoursNotes[dateKey]) || '';
 
             let statusText = '';
-            if(onVacation) statusText = '<span class="text-blue-600 font-normal text-sm">(On Vacation)</span>';
-            if(isHoliday) statusText = `<span class="text-yellow-600 font-normal text-sm">(Holiday: ${this.dataManager.getAllHolidays()[year][dateKey]})</span>`;
+            if (onVacation) statusText = '<span class="text-blue-600 font-normal text-sm">(On Vacation)</span>';
+            if (isHoliday) statusText = `<span class="text-yellow-600 font-normal text-sm">(Holiday: ${this.dataManager.getAllHolidays()[year][dateKey]})</span>`;
 
             return `
                 <div class="p-4 rounded-lg ${onVacation ? 'bg-blue-50' : (isHoliday ? 'bg-yellow-50' : 'bg-gray-50')}">
@@ -522,9 +522,9 @@ export class UIManager {
         const modal = document.getElementById('employee-summary-modal');
         const header = document.getElementById('employee-summary-header');
         const content = document.getElementById('employee-summary-content');
-        
-        const period = (this.dataManager.getCurrentView() === 'monthly') ? 
-            Config.MONTHS_OF_YEAR[this.dataManager.getCurrentDate().getMonth()] + " " + this.dataManager.getCurrentDate().getFullYear() : 
+
+        const period = (this.dataManager.getCurrentView() === 'monthly') ?
+            Config.MONTHS_OF_YEAR[this.dataManager.getCurrentDate().getMonth()] + " " + this.dataManager.getCurrentDate().getFullYear() :
             "Year " + this.dataManager.getCurrentDate().getFullYear();
         header.textContent = `${emp.name} - Summary for ${period}`;
 
@@ -542,7 +542,7 @@ export class UIManager {
                 const dateKey = this.dataManager.getDateKey(date);
                 const hours = emp.extraHours ? emp.extraHours[dateKey] : null;
                 const note = emp.extraHoursNotes ? emp.extraHoursNotes[dateKey] : null;
-                
+
                 if (hours || note) {
                     hasEntries = true;
                     detailsHTML += `
@@ -571,9 +571,9 @@ export class UIManager {
         const modal = document.getElementById('edit-working-days-modal');
         const header = document.getElementById('edit-working-days-header');
         const container = document.getElementById('edit-work-day-checkboxes');
-        
+
         header.textContent = `Edit Working Days - ${emp.name}`;
-        
+
         // Populate checkboxes with current working days
         container.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
             <label class="p-1 border rounded-md cursor-pointer">
@@ -581,7 +581,7 @@ export class UIManager {
                 <span class="block p-1">${day}</span>
             </label>
         `).join('');
-        
+
         // Store the employee ID for the save function
         modal.dataset.employeeId = employeeId;
         modal.classList.remove('hidden');
@@ -593,9 +593,9 @@ export class UIManager {
 
         const modal = document.getElementById('edit-employee-modal');
         const header = document.getElementById('edit-employee-header');
-        
+
         header.textContent = `Edit Colleague Information - ${emp.name}`;
-        
+
         // Populate form fields with current employee data
         document.getElementById('edit-employee-name').value = emp.name || '';
         document.getElementById('edit-employee-staff-number').value = emp.staffNumber || '';
@@ -607,7 +607,7 @@ export class UIManager {
         document.getElementById('edit-employee-employment-type').value = emp.employmentType || '';
         document.getElementById('edit-employee-shift').value = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
         document.getElementById('edit-employee-notes').value = emp.notes || '';
-        
+
         // Populate working days checkboxes
         const workDaysContainer = document.getElementById('edit-employee-work-days');
         workDaysContainer.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
@@ -616,10 +616,10 @@ export class UIManager {
                 <span class="block p-1">${day}</span>
             </label>
         `).join('');
-        
+
         // Clear any previous error messages
         document.getElementById('edit-employee-error').textContent = '';
-        
+
         // Store the employee ID for the save function
         modal.dataset.employeeId = employeeId;
         modal.classList.remove('hidden');
@@ -629,18 +629,18 @@ export class UIManager {
         // Force holiday initialization before any rendering
         const year = this.dataManager.getCurrentDate().getFullYear();
         this.dataManager.ensureHolidaysForYear(year);
-        
+
         // Also ensure adjacent years are loaded
         this.dataManager.ensureHolidaysForYear(year - 1);
         this.dataManager.ensureHolidaysForYear(year + 1);
-        
+
         this.renderEmployeeList();
-        
+
         const monthName = this.dataManager.getCurrentDate().toLocaleString('default', { month: 'long' });
-        
+
         const viewHeader = document.getElementById('view-header');
         const summaryTitle = document.getElementById('summary-title');
-        
+
         const mainViews = {
             calendar: document.getElementById('calendar-grid'),
             yearly: document.getElementById('yearly-summary-container'),
@@ -655,8 +655,9 @@ export class UIManager {
 
         const currentView = this.dataManager.getCurrentView();
         const showSidePanel = ['monthly', 'yearly', 'vacation'].includes(currentView);
-        const leftPanel = document.getElementById('summary-title')?.parentElement;
+        const leftPanel = document.getElementById('schedule-side-panel');
         if (leftPanel) leftPanel.style.display = showSidePanel ? '' : 'none';
+
         // Center single-column views by adjusting grid template columns
         const gridContainer = document.querySelector('#main-app .grid');
         if (gridContainer) {
@@ -671,10 +672,14 @@ export class UIManager {
                 gridContainer.classList.remove('lg:grid-cols-3');
             }
         }
-        document.getElementById('summary-title').style.display = showSidePanel ? '' : 'none';
-        document.getElementById('employee-list').style.display = showSidePanel ? '' : 'none';
-        // Only allow adding colleagues in the Reorder/List management view
-        document.getElementById('add-colleague-section').style.display = (currentView === 'reorder') ? '' : 'none';
+        // No longer need to hide summary-title separately as it is inside the side panel
+        // document.getElementById('employee-list').style.display = showSidePanel ? '' : 'none'; // Inside side panel too
+
+        // Only allow adding colleagues in the Reorder/List management view (Legacy check, maybe removable?)
+        const addColleagueSection = document.getElementById('add-colleague-section');
+        if (addColleagueSection) {
+            addColleagueSection.style.display = (currentView === 'reorder') ? '' : 'none';
+        }
 
         const showCalendarControls = ['monthly', 'yearly'].includes(currentView);
         document.getElementById('calendar-controls').style.display = showCalendarControls ? 'flex' : 'none';
@@ -707,26 +712,44 @@ export class UIManager {
             this.renderHistoryList();
         }
     }
-    
+
     switchView(view) {
         const currentView = this.dataManager.getCurrentView();
         const currentDate = this.dataManager.getCurrentDate();
-        
-        if(currentView === 'yearly' && view === 'monthly') {
-           this.dataManager.setCurrentDate(new Date(this.dataManager.lastMonthlyDate.getTime()));
-        } else if(currentView === 'monthly' && view === 'yearly') {
-           this.dataManager.lastMonthlyDate = new Date(currentDate.getTime());
+
+        if (currentView === 'yearly' && view === 'monthly') {
+            this.dataManager.setCurrentDate(new Date(this.dataManager.lastMonthlyDate.getTime()));
+        } else if (currentView === 'monthly' && view === 'yearly') {
+            this.dataManager.lastMonthlyDate = new Date(currentDate.getTime());
         }
-        
+
         this.dataManager.setCurrentView(view);
-        
-        document.getElementById('monthly-view-btn').classList.toggle('active', view === 'monthly');
-        document.getElementById('yearly-view-btn').classList.toggle('active', view === 'yearly');
-        document.getElementById('madeira-holidays-view-btn').classList.toggle('active', view === 'madeira-holidays');
-        document.getElementById('vacation-view-btn').classList.toggle('active', view === 'vacation');
-        document.getElementById('reorder-view-btn').classList.toggle('active', view === 'reorder');
-        document.getElementById('history-view-btn').classList.toggle('active', view === 'history');
-        
+
+        // Update button styles
+        const buttons = [
+            { id: 'monthly-view-btn', view: 'monthly' },
+            { id: 'yearly-view-btn', view: 'yearly' },
+            { id: 'madeira-holidays-view-btn', view: 'madeira-holidays' },
+            { id: 'vacation-view-btn', view: 'vacation' },
+            { id: 'reorder-view-btn', view: 'reorder' },
+            { id: 'history-view-btn', view: 'history' }
+        ];
+
+        buttons.forEach(btn => {
+            const el = document.getElementById(btn.id);
+            if (el) {
+                if (btn.view === view) {
+                    // Active state
+                    el.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
+                    el.classList.remove('text-gray-600', 'hover:text-gray-900');
+                } else {
+                    // Inactive state
+                    el.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
+                    el.classList.add('text-gray-600', 'hover:text-gray-900');
+                }
+            }
+        });
+
         this.updateView();
     }
 
@@ -735,7 +758,7 @@ export class UIManager {
         document.getElementById('confirm-modal-title').textContent = title;
         document.getElementById('confirm-modal-text').textContent = text;
         modal.classList.remove('hidden');
-        
+
         const confirmOk = document.getElementById('confirm-modal-ok-btn');
         const confirmCancel = document.getElementById('confirm-modal-cancel-btn');
 
@@ -751,14 +774,14 @@ export class UIManager {
             confirmOk.removeEventListener('click', okListener);
             confirmCancel.removeEventListener('click', cancelListener);
         };
-        
+
         confirmOk.addEventListener('click', okListener);
         confirmCancel.addEventListener('click', cancelListener);
     }
 
     renderMadeiraHolidays() {
         const container = document.getElementById('madeira-holidays-container');
-        
+
         const publicHolidays = [
             { name: "New Year's Day", date: "January 1" },
             { name: "Epiphany", date: "January 6" },
@@ -884,7 +907,7 @@ export class UIManager {
         container.addEventListener('click', (e) => {
             if (e.target.classList.contains('madeira-tab-btn')) {
                 const tabName = e.target.dataset.tab;
-                
+
                 // Update tab buttons
                 container.querySelectorAll('.madeira-tab-btn').forEach(btn => {
                     btn.classList.remove('active', 'border-yellow-500', 'text-yellow-600');
@@ -892,7 +915,7 @@ export class UIManager {
                 });
                 e.target.classList.add('active', 'border-yellow-500', 'text-yellow-600');
                 e.target.classList.remove('border-transparent', 'text-gray-500');
-                
+
                 // Update tab content
                 container.querySelectorAll('.madeira-tab-content').forEach(content => {
                     content.classList.add('hidden');
