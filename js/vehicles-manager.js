@@ -186,6 +186,21 @@ export class VehiclesManager {
     const stats = this.getStats();
 
     root.innerHTML = `
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-4">
+              <button id="veh-back-btn" class="group p-2 -ml-2 text-gray-500 hover:text-gray-900 rounded-full transition-colors">
+                  <div class="w-8 h-8 flex items-center justify-center rounded-full group-hover:bg-gray-100 transition-colors">
+                      <i class="fas fa-arrow-left text-lg"></i>
+                  </div>
+              </button>
+              <div>
+                  <h1 class="text-2xl font-bold text-gray-900">Vehicles</h1>
+                  <p class="text-sm text-gray-500">Fleet Management</p>
+              </div>
+          </div>
+      </div>
+
       <!-- Dashboard Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg transform hover:scale-[1.02] transition-transform">
@@ -273,6 +288,12 @@ export class VehiclesManager {
     root.querySelector('#veh-btn-add').onclick = () => this.openEditModal(); // no ID means add
     root.querySelector('#veh-search').oninput = (e) => { this.searchQuery = e.target.value; this.render(); };
     root.querySelector('#veh-filter-cat').onchange = (e) => { this.currentCategoryFilter = e.target.value; this.render(); };
+
+    // Wire Back Button
+    root.querySelector('#veh-back-btn').onclick = () => {
+      document.getElementById('vehicles-page').classList.add('hidden');
+      document.getElementById('landing-page').classList.remove('hidden');
+    };
   }
 
   renderCard(v) {
