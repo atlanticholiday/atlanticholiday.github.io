@@ -46,6 +46,7 @@ export class ScheduleManager {
         const bookVacationCancel = document.getElementById('book-vacation-cancel-btn');
         const bookVacationSave = document.getElementById('book-vacation-save-btn');
         const bookVacationModal = document.getElementById('book-vacation-modal');
+        const bookVacationDelete = document.getElementById('book-vacation-delete-btn');
 
         const closeBookVacationModal = () => {
             if (bookVacationModal) bookVacationModal.classList.add('hidden');
@@ -55,6 +56,7 @@ export class ScheduleManager {
 
         if (bookVacationClose) bookVacationClose.addEventListener('click', closeBookVacationModal);
         if (bookVacationCancel) bookVacationCancel.addEventListener('click', closeBookVacationModal);
+        if (bookVacationDelete) bookVacationDelete.addEventListener('click', () => this.handleDeleteVacation());
         if (bookVacationSave) bookVacationSave.addEventListener('click', () => this.handleBookVacation());
 
         // View Toggles
@@ -168,8 +170,18 @@ export class ScheduleManager {
                     this.openBookVacationModal(info.startStr, info.endStr ? new Date(new Date(info.endStr).setDate(new Date(info.endStr).getDate() - 1)).toISOString().split('T')[0] : info.startStr);
                 },
                 eventClick: (info) => {
-                    // Opt: Open edit modal? For now, just maybe alert or log
-                    // console.log("Clicked vacation for", info.event.title);
+                    const { employeeId, vacationIndex } = info.event.extendedProps;
+
+                    // Adjust end date back by 1 day because FullCalendar is exclusive on end dates for allDay events
+                    const endDate = new Date(info.event.end);
+                    endDate.setDate(endDate.getDate() - 1);
+
+                    this.openBookVacationModal(
+                        info.event.startStr,
+                        endDate.toISOString().split('T')[0],
+                        employeeId,
+                        vacationIndex
+                    );
                 },
                 height: 'auto'
             });
@@ -181,11 +193,14 @@ export class ScheduleManager {
         // Sort all vacations by start date logic could go here
     }
 
-    openBookVacationModal(startDateStr = '', endDateStr = '') {
+    openBookVacationModal(startDateStr = '', endDateStr = '', employeeId = null, vacationIndex = null) {
         const modal = document.getElementById('book-vacation-modal');
         const select = document.getElementById('vacation-employee-select');
         const startInput = document.getElementById('vacation-start-date');
         const endInput = document.getElementById('vacation-end-date');
+        const saveBtn = document.getElementById('book-vacation-save-btn');
+        const deleteBtn = document.getElementById('book-vacation-delete-btn');
+        const title = modal.querySelector('h3');
 
         // Populate dropdown
         const employees = this.dataManager.getActiveEmployees();
@@ -194,14 +209,36 @@ export class ScheduleManager {
         if (startDateStr) startInput.value = startDateStr;
         if (endDateStr) endInput.value = endDateStr;
 
+        // Reset state
+        modal.dataset.editing = 'false';
+        delete modal.dataset.employeeId;
+        delete modal.dataset.vacationIndex;
+        select.disabled = false;
+        saveBtn.textContent = 'Schedule Vacation';
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+        if (title) title.textContent = 'Book Vacation';
+
+        // Edit Mode
+        if (employeeId && vacationIndex !== null && vacationIndex !== undefined) {
+            modal.dataset.editing = 'true';
+            modal.dataset.employeeId = employeeId;
+            modal.dataset.vacationIndex = vacationIndex;
+            select.value = employeeId;
+            select.disabled = true; // Don't switch employee when editing specific vacation
+            saveBtn.textContent = 'Update Vacation';
+            if (deleteBtn) deleteBtn.classList.remove('hidden');
+            if (title) title.textContent = 'Edit Vacation';
+        }
+
         modal.classList.remove('hidden');
     }
 
     async handleBookVacation() {
-        const employeeId = document.getElementById('vacation-employee-select').value;
+        const modal = document.getElementById('book-vacation-modal');
+        const select = document.getElementById('vacation-employee-select');
+        const employeeId = select.value;
         const startDate = document.getElementById('vacation-start-date').value;
         const endDate = document.getElementById('vacation-end-date').value;
-        const modal = document.getElementById('book-vacation-modal');
 
         if (!employeeId || !startDate || !endDate) {
             alert("Please select a colleague and dates.");
@@ -209,7 +246,15 @@ export class ScheduleManager {
         }
 
         try {
-            await this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
+            if (modal.dataset.editing === 'true') {
+                const originalEmployeeId = modal.dataset.employeeId;
+                const vacationIndex = parseInt(modal.dataset.vacationIndex);
+                // In case for some reason select value is different (though disabled), use original
+                await this.dataManager.handleUpdateVacation(originalEmployeeId, vacationIndex, startDate, endDate);
+            } else {
+                await this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
+            }
+
             modal.classList.add('hidden');
             this.renderVacationPlanner(); // Refresh view
             if (this.uiManager.currentView === 'vacation') {
@@ -217,7 +262,26 @@ export class ScheduleManager {
             }
         } catch (e) {
             console.error(e);
-            alert("Failed to book vacation.");
+            alert("Failed to save vacation.");
+        }
+    }
+
+    async handleDeleteVacation() {
+        const modal = document.getElementById('book-vacation-modal');
+        if (modal.dataset.editing !== 'true') return;
+
+        const employeeId = modal.dataset.employeeId;
+        const vacationIndex = parseInt(modal.dataset.vacationIndex);
+
+        if (confirm("Are you sure you want to delete this vacation?")) {
+            try {
+                await this.dataManager.handleDeleteVacation(employeeId, vacationIndex);
+                modal.classList.add('hidden');
+                this.renderVacationPlanner();
+            } catch (e) {
+                console.error(e);
+                alert("Failed to delete vacation.");
+            }
         }
     }
 }
