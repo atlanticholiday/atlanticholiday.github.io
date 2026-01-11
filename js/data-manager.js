@@ -14,7 +14,7 @@ export class DataManager {
         this.currentView = 'monthly';
         this.unsubscribe = null;
         this.onDataChangeCallback = null;
-        
+
         // Initialize holidays for current year immediately
         this.initializeHolidays();
     }
@@ -25,7 +25,7 @@ export class DataManager {
 
     initializeHolidays() {
         const currentYear = new Date().getFullYear();
-        
+
         // Initialize holidays for current year and adjacent years
         this.holidays[currentYear - 1] = this.getHolidays(currentYear - 1);
         this.holidays[currentYear] = this.getHolidays(currentYear);
@@ -50,14 +50,14 @@ export class DataManager {
                 docChanges: snapshot.docChanges().length,
                 isFirstLoad: snapshot.docChanges().every(change => change.type === 'added')
             });
-            
+
             const allEmployees = snapshot.docs
                 .filter(doc => doc.id !== 'metadata')
                 .map(doc => ({ id: doc.id, ...doc.data() }));
-            
+
             console.log(`👥 [FIRESTORE READ] Processed ${allEmployees.length} employees (filtered out metadata doc)`);
-            
-            if (allEmployees.length === 0 && snapshot.docs.length <= 1) { 
+
+            if (allEmployees.length === 0 && snapshot.docs.length <= 1) {
                 // Dispatch event instead of directly showing setup screen
                 const event = new CustomEvent('noEmployeesFound');
                 document.dispatchEvent(event);
@@ -69,11 +69,11 @@ export class DataManager {
 
             this.activeEmployees.sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity));
             this.archivedEmployees.sort((a, b) => a.name.localeCompare(b.name));
-            
+
             const year = this.currentDate.getFullYear();
             if (!this.holidays[year]) this.holidays[year] = this.getHolidays(year);
-            if (!this.holidays[year+1]) this.holidays[year+1] = this.getHolidays(year+1);
-            if (!this.holidays[year-1]) this.holidays[year-1] = this.getHolidays(year-1);
+            if (!this.holidays[year + 1]) this.holidays[year + 1] = this.getHolidays(year + 1);
+            if (!this.holidays[year - 1]) this.holidays[year - 1] = this.getHolidays(year - 1);
 
             if (this.onDataChangeCallback) {
                 this.onDataChangeCallback();
@@ -84,16 +84,16 @@ export class DataManager {
     // Removed showSetupScreen - navigation is now handled by NavigationManager
 
     async addEmployee(name, staffNumber, workDays) {
-        const newEmployeeData = { 
-            name, 
+        const newEmployeeData = {
+            name,
             staffNumber: staffNumber || null,
-            workDays, 
+            workDays,
             displayOrder: this.activeEmployees.length,
             isArchived: false,
             shifts: { default: '9:00-18:00' },
-            overrides: {}, 
-            extraHours: {}, 
-            extraHoursNotes: {}, 
+            overrides: {},
+            extraHours: {},
+            extraHoursNotes: {},
             vacations: [],
             // Additional fields for employee information
             email: null,
@@ -106,7 +106,7 @@ export class DataManager {
         };
         return await addDoc(this.getEmployeesCollectionRef(), newEmployeeData);
     }
-    
+
     async handleStatusChange(employeeId, dateKey, newStatus) {
         const docRef = doc(this.db, "employees", employeeId);
         const fieldPath = `overrides.${dateKey}`;
@@ -121,7 +121,7 @@ export class DataManager {
         const updateData = (isNaN(hoursValue) || hoursValue <= 0) ? { [fieldPath]: deleteField() } : { [fieldPath]: hoursValue };
         await updateDoc(docRef, updateData).catch(e => console.error("Extra hours update failed:", e));
     }
-    
+
     async handleExtraHoursNotesChange(employeeId, dateKey, note) {
         const docRef = doc(this.db, "employees", employeeId);
         const fieldPath = `extraHoursNotes.${dateKey}`;
@@ -137,20 +137,20 @@ export class DataManager {
         }
         const empDoc = this.activeEmployees.find(e => e.id === employeeId);
         if (!empDoc) return;
-        
+
         const newVacation = { startDate, endDate };
         const updatedVacations = [...(empDoc.vacations || []), newVacation];
 
         const docRef = doc(this.db, "employees", employeeId);
         await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to schedule vacation", e));
     }
-    
+
     async handleDeleteVacation(employeeId, vacationIndex) {
         const empDoc = this.activeEmployees.find(e => e.id === employeeId);
         if (!empDoc || !empDoc.vacations) return;
-        
+
         const updatedVacations = empDoc.vacations.filter((_, index) => index !== vacationIndex);
-        
+
         const docRef = doc(this.db, "employees", employeeId);
         await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to delete vacation", e));
     }
@@ -164,7 +164,7 @@ export class DataManager {
         const docRef = doc(this.db, "employees", employeeId);
         await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to update vacation", e));
     }
-    
+
     async saveNewOrder() {
         const reorderedIds = [...document.querySelectorAll('#reorder-list-container .draggable')].map(el => el.dataset.employeeId);
         const updates = reorderedIds.map((id, index) => {
@@ -191,19 +191,19 @@ export class DataManager {
 
     async updateEmployee(employeeId, updatedData) {
         const docRef = doc(this.db, "employees", employeeId);
-        
+
         // Validate required fields
         if (!updatedData.name || updatedData.name.trim() === '') {
             throw new Error('Name is required');
         }
-        
+
         // Clean up the data - remove empty strings and set appropriate defaults
         const cleanData = {};
-        
+
         // Required fields
         cleanData.name = updatedData.name.trim();
         cleanData.workDays = updatedData.workDays || [];
-        
+
         // Optional fields - only include if they have values
         if (updatedData.staffNumber && updatedData.staffNumber.trim() !== '') {
             cleanData.staffNumber = parseInt(updatedData.staffNumber.trim()) || null;
@@ -229,12 +229,12 @@ export class DataManager {
         if (updatedData.notes && updatedData.notes.trim() !== '') {
             cleanData.notes = updatedData.notes.trim();
         }
-        
+
         // Handle shifts object
         if (updatedData.defaultShift && updatedData.defaultShift.trim() !== '') {
             cleanData.shifts = { default: updatedData.defaultShift.trim() };
         }
-        
+
         await updateDoc(docRef, cleanData).catch(e => {
             console.error("Employee update failed:", e);
             throw e;
@@ -253,24 +253,37 @@ export class DataManager {
         }
 
         const easter = getEaster(year);
+
+        // Helper to add days to a date
+        const addDays = (date, days) => {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        };
+
+        const carnival = addDays(easter, -47);
+        const goodFriday = addDays(easter, -2);
+        const corpusChristi = addDays(easter, 60);
+
         const holidays = [
             { m: 1, d: 1, name: "New Year's Day" },
-            { m: 1, d: 6, name: "Epiphany" },
-            { date: new Date(easter.getTime() - 2 * 86400000), name: "Good Friday" },
+            { date: carnival, name: "Carnival Tuesday" },
+            { date: goodFriday, name: "Good Friday" },
             { date: easter, name: "Easter Sunday" },
-            { m: 4, d: 2, name: "Madeira's Autonomy Day" },
+            { m: 4, d: 2, name: "Madeira's Autonomy Day" }, // This is technically regional but often optional? Keeping as per request for Madeira
             { m: 4, d: 25, name: "Freedom Day" },
             { m: 5, d: 1, name: "Labour Day" },
+            { date: corpusChristi, name: "Corpus Christi" },
             { m: 6, d: 10, name: "Portugal Day" },
             { m: 7, d: 1, name: "Madeira Day" },
             { m: 8, d: 15, name: "Assumption of Mary" },
-            { m: 8, d: 21, name: "Funchal Day" },
+            { m: 8, d: 21, name: "Funchal City Day" }, // Kept as it was in original list
             { m: 10, d: 5, name: "Republic Day" },
             { m: 11, d: 1, name: "All Saints' Day" },
             { m: 12, d: 1, name: "Restoration of Independence" },
             { m: 12, d: 8, name: "Immaculate Conception" },
             { m: 12, d: 25, name: "Christmas Day" },
-            { m: 12, d: 26, name: "Boxing Day" }
+            { m: 12, d: 26, name: "Boxing Day" } // Primeira Oitava
         ];
 
         const holidayMap = {};
@@ -279,7 +292,7 @@ export class DataManager {
             const key = this.getDateKey(date);
             holidayMap[key] = h.name;
         });
-        
+
         return holidayMap;
     }
 
@@ -290,7 +303,7 @@ export class DataManager {
 
     isDateInVacation(date, vacations) {
         if (!vacations || vacations.length === 0) return false;
-        const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); 
+        const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         for (const vac of vacations) {
             const startDate = new Date(vac.startDate);
             const endDate = new Date(vac.endDate);
@@ -306,10 +319,10 @@ export class DataManager {
 
         if (this.isDateInVacation(date, employee.vacations)) return 'On Vacation';
         if (employee.overrides && employee.overrides[dateKey]) return employee.overrides[dateKey];
-        
+
         // On holidays, default to 'Off' unless overridden
         if (isHoliday) return 'Off';
-        
+
         return employee.workDays.includes(date.getDay()) ? 'Working' : 'Scheduled Off';
     }
 

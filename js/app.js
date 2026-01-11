@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         holidayCalculator = new HolidayCalculator();
         pdfGenerator = new PDFGenerator();
         uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
+        scheduleManager = new ScheduleManager(dataManager, uiManager);
+        window.scheduleManager = scheduleManager;
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
         // Initialize Visits manager early so it can inject its page and landing button before nav listeners are wired
@@ -1711,6 +1713,8 @@ async function initializeScheduleApp() {
 
             if (loadingEl) loadingEl.classList.add('hidden');
             if (mainAppEl) mainAppEl.classList.remove('hidden');
+
+
 
             // Force UI refresh after a brief delay to ensure holidays are loaded
             setTimeout(() => {

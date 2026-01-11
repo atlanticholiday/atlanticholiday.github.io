@@ -1536,6 +1536,52 @@ Mountain Villa, Sintra Hills, V4"
         </div>
     </div>
 
+    <!-- Book Vacation Modal -->
+    <div id="book-vacation-modal"
+        class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+        <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white modal-content">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 class="text-xl leading-6 font-medium text-gray-900">Book Vacation</h3>
+                <button id="book-vacation-close-btn"
+                    class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Colleague</label>
+                    <select id="vacation-employee-select"
+                        class="w-full p-3 border rounded-md focus-ring transition-all">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                        <input type="date" id="vacation-start-date"
+                            class="w-full p-3 border rounded-md focus-ring transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                        <input type="date" id="vacation-end-date"
+                            class="w-full p-3 border rounded-md focus-ring transition-all">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button id="book-vacation-cancel-btn"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                    <button id="book-vacation-save-btn"
+                        class="px-6 py-2 btn-primary rounded-md transition-all hover-lift">
+                        Schedule Vacation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="operations-page" class="operations-page hidden min-h-screen bg-gray-50">
         <header class="dashboard-header">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">

@@ -277,127 +277,7 @@ export class UIManager {
         container.innerHTML = tableHTML + `</tbody></table></div>`;
     }
 
-    renderVacationPlanner() {
-        const container = document.getElementById('vacation-planner-container');
-        if (!container) return;
-
-        const employees = this.dataManager.getActiveEmployees();
-        const holidayMapAll = this.dataManager.getAllHolidays();
-
-        // ---- Calendar Wrapper Management ----
-        // Remove any previous toggle button
-        const existingToggle = document.getElementById('toggle-calendar-btn');
-        if (existingToggle) existingToggle.remove();
-
-        const existingWrapper = document.getElementById('vacation-calendar-wrapper');
-        if (existingWrapper) {
-            if (existingWrapper._calendarInstance) existingWrapper._calendarInstance.destroy();
-            existingWrapper.remove();
-        }
-
-        // ---- Build Colleague Vacation List ----
-        const listHTML = '<div class="space-y-6">' +
-            employees.map(emp => {
-                const indexedVacations = (emp.vacations || []).map((vac, idx) => ({ vac, idx }))
-                    .sort((a, b) => new Date(a.vac.startDate) - new Date(b.vac.startDate));
-
-                const vacationsHTML = indexedVacations.length > 0
-                    ? indexedVacations.map(({ vac, idx }) => {
-                        const start = new Date(vac.startDate);
-                        const end = new Date(vac.endDate);
-                        let daysCount = 0;
-                        let curr = new Date(vac.startDate);
-                        while (curr <= end) {
-                            const day = curr.getDay();
-                            const dateKey = this.dataManager.getDateKey(curr);
-                            const hols = holidayMapAll[curr.getFullYear()] || {};
-                            if (emp.workDays.includes(day) && !hols[dateKey]) daysCount++;
-                            curr.setDate(curr.getDate() + 1);
-                        }
-                        return `
-                            <div class="flex justify-between items-center bg-white p-2 rounded-md text-sm">
-                                <span>${daysCount} day${daysCount !== 1 ? 's' : ''}: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}</span>
-                                <div class="flex gap-2">
-                                    <button class="edit-vacation-btn text-blue-500 hover:text-blue-700" data-employee-id="${emp.id}" data-vacation-index="${idx}">Edit</button>
-                                    <button class="delete-vacation-btn text-red-500 hover:text-red-700" data-employee-id="${emp.id}" data-vacation-index="${idx}">Delete</button>
-                                </div>
-                            </div>`;
-                    }).join('')
-                    : '<p class="text-sm text-gray-500 italic">No vacations scheduled.</p>';
-
-                return `
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <h4 class="font-bold text-lg">${emp.name}</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-3">
-                            <input type="date" id="vacation-start-${emp.id}" class="p-2 border rounded-md focus:ring-1 focus:ring-brand">
-                            <input type="date" id="vacation-end-${emp.id}" class="p-2 border rounded-md focus:ring-1 focus:ring-brand">
-                            <button class="schedule-vacation-btn bg-brand text-white p-2 rounded-md hover:bg-brand-dark" data-employee-id="${emp.id}">Schedule</button>
-                        </div>
-                        <div class="mt-4 space-y-2">
-                            <h5 class="font-semibold text-sm">Scheduled Vacations:</h5>
-                            ${vacationsHTML}
-                        </div>
-                    </div>`;
-            }).join('') +
-            '</div>';
-
-        container.innerHTML = listHTML;
-
-        // ---- Toggle Calendar Visibility Button ----
-        if (this.vacationCalendarVisible === undefined) this.vacationCalendarVisible = true;
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'toggle-calendar-btn';
-        toggleBtn.className = 'btn-primary mb-4';
-        toggleBtn.textContent = this.vacationCalendarVisible ? 'Hide Calendar' : 'Show Calendar';
-        toggleBtn.addEventListener('click', () => {
-            this.vacationCalendarVisible = !this.vacationCalendarVisible;
-            this.renderVacationPlanner();
-        });
-        container.prepend(toggleBtn);
-
-        // ---- Create Calendar Wrapper ----
-        const calendarWrapper = document.createElement('div');
-        calendarWrapper.id = 'vacation-calendar-wrapper';
-        calendarWrapper.className = 'glass-effect p-4 rounded-lg shadow mb-6';
-        calendarWrapper.innerHTML = '<div id="vacation-calendar"></div>';
-        container.insertBefore(calendarWrapper, toggleBtn.nextSibling);
-        // Apply visibility based on state
-        calendarWrapper.style.display = this.vacationCalendarVisible ? '' : 'none';
-
-        // ---- Build Events Array ----
-        const events = [];
-        employees.forEach(emp => {
-            (emp.vacations || []).forEach(vac => {
-                const endPlusOne = new Date(vac.endDate);
-                endPlusOne.setDate(endPlusOne.getDate() + 1); // FullCalendar exclusive end
-                events.push({
-                    title: emp.name,
-                    start: vac.startDate,
-                    end: endPlusOne.toISOString().split('T')[0],
-                    allDay: true
-                });
-            });
-        });
-
-        // ---- Initialise FullCalendar ----
-        if (typeof FullCalendar !== 'undefined') {
-            const calendar = new FullCalendar.Calendar(document.getElementById('vacation-calendar'), {
-                initialView: 'dayGridMonth',
-                height: 'auto',
-                events,
-                headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-                dayMaxEvents: true,
-                eventColor: 'var(--brand-color)',
-                eventBackgroundColor: 'var(--brand-color)',
-                eventBorderColor: 'transparent',
-                eventTextColor: '#ffffff',
-                eventClassNames: 'vacation-event',
-            });
-            calendar.render();
-            // store instance for cleanup
-            calendarWrapper._calendarInstance = calendar;
-        }
-    }
+    // renderVacationPlanner moved to ScheduleManager
 
     renderReorderList() {
         const container = document.getElementById('reorder-list-container');
@@ -703,7 +583,9 @@ export class UIManager {
         } else if (currentView === 'vacation') {
             summaryTitle.textContent = "Vacation Summary";
             mainViews.vacation.classList.remove('hidden');
-            this.renderVacationPlanner();
+            if (window.scheduleManager) {
+                window.scheduleManager.renderVacationPlanner();
+            }
         } else if (currentView === 'reorder') {
             mainViews.reorder.classList.remove('hidden');
             this.renderReorderList();
@@ -784,16 +666,17 @@ export class UIManager {
 
         const publicHolidays = [
             { name: "New Year's Day", date: "January 1" },
-            { name: "Epiphany", date: "January 6" },
+            { name: "Carnival Tuesday", date: "Variable (February/March)" },
             { name: "Good Friday", date: "Variable (March/April)" },
             { name: "Easter Sunday", date: "Variable (March/April)" },
             { name: "Madeira's Autonomy Day", date: "April 2", badge: "Regional" },
             { name: "Freedom Day", date: "April 25" },
             { name: "Labour Day", date: "May 1" },
+            { name: "Corpus Christi", date: "Variable (May/June)" },
             { name: "Portugal Day", date: "June 10" },
             { name: "Madeira Day", date: "July 1", badge: "Regional" },
             { name: "Assumption of Mary", date: "August 15" },
-            { name: "Funchal Day", date: "August 21", badge: "Regional" },
+            { name: "Funchal City Day", date: "August 21", badge: "Regional" },
             { name: "Republic Day", date: "October 5" },
             { name: "All Saints' Day", date: "November 1" },
             { name: "Restoration of Independence", date: "December 1" },
@@ -803,7 +686,6 @@ export class UIManager {
         ];
 
         const culturalEvents = [
-            { name: "Carnival", date: "February/March (variable)", description: "Vibrant celebration with parades, costumes, and samba music" },
             { name: "Flower Festival", date: "April/May", description: "Celebrates spring with flower parades and the famous 'Wall of Hope'" },
             { name: "Atlantic Festival", date: "June (Saturdays)", description: "International fireworks competition at Funchal harbour" },
             { name: "Medieval Market (Machico)", date: "June 7-9", description: "Historic reenactment in Machico with period costumes and crafts" },
