@@ -58,7 +58,7 @@ export class ScheduleManager {
         if (bookVacationSave) bookVacationSave.addEventListener('click', () => this.handleBookVacation());
 
         // View Toggles
-        const views = ['monthly', 'yearly', 'madeira-holidays', 'vacation', 'reorder', 'history'];
+        const views = ['monthly', 'yearly', 'madeira-holidays', 'stats', 'vacation', 'reorder', 'history'];
         views.forEach(view => {
             const btn = document.getElementById(`${view}-view-btn`);
             if (btn) {

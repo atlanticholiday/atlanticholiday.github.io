@@ -163,6 +163,7 @@
         <div class="container mx-auto px-4 pt-8 pb-14 max-w-7xl">
             <!-- Primary apps -->
             <!-- Primary apps -->
+            <!-- Primary apps -->
             <h2 class="text-xl font-semibold text-gray-800 mb-4 px-2">Main Apps</h2>
             <div class="dashboard-grid mb-12">
                 <button id="go-to-schedule-btn" class="dashboard-card">
@@ -189,101 +190,133 @@
                 </button>
             </div>
 
-            <!-- Desactivated Section -->
-            <h2 class="text-xl font-semibold text-gray-500 mb-4 px-2">Desactivated</h2>
-            <div class="dashboard-grid opacity-60 grayscale-[50%] hover:grayscale-0 transition-all duration-300">
-                <button id="go-to-properties-btn" class="dashboard-card">
-                    <div class="card-icon bg-blue-500/10 text-blue-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>Properties</h3>
-                        <p>Manage short rentals and full inventory.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-allinfo-btn" class="dashboard-card">
-                    <div class="card-icon bg-rose-500/10 text-rose-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>All Info</h3>
-                        <p>See every property detail in one view.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-rnal-btn" class="dashboard-card">
-                    <div class="card-icon bg-orange-500/10 text-orange-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>RNAL</h3>
-                        <p>Process and manage RNAL data.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-checklists-btn" class="dashboard-card">
-                    <div class="card-icon bg-teal-500/10 text-teal-600">
-                        <i class="fas fa-clipboard-check"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Checklists</h3>
-                        <p>Standardize cleaning and property checks.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-owners-btn" class="dashboard-card">
-                    <div class="card-icon bg-amber-500/10 text-amber-600">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Owners</h3>
-                        <p>Owner information and payments.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-safety-btn" class="dashboard-card">
-                    <div class="card-icon bg-purple-500/10 text-purple-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>Safety</h3>
-                        <p>Fire extinguishers and first aid kits.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-reservations-btn" class="dashboard-card">
-                    <div class="card-icon bg-indigo-500/10 text-indigo-600">
-                        <i class="fas fa-calendar-week"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Weekly Reservations</h3>
-                        <p>Upload and browse weekly reservations.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-user-management-btn" class="dashboard-card">
-                    <div class="card-icon bg-gray-500/10 text-gray-700">
-                        <i class="fas fa-user-cog"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>User Management</h3>
-                        <p>Access control and roles.</p>
-                    </div>
+            <!-- More Tools Toggle -->
+            <div class="mb-4 px-2">
+                <button id="toggle-more-tools-btn"
+                    class="flex items-center text-gray-500 hover:text-brand transition-colors text-sm font-medium">
+                    <svg id="more-tools-icon" class="w-4 h-4 mr-1 transform transition-transform" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span id="more-tools-text">Show More Tools</span>
                 </button>
             </div>
+
+            <!-- More Tools Section (Hidden by default) -->
+            <div id="more-tools-section" class="hidden">
+                <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2">Other Tools</h2>
+                <div class="dashboard-grid opacity-80 mb-12">
+                    <button id="go-to-properties-btn" class="dashboard-card">
+                        <div class="card-icon bg-blue-500/10 text-blue-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                            </svg>
+                        </div>
+                        <div class="card-body">
+                            <h3>Properties</h3>
+                            <p>Manage short rentals and full inventory.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-allinfo-btn" class="dashboard-card">
+                        <div class="card-icon bg-rose-500/10 text-rose-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
+                            </svg>
+                        </div>
+                        <div class="card-body">
+                            <h3>All Info</h3>
+                            <p>See every property detail in one view.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-rnal-btn" class="dashboard-card">
+                        <div class="card-icon bg-orange-500/10 text-orange-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div class="card-body">
+                            <h3>RNAL</h3>
+                            <p>Process and manage RNAL data.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-checklists-btn" class="dashboard-card">
+                        <div class="card-icon bg-teal-500/10 text-teal-600">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="card-body">
+                            <h3>Checklists</h3>
+                            <p>Standardize cleaning and property checks.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-owners-btn" class="dashboard-card">
+                        <div class="card-icon bg-amber-500/10 text-amber-600">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="card-body">
+                            <h3>Owners</h3>
+                            <p>Owner information and payments.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-safety-btn" class="dashboard-card">
+                        <div class="card-icon bg-purple-500/10 text-purple-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div class="card-body">
+                            <h3>Safety</h3>
+                            <p>Fire extinguishers and first aid kits.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-reservations-btn" class="dashboard-card">
+                        <div class="card-icon bg-indigo-500/10 text-indigo-600">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div class="card-body">
+                            <h3>Weekly Reservations</h3>
+                            <p>Upload and browse weekly reservations.</p>
+                        </div>
+                    </button>
+
+                    <button id="go-to-user-management-btn" class="dashboard-card">
+                        <div class="card-icon bg-gray-500/10 text-gray-700">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <div class="card-body">
+                            <h3>User Management</h3>
+                            <p>Access control and roles.</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <script>
+                document.getElementById('toggle-more-tools-btn').addEventListener('click', function () {
+                    const section = document.getElementById('more-tools-section');
+                    const icon = document.getElementById('more-tools-icon');
+                    const text = document.getElementById('more-tools-text');
+
+                    if (section.classList.contains('hidden')) {
+                        section.classList.remove('hidden');
+                        icon.classList.add('rotate-180');
+                        text.textContent = 'Hide More Tools';
+                    } else {
+                        section.classList.add('hidden');
+                        icon.classList.remove('rotate-180');
+                        text.textContent = 'Show More Tools';
+                    }
+                });
+            </script>
         </div>
     </div>
 
@@ -855,6 +888,8 @@ Mountain Villa, Sintra Hills, V4"
                     <button id="madeira-holidays-view-btn"
                         class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Madeira
                         Holidays</button>
+                    <button id="stats-view-btn"
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Stats</button>
                     <button id="vacation-view-btn"
                         class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Vacation
                         Planner</button>
@@ -874,7 +909,16 @@ Mountain Villa, Sintra Hills, V4"
                     class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md modal-content flex flex-col h-[calc(100vh-250px)]">
                     <div class="flex justify-between items-center mb-4 border-b pb-3">
                         <h2 id="summary-title" class="text-2xl font-semibold text-gradient">Monthly Summary</h2>
-
+                        <div class="flex gap-2">
+                            <button id="toggle-staff-mode-btn"
+                                class="text-sm bg-purple-50 text-purple-600 hover:bg-purple-100 px-3 py-1 rounded-md transition-colors border border-purple-200 hover:shadow-sm">
+                                <i class="fas fa-eye mr-1"></i> <span id="staff-mode-label">Staff View</span>
+                            </button>
+                            <button id="manage-shifts-btn"
+                                class="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors border border-blue-200 hover:shadow-sm">
+                                <i class="fas fa-clock mr-1"></i> Shifts
+                            </button>
+                        </div>
                     </div>
 
                     <div id="employee-list" class="space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
@@ -915,6 +959,14 @@ Mountain Villa, Sintra Hills, V4"
                                     </div>
                                 </div>
                             </div>
+                            <button id="print-weekly-btn"
+                                class="ml-4 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
+                                title="Print Weekly Roster">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" />
+                                </svg>
+                            </button>
                             <button id="pdf-download-btn"
                                 class="hidden ml-4 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
                                 title="Download Monthly Team Report PDF">
@@ -933,12 +985,14 @@ Mountain Villa, Sintra Hills, V4"
                                 </svg>
                             </button>
                         </div>
-                        <div id="calendar-grid" class="grid grid-cols-7 gap-3"></div>
+                        <div id="calendar-grid" class="hidden grid-cols-7 gap-3"></div>
+                        <div id="calendar-mobile-cards" class="hidden space-y-3"></div>
                         <div id="yearly-summary-container" class="hidden"></div>
                         <div id="madeira-holidays-container" class="hidden"></div>
                         <div id="vacation-planner-container" class="hidden"></div>
                         <div id="reorder-list-container" class="hidden"></div>
                         <div id="history-container" class="hidden"></div>
+                        <div id="stats-container" class="hidden"></div>
                     </div>
                 </div>
             </div>
@@ -2399,6 +2453,97 @@ Mountain Villa, Sintra Hills, V4"
     </div>
 
     <!-- XLSX (SheetJS) for Excel file parsing -->
+    <!-- Weekly Roster Modal -->
+    <div id="weekly-roster-modal" class="hidden fixed inset-0 bg-white z-[60] overflow-auto flex flex-col">
+        <div class="p-6 bg-gray-50 border-b flex justify-between items-center no-print">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Weekly Print View</h2>
+                <p class="text-sm text-gray-600">Select a week to print.</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="roster-prev-week" class="p-2 bg-white border rounded hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <span id="roster-week-label" class="font-medium self-center text-lg w-48 text-center">Current
+                    Week</span>
+                <button id="roster-next-week" class="p-2 bg-white border rounded hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="w-px bg-gray-300 mx-2"></div>
+                <button id="print-roster-action-btn"
+                    class="bg-brand text-white px-4 py-2 rounded shadow hover:bg-brand-dark flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </button>
+                <button id="close-roster-btn" class="text-gray-500 hover:text-gray-700 px-4 py-2">Close</button>
+            </div>
+        </div>
+        <div id="weekly-roster-content" class="p-8 flex-grow">
+            <!-- Table inserted here -->
+        </div>
+    </div>
+
+    <style>
+        @media print {
+            body>*:not(#weekly-roster-modal) {
+                display: none !important;
+            }
+
+            #weekly-roster-modal {
+                display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 9999 !important;
+                background: white !important;
+                overflow: visible !important;
+                /* Reset flex logic for print */
+                display: block !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Ensure table fits */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            th,
+            td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            th {
+                background-color: #f3f4f6 !important;
+            }
+        }
+    </style>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Papa Parse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
@@ -2407,3 +2552,54 @@ Mountain Villa, Sintra Hills, V4"
 </body>
 
 </html>
+<!-- Manage Shifts Modal -->
+<div id="manage-shifts-modal-root"
+    class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+    <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white modal-content">
+        <div class="p-5 border-b flex justify-between items-center">
+            <h3 class="text-xl leading-6 font-medium text-gray-900">Manage Shift Presets</h3>
+            <button id="manage-shifts-close-btn"
+                class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-5">
+            <div class="mb-6 border-b pb-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Global Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label class="text-sm text-gray-600">Min. Staff Threshold (Skeleton Crew)</label>
+                    <input type="number" id="min-staff-threshold" class="w-20 p-2 border rounded-md text-sm text-center"
+                        min="0" value="0">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Days with fewer working staff will be highlighted.</p>
+            </div>
+
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Add New Preset</h4>
+                <div class="flex gap-2">
+                    <input type="text" id="new-preset-name" placeholder="Name (e.g. Morning)"
+                        class="flex-1 p-2 border rounded-md text-sm">
+                    <input type="text" id="new-preset-start" placeholder="Start (e.g. 09:00)"
+                        class="w-24 p-2 border rounded-md text-sm">
+                    <input type="text" id="new-preset-end" placeholder="End (e.g. 18:00)"
+                        class="w-24 p-2 border rounded-md text-sm">
+                    <button id="add-preset-btn"
+                        class="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="border-t pt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Existing Presets</h4>
+                <ul id="shift-presets-list" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Presets inserted here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

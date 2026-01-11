@@ -5,6 +5,7 @@ export class UIManager {
         this.dataManager = dataManager;
         this.holidayCalculator = holidayCalculator;
         this.pdfGenerator = pdfGenerator;
+        this.isStaffMode = false; // Staff read-only mode
 
         // Set up data change callback
         this.dataManager.setOnDataChangeCallback(() => {
@@ -15,7 +16,6 @@ export class UIManager {
                 this.showDayDetailsModal(this.dataManager.getSelectedDateKey());
             }
         });
-
 
     }
 
@@ -124,9 +124,11 @@ export class UIManager {
                                 <p class="font-semibold text-lg text-gray-900 mb-1">${emp.name}</p>
                                 <p class="text-sm text-gray-600">Default: ${emp.workDays.map(d => Config.DAYS_OF_WEEK[d]).join(', ')}</p>
                             </div>
+                            ${!this.isStaffMode ? `
                             <button class="edit-working-days-btn text-brand hover:text-brand-dark p-2 rounded-md hover:bg-brand-light transition-all hover-scale" title="Edit working days" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                             </button>
+                            ` : ''}
                         </div>
                         <div class="stats-grid">
                             <div class="stat-item">
@@ -152,10 +154,12 @@ export class UIManager {
                             </div>
                         </div>
                     </div>
+                    ${!this.isStaffMode ? `
                     <button class="individual-pdf-btn mt-4 w-full text-sm bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition-all hover-lift flex items-center justify-center gap-2" data-employee-id="${emp.id}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Download Report
                     </button>
+                    ` : ''}
                 </div>`;
         }).join('');
     }
@@ -187,25 +191,60 @@ export class UIManager {
             const date = new Date(year, month, day);
             const dateKey = this.dataManager.getDateKey(date);
             const holidayName = currentYearHolidays[dateKey];
-
-
+            const dailyNote = this.dataManager.getDailyNote(dateKey);
 
             const workingCount = this.dataManager.getActiveEmployees().filter(emp =>
                 this.dataManager.getEmployeeStatusForDate(emp, date) === 'Working'
             ).length;
 
+            // Skeleton Crew Check
+            const threshold = this.dataManager.minStaffThreshold || 0;
+            const isSkeletonCrew = threshold > 0 && workingCount < threshold && !holidayName;
+            const skeletonClass = isSkeletonCrew ? 'border-red-400 bg-red-50' : '';
+            const skeletonTextClass = isSkeletonCrew ? 'text-red-600' : 'text-green-600';
+            const skeletonIcon = isSkeletonCrew ? '<span class="absolute top-1 right-1 text-red-500 text-xs" title="Understaffed">⚠</span>' : '';
+
+            // Count absences and vacations
+            let absentCount = 0;
+            let vacationCount = 0;
+            this.dataManager.getActiveEmployees().forEach(emp => {
+                const status = this.dataManager.getEmployeeStatusForDate(emp, date);
+                if (status === 'On Vacation' || status === 'Vacation') vacationCount++;
+                else if (['Absent', 'Sick', 'Personal', 'Unjustified'].includes(status)) absentCount++;
+            });
+
             const dayCell = document.createElement('div');
-            dayCell.className = `day-cell p-2 border rounded-lg flex flex-col items-center justify-center h-24 sm:h-28 relative`;
-            if ([0, 6].includes(date.getDay()) && !holidayName) dayCell.classList.add('bg-gray-50');
+            // Add skeletonClass
+            dayCell.className = `day-cell p-2 border rounded-lg flex flex-col items-center justify-center h-24 sm:h-28 relative ${skeletonClass}`;
+            if ([0, 6].includes(date.getDay()) && !holidayName && !isSkeletonCrew) dayCell.classList.add('bg-gray-50');
             if (holidayName) {
                 dayCell.classList.add('holiday');
                 dayCell.title = holidayName;
             }
 
             dayCell.dataset.date = dateKey;
+
+            // Indicators HTML
+            let indicatorsHtml = '<div class="flex gap-1 mt-1 justify-center absolute bottom-2 left-0 right-0">';
+            if (absentCount > 0) {
+                indicatorsHtml += `<span class="bg-red-500 rounded-full w-2 h-2" title="${absentCount} Absent"></span>`;
+            }
+            if (vacationCount > 0) {
+                indicatorsHtml += `<span class="bg-yellow-400 rounded-full w-2 h-2" title="${vacationCount} On Vacation"></span>`;
+            }
+            indicatorsHtml += '</div>';
+
+            // Daily Note Icon
+            const noteIconHtml = dailyNote
+                ? `<div class="absolute top-1 left-2 text-blue-500" title="${dailyNote}">
+                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                   </div>`
+                : '';
+
             if (holidayName) {
                 // Holiday day layout
                 dayCell.innerHTML = `
+                    ${noteIconHtml}
                     <div class="absolute top-1 right-1 text-yellow-600 text-sm" title="${holidayName}">★</div>
                     <div class="text-2xl font-bold text-gray-800 mb-1">${day}</div>
                     <div class="text-xs text-yellow-700 font-medium text-center px-1 py-0.5 bg-yellow-200 rounded max-w-full overflow-hidden"
@@ -218,21 +257,113 @@ export class UIManager {
                         </svg>
                         <span class="text-lg font-bold">${workingCount}</span>
                     </div>
+                    ${indicatorsHtml}
                 `;
             } else {
                 // Regular day layout  
                 dayCell.innerHTML = `
+                    ${noteIconHtml}
+                    ${skeletonIcon}
                     <div class="text-lg font-semibold">${day}</div>
-                    <div class="mt-2 flex items-center space-x-2 text-green-600">
+                    <div class="mt-2 flex items-center space-x-2 ${skeletonTextClass}">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                         </svg>
                         <span class="text-xl font-bold">${workingCount}</span>
                     </div>
                     <div class="text-xs text-gray-500">working</div>
+                    ${indicatorsHtml}
                 `;
             }
             grid.appendChild(dayCell);
+        }
+
+        // Render mobile cards
+        this.renderCalendarMobileCards();
+    }
+
+    renderCalendarMobileCards() {
+        const container = document.getElementById('calendar-mobile-cards');
+        if (!container) return;
+
+        container.innerHTML = '';
+        const currentDate = this.dataManager.getCurrentDate();
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const currentYearHolidays = this.dataManager.getHolidaysForYear(year);
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateKey = this.dataManager.getDateKey(date);
+            const holidayName = currentYearHolidays[dateKey];
+            const dailyNote = this.dataManager.getDailyNote(dateKey);
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+            const workingCount = this.dataManager.getActiveEmployees().filter(emp =>
+                this.dataManager.getEmployeeStatusForDate(emp, date) === 'Working'
+            ).length;
+
+            // Skeleton Crew Check
+            const threshold = this.dataManager.minStaffThreshold || 0;
+            const isSkeletonCrew = threshold > 0 && workingCount < threshold && !holidayName;
+
+            // Count absences and vacations
+            let absentCount = 0;
+            let vacationCount = 0;
+            this.dataManager.getActiveEmployees().forEach(emp => {
+                const status = this.dataManager.getEmployeeStatusForDate(emp, date);
+                if (status === 'On Vacation' || status === 'Vacation') vacationCount++;
+                else if (['Absent', 'Sick', 'Personal', 'Unjustified'].includes(status)) absentCount++;
+            });
+
+            const card = document.createElement('div');
+            card.className = `day-card p-4 border rounded-lg bg-white ${isSkeletonCrew ? 'border-red-400 bg-red-50' : ''}`;
+            if ([0, 6].includes(date.getDay()) && !holidayName && !isSkeletonCrew) {
+                card.classList.add('bg-gray-50');
+            }
+            if (holidayName) {
+                card.classList.add('border-yellow-400', 'bg-yellow-50');
+            }
+            card.dataset.date = dateKey;
+
+            let indicatorsHtml = '';
+            if (absentCount > 0) {
+                indicatorsHtml += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                    ${absentCount} Absent
+                </span>`;
+            }
+            if (vacationCount > 0) {
+                indicatorsHtml += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    ${vacationCount} Vacation
+                </span>`;
+            }
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="text-sm text-gray-500">${dayName}</div>
+                        <div class="text-2xl font-bold text-gray-900">${day}</div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        ${holidayName ? `<span class="text-yellow-600 text-xl mb-1">★</span>` : ''}
+                        ${isSkeletonCrew ? `<span class="text-red-500 text-xl">⚠</span>` : ''}
+                        ${dailyNote ? `<span class="text-blue-500" title="${dailyNote}">📝</span>` : ''}
+                    </div>
+                </div>
+                ${holidayName ? `<div class="text-sm font-medium text-yellow-700 mb-2">${holidayName}</div>` : ''}
+                <div class="flex items-center ${isSkeletonCrew ? 'text-red-600' : 'text-green-600'}">
+                    <svg class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    <span class="text-lg font-bold">${workingCount}</span>
+                    <span class="ml-1 text-sm">working</span>
+                </div>
+                ${indicatorsHtml ? `<div class="mt-3">${indicatorsHtml}</div>` : ''}
+            `;
+
+            container.appendChild(card);
         }
     }
 
@@ -347,6 +478,30 @@ export class UIManager {
         const [year, month, day] = dateKey.split('-').map(Number);
         const date = new Date(year, month - 1, day);
         document.getElementById('modal-date-header').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Add Daily Note Section
+        const modalBody = document.querySelector('#day-details-modal .modal-content');
+        let noteSection = document.getElementById('daily-note-section');
+        if (!noteSection) {
+            noteSection = document.createElement('div');
+            noteSection.id = 'daily-note-section';
+            noteSection.className = 'mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200';
+            // Insert before employee list
+            const employeeList = document.getElementById('modal-employee-list');
+            modalBody.insertBefore(noteSection, employeeList);
+        }
+
+        const currentNote = this.dataManager.getDailyNote(dateKey);
+        noteSection.innerHTML = `
+            <label class="block text-sm font-medium text-yellow-800 mb-1">Daily Note (Visible to everyone)</label>
+            <textarea id="daily-note-input" rows="2" class="w-full p-2 border border-yellow-300 rounded-md text-sm focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="Add a note for this day (e.g. 'Bank Holiday', 'VIP Arrival')...">${currentNote}</textarea>
+        `;
+
+        // Save note on change
+        const noteInput = document.getElementById('daily-note-input');
+        noteInput.addEventListener('change', () => {
+            this.dataManager.saveDailyNote(dateKey, noteInput.value);
+        });
 
         const listContainer = document.getElementById('modal-employee-list');
         listContainer.innerHTML = this.dataManager.getActiveEmployees().map(emp => {
@@ -496,6 +651,10 @@ export class UIManager {
         document.getElementById('edit-employee-shift').value = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
         document.getElementById('edit-employee-notes').value = emp.notes || '';
 
+        // Populate Shift Dropdown if it exists (for editing) or create it if missing
+        this.populateShiftDropdowns(emp.shifts?.default);
+
+
         // Populate working days checkboxes
         const workDaysContainer = document.getElementById('edit-employee-work-days');
         workDaysContainer.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
@@ -511,6 +670,74 @@ export class UIManager {
         // Store the employee ID for the save function
         modal.dataset.employeeId = employeeId;
         modal.classList.remove('hidden');
+    }
+
+    renderShiftPresetsModal() {
+        const thresholdInput = document.getElementById('min-staff-threshold');
+        if (thresholdInput) {
+            thresholdInput.value = this.dataManager.minStaffThreshold || 0;
+        }
+
+        const list = document.getElementById('shift-presets-list');
+        if (!list) return;
+
+        const presets = this.dataManager.shiftPresets || [];
+        list.innerHTML = presets.length === 0
+            ? '<li class="text-sm text-gray-500 italic text-center py-2">No presets added yet.</li>'
+            : presets.map(p => `
+            <li class="flex justify-between items-center bg-gray-50 p-2 rounded-md border text-sm">
+                <div>
+                    <span class="font-medium text-gray-800">${p.name}</span>
+                    <span class="text-gray-500 text-xs ml-2">(${p.start} - ${p.end})</span>
+                </div>
+                <button class="delete-preset-btn text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors" data-id="${p.id}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </li>
+        `).join('');
+    }
+
+    populateShiftDropdowns(currentShiftValue = null) {
+        // Find shift inputs in both modals
+        const shiftInputs = [
+            document.getElementById('edit-employee-shift'),
+            document.getElementById('new-employee-shift') // Assuming this ID for add modal
+        ];
+
+        shiftInputs.forEach(input => {
+            if (!input) return;
+
+            // Check if dropdown container already exists
+            let container = input.parentElement.querySelector('.shift-preset-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'shift-preset-container mt-2 flex gap-2';
+                input.parentElement.appendChild(container); // Append after input
+            }
+
+            // Populate dropdown
+            const presets = this.dataManager.shiftPresets || [];
+
+            // Create selector HTML
+            container.innerHTML = `
+                <select class="shift-preset-select w-full p-2 border rounded-md text-sm bg-gray-50 focus:ring-1 focus:ring-brand">
+                    <option value="">Select a preset...</option>
+                    ${presets.map(p => `<option value="${p.start}-${p.end}">${p.name} (${p.start}-${p.end})</option>`).join('')}
+                    <option value="custom">Custom Shift...</option>
+                </select>
+            `;
+
+            // Add listener to update input
+            const select = container.querySelector('select');
+            select.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val && val !== 'custom') {
+                    input.value = val;
+                } else if (val === 'custom') {
+                    input.focus();
+                }
+            });
+        });
     }
 
     updateView() {
@@ -531,15 +758,20 @@ export class UIManager {
 
         const mainViews = {
             calendar: document.getElementById('calendar-grid'),
+            calendarMobile: document.getElementById('calendar-mobile-cards'),
             yearly: document.getElementById('yearly-summary-container'),
             madeiraHolidays: document.getElementById('madeira-holidays-container'),
+            stats: document.getElementById('stats-container'),
             vacation: document.getElementById('vacation-planner-container'),
             reorder: document.getElementById('reorder-list-container'),
             history: document.getElementById('history-container')
         };
 
-        // Hide all main content views first
-        Object.values(mainViews).forEach(v => v.classList.add('hidden'));
+        // Hide all main content views first and clean up responsive classes
+        Object.values(mainViews).forEach(v => {
+            v.classList.add('hidden');
+            v.classList.remove('md:grid', 'md:hidden', 'block', 'grid');
+        });
 
         const currentView = this.dataManager.getCurrentView();
         const showSidePanel = ['monthly', 'yearly', 'vacation'].includes(currentView);
@@ -577,6 +809,9 @@ export class UIManager {
             viewHeader.textContent = `${monthName} ${year}`;
             summaryTitle.textContent = "Monthly Summary";
             mainViews.calendar.classList.remove('hidden');
+            mainViews.calendar.classList.add('md:grid');
+            mainViews.calendarMobile.classList.remove('hidden');
+            mainViews.calendarMobile.classList.add('md:hidden', 'block');
             this.renderCalendarGrid();
         } else if (currentView === 'yearly') {
             viewHeader.textContent = year;
@@ -600,6 +835,11 @@ export class UIManager {
         } else if (currentView === 'history') {
             mainViews.history.classList.remove('hidden');
             this.renderHistoryList();
+        } else if (currentView === 'stats') {
+            viewHeader.textContent = "Team Statistics";
+            summaryTitle.textContent = "Balance & Stats";
+            mainViews.stats.classList.remove('hidden');
+            this.renderStats();
         }
     }
 
@@ -620,6 +860,7 @@ export class UIManager {
             { id: 'monthly-view-btn', view: 'monthly' },
             { id: 'yearly-view-btn', view: 'yearly' },
             { id: 'madeira-holidays-view-btn', view: 'madeira-holidays' },
+            { id: 'stats-view-btn', view: 'stats' },
             { id: 'vacation-view-btn', view: 'vacation' },
             { id: 'reorder-view-btn', view: 'reorder' },
             { id: 'history-view-btn', view: 'history' }
@@ -813,5 +1054,243 @@ export class UIManager {
                 document.getElementById(`madeira-${tabName}-tab`).classList.remove('hidden');
             }
         });
+    }
+
+    renderWeeklyRoster(startDate) {
+        const container = document.getElementById('weekly-roster-content');
+        if (!container) return;
+
+        // Calculate Monday of the week
+        const d = new Date(startDate);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        const monday = new Date(d.setDate(diff));
+
+        // Update label
+        const endOfWeek = new Date(monday);
+        endOfWeek.setDate(monday.getDate() + 6);
+        const label = document.getElementById('roster-week-label');
+        if (label) {
+            label.textContent = `${monday.toLocaleDateString()} - ${endOfWeek.toLocaleDateString()}`;
+        }
+
+        // Build Table
+        const employees = this.dataManager.getActiveEmployees();
+
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const current = new Date(monday);
+            current.setDate(monday.getDate() + i);
+            days.push(current);
+        }
+
+        let html = `
+            <table class="w-full text-sm border-collapse border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 p-2 text-left">Colleague</th>
+                        ${days.map(date => {
+            const weekday = date.toLocaleDateString('en-GB', { weekday: 'short' });
+            const dayNum = date.getDate();
+            const monthNum = date.getMonth() + 1;
+            return `<th class="border border-gray-300 p-2 text-center">${weekday} ${dayNum}/${monthNum}</th>`;
+        }).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        employees.forEach(emp => {
+            html += `<tr>
+                <td class="border border-gray-300 p-2 font-medium">${emp.name}</td>`;
+
+            days.forEach(date => {
+                const status = this.dataManager.getEmployeeStatusForDate(emp, date);
+                let cellText = '';
+                let cellClass = '';
+
+                if (status === 'Working') {
+                    cellText = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
+                    cellClass = 'bg-white';
+                } else if (status === 'Off') {
+                    cellText = 'OFF';
+                    cellClass = 'bg-gray-100 text-gray-400';
+                } else if (status === 'On Vacation' || status === 'Vacation') {
+                    cellText = 'Vacation';
+                    cellClass = 'bg-yellow-100 text-yellow-800';
+                } else {
+                    cellText = status;
+                    cellClass = 'bg-red-50 text-red-600';
+                }
+
+                html += `<td class="border border-gray-300 p-2 text-center ${cellClass}">${cellText}</td>`;
+            });
+
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+        // Save date for navigation
+        this.currentRosterDate = monday;
+    }
+
+    renderStats() {
+        const container = document.getElementById('stats-container');
+        if (!container) return;
+
+        const employees = this.dataManager.getActiveEmployees();
+        const year = this.dataManager.getCurrentDate().getFullYear();
+
+        // Calculate stats
+        const stats = employees.map(emp => {
+            // Vacation Days
+            let vacationDays = 0;
+            if (emp.vacations) {
+                emp.vacations.forEach(vac => {
+                    const start = new Date(vac.startDate);
+                    const end = new Date(vac.endDate);
+                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                        if (d.getFullYear() === year) {
+                            const day = d.getDay();
+                            if (day !== 0 && day !== 6) vacationDays++;
+                        }
+                    }
+                });
+            }
+            const vacationBalance = 22 - vacationDays;
+
+            // Extra Hours
+            let extraHours = 0;
+            if (emp.extraHours) {
+                Object.entries(emp.extraHours).forEach(([dateKey, hours]) => {
+                    if (dateKey.startsWith(year)) {
+                        extraHours += parseFloat(hours);
+                    }
+                });
+            }
+
+            return { name: emp.name, vacationDays, vacationBalance, extraHours };
+        });
+
+        // Store stats for export
+        this.currentStats = stats;
+        this.currentStatsYear = year;
+
+        container.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Yearly Statistics (${year})</h3>
+                    <button id="export-stats-csv-btn" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export CSV
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colleague</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Vacation Used</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Vacation Balance</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Extra Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${stats.map(s => `
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${s.name}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-500">${s.vacationDays} days</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center font-bold ${s.vacationBalance < 0 ? 'text-red-600' : 'text-green-600'}">${s.vacationBalance} days</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center font-bold ${s.extraHours > 0 ? 'text-green-600' : (s.extraHours < 0 ? 'text-red-600' : 'text-gray-500')}">${s.extraHours.toFixed(1)} h</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    exportStatsToCSV() {
+        if (!this.currentStats || !this.currentStatsYear) {
+            console.warn('No stats data available for export');
+            return;
+        }
+
+        // CSV Header
+        let csv = 'Colleague,Vacation Used (days),Vacation Balance (days),Extra Hours\n';
+
+        // CSV Rows
+        this.currentStats.forEach(stat => {
+            csv += `"${stat.name}",${stat.vacationDays},${stat.vacationBalance},${stat.extraHours.toFixed(1)}\n`;
+        });
+
+        // Create blob and download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `stats_${this.currentStatsYear}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    toggleStaffMode() {
+        this.isStaffMode = !this.isStaffMode;
+
+        // Update button label
+        const label = document.getElementById('staff-mode-label');
+        const btn = document.getElementById('toggle-staff-mode-btn');
+
+        if (this.isStaffMode) {
+            label.textContent = 'Admin View';
+            btn.classList.remove('bg-purple-50', 'text-purple-600', 'border-purple-200');
+            btn.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
+
+            // Show banner
+            this.showStaffModeBanner();
+        } else {
+            label.textContent = 'Staff View';
+            btn.classList.remove('bg-green-50', 'text-green-600', 'border-green-200');
+            btn.classList.add('bg-purple-50', 'text-purple-600', 'border-purple-200');
+
+            // Hide banner
+            this.hideStaffModeBanner();
+        }
+
+        // Re-render current view
+        this.updateView();
+    }
+
+    showStaffModeBanner() {
+        let banner = document.getElementById('staff-mode-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'staff-mode-banner';
+            banner.className = 'fixed top-0 left-0 right-0 bg-purple-600 text-white text-center py-2 px-4 z-50 shadow-lg';
+            banner.innerHTML = `
+                <div class="flex items-center justify-center gap-2">
+                    <i class="fas fa-eye"></i>
+                    <span class="font-semibold">STAFF VIEW MODE - Read Only</span>
+                </div>
+            `;
+            document.body.appendChild(banner);
+        }
+        banner.classList.remove('hidden');
+    }
+
+    hideStaffModeBanner() {
+        const banner = document.getElementById('staff-mode-banner');
+        if (banner) {
+            banner.classList.add('hidden');
+        }
     }
 } 

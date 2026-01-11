@@ -13,6 +13,12 @@ export class DataManager {
         this.selectedDateKey = null;
         this.currentView = 'monthly';
         this.unsubscribe = null;
+        this.unsubscribeNotes = null;
+        this.dailyNotes = {};
+        this.shiftPresets = [];
+        this.minStaffThreshold = 0;
+        this.unsubscribeShiftPresets = null;
+        this.unsubscribeSettings = null;
         this.onDataChangeCallback = null;
 
         // Initialize holidays for current year immediately
@@ -81,6 +87,64 @@ export class DataManager {
         }, (error) => console.error("Error listening:", error));
     }
 
+    listenForDailyNotes() {
+        // Create a listener for the daily_notes collection
+        const notesCollection = collection(this.db, "daily_notes");
+        this.unsubscribeNotes = onSnapshot(notesCollection, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added" || change.type === "modified") {
+                    this.dailyNotes[change.doc.id] = change.doc.data().note;
+                }
+                if (change.type === "removed") {
+                    delete this.dailyNotes[change.doc.id];
+                }
+            });
+            // Update UI when notes change
+            if (this.onDataChangeCallback) {
+                this.onDataChangeCallback();
+            }
+        }, (error) => console.error("Error listening for notes:", error));
+    }
+
+    listenForShiftPresets() {
+        const presetsCollection = collection(this.db, "shift_presets");
+        this.unsubscribeShiftPresets = onSnapshot(presetsCollection, (snapshot) => {
+            const presets = [];
+            snapshot.forEach((doc) => {
+                presets.push({ id: doc.id, ...doc.data() });
+            });
+            this.shiftPresets = presets;
+            if (this.onDataChangeCallback) this.onDataChangeCallback();
+        }, (error) => console.error("Error listening for shift presets:", error));
+    }
+
+    listenForGlobalSettings() {
+        // Global settings document
+        const settingsDoc = doc(this.db, "settings", "global");
+        this.unsubscribeSettings = onSnapshot(settingsDoc, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                this.minStaffThreshold = data.minStaffThreshold || 0;
+            } else {
+                this.minStaffThreshold = 0;
+            }
+            if (this.onDataChangeCallback) this.onDataChangeCallback();
+        }, (error) => console.error("Error listening for settings:", error));
+    }
+
+    async saveShiftPreset(name, start, end) {
+        await addDoc(collection(this.db, "shift_presets"), { name, start, end });
+    }
+
+    async deleteShiftPreset(id) {
+        await deleteDoc(doc(this.db, "shift_presets", id));
+    }
+
+    async saveMinStaffThreshold(count) {
+        const settingsRef = doc(this.db, "settings", "global");
+        await setDoc(settingsRef, { minStaffThreshold: parseInt(count) }, { merge: true });
+    }
+
     // Removed showSetupScreen - navigation is now handled by NavigationManager
 
     async addEmployee(name, staffNumber, workDays) {
@@ -128,6 +192,19 @@ export class DataManager {
         const noteText = note.trim();
         const updateData = noteText ? { [fieldPath]: noteText } : { [fieldPath]: deleteField() };
         await updateDoc(docRef, updateData).catch(e => console.error("Extra hours note update failed:", e));
+    }
+
+    async saveDailyNote(dateKey, note) {
+        const docRef = doc(this.db, "daily_notes", dateKey);
+        if (!note || note.trim() === '') {
+            await deleteDoc(docRef).catch(e => console.error("Failed to delete daily note:", e));
+        } else {
+            await setDoc(docRef, { note: note.trim() }).catch(e => console.error("Failed to save daily note:", e));
+        }
+    }
+
+    getDailyNote(dateKey) {
+        return this.dailyNotes[dateKey] || '';
     }
 
     async handleScheduleVacation(employeeId, startDate, endDate) {
@@ -244,6 +321,7 @@ export class DataManager {
     async initializeDatabase() {
         await setDoc(doc(this.db, "employees", 'metadata'), { initialized: true });
         this.listenForEmployeeChanges();
+        this.listenForDailyNotes();
     }
 
     getHolidays(year) {

@@ -412,7 +412,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("Firebase init failed:", error);
-        document.getElementById('login-error').textContent = 'Could not connect to services.';
+        let msg = 'Could not connect to services.';
+
+        if (window.location.protocol === 'file:') {
+            msg = 'Security Error: You are opening this file directly. Please use a local server (e.g., "Live Server" in VS Code) to run this application.';
+        } else if (error.message) {
+            msg += ` Error: ${error.message}`;
+        }
+
+        const loginError = document.getElementById('login-error');
+        if (loginError) {
+            loginError.textContent = msg;
+            loginError.classList.add('text-red-600', 'font-bold');
+        }
     }
 });
 
@@ -1629,10 +1641,17 @@ async function setupApp() {
         // Set up data change callback and start listening
         dataManager.setOnDataChangeCallback(() => {
             console.log(`🔄 [DATA CHANGE] Employee data changed, updating UI`);
-            if (uiManager) uiManager.updateView();
+            if (uiManager) {
+                uiManager.updateView();
+                // Ensure Shift Presets Modal list is updated if open
+                uiManager.renderShiftPresetsModal();
+            }
         });
 
         dataManager.listenForEmployeeChanges();
+        dataManager.listenForDailyNotes();
+        dataManager.listenForShiftPresets();
+        dataManager.listenForGlobalSettings();
 
         // Show the main app interface
         const loadingEl = document.getElementById('loading');
@@ -1701,6 +1720,9 @@ async function initializeScheduleApp() {
             if (!dataManager.unsubscribe) {
                 console.log('🔄 [OPTIMIZATION] Starting employee listener for first time');
                 dataManager.listenForEmployeeChanges();
+                dataManager.listenForDailyNotes();
+                dataManager.listenForShiftPresets();
+                dataManager.listenForGlobalSettings();
             } else {
                 console.log('✅ [OPTIMIZATION] Employee listener already active');
             }
