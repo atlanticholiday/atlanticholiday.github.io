@@ -21,6 +21,7 @@ import { VehiclesManager } from './vehicles-manager.js';
 import { OwnersManager } from './owners-manager.js';
 import { VisitsManager } from './visits-manager.js';
 import { CleaningBillsManager } from './cleaning-bills-manager.js';
+import { WelcomePackManager } from './welcome-pack-manager.js';
 import { ScheduleManager } from './schedule-manager.js';
 import './allinfo-bulk-edit.js';
 import './allinfo-seq-edit.js';
@@ -32,7 +33,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, scheduleManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, scheduleManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -106,25 +107,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, errorCallback);
         };
 
-        // Initialize managers
-        dataManager = new DataManager(db);
-        holidayCalculator = new HolidayCalculator();
+        // Initialize DataManager
+        dataManager = new DataManager(db, auth.currentUser ? auth.currentUser.uid : null);
+        window.dataManager = dataManager; // For debugging
+
+        // Initialize Managers
+        uiManager = new UIManager(dataManager, null, pdfGenerator); // HolidayCalculator injected later
+        window.uiManager = uiManager;
+
+        holidayCalculator = new HolidayCalculator(dataManager);
+        // Inject holiday calculator into UI manager
+        uiManager.holidayCalculator = holidayCalculator;
+
+        eventManager = new EventManager(dataManager, uiManager, holidayCalculator);
+        navigationManager = new NavigationManager();
+        propertiesManager = new PropertiesManager(db);
+        window.propertiesManager = propertiesManager; // Make global for other scripts
+
+        operationsManager = new OperationsManager(db);
+        reservationsManager = new ReservationsManager(db);
+        rnalManager = new RnalManager(db);
+        safetyManager = new SafetyManager(db);
+
+        // Initialize Welcome Pack Manager (Correctly placed)
+        welcomePackManager = new WelcomePackManager(dataManager);
+        window.welcomePackManager = welcomePackManager;
+
+        // Initialize PDF Generator
         pdfGenerator = new PDFGenerator();
-        uiManager = new UIManager(dataManager, holidayCalculator, pdfGenerator);
         scheduleManager = new ScheduleManager(dataManager, uiManager);
         window.scheduleManager = scheduleManager;
-        eventManager = new EventManager(auth, dataManager, uiManager);
-        navigationManager = new NavigationManager();
         // Initialize Visits manager early so it can inject its page and landing button before nav listeners are wired
-        visitsManager = new VisitsManager(db, userId);
+        visitsManager = new VisitsManager(db, userId); // Reverted to original
         window.visitsManager = visitsManager;
         try { visitsManager.ensureDomScaffold?.(); } catch { }
         // Initialize Cleaning Bills manager early to inject page and landing button before nav listeners are wired
-        cleaningBillsManager = new CleaningBillsManager();
+        cleaningBillsManager = new CleaningBillsManager(); // Reverted to original
         window.cleaningBillsManager = cleaningBillsManager;
         try { cleaningBillsManager.ensureDomScaffold?.(); } catch { }
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
-        checklistsManager = new ChecklistsManager(userId);
+        checklistsManager = new ChecklistsManager(userId); // Reverted to original
         window.checklistsManager = checklistsManager;
         // Provide Firestore DB so it can start syncing once user is set
         checklistsManager.setDatabase(db);
@@ -134,6 +156,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Owners manager (shared owners collection)
         ownersManager = new OwnersManager(db, userId);
         window.ownersManager = ownersManager;
+        // Initialize Welcome Pack manager
+        // welcomePackManager = new WelcomePackManager(dataManager); // Already initialized above
+        // window.welcomePackManager = welcomePackManager;
 
         // Initialize RNAL manager with error handling
         try {
@@ -431,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn' || e.target.id === 'owners-sign-out-btn') {
+        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn' || e.target.id === 'owners-sign-out-btn' || e.target.id === 'welcome-sign-out-btn') {
             signOut(auth);
         }
     });
@@ -457,6 +482,26 @@ function setupGlobalEventListeners() {
     if (goToOperationsBtn) {
         goToOperationsBtn.addEventListener('click', () => {
             navigationManager.showOperationsPage();
+        });
+    }
+
+    const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
+    if (goToWelcomePacksBtn) {
+        goToWelcomePacksBtn.addEventListener('click', () => {
+            // Manual navigation for new welcome pack app
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('welcome-packs-page').classList.remove('hidden');
+            if (welcomePackManager) {
+                welcomePackManager.init();
+            }
+        });
+    }
+
+    const backToLandingFromWelcomeBtn = document.getElementById('back-to-landing-from-welcome-btn');
+    if (backToLandingFromWelcomeBtn) {
+        backToLandingFromWelcomeBtn.addEventListener('click', () => {
+            document.getElementById('welcome-packs-page').classList.add('hidden');
+            navigationManager.showLandingPage();
         });
     }
 

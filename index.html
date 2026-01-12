@@ -188,6 +188,16 @@
                         <p>Manage fleet, insurance and inspections.</p>
                     </div>
                 </button>
+
+                <button id="go-to-welcome-packs-btn" class="dashboard-card">
+                    <div class="card-icon bg-pink-500/10 text-pink-600">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3>Welcome Packs</h3>
+                        <p>Manage stocks and packs delivered.</p>
+                    </div>
+                </button>
             </div>
 
             <!-- More Tools Toggle -->
@@ -996,6 +1006,45 @@ Mountain Villa, Sintra Hills, V4"
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Welcome Packs Page -->
+    <div id="welcome-packs-page" class="hidden min-h-screen bg-gray-50">
+        <header class="dashboard-header">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-welcome-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo dashboard-logo--xl" />
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Welcome Packs</div>
+                        <div class="header-sub">Manage inventory and track packs</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="welcome-sign-out-btn"
+                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <div id="welcome-pack-content"></div>
         </div>
     </div>
 

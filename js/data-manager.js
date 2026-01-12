@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { Config } from './config.js';
 
 export class DataManager {
@@ -431,4 +431,91 @@ export class DataManager {
     setCurrentDate(date) { this.currentDate = date; }
     setCurrentView(view) { this.currentView = view; }
     setSelectedDateKey(key) { this.selectedDateKey = key; }
+
+    // Welcome Pack Methods
+    async getWelcomePackItems() {
+        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_items"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async saveWelcomePackItem(item) {
+        await addDoc(collection(this.db, "welcome_pack_items"), { ...item, quantity: parseInt(item.quantity) || 0 });
+    }
+
+    async updateWelcomePackItem(id, data) {
+        await updateDoc(doc(this.db, "welcome_pack_items", id), data);
+    }
+
+    async deleteWelcomePackItem(id) {
+        await deleteDoc(doc(this.db, "welcome_pack_items", id));
+    }
+
+    async getWelcomePackLogs() {
+        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_logs"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async logWelcomePack(log) {
+        await runTransaction(this.db, async (transaction) => {
+            const newLogRef = doc(collection(this.db, "welcome_pack_logs"));
+            transaction.set(newLogRef, log);
+
+            for (const item of log.items) {
+                if (item.id) {
+                    const itemRef = doc(this.db, "welcome_pack_items", item.id);
+                    transaction.update(itemRef, { quantity: increment(-1) });
+                }
+            }
+        });
+    }
+
+    async deleteWelcomePackLog(logId, items) {
+        await runTransaction(this.db, async (transaction) => {
+            const logRef = doc(this.db, "welcome_pack_logs", logId);
+            transaction.delete(logRef);
+
+            for (const item of items) {
+                if (item.id) {
+                    const itemRef = doc(this.db, "welcome_pack_items", item.id);
+                    transaction.update(itemRef, { quantity: increment(1) });
+                }
+            }
+        });
+    }
+
+    async updateWelcomePackLog(logId, oldItems, newLog) {
+        await runTransaction(this.db, async (transaction) => {
+            const logRef = doc(this.db, "welcome_pack_logs", logId);
+            transaction.update(logRef, newLog);
+
+            // Restore old stock
+            for (const item of oldItems) {
+                if (item.id) {
+                    const itemRef = doc(this.db, "welcome_pack_items", item.id);
+                    transaction.update(itemRef, { quantity: increment(1) });
+                }
+            }
+
+            // Deduct new stock
+            for (const item of newLog.items) {
+                if (item.id) {
+                    const itemRef = doc(this.db, "welcome_pack_items", item.id);
+                    transaction.update(itemRef, { quantity: increment(-1) });
+                }
+            }
+        });
+    }
+
+    async getWelcomePackPresets() {
+        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_presets"));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async saveWelcomePackPreset(preset) {
+        await addDoc(collection(this.db, "welcome_pack_presets"), preset);
+    }
+
+    async deleteWelcomePackPreset(id) {
+        await deleteDoc(doc(this.db, "welcome_pack_presets", id));
+    }
 } 
