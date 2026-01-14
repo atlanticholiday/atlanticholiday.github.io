@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Inject holiday calculator into UI manager
         uiManager.holidayCalculator = holidayCalculator;
 
-        eventManager = new EventManager(dataManager, uiManager, holidayCalculator);
+        eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
         propertiesManager = new PropertiesManager(db);
         window.propertiesManager = propertiesManager; // Make global for other scripts
