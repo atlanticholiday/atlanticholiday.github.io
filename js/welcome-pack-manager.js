@@ -300,62 +300,61 @@ export class WelcomePackManager {
         try {
             properties = await this._fetchData('properties');
             totalCount = properties.length;
-            configuredCount = properties.filter(p => p.icalUrl).length;
+            configuredCount = properties.filter(p => p.welcomePackEnabled).length;
         } catch (e) {
             console.warn('[WelcomePack] Could not fetch properties:', e);
         }
 
         const filterDays = this.reservationsDateFilter;
 
+        // Load cached last sync time
+        const lastSync = localStorage.getItem('wp_last_sync');
+        const lastSyncText = lastSync ? `Last updated: ${new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+
         container.innerHTML = `
             <!-- Header with Sync Button -->
             <div class="flex justify-between items-center mb-6">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800">Future Bookings</h3>
-                    <p class="text-sm text-gray-500">${configuredCount} of ${totalCount} properties have iCal configured</p>
+                    <p class="text-sm text-gray-500">${configuredCount} of ${totalCount} properties have Welcome Pack enabled</p>
                 </div>
-                <button id="wp-sync-reservations-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-                    <i class="fas fa-sync-alt"></i> Sync Calendars
-                </button>
+                <div class="flex items-center gap-3">
+                    <span id="wp-last-sync-label" class="text-xs text-gray-400 font-medium">${lastSyncText}</span>
+                    <button id="wp-sync-reservations-btn" style="background-color: #ef4444 !important; color: white !important;" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+                        <i class="fas fa-sync-alt"></i> Sync Now
+                    </button>
+                </div>
             </div>
 
             <!-- Date Filter Buttons -->
             <div class="flex flex-wrap gap-2 mb-6">
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 7
-                ? 'bg-[#e94b5a] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="7">
+                ? 'bg-red-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="7" style="${filterDays === 7 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
                     Next 7 Days
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 15
-                ? 'bg-[#e94b5a] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="15">
+                ? 'bg-red-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="15" style="${filterDays === 15 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
                     Next 15 Days
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 30
-                ? 'bg-[#e94b5a] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="30">
+                ? 'bg-red-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="30" style="${filterDays === 30 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
                     Next 30 Days
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 365
-                ? 'bg-[#e94b5a] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="365">
+                ? 'bg-red-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="365" style="${filterDays === 365 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
                     View All
                 </button>
-                <span id="wp-last-sync" class="ml-auto text-sm text-gray-500 flex items-center"></span>
             </div>
 
             <!-- Reservations List -->
             <div id="wp-reservations-list" class="space-y-3">
                 <div class="text-center py-12 text-gray-500">
-                    <i class="fas fa-calendar-day text-5xl text-gray-300 mb-4"></i>
-                    <p class="text-lg font-medium mb-2">No reservations loaded</p>
-                    <p class="text-sm">Click "Sync Calendars" to fetch upcoming bookings</p>
-                    ${configuredCount === 0 ? `
-                        <p class="text-sm mt-4 text-amber-600">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            No iCal connections configured. Go to "iCal Connections" tab first.
-                        </p>
-                    ` : ''}
+                    <i class="fas fa-circle-notch fa-spin text-3xl text-gray-300 mb-4"></i>
+                    <p class="text-lg font-medium mb-2">Loading reservations...</p>
                 </div>
             </div>
 
@@ -377,7 +376,7 @@ export class WelcomePackManager {
         `;
 
         // Event listeners
-        document.getElementById('wp-sync-reservations-btn').onclick = () => this.syncAndDisplayReservations();
+        document.getElementById('wp-sync-reservations-btn').onclick = () => this.syncAndDisplayReservations(false); // Manual sync
 
         document.querySelectorAll('.wp-date-filter').forEach(btn => {
             btn.onclick = () => {
@@ -385,6 +384,25 @@ export class WelcomePackManager {
                 this.renderReservations(document.getElementById('wp-view-container'));
             };
         });
+
+        // AUTO-SYNC LOGIC
+        // 1. Try to load from cache immediately
+        const cachedData = localStorage.getItem('wp_reservations');
+        if (cachedData) {
+            try {
+                const parsedData = JSON.parse(cachedData);
+                // Render with cached data immediately
+                this.displayReservationsList(parsedData, properties);
+            } catch (e) {
+                console.error('Error parsing cached reservations', e);
+            }
+        } else {
+            // If no cache, standard loading state is already in HTML
+        }
+
+        // 2. Trigger background sync
+        // Pass 'true' for isBackground to avoid showing the loading spinner if cache exists
+        this.syncAndDisplayReservations(!!cachedData);
     }
 
     /**
@@ -680,27 +698,32 @@ export class WelcomePackManager {
     /**
      * Sync calendars and display reservations list
      */
-    async syncAndDisplayReservations() {
+    /**
+     * Sync reservations from configured sources and update the display
+     * @param {boolean} isBackground - If true, run silently without showing loading spinner
+     */
+    async syncAndDisplayReservations(isBackground = false) {
         const listContainer = document.getElementById('wp-reservations-list');
         const syncBtn = document.getElementById('wp-sync-reservations-btn');
-        const lastSyncSpan = document.getElementById('wp-last-sync');
+        const lastSyncLabel = document.getElementById('wp-last-sync-label');
 
         if (!listContainer) return;
 
-        // Show loading state
-        if (syncBtn) {
+        // Show loading state only if not background sync
+        if (!isBackground && syncBtn) {
             syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
             syncBtn.disabled = true;
+
+            listContainer.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-lg">Fetching reservations...</p>
+                </div>
+            `;
         }
 
-        listContainer.innerHTML = `
-            <div class="text-center py-12 text-gray-500">
-                <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400 mb-4"></i>
-                <p class="text-lg">Fetching reservations...</p>
-            </div>
-        `;
-
         try {
+            // 1. Fetch Properties
             let properties = [];
             try {
                 properties = await this._fetchData('properties');
@@ -708,213 +731,195 @@ export class WelcomePackManager {
                 console.warn('[WelcomePack] Could not fetch properties:', e);
             }
 
-            // Get enabled property names for filtering
-            const enabledProperties = properties.filter(p => p.welcomePackEnabled);
-            const enabledPropertyNames = enabledProperties.map(p => (p.name || p.id).toLowerCase());
-
-            // Initialize reservations array
+            // 2. Fetch Reservations (Google Sheets)
             const allReservations = [];
-            const errors = [];
-
-            // Check if Google Sheets is configured (primary source)
-            const useGoogleSheets = true;
-
-            if (useGoogleSheets) {
-                // Fetch from Google Sheets
-                try {
-                    const sheetsReservations = await this.fetchGoogleSheetsReservations();
-                    allReservations.push(...sheetsReservations);
-                    console.log(`[WelcomePack] Fetched ${sheetsReservations.length} reservations from Google Sheets`);
-                } catch (error) {
-                    console.error('[WelcomePack] Error fetching from Google Sheets:', error);
-                    errors.push('Google Sheets');
-                }
+            try {
+                const sheetsReservations = await this.fetchGoogleSheetsReservations();
+                allReservations.push(...sheetsReservations);
+                console.log(`[WelcomePack] Fetched ${sheetsReservations.length} reservations from Google Sheets`);
+            } catch (error) {
+                console.error('[WelcomePack] Error fetching from Google Sheets:', error);
             }
 
-            // Filter to only show reservations for welcome-pack-enabled properties
-            const enabledReservations = allReservations.filter(r => {
-                const propertyName = (r.propertyName || '').toLowerCase();
-                return enabledPropertyNames.some(enabled =>
-                    propertyName.includes(enabled) || enabled.includes(propertyName)
-                );
-            });
+            // 3. Cache Data & Timestamp
+            localStorage.setItem('wp_reservations', JSON.stringify(allReservations));
+            const now = new Date();
+            localStorage.setItem('wp_last_sync', now.toISOString());
 
-            // If no enabled properties configured
-            if (enabledProperties.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-center py-12">
-                        <i class="fas fa-gift text-5xl text-amber-400 mb-4"></i>
-                        <p class="text-lg font-medium text-gray-700 mb-2">No properties have welcome pack enabled</p>
-                        <p class="text-sm text-gray-500 mb-4">Go to "Property Settings" to enable welcome pack for your properties</p>
-                        <button onclick="welcomePackManager.reservationsSubTab='settings'; welcomePackManager.renderReservations(document.getElementById('wp-view-container'));"
-                            class="px-4 py-2 bg-[#e94b5a] text-white rounded-lg hover:bg-[#d3414f] transition-colors">
-                            <i class="fas fa-cog mr-2"></i> Configure Properties
-                        </button>
-                    </div>
-                `;
-                return;
+            // 4. Update UI
+            if (lastSyncLabel) {
+                lastSyncLabel.textContent = `Last updated: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
             }
 
-            // If no reservations found
-            if (enabledReservations.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-center py-12">
-                        <i class="fas fa-calendar-times text-5xl text-amber-400 mb-4"></i>
-                        <p class="text-lg font-medium text-gray-700 mb-2">No reservations found</p>
-                        <p class="text-sm text-gray-500 mb-4">Reservations from properties with enabled Welcome Packs will appear here</p>
-                    </div>
-                `;
-                return;
-            }
-
-
-            // Filter by date range
-            const filterDays = this.reservationsDateFilter || 7;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const endDate = new Date(today);
-            endDate.setDate(today.getDate() + filterDays);
-
-            // Filter reservations where check-in is within the range
-            const filteredReservations = enabledReservations.filter(r => {
-                const checkIn = new Date(r.checkIn);
-                return checkIn >= today && checkIn <= endDate;
-            }).sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
-
-            // Calculate stats
-            const todayStr = today.toISOString().split('T')[0];
-            const weekEnd = new Date(today);
-            weekEnd.setDate(today.getDate() + 7);
-
-            const todayCount = enabledReservations.filter(r => {
-                const checkIn = new Date(r.checkIn);
-                return checkIn.toISOString().split('T')[0] === todayStr;
-            }).length;
-
-            const weekCount = enabledReservations.filter(r => {
-                const checkIn = new Date(r.checkIn);
-                return checkIn >= today && checkIn <= weekEnd;
-            }).length;
-
-            // Build the UI
-            let html = `
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                        <div class="flex items-center gap-2 text-green-700">
-                            <i class="fas fa-check-circle"></i>
-                            <span class="font-medium">Successfully synced data for ${enabledProperties.length} enabled propert${enabledProperties.length === 1 ? 'y' : 'ies'}</span>
-                            ${errors.length > 0 ? `<span class="text-amber-600 text-sm ml-2">(${errors.length} failed)</span>` : ''}
-                        </div>
-                    </div>
-                    `;
-
-            if (filteredReservations.length === 0) {
-                html += `
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-calendar-check text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-lg font-medium text-gray-600">No check-ins in the next ${filterDays} days</p>
-                        <p class="text-sm mt-1">Reservations will appear here when guests book</p>
-                    </div>
-                    `;
-            } else {
-                html += `<div class="space-y-3">`;
-
-                for (const reservation of filteredReservations) {
-                    const checkInDate = new Date(reservation.checkIn);
-                    const checkOutDate = new Date(reservation.checkOut);
-                    const isToday = checkInDate.toISOString().split('T')[0] === todayStr;
-                    const isTomorrow = checkInDate.toISOString().split('T')[0] === new Date(today.getTime() + 86400000).toISOString().split('T')[0];
-
-                    // In iCal, DTEND is the checkout day (exclusive), so nights = DTEND - DTSTART
-                    const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-
-                    // Last night is the day before checkout
-                    const lastNight = new Date(checkOutDate);
-                    lastNight.setDate(lastNight.getDate() - 1);
-
-                    html += `
-                    <div class="bg-white border ${isToday ? 'border-green-300 bg-green-50' : 'border-gray-200'} rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    ${isToday ? '<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TODAY</span>' : ''}
-                                    ${isTomorrow ? '<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TOMORROW</span>' : ''}
-                                    <span class="font-medium text-gray-800">${reservation.propertyName}</span>
-                                </div>
-                                <div class="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
-                                    <div>
-                                        <p class="text-xs text-gray-400 uppercase">Check-in</p>
-                                        <p class="font-medium flex items-center gap-1">
-                                            <i class="fas fa-sign-in-alt text-green-500"></i>
-                                            ${checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 uppercase">Check-out</p>
-                                        <p class="font-medium flex items-center gap-1">
-                                            <i class="fas fa-sign-out-alt text-red-500"></i>
-                                            ${checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-500">
-                                    <span class="bg-gray-100 px-2 py-1 rounded">${nights} night${nights > 1 ? 's' : ''}</span>
-                                    ${reservation.guestName
-                            ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${reservation.guestName}</span>`
-                            : (reservation.summary && reservation.summary !== 'UNAVAILABLE')
-                                ? `<span><i class="fas fa-user mr-1"></i>${reservation.summary}</span>`
-                                : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>Blocked / Reserved</span>`
-                        }
-                                    ${reservation.portal
-                            ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${reservation.portal.toLowerCase().includes('airbnb') ? 'bg-red-100 text-red-700' :
-                                reservation.portal.toLowerCase().includes('booking') ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-600'
-                            }">${reservation.portal}</span>`
-                            : ''
-                        }
-                                </div>
-
-                            </div>
-                            <button onclick="welcomePackManager.logPackForReservation('${reservation.propertyName.replace(/'/g, "\\'")}')"
-                                    class="px-3 py-2 bg-[#e94b5a] text-white text-sm rounded-lg hover:bg-[#d3414f] transition-colors flex items-center gap-1 ml-4">
-                            <i class="fas fa-gift"></i> Assign Pack
-                        </button>
-                            </div >
-                        </div >
-                    `;
-                }
-
-
-                html += `</div > `;
-            }
-
-            listContainer.innerHTML = html;
-
-            // Update stats
-            document.getElementById('wp-today-count').textContent = todayCount.toString();
-            document.getElementById('wp-week-count').textContent = weekCount.toString();
-            document.getElementById('wp-period-count').textContent = filteredReservations.length.toString();
-
-            // Update last sync time
-            if (lastSyncSpan) {
-                lastSyncSpan.innerHTML = `< i class="fas fa-clock mr-1" ></i > Last sync: ${new Date().toLocaleTimeString()} `;
-            }
+            this.displayReservationsList(allReservations, properties);
 
         } catch (error) {
             console.error('[WelcomePack] Error syncing reservations:', error);
-            listContainer.innerHTML = `
-                    < div class="text-center py-12 text-red-500" >
-                    <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
-                    <p class="text-lg font-medium">Error syncing calendars</p>
-                    <p class="text-sm">${error.message}</p>
-                </div >
-                    `;
+            if (!isBackground) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+                        <p class="text-lg font-medium">Error syncing calendars</p>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                `;
+            }
         } finally {
             // Reset button state
             if (syncBtn) {
-                syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Calendars';
+                syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Now';
                 syncBtn.disabled = false;
             }
         }
+    }
+
+    /**
+     * Render the list of reservations based on current data and filters
+     */
+    displayReservationsList(allReservations, properties) {
+        const listContainer = document.getElementById('wp-reservations-list');
+        if (!listContainer) return;
+
+        // Get enabled property names for filtering
+        const enabledProperties = properties.filter(p => p.welcomePackEnabled);
+        const enabledPropertyNames = enabledProperties.map(p => (p.name || p.id).toLowerCase());
+
+        // Filter to only show reservations for welcome-pack-enabled properties
+        const enabledReservations = allReservations.filter(r => {
+            const propertyName = (r.propertyName || '').toLowerCase();
+            return enabledPropertyNames.some(enabled =>
+                propertyName.includes(enabled) || enabled.includes(propertyName)
+            );
+        });
+
+        // 1. Check if ANY properties are enabled
+        if (enabledProperties.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-gift text-5xl text-amber-400 mb-4"></i>
+                    <p class="text-lg font-medium text-gray-700 mb-2">No properties have welcome pack enabled</p>
+                    <p class="text-sm text-gray-500 mb-4">Go to "Property Settings" to enable welcome pack for your properties</p>
+                    <button onclick="welcomePackManager.reservationsSubTab='settings'; welcomePackManager.renderReservations(document.getElementById('wp-view-container'));"
+                        class="px-4 py-2 bg-[#e94b5a] text-white rounded-lg hover:bg-[#d3414f] transition-colors">
+                        <i class="fas fa-cog mr-2"></i> Configure Properties
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        // 2. Filter by date range
+        const filterDays = this.reservationsDateFilter || 7;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + filterDays);
+
+        const filteredReservations = enabledReservations.filter(r => {
+            const checkIn = new Date(r.checkIn);
+            return checkIn >= today && checkIn <= endDate;
+        }).sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+        // 3. Update Stats
+        const todayStr = today.toISOString().split('T')[0];
+        const weekEnd = new Date(today);
+        weekEnd.setDate(today.getDate() + 7);
+
+        const todayCount = enabledReservations.filter(r => {
+            const checkIn = new Date(r.checkIn);
+            return checkIn.toISOString().split('T')[0] === todayStr;
+        }).length;
+
+        const weekCount = enabledReservations.filter(r => {
+            const checkIn = new Date(r.checkIn);
+            return checkIn >= today && checkIn <= weekEnd;
+        }).length;
+
+        const todayEl = document.getElementById('wp-today-count');
+        const weekEl = document.getElementById('wp-week-count');
+        const periodEl = document.getElementById('wp-period-count');
+
+        if (todayEl) todayEl.textContent = todayCount.toString();
+        if (weekEl) weekEl.textContent = weekCount.toString();
+        if (periodEl) periodEl.textContent = filteredReservations.length.toString();
+
+
+        // 4. Render List
+        if (filteredReservations.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-calendar-check text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-lg font-medium text-gray-600">No check-ins in the next ${filterDays} days</p>
+                    <p class="text-sm mt-1">Reservations will appear here when guests book</p>
+                    ${enabledReservations.length === 0 ? '<p class="text-xs text-amber-500 mt-2">(No reservations found for enabled properties)</p>' : ''}
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="space-y-3">';
+
+        for (const reservation of filteredReservations) {
+            const checkInDate = new Date(reservation.checkIn);
+            const checkOutDate = new Date(reservation.checkOut);
+            const isToday = checkInDate.toISOString().split('T')[0] === todayStr;
+            const isTomorrow = checkInDate.toISOString().split('T')[0] === new Date(today.getTime() + 86400000).toISOString().split('T')[0];
+            const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+            html += `
+            <div class="bg-white border ${isToday ? 'border-green-300 bg-green-50' : 'border-gray-200'} rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            ${isToday ? '<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TODAY</span>' : ''}
+                            ${isTomorrow ? '<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TOMORROW</span>' : ''}
+                            <span class="font-medium text-gray-800">${reservation.propertyName}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Check-in</p>
+                                <p class="font-medium flex items-center gap-1">
+                                    <i class="fas fa-sign-in-alt text-green-500"></i>
+                                    ${checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Check-out</p>
+                                <p class="font-medium flex items-center gap-1">
+                                    <i class="fas fa-sign-out-alt text-red-500"></i>
+                                    ${checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                            <span class="bg-gray-100 px-2 py-1 rounded">${nights} night${nights > 1 ? 's' : ''}</span>
+                            ${reservation.guestName
+                    ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${reservation.guestName}</span>`
+                    : (reservation.summary && reservation.summary !== 'UNAVAILABLE')
+                        ? `<span><i class="fas fa-user mr-1"></i>${reservation.summary}</span>`
+                        : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>Blocked / Reserved</span>`
+                }
+                            ${reservation.portal
+                    ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${reservation.portal.toLowerCase().includes('airbnb') ? 'bg-red-100 text-red-700' :
+                        reservation.portal.toLowerCase().includes('booking') ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-100 text-gray-600'
+                    }">${reservation.portal}</span>`
+                    : ''
+                }
+                        </div>
+
+                    </div>
+                    <button onclick="welcomePackManager.logPackForReservation('${reservation.propertyName.replace(/'/g, "\\'")}')"
+                            class="px-3 py-2 bg-[#e94b5a] text-white text-sm rounded-lg hover:bg-[#d3414f] transition-colors flex items-center gap-1 ml-4">
+                    <i class="fas fa-gift"></i> Assign Pack
+                </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        listContainer.innerHTML = html;
     }
 
     /**
