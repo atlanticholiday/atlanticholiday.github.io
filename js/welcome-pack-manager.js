@@ -58,10 +58,13 @@ export class WelcomePackManager {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="mb-6 flex justify-between items-center">
+            <div class="mb-6 flex justify-between items-center flex-wrap gap-3">
                 <h2 class="text-2xl font-bold text-gray-800">Welcome Packs</h2>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <button id="wp-dashboard-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'dashboard' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Dashboard</button>
+                    <button id="wp-reservations-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'reservations' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all flex items-center gap-1">
+                        <i class="fas fa-calendar-alt text-sm"></i> Reservations
+                    </button>
                     <button id="wp-log-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'log' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Log Pack</button>
                     <button id="wp-presets-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'presets' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Presets</button>
                     <button id="wp-inventory-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'inventory' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Inventory</button>
@@ -76,6 +79,7 @@ export class WelcomePackManager {
 
     attachNavListeners() {
         document.getElementById('wp-dashboard-btn').onclick = () => { this.currentView = 'dashboard'; this.render(); };
+        document.getElementById('wp-reservations-btn').onclick = () => { this.currentView = 'reservations'; this.render(); };
         document.getElementById('wp-log-btn').onclick = () => { this.editingLogId = null; this.currentView = 'log'; this.render(); };
         document.getElementById('wp-presets-btn').onclick = () => { this.currentView = 'presets'; this.render(); };
         document.getElementById('wp-inventory-btn').onclick = () => { this.currentView = 'inventory'; this.render(); };
@@ -84,10 +88,12 @@ export class WelcomePackManager {
     renderCurrentView() {
         const container = document.getElementById('wp-view-container');
         if (this.currentView === 'dashboard') this.renderDashboard(container);
+        else if (this.currentView === 'reservations') this.renderReservations(container);
         else if (this.currentView === 'inventory') this.renderInventory(container);
         else if (this.currentView === 'presets') this.renderPresets(container);
         else if (this.currentView === 'log') this.renderLogForm(container);
     }
+
 
     async renderDashboard(container) {
         const logs = await this._fetchData('logs');
@@ -111,7 +117,36 @@ export class WelcomePackManager {
             propertyStats[log.property]++;
         });
 
+        // Check for low stock items
+        const lowStockItems = items.filter(item => (item.quantity || 0) < 5);
+
         container.innerHTML = `
+            <!-- Low Stock Alert -->
+            ${lowStockItems.length > 0 ? `
+            <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 flex items-start gap-4">
+                <div class="bg-amber-100 rounded-full p-2">
+                    <i class="fas fa-exclamation-triangle text-amber-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-amber-800 mb-1">Low Stock Alert</h3>
+                    <p class="text-sm text-amber-700 mb-2">${lowStockItems.length} item${lowStockItems.length > 1 ? 's are' : ' is'} running low on stock:</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${lowStockItems.map(item => `
+                            <span class="inline-flex items-center gap-1 bg-white border border-amber-200 rounded-full px-3 py-1 text-sm">
+                                <span class="font-medium text-amber-800">${item.name}</span>
+                                <span class="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">${item.quantity || 0}</span>
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+                <button onclick="welcomePackManager.currentView='inventory'; welcomePackManager.render();" 
+                    class="text-amber-700 hover:text-amber-900 font-medium text-sm whitespace-nowrap">
+                    Manage Stock →
+                </button>
+            </div>
+            ` : ''}
+
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <!-- Date Filter Control -->
                 <div class="md:col-span-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-4">
@@ -128,7 +163,7 @@ export class WelcomePackManager {
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Total Packs Left</h3>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Packs Delivered</h3>
                     <p class="text-3xl font-bold text-gray-800">${totalPacks}</p>
                 </div>
                 <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
@@ -196,7 +231,921 @@ export class WelcomePackManager {
         document.getElementById('wp-export-csv').onclick = () => this.exportToCSV(filteredLogs);
     }
 
+
+    /**
+     * Render the Reservations view with two sub-tabs
+     */
+    async renderReservations(container) {
+        // Default to 'upcoming' sub-tab if not set
+        if (!this.reservationsSubTab) {
+            this.reservationsSubTab = 'upcoming';
+        }
+        if (!this.reservationsDateFilter) {
+            this.reservationsDateFilter = 7; // Default: 7 days
+        }
+
+        container.innerHTML = `
+            <!-- Sub-Tab Navigation -->
+            <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+                <div class="flex border-b border-gray-200">
+                    <button id="wp-subtab-upcoming" class="flex-1 px-6 py-4 text-center font-medium transition-colors ${this.reservationsSubTab === 'upcoming'
+                ? 'text-[#e94b5a] border-b-2 border-[#e94b5a] bg-red-50'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        Upcoming Reservations
+                    </button>
+                    <button id="wp-subtab-settings" class="flex-1 px-6 py-4 text-center font-medium transition-colors ${this.reservationsSubTab === 'settings'
+                ? 'text-[#e94b5a] border-b-2 border-[#e94b5a] bg-red-50'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}">
+                        <i class="fas fa-cog mr-2"></i>
+                        Property Settings
+                    </button>
+                </div>
+                
+                <!-- Sub-Tab Content -->
+                <div id="wp-subtab-content" class="p-6">
+                    <!-- Content will be inserted based on active tab -->
+                </div>
+            </div>
+        `;
+
+        // Set up sub-tab listeners
+        document.getElementById('wp-subtab-upcoming').onclick = () => {
+            this.reservationsSubTab = 'upcoming';
+            this.renderReservations(container);
+        };
+        document.getElementById('wp-subtab-settings').onclick = () => {
+            this.reservationsSubTab = 'settings';
+            this.renderReservations(container);
+        };
+
+        // Render the appropriate sub-tab content
+        const contentContainer = document.getElementById('wp-subtab-content');
+        if (this.reservationsSubTab === 'upcoming') {
+            await this.renderUpcomingReservations(contentContainer);
+        } else {
+            await this.renderPropertySettings(contentContainer);
+        }
+    }
+
+
+    /**
+     * Render Upcoming Reservations sub-tab (View Only)
+     */
+    async renderUpcomingReservations(container) {
+        // Get stats
+        let configuredCount = 0;
+        let totalCount = 0;
+        let properties = [];
+        try {
+            properties = await this._fetchData('properties');
+            totalCount = properties.length;
+            configuredCount = properties.filter(p => p.icalUrl).length;
+        } catch (e) {
+            console.warn('[WelcomePack] Could not fetch properties:', e);
+        }
+
+        const filterDays = this.reservationsDateFilter;
+
+        container.innerHTML = `
+            <!-- Header with Sync Button -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Future Bookings</h3>
+                    <p class="text-sm text-gray-500">${configuredCount} of ${totalCount} properties have iCal configured</p>
+                </div>
+                <button id="wp-sync-reservations-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-sync-alt"></i> Sync Calendars
+                </button>
+            </div>
+
+            <!-- Date Filter Buttons -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 7
+                ? 'bg-[#e94b5a] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="7">
+                    Next 7 Days
+                </button>
+                <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 15
+                ? 'bg-[#e94b5a] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="15">
+                    Next 15 Days
+                </button>
+                <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 30
+                ? 'bg-[#e94b5a] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="30">
+                    Next 30 Days
+                </button>
+                <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 365
+                ? 'bg-[#e94b5a] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-days="365">
+                    View All
+                </button>
+                <span id="wp-last-sync" class="ml-auto text-sm text-gray-500 flex items-center"></span>
+            </div>
+
+            <!-- Reservations List -->
+            <div id="wp-reservations-list" class="space-y-3">
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-calendar-day text-5xl text-gray-300 mb-4"></i>
+                    <p class="text-lg font-medium mb-2">No reservations loaded</p>
+                    <p class="text-sm">Click "Sync Calendars" to fetch upcoming bookings</p>
+                    ${configuredCount === 0 ? `
+                        <p class="text-sm mt-4 text-amber-600">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            No iCal connections configured. Go to "iCal Connections" tab first.
+                        </p>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500">Check-ins Today</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-today-count">—</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500">This Week</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-week-count">—</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-sm text-gray-500">Next ${filterDays} Days</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-period-count">—</p>
+                </div>
+            </div>
+        `;
+
+        // Event listeners
+        document.getElementById('wp-sync-reservations-btn').onclick = () => this.syncAndDisplayReservations();
+
+        document.querySelectorAll('.wp-date-filter').forEach(btn => {
+            btn.onclick = () => {
+                this.reservationsDateFilter = parseInt(btn.dataset.days);
+                this.renderReservations(document.getElementById('wp-view-container'));
+            };
+        });
+    }
+
+    /**
+     * Render iCal Connections sub-tab (Settings)
+     */
+    /**
+     * Render Property Settings sub-tab - Enable/disable welcome pack for properties
+     */
+    async renderPropertySettings(container) {
+        let properties = [];
+        let enabledCount = 0;
+        try {
+            properties = await this._fetchData('properties');
+            enabledCount = properties.filter(p => p.welcomePackEnabled).length;
+        } catch (e) {
+            console.warn('[WelcomePack] Could not fetch properties:', e);
+        }
+
+        container.innerHTML = `
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Welcome Pack Properties</h3>
+                    <p class="text-sm text-gray-500">${enabledCount} of ${properties.length} properties have welcome pack enabled</p>
+                </div>
+            </div>
+
+            <!-- Info Banner -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-500 text-lg mt-0.5"></i>
+                    <div>
+                        <p class="text-sm text-blue-800 font-medium">Configure which properties need welcome packs</p>
+                        <p class="text-sm text-blue-700 mt-1">
+                            Search for a property below and enable welcome pack tracking. 
+                            Only enabled properties will appear in the Upcoming Reservations list.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Input -->
+            <div class="relative mb-4">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" id="wp-property-settings-search" 
+                    placeholder="Search for a property to enable/disable..." 
+                    class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                    autocomplete="off">
+            </div>
+            
+            <!-- Search Results -->
+            <div id="wp-property-settings-results" class="border border-gray-200 rounded-lg overflow-hidden hidden mb-6">
+                <!-- Results will be inserted here -->
+            </div>
+            
+            <!-- Empty State / Instructions -->
+            <div id="wp-property-settings-empty" class="text-center py-8 text-gray-500 mb-6">
+                <i class="fas fa-building text-4xl text-gray-300 mb-3"></i>
+                <p>Start typing to search for a property</p>
+            </div>
+
+            <!-- Enabled Properties List -->
+            <div class="border-t border-gray-200 pt-6">
+                <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">
+                    <i class="fas fa-gift text-[#e94b5a] mr-2"></i>
+                    Properties with Welcome Pack Enabled (${enabledCount})
+                </h4>
+                
+                ${enabledCount > 0 ? `
+                    <div class="space-y-2">
+                        ${properties.filter(p => p.welcomePackEnabled).map(property => `
+                            <div class="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-lg">
+                                <div class="flex-1">
+                                    <span class="font-medium text-gray-800">${property.name || property.id}</span>
+                                    <span class="ml-2 text-xs text-green-600">
+                                        <i class="fas fa-check-circle"></i> Welcome Pack Enabled
+                                    </span>
+                                </div>
+                                <button class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                                    onclick="welcomePackManager.toggleWelcomePack('${property.id}', false)">
+                                    <i class="fas fa-times mr-1"></i> Disable
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="text-center py-6 text-gray-400 bg-gray-50 rounded-lg">
+                        <i class="fas fa-gift text-3xl mb-2 opacity-50"></i>
+                        <p>No properties have welcome pack enabled yet</p>
+                        <p class="text-sm">Search and enable properties above</p>
+                    </div>
+                `}
+            </div>
+        `;
+
+        // Property search with debounce
+        let searchTimeout = null;
+        document.getElementById('wp-property-settings-search').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                document.getElementById('wp-property-settings-results').classList.add('hidden');
+                document.getElementById('wp-property-settings-empty').classList.remove('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => this.searchPropertiesForSettings(query), 300);
+        });
+    }
+
+    /**
+     * Search properties for welcome pack settings
+     */
+    async searchPropertiesForSettings(query) {
+        const resultsContainer = document.getElementById('wp-property-settings-results');
+        const emptyState = document.getElementById('wp-property-settings-empty');
+
+        if (!resultsContainer) return;
+
+        // Show loading
+        resultsContainer.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        resultsContainer.innerHTML = `
+            <div class="p-4 text-center text-gray-500">
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Searching...
+            </div>
+        `;
+
+        try {
+            const properties = await this._fetchData('properties');
+            const lowerQuery = query.toLowerCase();
+
+            // Filter properties by name
+            const matches = properties.filter(p =>
+                (p.name && p.name.toLowerCase().includes(lowerQuery)) ||
+                (p.id && p.id.toLowerCase().includes(lowerQuery))
+            ).slice(0, 10); // Limit to 10 results
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
+                        <p>No properties found matching "${query}"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsContainer.innerHTML = matches.map(property => `
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-800">${property.name || property.id}</span>
+                        ${property.welcomePackEnabled
+                    ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
+                                <i class="fas fa-check-circle"></i> Enabled
+                              </span>`
+                    : `<span class="ml-2 inline-flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fas fa-times-circle"></i> Disabled
+                              </span>`
+                }
+                    </div>
+                    <button class="px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                        ${property.welcomePackEnabled
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }"
+                        onclick="welcomePackManager.toggleWelcomePack('${property.id}', ${!property.welcomePackEnabled})">
+                        ${property.welcomePackEnabled
+                    ? '<i class="fas fa-times mr-1"></i> Disable'
+                    : '<i class="fas fa-check mr-1"></i> Enable'}
+                    </button>
+                </div>
+            `).join('');
+
+        } catch (error) {
+            console.error('[WelcomePack] Error searching properties:', error);
+            resultsContainer.innerHTML = `
+                <div class="p-4 text-center text-red-500">
+                    <i class="fas fa-exclamation-circle mr-2"></i> Error searching properties
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Toggle welcome pack enabled/disabled for a property
+     */
+    async toggleWelcomePack(propertyId, enabled) {
+        try {
+            await this.dataManager.updatePropertyWelcomePack(propertyId, enabled);
+            this._invalidateCache('properties');
+            this.renderReservations(document.getElementById('wp-view-container'));
+        } catch (error) {
+            console.error('[WelcomePack] Error toggling welcome pack:', error);
+            alert('Error updating property. Please try again.');
+        }
+    }
+
+
+    /**
+     * Search properties for iCal configuration
+     */
+    async searchPropertiesForIcal(query) {
+        const resultsContainer = document.getElementById('wp-ical-search-results');
+        const emptyState = document.getElementById('wp-ical-search-empty');
+
+        if (!resultsContainer) return;
+
+        // Show loading
+        resultsContainer.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        resultsContainer.innerHTML = `
+            <div class="p-4 text-center text-gray-500">
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Searching...
+            </div>
+        `;
+
+        try {
+            const properties = await this._fetchData('properties');
+            const lowerQuery = query.toLowerCase();
+
+            // Filter properties by name
+            const matches = properties.filter(p =>
+                (p.name && p.name.toLowerCase().includes(lowerQuery)) ||
+                (p.id && p.id.toLowerCase().includes(lowerQuery))
+            ).slice(0, 10); // Limit to 10 results
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
+                        <p>No properties found matching "${query}"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsContainer.innerHTML = matches.map(property => `
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-800">${property.name || property.id}</span>
+                        ${property.icalUrl
+                    ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
+                                <i class="fas fa-check-circle"></i> Connected
+                              </span>`
+                    : `<span class="ml-2 inline-flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fas fa-times-circle"></i> Not connected
+                              </span>`
+                }
+                    </div>
+                    <button class="px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                        ${property.icalUrl
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-[#e94b5a] text-white hover:bg-[#d3414f]'
+                }"
+                        onclick="welcomePackManager.showIcalConfigModal('${property.id}', '${(property.name || '').replace(/'/g, "\\'")}', '${(property.icalUrl || '').replace(/'/g, "\\'")}')">
+                        ${property.icalUrl ? '<i class="fas fa-edit mr-1"></i> Edit' : '<i class="fas fa-plus mr-1"></i> Add iCal'}
+                    </button>
+                </div>
+            `).join('');
+
+        } catch (error) {
+            console.error('[WelcomePack] Error searching properties:', error);
+            resultsContainer.innerHTML = `
+                <div class="p-4 text-center text-red-500">
+                    <i class="fas fa-exclamation-circle mr-2"></i> Error searching properties
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Remove iCal URL from a property
+     */
+    async removeIcalUrl(propertyId, propertyName) {
+        if (!confirm(`Remove iCal connection for "${propertyName}"?\n\nThis will stop syncing reservations for this property.`)) {
+            return;
+        }
+
+        try {
+            await this.dataManager.updatePropertyIcalUrl(propertyId, '');
+            this._invalidateCache('properties');
+            this.renderReservations(document.getElementById('wp-view-container'));
+        } catch (error) {
+            console.error('[WelcomePack] Error removing iCal URL:', error);
+            alert('Error removing iCal connection. Please try again.');
+        }
+    }
+
+    /**
+     * Sync calendars and display reservations list
+     */
+    async syncAndDisplayReservations() {
+        const listContainer = document.getElementById('wp-reservations-list');
+        const syncBtn = document.getElementById('wp-sync-reservations-btn');
+        const lastSyncSpan = document.getElementById('wp-last-sync');
+
+        if (!listContainer) return;
+
+        // Show loading state
+        if (syncBtn) {
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            syncBtn.disabled = true;
+        }
+
+        listContainer.innerHTML = `
+            <div class="text-center py-12 text-gray-500">
+                <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400 mb-4"></i>
+                <p class="text-lg">Fetching reservations...</p>
+            </div>
+        `;
+
+        try {
+            let properties = [];
+            try {
+                properties = await this._fetchData('properties');
+            } catch (e) {
+                console.warn('[WelcomePack] Could not fetch properties:', e);
+            }
+
+            // Get enabled property names for filtering
+            const enabledProperties = properties.filter(p => p.welcomePackEnabled);
+            const enabledPropertyNames = enabledProperties.map(p => (p.name || p.id).toLowerCase());
+
+            // Initialize reservations array
+            const allReservations = [];
+            const errors = [];
+
+            // Check if Google Sheets is configured (primary source)
+            const useGoogleSheets = true;
+
+            if (useGoogleSheets) {
+                // Fetch from Google Sheets
+                try {
+                    const sheetsReservations = await this.fetchGoogleSheetsReservations();
+                    allReservations.push(...sheetsReservations);
+                    console.log(`[WelcomePack] Fetched ${sheetsReservations.length} reservations from Google Sheets`);
+                } catch (error) {
+                    console.error('[WelcomePack] Error fetching from Google Sheets:', error);
+                    errors.push('Google Sheets');
+                }
+            }
+
+            // Filter to only show reservations for welcome-pack-enabled properties
+            const enabledReservations = allReservations.filter(r => {
+                const propertyName = (r.propertyName || '').toLowerCase();
+                return enabledPropertyNames.some(enabled =>
+                    propertyName.includes(enabled) || enabled.includes(propertyName)
+                );
+            });
+
+            // If no enabled properties configured
+            if (enabledProperties.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-gift text-5xl text-amber-400 mb-4"></i>
+                        <p class="text-lg font-medium text-gray-700 mb-2">No properties have welcome pack enabled</p>
+                        <p class="text-sm text-gray-500 mb-4">Go to "Property Settings" to enable welcome pack for your properties</p>
+                        <button onclick="welcomePackManager.reservationsSubTab='settings'; welcomePackManager.renderReservations(document.getElementById('wp-view-container'));"
+                            class="px-4 py-2 bg-[#e94b5a] text-white rounded-lg hover:bg-[#d3414f] transition-colors">
+                            <i class="fas fa-cog mr-2"></i> Configure Properties
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // If no reservations found
+            if (enabledReservations.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-calendar-times text-5xl text-amber-400 mb-4"></i>
+                        <p class="text-lg font-medium text-gray-700 mb-2">No reservations found</p>
+                        <p class="text-sm text-gray-500 mb-4">Reservations from properties with enabled Welcome Packs will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+
+
+            // Filter by date range
+            const filterDays = this.reservationsDateFilter || 7;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const endDate = new Date(today);
+            endDate.setDate(today.getDate() + filterDays);
+
+            // Filter reservations where check-in is within the range
+            const filteredReservations = enabledReservations.filter(r => {
+                const checkIn = new Date(r.checkIn);
+                return checkIn >= today && checkIn <= endDate;
+            }).sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+            // Calculate stats
+            const todayStr = today.toISOString().split('T')[0];
+            const weekEnd = new Date(today);
+            weekEnd.setDate(today.getDate() + 7);
+
+            const todayCount = enabledReservations.filter(r => {
+                const checkIn = new Date(r.checkIn);
+                return checkIn.toISOString().split('T')[0] === todayStr;
+            }).length;
+
+            const weekCount = enabledReservations.filter(r => {
+                const checkIn = new Date(r.checkIn);
+                return checkIn >= today && checkIn <= weekEnd;
+            }).length;
+
+            // Build the UI
+            let html = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center gap-2 text-green-700">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="font-medium">Successfully synced data for ${enabledProperties.length} enabled propert${enabledProperties.length === 1 ? 'y' : 'ies'}</span>
+                            ${errors.length > 0 ? `<span class="text-amber-600 text-sm ml-2">(${errors.length} failed)</span>` : ''}
+                        </div>
+                    </div>
+                    `;
+
+            if (filteredReservations.length === 0) {
+                html += `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-calendar-check text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-lg font-medium text-gray-600">No check-ins in the next ${filterDays} days</p>
+                        <p class="text-sm mt-1">Reservations will appear here when guests book</p>
+                    </div>
+                    `;
+            } else {
+                html += `<div class="space-y-3">`;
+
+                for (const reservation of filteredReservations) {
+                    const checkInDate = new Date(reservation.checkIn);
+                    const checkOutDate = new Date(reservation.checkOut);
+                    const isToday = checkInDate.toISOString().split('T')[0] === todayStr;
+                    const isTomorrow = checkInDate.toISOString().split('T')[0] === new Date(today.getTime() + 86400000).toISOString().split('T')[0];
+
+                    // In iCal, DTEND is the checkout day (exclusive), so nights = DTEND - DTSTART
+                    const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+                    // Last night is the day before checkout
+                    const lastNight = new Date(checkOutDate);
+                    lastNight.setDate(lastNight.getDate() - 1);
+
+                    html += `
+                    <div class="bg-white border ${isToday ? 'border-green-300 bg-green-50' : 'border-gray-200'} rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    ${isToday ? '<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TODAY</span>' : ''}
+                                    ${isTomorrow ? '<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TOMORROW</span>' : ''}
+                                    <span class="font-medium text-gray-800">${reservation.propertyName}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
+                                    <div>
+                                        <p class="text-xs text-gray-400 uppercase">Check-in</p>
+                                        <p class="font-medium flex items-center gap-1">
+                                            <i class="fas fa-sign-in-alt text-green-500"></i>
+                                            ${checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-400 uppercase">Check-out</p>
+                                        <p class="font-medium flex items-center gap-1">
+                                            <i class="fas fa-sign-out-alt text-red-500"></i>
+                                            ${checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs text-gray-500">
+                                    <span class="bg-gray-100 px-2 py-1 rounded">${nights} night${nights > 1 ? 's' : ''}</span>
+                                    ${reservation.guestName
+                            ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${reservation.guestName}</span>`
+                            : (reservation.summary && reservation.summary !== 'UNAVAILABLE')
+                                ? `<span><i class="fas fa-user mr-1"></i>${reservation.summary}</span>`
+                                : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>Blocked / Reserved</span>`
+                        }
+                                    ${reservation.portal
+                            ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${reservation.portal.toLowerCase().includes('airbnb') ? 'bg-red-100 text-red-700' :
+                                reservation.portal.toLowerCase().includes('booking') ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-600'
+                            }">${reservation.portal}</span>`
+                            : ''
+                        }
+                                </div>
+
+                            </div>
+                            <button onclick="welcomePackManager.logPackForReservation('${reservation.propertyName.replace(/'/g, "\\'")}')"
+                                    class="px-3 py-2 bg-[#e94b5a] text-white text-sm rounded-lg hover:bg-[#d3414f] transition-colors flex items-center gap-1 ml-4">
+                            <i class="fas fa-gift"></i> Assign Pack
+                        </button>
+                            </div >
+                        </div >
+                    `;
+                }
+
+
+                html += `</div > `;
+            }
+
+            listContainer.innerHTML = html;
+
+            // Update stats
+            document.getElementById('wp-today-count').textContent = todayCount.toString();
+            document.getElementById('wp-week-count').textContent = weekCount.toString();
+            document.getElementById('wp-period-count').textContent = filteredReservations.length.toString();
+
+            // Update last sync time
+            if (lastSyncSpan) {
+                lastSyncSpan.innerHTML = `< i class="fas fa-clock mr-1" ></i > Last sync: ${new Date().toLocaleTimeString()} `;
+            }
+
+        } catch (error) {
+            console.error('[WelcomePack] Error syncing reservations:', error);
+            listContainer.innerHTML = `
+                    < div class="text-center py-12 text-red-500" >
+                    <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+                    <p class="text-lg font-medium">Error syncing calendars</p>
+                    <p class="text-sm">${error.message}</p>
+                </div >
+                    `;
+        } finally {
+            // Reset button state
+            if (syncBtn) {
+                syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Calendars';
+                syncBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Fetch and parse iCal data from a URL
+     */
+    async fetchAndParseIcal(icalUrl, propertyName) {
+        // Use CORS proxy for cross-origin requests
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(icalUrl)}`;
+
+        let response;
+        try {
+            // Try direct fetch first
+            response = await fetch(icalUrl);
+            if (!response.ok) throw new Error('Direct fetch failed');
+        } catch (e) {
+            // Fall back to CORS proxy
+            console.log(`[WelcomePack] Using CORS proxy for ${propertyName}`);
+            response = await fetch(proxyUrl);
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch calendar: ${response.status}`);
+        }
+
+        const icalText = await response.text();
+        return this.parseIcalData(icalText, propertyName);
+    }
+
+    /**
+     * Parse iCal text data into reservation objects
+     */
+    parseIcalData(icalText, propertyName) {
+        const reservations = [];
+
+        // Split into events
+        const events = icalText.split('BEGIN:VEVENT');
+
+        for (let i = 1; i < events.length; i++) {
+            const eventBlock = events[i].split('END:VEVENT')[0];
+
+            // Extract DTSTART
+            const dtStartMatch = eventBlock.match(/DTSTART(?:;VALUE=DATE)?:(\d{8})/);
+            // Extract DTEND
+            const dtEndMatch = eventBlock.match(/DTEND(?:;VALUE=DATE)?:(\d{8})/);
+            // Extract SUMMARY
+            const summaryMatch = eventBlock.match(/SUMMARY:(.+?)(?:\r?\n|\r)/);
+
+            if (dtStartMatch && dtEndMatch) {
+                const startStr = dtStartMatch[1];
+                const endStr = dtEndMatch[1];
+
+                // Parse dates (format: YYYYMMDD)
+                const checkIn = new Date(
+                    parseInt(startStr.substring(0, 4)),
+                    parseInt(startStr.substring(4, 6)) - 1,
+                    parseInt(startStr.substring(6, 8))
+                );
+
+                const checkOut = new Date(
+                    parseInt(endStr.substring(0, 4)),
+                    parseInt(endStr.substring(4, 6)) - 1,
+                    parseInt(endStr.substring(6, 8))
+                );
+
+                reservations.push({
+                    propertyName: propertyName,
+                    checkIn: checkIn.toISOString(),
+                    checkOut: checkOut.toISOString(),
+                    summary: summaryMatch ? summaryMatch[1].trim() : 'Reserved'
+                });
+            }
+        }
+
+        return reservations;
+    }
+
+    /**
+     * Fetch reservations from Google Apps Script Web App
+     * The script automatically aggregates all sheets and returns JSON
+     */
+    async fetchGoogleSheetsReservations() {
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvIkBDhwZ3MxOW8aQUlD5qx3UV9l8wS-dMg8PcixJIrJ7-eXAid6vo6stchkBNfGpA/exec';
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL);
+
+            if (!response.ok) {
+                throw new Error(`Script returned status: ${response.status}`);
+            }
+
+            const reservations = await response.json();
+            return reservations;
+
+        } catch (error) {
+            console.error('[WelcomePack] Error fetching from Apps Script:', error);
+            return [];
+        }
+    }
+
+
+
+
+    /**
+     * Quick action to log a pack for a reservation
+     */
+    logPackForReservation(propertyName) {
+        // Switch to log pack view and pre-fill property
+        this.currentView = 'log';
+        this.render();
+
+        // Try to set the property in the form
+        setTimeout(() => {
+            const propertySelect = document.getElementById('wp-log-property');
+            if (propertySelect) {
+                // Find the option that matches
+                for (const option of propertySelect.options) {
+                    if (option.text === propertyName || option.value === propertyName) {
+                        propertySelect.value = option.value;
+                        break;
+                    }
+                }
+            }
+        }, 100);
+    }
+
+
+
+
+    /**
+     * Show modal to configure iCal URL for a property
+     */
+    showIcalConfigModal(propertyId, propertyName, currentUrl) {
+        const modalHtml = `
+            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-ical-config-modal">
+                <div class="relative p-5 border w-[500px] shadow-lg rounded-xl bg-white">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Configure iCal URL</h3>
+                    <p class="text-sm text-gray-600 mb-4">Property: <strong>${propertyName || propertyId}</strong></p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">iCal/ICS URL</label>
+                            <input type="url" id="wp-ical-url-input" value="${currentUrl}" 
+                                placeholder="https://www.airbnb.com/calendar/ical/..." 
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Find this in your channel manager (Airbnb, Booking.com, VRBO, etc.)
+                            </p>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>How to find your iCal URL:</p>
+                            <ul class="text-xs text-blue-700 mt-2 space-y-1 ml-4">
+                                <li>• <strong>Airbnb:</strong> Calendar → Availability settings → Export calendar</li>
+                                <li>• <strong>Booking.com:</strong> Property → Calendar → Sync calendars</li>
+                                <li>• <strong>VRBO:</strong> Calendar → Import/Export → Export</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2">
+                            <button id="wp-ical-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+                            <button id="wp-ical-test-btn" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">Test URL</button>
+                            <button id="wp-ical-save-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.getElementById('wp-ical-cancel-btn').onclick = () => {
+            document.getElementById('wp-ical-config-modal').remove();
+        };
+
+        document.getElementById('wp-ical-test-btn').onclick = async () => {
+            const url = document.getElementById('wp-ical-url-input').value.trim();
+            if (!url) {
+                alert('Please enter a URL first');
+                return;
+            }
+
+            const btn = document.getElementById('wp-ical-test-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            btn.disabled = true;
+
+            try {
+                // Try to fetch the URL
+                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+                const text = await response.text();
+
+                if (text.includes('BEGIN:VCALENDAR')) {
+                    alert('✅ URL is valid! Calendar data received successfully.');
+                } else {
+                    alert('⚠️ URL returned data but it doesn\'t appear to be a valid iCal format.');
+                }
+            } catch (error) {
+                alert('❌ Could not fetch URL. Please check if the URL is correct and accessible.');
+            } finally {
+                btn.innerHTML = 'Test URL';
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('wp-ical-save-btn').onclick = async () => {
+            const url = document.getElementById('wp-ical-url-input').value.trim();
+
+            try {
+                // Save iCal URL to property (you'll need to add this method to DataManager)
+                if (this.dataManager.updatePropertyIcalUrl) {
+                    await this.dataManager.updatePropertyIcalUrl(propertyId, url);
+                } else {
+                    // Fallback: store in a separate collection
+                    console.warn('[WelcomePack] updatePropertyIcalUrl not available, storing separately');
+                    // For now, just close and show message
+                    alert('iCal URL saved! (Note: Full integration requires DataManager update)');
+                }
+
+                this._invalidateCache('properties');
+                document.getElementById('wp-ical-config-modal').remove();
+                this.render();
+            } catch (error) {
+                console.error('[WelcomePack] Error saving iCal URL:', error);
+                alert('Error saving URL. Please try again.');
+            }
+        };
+    }
+
+
     exportToCSV(logs) {
+
+
         if (!logs || logs.length === 0) {
             alert('No data to export');
             return;
@@ -228,7 +1177,20 @@ export class WelcomePackManager {
     async renderInventory(container) {
         const items = await this._fetchData('items');
 
+        // Calculate low stock items for alert
+        const lowStockItems = items.filter(item => (item.quantity || 0) < 5);
+
         container.innerHTML = `
+            ${lowStockItems.length > 0 ? `
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-amber-500 mt-1"></i>
+                <div>
+                    <p class="font-semibold text-amber-800">Low Stock Alert</p>
+                    <p class="text-sm text-amber-700">${lowStockItems.length} item${lowStockItems.length > 1 ? 's are' : ' is'} running low: ${lowStockItems.map(i => `<strong>${i.name}</strong> (${i.quantity || 0})`).join(', ')}</p>
+                </div>
+            </div>
+            ` : ''}
+            
             <div class="bg-white rounded-xl shadow-md p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-bold text-gray-800">Items Inventory</h3>
@@ -240,37 +1202,59 @@ export class WelcomePackManager {
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="text-gray-500 border-b border-gray-200">
+                            <tr class="text-gray-500 border-b border-gray-200 text-sm">
                                 <th class="py-3 font-medium">Item Name</th>
-                                <th class="py-3 font-medium">Stock</th>
-                                <th class="py-3 font-medium">Cost Price</th>
-                                <th class="py-3 font-medium">Sell Price</th>
+                                <th class="py-3 font-medium text-center">Stock</th>
+                                <th class="py-3 font-medium">VAT</th>
+                                <th class="py-3 font-medium">Cost (Net)</th>
+                                <th class="py-3 font-medium">Cost (Gross)</th>
+                                <th class="py-3 font-medium">Sell (Net)</th>
+                                <th class="py-3 font-medium">Sell (Gross)</th>
                                 <th class="py-3 font-medium">Profit</th>
                                 <th class="py-3 font-medium text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="wp-inventory-list">
-                            ${items.map(item => `
-                                <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                                    <td class="py-3 text-gray-800 font-medium">${item.name}</td>
-                                    <td class="py-3">
-                                        <span class="px-2 py-1 rounded text-xs font-bold ${item.quantity < 5 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}">
+                            ${items.map(item => {
+            const costVat = item.costVatRate || 22;
+            const sellVat = item.sellVatRate || 22;
+            const costGross = item.costGross || (item.costPrice * (1 + costVat / 100));
+            const sellGross = item.sellGross || (item.sellPrice * (1 + sellVat / 100));
+            const profit = sellGross - costGross;
+            const isLowStock = (item.quantity || 0) < 5;
+
+            return `
+                                <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 ${isLowStock ? 'bg-red-50/50' : ''}">
+                                    <td class="py-3 text-gray-800 font-medium">
+                                        ${item.name}
+                                        ${isLowStock ? '<i class="fas fa-exclamation-circle text-red-500 ml-2" title="Low Stock"></i>' : ''}
+                                    </td>
+                                    <td class="py-3 text-center">
+                                        <span class="px-2 py-1 rounded text-xs font-bold ${isLowStock ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}">
                                             ${item.quantity || 0}
                                         </span>
                                     </td>
-                                    <td class="py-3 text-gray-600">€${parseFloat(item.costPrice).toFixed(2)}</td>
-                                    <td class="py-3 text-gray-600">€${parseFloat(item.sellPrice).toFixed(2)}</td>
-                                    <td class="py-3 text-green-600 font-medium">+€${(item.sellPrice - item.costPrice).toFixed(2)}</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${this.getVatBadgeClass(sellVat)}">
+                                            ${sellVat}%
+                                        </span>
+                                    </td>
+                                    <td class="py-3 text-gray-600 text-sm">€${parseFloat(item.costPrice).toFixed(2)}</td>
+                                    <td class="py-3 text-gray-800 font-medium text-sm">€${costGross.toFixed(2)}</td>
+                                    <td class="py-3 text-gray-600 text-sm">€${parseFloat(item.sellPrice).toFixed(2)}</td>
+                                    <td class="py-3 text-gray-800 font-medium text-sm">€${sellGross.toFixed(2)}</td>
+                                    <td class="py-3 text-green-600 font-medium text-sm">+€${profit.toFixed(2)}</td>
                                     <td class="py-3 text-right">
-                                        <button class="text-blue-500 hover:text-blue-700 p-1 mr-2" onclick="welcomePackManager.editItem('${item.id}')">
+                                        <button class="text-blue-500 hover:text-blue-700 p-1 mr-2" onclick="welcomePackManager.editItem('${item.id}')" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="text-red-400 hover:text-red-600 transition-colors p-2" onclick="welcomePackManager.deleteItem('${item.id}')">
+                                        <button class="text-red-400 hover:text-red-600 transition-colors p-1" onclick="welcomePackManager.deleteItem('${item.id}')" title="Delete">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `;
+        }).join('')}
                         </tbody>
                     </table>
                     ${items.length === 0 ? '<p class="text-center text-gray-500 py-8">No items in inventory. Add one to get started.</p>' : ''}
@@ -279,18 +1263,10 @@ export class WelcomePackManager {
         `;
 
         document.getElementById('wp-add-item-btn').onclick = () => this.showAddItemModal();
-
-        // The original delete listener was for a custom event.
-        // The new delete button calls `welcomePackManager.deleteItem` directly.
-        // So, the custom event listener is no longer needed if all delete calls are direct.
-        // If there are other places dispatching 'wp-delete-item', this listener should remain.
-        // For now, I'll assume the inline onclick replaces the need for this specific listener.
-        // If `welcomePackManager` is not globally available, the inline onclicks will fail.
-        // A better approach would be to attach event listeners dynamically after rendering.
-        // For this change, I'll follow the user's provided `onclick` structure.
     }
 
     async renderPresets(container) {
+
         const presets = await this._fetchData('presets');
 
         container.innerHTML = `
@@ -303,28 +1279,43 @@ export class WelcomePackManager {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    ${presets.map(preset => `
+                    ${presets.map(preset => {
+            // Calculate total items count and total price with VAT
+            const totalItemCount = preset.items.reduce((sum, i) => sum + (i.quantity || 1), 0);
+            const totalGross = preset.items.reduce((sum, i) => {
+                const qty = i.quantity || 1;
+                const vatRate = i.sellVatRate || 22;
+                const itemGross = i.sellPrice * (1 + vatRate / 100);
+                return sum + (itemGross * qty);
+            }, 0);
+
+            return `
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group bg-gray-50">
                             <h4 class="font-bold text-gray-800 mb-2">${preset.name}</h4>
-                            <p class="text-sm text-gray-600 mb-3">${preset.items.length} items</p>
+                            <p class="text-sm text-gray-600 mb-3">${totalItemCount} item${totalItemCount > 1 ? 's' : ''}</p>
                             <ul class="text-sm text-gray-500 space-y-1 mb-4">
-                                ${preset.items.slice(0, 3).map(i => `<li>• ${i.name}</li>`).join('')}
-                                ${preset.items.length > 3 ? `<li>+ ${preset.items.length - 3} more...</li>` : ''}
+                                ${preset.items.slice(0, 4).map(i => `<li>• ${i.quantity && i.quantity > 1 ? `${i.quantity}× ` : ''}${i.name}</li>`).join('')}
+                                ${preset.items.length > 4 ? `<li class="text-gray-400">+ ${preset.items.length - 4} more...</li>` : ''}
                             </ul>
                             <div class="flex justify-between items-center mt-auto border-t border-gray-200 pt-3">
-                                <span class="font-bold text-gray-800">€${preset.items.reduce((sum, i) => sum + i.sellPrice, 0).toFixed(2)}</span>
-                                <button class="text-red-400 hover:text-red-600 p-1" onclick="welcomePackManager.deletePreset('${preset.id}')">
+                                <div>
+                                    <span class="font-bold text-gray-800">€${totalGross.toFixed(2)}</span>
+                                    <span class="text-xs text-gray-500 ml-1">(incl. VAT)</span>
+                                </div>
+                                <button class="text-red-400 hover:text-red-600 p-1" onclick="welcomePackManager.deletePreset('${preset.id}')" title="Delete Preset">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
                         </div>
-                    `).join('') || '<p class="col-span-3 text-center text-gray-500 py-8">No presets created.</p>'}
+                    `;
+        }).join('') || '<p class="col-span-3 text-center text-gray-500 py-8">No presets created.</p>'}
                 </div>
             </div>
         `;
 
         document.getElementById('wp-add-preset-btn').onclick = () => this.showAddPresetModal();
     }
+
 
     async deletePreset(id) {
         if (confirm('Delete this preset?')) {
@@ -339,25 +1330,46 @@ export class WelcomePackManager {
 
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-add-preset-modal">
-                <div class="relative p-5 border w-[500px] shadow-lg rounded-xl bg-white max-h-[80vh] flex flex-col">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Create New Preset</h3>
+                <div class="relative p-5 border w-[550px] shadow-lg rounded-xl bg-white max-h-[85vh] flex flex-col">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Create New Pack Preset</h3>
                     
-                    <input type="text" id="wp-preset-name" placeholder="Preset Name (e.g. Standard Arrival)" class="w-full p-2 border rounded mb-4">
+                    <input type="text" id="wp-preset-name" placeholder="Preset Name (e.g. Gold Welcome Pack)" class="w-full p-2 border rounded mb-4">
                     
-                    <div class="bg-gray-50 p-2 rounded border mb-4">
-                        <p class="text-sm font-bold text-gray-700 mb-2">Select Items for Bundle:</p>
-                        <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                            ${items.map(item => `
-                                <label class="flex items-center space-x-2 text-sm cursor-pointer p-1 hover:bg-gray-100 rounded">
-                                    <input type="checkbox" class="wp-preset-item-checkbox form-checkbox h-4 w-4 text-[#e94b5a] rounded focus:ring-[#e94b5a]" 
-                                        value='${JSON.stringify({ id: item.id, name: item.name, costPrice: item.costPrice, sellPrice: item.sellPrice })}'>
-                                    <span>${item.name}</span>
-                                </label>
-                            `).join('')}
+                    <div class="bg-gray-50 p-3 rounded-lg border mb-4 flex-1 overflow-hidden flex flex-col">
+                        <p class="text-sm font-bold text-gray-700 mb-2">Select Items & Quantities:</p>
+                        <div class="flex-1 overflow-y-auto space-y-2 pr-1">
+                            ${items.map(item => {
+            const vatRate = item.sellVatRate || 22;
+            const sellGross = item.sellGross || (item.sellPrice * (1 + vatRate / 100));
+            return `
+                                <div class="flex items-center gap-3 p-2 bg-white rounded border border-gray-200 hover:border-gray-300 transition-colors wp-preset-item-row" data-item-id="${item.id}">
+                                    <input type="checkbox" class="wp-preset-item-checkbox form-checkbox h-5 w-5 text-[#e94b5a] rounded focus:ring-[#e94b5a] cursor-pointer" 
+                                        data-item='${JSON.stringify({ id: item.id, name: item.name, costPrice: item.costPrice, sellPrice: item.sellPrice, costVatRate: item.costVatRate || 22, sellVatRate: vatRate })}'>
+                                    <div class="flex-1">
+                                        <span class="font-medium text-gray-800">${item.name}</span>
+                                        <span class="ml-2 px-1.5 py-0.5 text-xs rounded ${this.getVatBadgeClass(vatRate)}">${vatRate}%</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-gray-500">€${sellGross.toFixed(2)}</span>
+                                        <span class="text-gray-400">×</span>
+                                        <input type="number" class="wp-preset-item-qty w-16 p-1.5 border rounded text-center text-sm" 
+                                            value="1" min="1" max="99" disabled>
+                                    </div>
+                                </div>
+                            `;
+        }).join('')}
                         </div>
                     </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-blue-800">Pack Total:</span>
+                            <span id="wp-preset-total" class="text-lg font-bold text-blue-900">€0.00</span>
+                        </div>
+                        <div id="wp-preset-summary" class="text-xs text-blue-700 mt-1">Select items to see pack composition</div>
+                    </div>
 
-                    <div class="flex justify-end gap-2 mt-auto">
+                    <div class="flex justify-end gap-2">
                         <button id="wp-cancel-preset-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
                         <button id="wp-save-preset-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save Preset</button>
                     </div>
@@ -366,21 +1378,81 @@ export class WelcomePackManager {
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+        // Enable/disable quantity input based on checkbox
+        const updateTotals = () => {
+            const rows = document.querySelectorAll('.wp-preset-item-row');
+            let totalNet = 0;
+            let totalGross = 0;
+            const summaryParts = [];
+
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.wp-preset-item-checkbox');
+                const qtyInput = row.querySelector('.wp-preset-item-qty');
+
+                if (checkbox.checked) {
+                    const itemData = JSON.parse(checkbox.dataset.item);
+                    const qty = parseInt(qtyInput.value) || 1;
+                    const vatRate = itemData.sellVatRate || 22;
+                    const itemGross = itemData.sellPrice * (1 + vatRate / 100);
+
+                    totalNet += itemData.sellPrice * qty;
+                    totalGross += itemGross * qty;
+                    summaryParts.push(`${qty}× ${itemData.name}`);
+                }
+            });
+
+            document.getElementById('wp-preset-total').textContent = `€${totalGross.toFixed(2)}`;
+            document.getElementById('wp-preset-summary').textContent = summaryParts.length > 0
+                ? summaryParts.join(', ') + ` (Net: €${totalNet.toFixed(2)} + VAT)`
+                : 'Select items to see pack composition';
+        };
+
+        document.querySelectorAll('.wp-preset-item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const row = this.closest('.wp-preset-item-row');
+                const qtyInput = row.querySelector('.wp-preset-item-qty');
+                qtyInput.disabled = !this.checked;
+                if (this.checked) {
+                    qtyInput.focus();
+                    qtyInput.select();
+                }
+                updateTotals();
+            });
+        });
+
+        document.querySelectorAll('.wp-preset-item-qty').forEach(input => {
+            input.addEventListener('input', updateTotals);
+            input.addEventListener('change', updateTotals);
+        });
+
         document.getElementById('wp-cancel-preset-btn').onclick = () => document.getElementById('wp-add-preset-modal').remove();
         document.getElementById('wp-save-preset-btn').onclick = async () => {
             const name = document.getElementById('wp-preset-name').value;
-            const checkboxes = document.querySelectorAll('.wp-preset-item-checkbox:checked');
+            const rows = document.querySelectorAll('.wp-preset-item-row');
 
             if (!name) {
                 alert('Please enter a preset name');
                 return;
             }
-            if (checkboxes.length === 0) {
+
+            const selectedItems = [];
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.wp-preset-item-checkbox');
+                const qtyInput = row.querySelector('.wp-preset-item-qty');
+
+                if (checkbox.checked) {
+                    const itemData = JSON.parse(checkbox.dataset.item);
+                    selectedItems.push({
+                        ...itemData,
+                        quantity: parseInt(qtyInput.value) || 1
+                    });
+                }
+            });
+
+            if (selectedItems.length === 0) {
                 alert('Please select at least one item');
                 return;
             }
-
-            const selectedItems = Array.from(checkboxes).map(cb => JSON.parse(cb.value));
 
             await this.dataManager.saveWelcomePackPreset({
                 name,
@@ -393,6 +1465,7 @@ export class WelcomePackManager {
             this.render();
         };
     }
+
 
     async renderLogForm(container) {
         const items = await this._fetchData('items');
@@ -644,16 +1717,62 @@ export class WelcomePackManager {
         this.render();
     }
 
+    // Helper function to calculate VAT
+    calculateVAT(netPrice, vatRate) {
+        const net = parseFloat(netPrice) || 0;
+        const rate = parseFloat(vatRate) || 22;
+        const vatAmount = net * (rate / 100);
+        const grossPrice = net + vatAmount;
+        return { net, vatAmount, grossPrice, rate };
+    }
+
+    // Helper to get VAT rate badge color
+    getVatBadgeClass(vatRate) {
+        const rate = parseInt(vatRate) || 22;
+        if (rate === 4) return 'bg-green-100 text-green-700';
+        if (rate === 12) return 'bg-yellow-100 text-yellow-700';
+        return 'bg-blue-100 text-blue-700'; // 22%
+    }
+
     showAddItemModal() {
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-add-item-modal">
-                <div class="relative p-5 border w-96 shadow-lg rounded-xl bg-white">
+                <div class="relative p-5 border w-[420px] shadow-lg rounded-xl bg-white">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Add New Item</h3>
                     <div class="space-y-4">
                         <input type="text" id="wp-new-item-name" placeholder="Item Name" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-new-item-stock" placeholder="Initial Stock Quantity" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-new-item-cost" placeholder="Cost Price (€)" step="0.01" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-new-item-sell" placeholder="Sell Price (€)" step="0.01" class="w-full p-2 border rounded">
+                        <input type="number" id="wp-new-item-stock" placeholder="Initial Stock Quantity" class="w-full p-2 border rounded" min="0">
+                        
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Cost Price (Net, excl. VAT)</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="wp-new-item-cost" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <select id="wp-new-item-cost-vat" class="w-full p-2 border rounded bg-white">
+                                    <option value="4">4% (Reduced)</option>
+                                    <option value="12">12% (Intermediate)</option>
+                                    <option value="22" selected>22% (Standard)</option>
+                                </select>
+                            </div>
+                            <div id="wp-cost-vat-preview" class="mt-2 text-sm text-gray-600 hidden">
+                                <!-- VAT preview will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Sell Price (Net, excl. VAT)</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <select id="wp-new-item-sell-vat" class="w-full p-2 border rounded bg-white">
+                                    <option value="4">4% (Reduced)</option>
+                                    <option value="12">12% (Intermediate)</option>
+                                    <option value="22" selected>22% (Standard)</option>
+                                </select>
+                            </div>
+                            <div id="wp-sell-vat-preview" class="mt-2 text-sm text-gray-600 hidden">
+                                <!-- VAT preview will be inserted here -->
+                            </div>
+                        </div>
+                        
                         <div class="flex justify-end gap-2 mt-4">
                             <button id="wp-cancel-add-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
                             <button id="wp-confirm-add-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Add Item</button>
@@ -664,19 +1783,53 @@ export class WelcomePackManager {
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+        // VAT calculation preview function
+        const updateVatPreview = (inputId, vatSelectId, previewId) => {
+            const netPrice = parseFloat(document.getElementById(inputId).value) || 0;
+            const vatRate = parseInt(document.getElementById(vatSelectId).value) || 22;
+            const preview = document.getElementById(previewId);
+
+            if (netPrice > 0) {
+                const { vatAmount, grossPrice } = this.calculateVAT(netPrice, vatRate);
+                preview.innerHTML = `<span class="text-gray-500">€${netPrice.toFixed(2)}</span> + <span class="text-orange-600">€${vatAmount.toFixed(2)} VAT</span> = <span class="font-bold text-gray-800">€${grossPrice.toFixed(2)}</span>`;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        };
+
+        // Attach VAT preview listeners
+        ['wp-new-item-cost', 'wp-new-item-cost-vat'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-new-item-cost', 'wp-new-item-cost-vat', 'wp-cost-vat-preview'));
+            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-new-item-cost', 'wp-new-item-cost-vat', 'wp-cost-vat-preview'));
+        });
+        ['wp-new-item-sell', 'wp-new-item-sell-vat'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-new-item-sell', 'wp-new-item-sell-vat', 'wp-sell-vat-preview'));
+            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-new-item-sell', 'wp-new-item-sell-vat', 'wp-sell-vat-preview'));
+        });
+
         document.getElementById('wp-cancel-add-btn').onclick = () => document.getElementById('wp-add-item-modal').remove();
         document.getElementById('wp-confirm-add-btn').onclick = async () => {
             const name = document.getElementById('wp-new-item-name').value;
             const stock = parseInt(document.getElementById('wp-new-item-stock').value) || 0;
             const costPrice = parseFloat(document.getElementById('wp-new-item-cost').value);
+            const costVatRate = parseInt(document.getElementById('wp-new-item-cost-vat').value) || 22;
             const sellPrice = parseFloat(document.getElementById('wp-new-item-sell').value);
+            const sellVatRate = parseInt(document.getElementById('wp-new-item-sell-vat').value) || 22;
 
             if (name && !isNaN(costPrice) && !isNaN(sellPrice)) {
+                const costCalc = this.calculateVAT(costPrice, costVatRate);
+                const sellCalc = this.calculateVAT(sellPrice, sellVatRate);
+
                 await this.dataManager.saveWelcomePackItem({
                     name,
                     quantity: stock,
-                    costPrice,
-                    sellPrice
+                    costPrice: costPrice,           // Net cost
+                    costVatRate: costVatRate,       // VAT rate for cost
+                    costGross: costCalc.grossPrice, // Gross cost (calculated)
+                    sellPrice: sellPrice,           // Net sell
+                    sellVatRate: sellVatRate,       // VAT rate for sell
+                    sellGross: sellCalc.grossPrice  // Gross sell (calculated)
                 });
                 this._invalidateCache('items');
                 document.getElementById('wp-add-item-modal').remove();
@@ -696,17 +1849,48 @@ export class WelcomePackManager {
     }
 
     showEditItemModal(item) {
+        // Get current VAT rates or default to 22%
+        const currentCostVat = item.costVatRate || 22;
+        const currentSellVat = item.sellVatRate || 22;
+
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-edit-item-modal">
-                <div class="relative p-5 border w-96 shadow-lg rounded-xl bg-white">
+                <div class="relative p-5 border w-[420px] shadow-lg rounded-xl bg-white">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Edit Item</h3>
                     <div class="space-y-4">
                         <input type="text" id="wp-edit-item-name" value="${item.name}" placeholder="Item Name" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="Stock Quantity" class="w-full p-2 border rounded">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Cost Price (€)" step="0.01" class="w-full p-2 border rounded">
-                            <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Sell Price (€)" step="0.01" class="w-full p-2 border rounded">
+                        <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="Stock Quantity" class="w-full p-2 border rounded" min="0">
+                        
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Cost Price (Net, excl. VAT)</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <select id="wp-edit-item-cost-vat" class="w-full p-2 border rounded bg-white">
+                                    <option value="4" ${currentCostVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
+                                    <option value="12" ${currentCostVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
+                                    <option value="22" ${currentCostVat === 22 ? 'selected' : ''}>22% (Standard)</option>
+                                </select>
+                            </div>
+                            <div id="wp-edit-cost-vat-preview" class="mt-2 text-sm text-gray-600">
+                                <!-- VAT preview will be inserted here -->
+                            </div>
                         </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Sell Price (Net, excl. VAT)</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <select id="wp-edit-item-sell-vat" class="w-full p-2 border rounded bg-white">
+                                    <option value="4" ${currentSellVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
+                                    <option value="12" ${currentSellVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
+                                    <option value="22" ${currentSellVat === 22 ? 'selected' : ''}>22% (Standard)</option>
+                                </select>
+                            </div>
+                            <div id="wp-edit-sell-vat-preview" class="mt-2 text-sm text-gray-600">
+                                <!-- VAT preview will be inserted here -->
+                            </div>
+                        </div>
+                        
                         <div class="flex justify-end gap-2 mt-4">
                             <button id="wp-cancel-edit-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
                             <button id="wp-confirm-edit-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save Changes</button>
@@ -717,19 +1901,56 @@ export class WelcomePackManager {
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+        // VAT calculation preview function
+        const updateVatPreview = (inputId, vatSelectId, previewId) => {
+            const netPrice = parseFloat(document.getElementById(inputId).value) || 0;
+            const vatRate = parseInt(document.getElementById(vatSelectId).value) || 22;
+            const preview = document.getElementById(previewId);
+
+            if (netPrice > 0) {
+                const { vatAmount, grossPrice } = this.calculateVAT(netPrice, vatRate);
+                preview.innerHTML = `<span class="text-gray-500">€${netPrice.toFixed(2)}</span> + <span class="text-orange-600">€${vatAmount.toFixed(2)} VAT</span> = <span class="font-bold text-gray-800">€${grossPrice.toFixed(2)}</span>`;
+            } else {
+                preview.innerHTML = '';
+            }
+        };
+
+        // Attach VAT preview listeners
+        ['wp-edit-item-cost', 'wp-edit-item-cost-vat'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview'));
+            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview'));
+        });
+        ['wp-edit-item-sell', 'wp-edit-item-sell-vat'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview'));
+            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview'));
+        });
+
+        // Initial preview update
+        updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview');
+        updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview');
+
         document.getElementById('wp-cancel-edit-btn').onclick = () => document.getElementById('wp-edit-item-modal').remove();
         document.getElementById('wp-confirm-edit-btn').onclick = async () => {
             const name = document.getElementById('wp-edit-item-name').value;
             const stock = document.getElementById('wp-edit-item-stock').value;
             const costPrice = parseFloat(document.getElementById('wp-edit-item-cost').value);
+            const costVatRate = parseInt(document.getElementById('wp-edit-item-cost-vat').value) || 22;
             const sellPrice = parseFloat(document.getElementById('wp-edit-item-sell').value);
+            const sellVatRate = parseInt(document.getElementById('wp-edit-item-sell-vat').value) || 22;
 
             if (name && !isNaN(costPrice) && !isNaN(sellPrice)) {
+                const costCalc = this.calculateVAT(costPrice, costVatRate);
+                const sellCalc = this.calculateVAT(sellPrice, sellVatRate);
+
                 await this.dataManager.updateWelcomePackItem(item.id, {
                     name,
                     quantity: parseInt(stock) || 0,
-                    costPrice,
-                    sellPrice
+                    costPrice: costPrice,
+                    costVatRate: costVatRate,
+                    costGross: costCalc.grossPrice,
+                    sellPrice: sellPrice,
+                    sellVatRate: sellVatRate,
+                    sellGross: sellCalc.grossPrice
                 });
                 this._invalidateCache('items');
                 document.getElementById('wp-edit-item-modal').remove();
@@ -738,6 +1959,7 @@ export class WelcomePackManager {
                 alert('Please fill out all fields correctly.');
             }
         };
+
     }
 
     async deleteItem(id) {
@@ -747,6 +1969,5 @@ export class WelcomePackManager {
             this.render();
         }
     }
+
 }
-
-

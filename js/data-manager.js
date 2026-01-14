@@ -467,10 +467,12 @@ export class DataManager {
             const newLogRef = doc(collection(this.db, "welcome_pack_logs"));
             transaction.set(newLogRef, log);
 
+            // Deduct stock by quantity (default to 1 for backward compatibility)
             for (const item of log.items) {
                 if (item.id) {
+                    const qty = item.quantity || 1;
                     const itemRef = doc(this.db, "welcome_pack_items", item.id);
-                    transaction.update(itemRef, { quantity: increment(-1) });
+                    transaction.update(itemRef, { quantity: increment(-qty) });
                 }
             }
         });
@@ -481,10 +483,12 @@ export class DataManager {
             const logRef = doc(this.db, "welcome_pack_logs", logId);
             transaction.delete(logRef);
 
+            // Restore stock by quantity
             for (const item of items) {
                 if (item.id) {
+                    const qty = item.quantity || 1;
                     const itemRef = doc(this.db, "welcome_pack_items", item.id);
-                    transaction.update(itemRef, { quantity: increment(1) });
+                    transaction.update(itemRef, { quantity: increment(qty) });
                 }
             }
         });
@@ -495,23 +499,26 @@ export class DataManager {
             const logRef = doc(this.db, "welcome_pack_logs", logId);
             transaction.update(logRef, newLog);
 
-            // Restore old stock
+            // Restore old stock by quantity
             for (const item of oldItems) {
                 if (item.id) {
+                    const qty = item.quantity || 1;
                     const itemRef = doc(this.db, "welcome_pack_items", item.id);
-                    transaction.update(itemRef, { quantity: increment(1) });
+                    transaction.update(itemRef, { quantity: increment(qty) });
                 }
             }
 
-            // Deduct new stock
+            // Deduct new stock by quantity
             for (const item of newLog.items) {
                 if (item.id) {
+                    const qty = item.quantity || 1;
                     const itemRef = doc(this.db, "welcome_pack_items", item.id);
-                    transaction.update(itemRef, { quantity: increment(-1) });
+                    transaction.update(itemRef, { quantity: increment(-qty) });
                 }
             }
         });
     }
+
 
     async getWelcomePackPresets() {
         const querySnapshot = await getDocs(collection(this.db, "welcome_pack_presets"));
@@ -525,4 +532,60 @@ export class DataManager {
     async deleteWelcomePackPreset(id) {
         await deleteDoc(doc(this.db, "welcome_pack_presets", id));
     }
-} 
+
+    // ==================== Properties Methods ====================
+
+    /**
+     * Get all properties from Firestore
+     * @returns {Promise<Array>} Array of property objects with id
+     */
+    async getAllProperties() {
+        try {
+            const querySnapshot = await getDocs(collection(this.db, "properties"));
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('[DataManager] Error fetching properties:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Update iCal URL for a property
+     * @param {string} propertyId - The property ID
+     * @param {string} icalUrl - The iCal URL (can be empty to remove)
+     */
+    async updatePropertyIcalUrl(propertyId, icalUrl) {
+        try {
+            const propertyRef = doc(this.db, "properties", propertyId);
+            await updateDoc(propertyRef, {
+                icalUrl: icalUrl || null,
+                icalLastSync: null, // Reset last sync when URL changes
+                updatedAt: new Date()
+            });
+            console.log(`[DataManager] Updated iCal URL for property ${propertyId}`);
+        } catch (error) {
+            console.error('[DataManager] Error updating property iCal URL:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update a property's welcome pack enabled status
+     * @param {string} propertyId - The property ID
+     * @param {boolean} enabled - Whether welcome pack is enabled
+     */
+    async updatePropertyWelcomePack(propertyId, enabled) {
+        try {
+            const propertyRef = doc(this.db, "properties", propertyId);
+            await updateDoc(propertyRef, {
+                welcomePackEnabled: enabled,
+                updatedAt: new Date()
+            });
+            console.log(`[DataManager] Updated welcome pack status for property ${propertyId}: ${enabled}`);
+        } catch (error) {
+            console.error('[DataManager] Error updating property welcome pack:', error);
+            throw error;
+        }
+    }
+}
+
