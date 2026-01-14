@@ -112,8 +112,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         dataManager = new DataManager(db, auth.currentUser ? auth.currentUser.uid : null);
         window.dataManager = dataManager; // For debugging
 
+        // Initialize PDF Generator
+        pdfGenerator = new PDFGenerator();
+
         // Initialize Managers
         uiManager = new UIManager(dataManager, null, pdfGenerator); // HolidayCalculator injected later
+
         window.uiManager = uiManager;
 
         holidayCalculator = new HolidayCalculator(dataManager);
@@ -134,8 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         welcomePackManager = new WelcomePackManager(dataManager);
         window.welcomePackManager = welcomePackManager;
 
-        // Initialize PDF Generator
-        pdfGenerator = new PDFGenerator();
+
         scheduleManager = new ScheduleManager(dataManager, uiManager);
         window.scheduleManager = scheduleManager;
         try {

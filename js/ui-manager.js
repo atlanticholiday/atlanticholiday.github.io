@@ -281,16 +281,6 @@ export class UIManager {
         container.innerHTML = tableHTML + `</tbody></table></div>`;
     }
 
-    // renderVacationPlanner moved to ScheduleManager
-
-    renderReorderList() {
-        // Deprecated: Staff reordering/management is now in StaffManager.
-    }
-
-    renderHistoryList() {
-        // Deprecated: History list moved to StaffManager.
-    }
-
     showDayDetailsModal(dateKey) {
         this.dataManager.setSelectedDateKey(dateKey);
         const modal = document.getElementById('day-details-modal');
@@ -582,9 +572,7 @@ export class UIManager {
             yearly: document.getElementById('yearly-summary-container'),
             madeiraHolidays: document.getElementById('madeira-holidays-container'),
             stats: document.getElementById('stats-container'),
-            vacation: document.getElementById('vacation-planner-container'),
-            reorder: document.getElementById('reorder-list-container'),
-            history: document.getElementById('history-container')
+            vacation: document.getElementById('vacation-planner-container')
         };
 
         // Hide all main content views first and clean up responsive classes
@@ -618,7 +606,7 @@ export class UIManager {
         // Only allow adding colleagues in the Reorder/List management view (Legacy check, maybe removable?)
         const addColleagueSection = document.getElementById('add-colleague-section');
         if (addColleagueSection) {
-            addColleagueSection.style.display = (currentView === 'reorder') ? '' : 'none';
+            addColleagueSection.style.display = 'none';
         }
 
         const showCalendarControls = ['monthly', 'yearly'].includes(currentView);
@@ -649,12 +637,6 @@ export class UIManager {
             if (window.scheduleManager) {
                 window.scheduleManager.renderVacationPlanner();
             }
-        } else if (currentView === 'reorder') {
-            mainViews.reorder.classList.remove('hidden');
-            this.renderReorderList();
-        } else if (currentView === 'history') {
-            mainViews.history.classList.remove('hidden');
-            this.renderHistoryList();
         } else if (currentView === 'stats') {
             viewHeader.textContent = "Team Statistics";
             if (summaryTitle) summaryTitle.textContent = "Statistics";

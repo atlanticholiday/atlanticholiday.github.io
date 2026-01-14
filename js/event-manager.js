@@ -180,78 +180,7 @@ export class EventManager {
             }
         });
 
-        const reorderContainer = document.getElementById('reorder-list-container');
-        reorderContainer.addEventListener('click', e => {
-            const archiveBtn = e.target.closest('.archive-btn');
-            const editBtn = e.target.closest('.edit-employee-btn');
 
-            if (editBtn) {
-                const { employeeId } = editBtn.dataset;
-                this.uiManager.showEditEmployeeModal(employeeId);
-            } else if (archiveBtn) {
-                const { employeeId, employeeName } = archiveBtn.dataset;
-                this.uiManager.showConfirmationModal(
-                    `Archive ${employeeName}?`,
-                    'This will move them to the history tab. You can restore them later.',
-                    () => this.dataManager.handleArchiveToggle(employeeId, true)
-                );
-            }
-        });
-
-        reorderContainer.addEventListener('dragstart', e => {
-            if (e.target.classList.contains('draggable')) {
-                e.target.classList.add('dragging');
-            }
-        });
-
-        reorderContainer.addEventListener('dragend', e => {
-            if (e.target.classList.contains('draggable')) {
-                e.target.classList.remove('dragging');
-                this.dataManager.saveNewOrder();
-            }
-        });
-
-        reorderContainer.addEventListener('dragover', e => {
-            e.preventDefault();
-            const dragging = document.querySelector('.dragging');
-            if (!dragging) return;
-
-            const afterElement = this.getDragAfterElement(reorderContainer, e.clientY);
-            const parent = dragging.parentNode;
-
-            if (afterElement == null) {
-                parent.appendChild(dragging);
-            } else {
-                parent.insertBefore(dragging, afterElement);
-            }
-        });
-
-        document.getElementById('history-container').addEventListener('click', e => {
-            const restoreBtn = e.target.closest('.restore-btn');
-            const deleteBtn = e.target.closest('.delete-btn');
-            if (restoreBtn) {
-                const { employeeId, employeeName } = restoreBtn.dataset;
-                this.uiManager.showConfirmationModal(
-                    `Restore ${employeeName}?`,
-                    'This will move them back to the active list.',
-                    () => this.dataManager.handleArchiveToggle(employeeId, false)
-                );
-            } else if (deleteBtn) {
-                const { employeeId, employeeName } = deleteBtn.dataset;
-                this.uiManager.showConfirmationModal(
-                    `Permanently Delete ${employeeName}?`,
-                    'This action is irreversible. All data for this colleague will be lost forever.',
-                    () => this.dataManager.handlePermanentDelete(employeeId)
-                );
-            } else if (deleteBtn) {
-                const { employeeId, employeeName } = deleteBtn.dataset;
-                this.uiManager.showConfirmationModal(
-                    `Permanently Delete ${employeeName}?`,
-                    'This action is irreversible. All data for this colleague will be lost forever.',
-                    () => this.dataManager.handlePermanentDelete(employeeId)
-                );
-            }
-        });
 
         // Manage Shifts Modal Listeners
         const manageShiftsBtn = document.getElementById('manage-shifts-btn');
