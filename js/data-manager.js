@@ -427,6 +427,13 @@ export class DataManager {
         }
     }
 
+    getHolidaysForYear(year) {
+        if (!this.holidays[year]) {
+            this.holidays[year] = this.getHolidays(year);
+        }
+        return this.holidays[year];
+    }
+
     // Setters for UI updates
     setCurrentDate(date) { this.currentDate = date; }
     setCurrentView(view) { this.currentView = view; }

@@ -198,6 +198,16 @@
                         <p>Manage stocks and packs delivered.</p>
                     </div>
                 </button>
+
+                <button id="go-to-staff-btn" class="dashboard-card">
+                    <div class="card-icon bg-purple-500/10 text-purple-600">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3>Staff</h3>
+                        <p>Manage team members and details.</p>
+                    </div>
+                </button>
             </div>
 
             <!-- More Tools Toggle -->
@@ -914,30 +924,8 @@ Mountain Villa, Sintra Hills, V4"
             <!-- Main Grid Layout -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <!-- Left Column: Employee Management -->
-                <div id="schedule-side-panel"
-                    class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md modal-content flex flex-col h-[calc(100vh-250px)]">
-                    <div class="flex justify-between items-center mb-4 border-b pb-3">
-                        <h2 id="summary-title" class="text-2xl font-semibold text-gradient">Monthly Summary</h2>
-                        <div class="flex gap-2">
-                            <button id="toggle-staff-mode-btn"
-                                class="text-sm bg-purple-50 text-purple-600 hover:bg-purple-100 px-3 py-1 rounded-md transition-colors border border-purple-200 hover:shadow-sm">
-                                <i class="fas fa-eye mr-1"></i> <span id="staff-mode-label">Staff View</span>
-                            </button>
-                            <button id="manage-shifts-btn"
-                                class="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors border border-blue-200 hover:shadow-sm">
-                                <i class="fas fa-clock mr-1"></i> Shifts
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="employee-list" class="space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
-                        <!-- Employee items will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Right Column: Calendar & Controls -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md modal-content">
+                <!-- Main Content Area (Full Width) -->
+                <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-md modal-content">
                     <div id="add-colleague-section" class="hidden">
                         <!-- Removed inline form, moved to modal -->
                     </div>
@@ -1045,6 +1033,71 @@ Mountain Villa, Sintra Hills, V4"
 
         <div class="container mx-auto px-4 py-8 max-w-7xl">
             <div id="welcome-pack-content"></div>
+        </div>
+    </div>
+
+    <!-- Staff Page -->
+    <div id="staff-page" class="hidden min-h-screen bg-gray-50">
+        <header class="dashboard-header">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-staff-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo dashboard-logo--xl" />
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Staff Management</div>
+                        <div class="header-sub">Manage team members</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="staff-sign-out-btn"
+                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <div class="bg-white p-6 rounded-xl shadow-md modal-content h-[calc(100vh-150px)] flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gradient">Team Members</h2>
+                    <div class="flex gap-3">
+                        <button id="open-add-employee-modal-btn"
+                            class="btn-primary shadow flex items-center gap-2 hover-lift px-4 py-2 rounded-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Add Colleague
+                        </button>
+                        <button id="toggle-history-view-btn"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md transition-colors border border-gray-300">
+                            Archive/History
+                        </button>
+                    </div>
+                </div>
+
+                <div id="staff-list-container" class="space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
+                    <!-- Staff list will be inserted here -->
+                </div>
+                <div id="history-list-container"
+                    class="hidden space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
+                    <!-- History list will be inserted here -->
+                </div>
+            </div>
         </div>
     </div>
 

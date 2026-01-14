@@ -17,7 +17,9 @@ export class NavigationManager {
             vehicles: 'vehicles-page',
             owners: 'owners-page',
             visits: 'visits-page',
+            visits: 'visits-page',
             cleaningBills: 'cleaning-bills-page',
+            staff: 'staff-page',
         };
     }
 
@@ -115,6 +117,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showStaffPage() {
+        this.showPage('staff');
+        const event = new CustomEvent('staffPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -130,7 +138,8 @@ export class NavigationManager {
         const goToVisitsBtn = document.getElementById('go-to-visits-btn');
         const goToCleaningBillsBtn = document.getElementById('go-to-cleaning-bills-btn');
         const goToCommissionCalculatorBtn = document.getElementById('go-to-commission-calculator-btn');
-        
+        const goToStaffBtn = document.getElementById('go-to-staff-btn');
+
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
                 this.showPropertiesPage();
@@ -206,6 +215,12 @@ export class NavigationManager {
             });
         }
 
+        if (goToStaffBtn) {
+            goToStaffBtn.addEventListener('click', () => {
+                this.showStaffPage();
+            });
+        }
+
         // All Info navigation
         const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
         if (goToAllInfoBtn) {
@@ -266,7 +281,7 @@ export class NavigationManager {
         const backToLandingFromVisitsBtn = document.getElementById('back-to-landing-from-visits-btn');
         const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
         const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
-        
+
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
                 this.showLandingPage();
@@ -371,7 +386,8 @@ export class NavigationManager {
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
         const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
         const commissionCalculatorSignOutBtn = document.getElementById('commission-calculator-sign-out-btn');
-        
+        const staffSignOutBtn = document.getElementById('staff-sign-out-btn');
+
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
@@ -448,7 +464,21 @@ export class NavigationManager {
                 document.dispatchEvent(event);
             });
         }
+        if (staffSignOutBtn) {
+            staffSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+
+        // Back from Staff
+        const backToLandingFromStaffBtn = document.getElementById('back-to-landing-from-staff-btn');
+        if (backToLandingFromStaffBtn) {
+            backToLandingFromStaffBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
     }
 
-    
+
 }

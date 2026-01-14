@@ -97,19 +97,8 @@ export class EventManager {
             }
         });
 
-        document.getElementById('employee-list').addEventListener('click', e => {
-            const card = e.target.closest('.employee-card-main');
-            const pdfBtn = e.target.closest('.individual-pdf-btn');
-            const editBtn = e.target.closest('.edit-working-days-btn');
+        // employee-list listener removed (Legacy)
 
-            if (card && card.dataset.employeeId && !e.target.closest('.edit-working-days-btn')) {
-                this.uiManager.showEmployeeSummaryModal(card.dataset.employeeId);
-            } else if (pdfBtn && pdfBtn.dataset.employeeId) {
-                this.uiManager.pdfGenerator.generateIndividualReportPDF(pdfBtn.dataset.employeeId, this.dataManager);
-            } else if (editBtn && editBtn.dataset.employeeId) {
-                this.uiManager.showEditWorkingDaysModal(editBtn.dataset.employeeId);
-            }
-        });
 
         document.getElementById('employee-summary-close-btn').addEventListener('click', () => {
             document.getElementById('employee-summary-modal').classList.add('hidden');

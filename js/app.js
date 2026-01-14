@@ -23,6 +23,7 @@ import { VisitsManager } from './visits-manager.js';
 import { CleaningBillsManager } from './cleaning-bills-manager.js';
 import { WelcomePackManager } from './welcome-pack-manager.js';
 import { ScheduleManager } from './schedule-manager.js';
+import { StaffManager } from './staff-manager.js';
 import './allinfo-bulk-edit.js';
 import './allinfo-seq-edit.js';
 import './allinfo-accordion-edit.js';
@@ -33,7 +34,7 @@ let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, scheduleManager;
+let dataManager, uiManager, pdfGenerator, holidayCalculator, eventManager, navigationManager, propertiesManager, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, scheduleManager, staffManager;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -137,6 +138,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         pdfGenerator = new PDFGenerator();
         scheduleManager = new ScheduleManager(dataManager, uiManager);
         window.scheduleManager = scheduleManager;
+        try {
+            staffManager = new StaffManager(dataManager, uiManager);
+            window.staffManager = staffManager;
+        } catch (error) {
+            console.error('Failed to initialize StaffManager:', error);
+        }
         // Initialize Visits manager early so it can inject its page and landing button before nav listeners are wired
         visitsManager = new VisitsManager(db, userId); // Reverted to original
         window.visitsManager = visitsManager;
@@ -580,6 +587,12 @@ function setupGlobalEventListeners() {
         if (safetyManager) {
             console.log('Safety page opened, initializing...');
             safetyManager.initialize();
+        }
+    });
+
+    document.addEventListener('staffPageOpened', () => {
+        if (staffManager) {
+            staffManager.render();
         }
     });
 

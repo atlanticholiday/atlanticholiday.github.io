@@ -34,139 +34,7 @@ export class UIManager {
     // Removed showSetupScreen - navigation is now handled by NavigationManager
 
     renderEmployeeList() {
-        const listContainer = document.getElementById('employee-list');
-        if (!listContainer) return;
-
-        const activeEmployees = this.dataManager.getActiveEmployees();
-        if (activeEmployees.length === 0) {
-            listContainer.innerHTML = `<p class="text-gray-500 italic text-center">No active colleagues.</p>`;
-            return;
-        }
-
-        const year = this.dataManager.getCurrentDate().getFullYear();
-        const currentView = this.dataManager.getCurrentView();
-        if (currentView === 'vacation') {
-            const allHolidays = this.dataManager.getAllHolidays();
-            listContainer.innerHTML = activeEmployees.map(emp => {
-                let usedDays = 0;
-                if (emp.vacations && emp.vacations.length > 0) {
-                    emp.vacations.forEach(vac => {
-                        let current = new Date(vac.startDate);
-                        const end = new Date(vac.endDate);
-                        while (current <= end) {
-                            const dayIndex = current.getDay();
-                            if (emp.workDays.includes(dayIndex)) {
-                                const dateKey = this.dataManager.getDateKey(current);
-                                const hols = allHolidays[current.getFullYear()] || {};
-                                if (!hols[dateKey]) {
-                                    usedDays++;
-                                }
-                            }
-                            current.setDate(current.getDate() + 1);
-                        }
-                    });
-                }
-                let entitled = 22;
-                if (emp.hireDate) {
-                    const hire = new Date(emp.hireDate);
-                    if (hire.getFullYear() === year) {
-                        const startOfProration = hire;
-                        const endOfYear = new Date(year, 11, 31);
-                        const totalDays = Math.floor((endOfYear - new Date(year, 0, 1)) / MS_PER_DAY) + 1;
-                        const remainingDays = Math.floor((endOfYear - startOfProration) / MS_PER_DAY) + 1;
-                        entitled = Math.round(22 * (remainingDays / totalDays));
-                    } else if (hire.getFullYear() > year) {
-                        entitled = 0;
-                    }
-                }
-
-                // Add adjustment
-                const adjustment = emp.vacationAdjustment || 0;
-                const totalEntitled = entitled + adjustment;
-                const remaining = totalEntitled - usedDays;
-
-                return `
-                    <div class="stat-item bg-gray-100 p-4 rounded-lg mb-2">
-                        <p class="font-semibold">${emp.name}</p>
-                        <p class="text-sm">Used: ${usedDays} days</p>
-                        <p class="text-sm">Remaining: ${remaining >= 0 ? remaining : 0} days</p>
-                    </div>
-                `;
-            }).join('');
-            return;
-        }
-
-        listContainer.innerHTML = activeEmployees.map(emp => {
-            let stats = { worked: 0, off: 0, absent: 0, vacation: 0, extraHours: 0 };
-            const currentView = this.dataManager.getCurrentView();
-            const loopMonths = (currentView === 'yearly') ? 12 : 1;
-            const startMonth = (currentView === 'yearly') ? 0 : this.dataManager.getCurrentDate().getMonth();
-
-            for (let m = 0; m < loopMonths; m++) {
-                const month = startMonth + m;
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, month, day);
-                    const status = this.dataManager.getEmployeeStatusForDate(emp, date);
-
-                    if (status === 'On Vacation') stats.vacation++;
-                    else if (status === 'Working') stats.worked++;
-                    else if (status === 'Absent') stats.absent++;
-                    else stats.off++;
-
-                    const dateKey = this.dataManager.getDateKey(date);
-                    if (emp.extraHours && emp.extraHours[dateKey]) {
-                        stats.extraHours += emp.extraHours[dateKey];
-                    }
-                }
-            }
-
-            return `
-                <div class="employee-card bg-gray-100 rounded-lg p-4 hover-lift">
-                    <div class="employee-card-main" data-employee-id="${emp.id}">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="flex-1">
-                                <p class="font-semibold text-lg text-gray-900 mb-1">${emp.name}</p>
-                                <p class="text-sm text-gray-600">Default: ${emp.workDays.map(d => Config.DAYS_OF_WEEK[d]).join(', ')}</p>
-                            </div>
-                            ${!this.isStaffMode ? `
-                            <button class="edit-working-days-btn text-brand hover:text-brand-dark p-2 rounded-md hover:bg-brand-light transition-all hover-scale" title="Edit working days" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </button>
-                            ` : ''}
-                        </div>
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-green-600">${stats.worked}</p>
-                                <p class="text-xs text-gray-500">Worked</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-yellow-600">${stats.vacation}</p>
-                                <p class="text-xs text-gray-500">Vacation</p>
-                            </div>
-
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-blue-600">${stats.off}</p>
-                                <p class="text-xs text-gray-500">Off</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-red-600">${stats.absent}</p>
-                                <p class="text-xs text-gray-500">Absent</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="font-bold text-lg text-purple-600">${stats.extraHours.toFixed(1)}</p>
-                                <p class="text-xs text-gray-500">Extra Hours</p>
-                            </div>
-                        </div>
-                    </div>
-                    ${!this.isStaffMode ? `
-                    <button class="individual-pdf-btn mt-4 w-full text-sm bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition-all hover-lift flex items-center justify-center gap-2" data-employee-id="${emp.id}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Download Report
-                    </button>
-                    ` : ''}
-                </div>`;
-        }).join('');
+        // Deprecated: Staff list moved to StaffManager on dedicated page.
     }
 
     renderCalendarGrid() {
@@ -416,65 +284,11 @@ export class UIManager {
     // renderVacationPlanner moved to ScheduleManager
 
     renderReorderList() {
-        const container = document.getElementById('reorder-list-container');
-        if (!container) return;
-
-        container.innerHTML = `
-        <div class="flex justify-between items-center mb-4">
-             <h3 class="text-xl font-semibold text-gray-800">Manage Colleague List</h3>
-             <button id="open-add-employee-modal-btn" class="btn-primary shadow flex items-center gap-2 hover-lift" style="background: var(--gradient-brand); color: white; padding: 0.5rem 1rem;">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Add Colleague
-             </button>
-        </div>
-        <div class="space-y-2 text-left">${this.dataManager.getActiveEmployees().map(emp => `
-            <div class="draggable bg-white p-4 rounded-lg shadow flex items-center" draggable="true" data-employee-id="${emp.id}">
-                <svg class="w-5 h-5 text-gray-400 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                <div class="flex-grow">
-                    <div class="font-medium text-gray-900">${emp.name}</div>
-                    <div class="text-sm text-gray-600">
-                        ${emp.staffNumber ? `Staff #${emp.staffNumber}` : 'No staff number'}
-                        ${emp.department ? ` • ${emp.department}` : ''}
-                        ${emp.position ? ` • ${emp.position}` : ''}
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 ml-4">
-                    <button class="edit-employee-btn text-blue-600 hover:text-blue-800 p-2 rounded-md hover:bg-blue-50 transition-all hover-scale" title="Edit ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                    </button>
-                    <button class="archive-btn text-yellow-600 hover:text-yellow-800 p-2 rounded-md hover:bg-yellow-50 transition-all hover-scale" title="Archive ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                </button>
-                </div>
-            </div>
-        `).join('')}</div><p class="text-center text-sm text-gray-500 mt-4">Drag and drop to reorder the list. Edit or archive colleagues as needed.</p>`;
+        // Deprecated: Staff reordering/management is now in StaffManager.
     }
 
     renderHistoryList() {
-        const container = document.getElementById('history-container');
-        if (!container) return;
-
-        const archivedEmployees = this.dataManager.getArchivedEmployees();
-        if (archivedEmployees.length === 0) {
-            container.innerHTML = `<p class="text-center text-gray-500 italic">No colleagues in the archive.</p>`;
-            return;
-        }
-
-        container.innerHTML = `<div class="space-y-2">${archivedEmployees.map(emp => `
-            <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
-                <span class="font-medium text-gray-500">${emp.name}</span>
-                <div class="flex items-center gap-4">
-                     <button class="restore-btn text-green-600 hover:text-green-800 flex items-center gap-1 text-sm" title="Restore ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15l4 4 4-4M4 4h16v6a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
-                        <span>Restore</span>
-                    </button>
-                    <button class="delete-btn text-red-600 hover:text-red-800 flex items-center gap-1 text-sm" title="Permanently Delete ${emp.name}" data-employee-id="${emp.id}" data-employee-name="${emp.name}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        <span>Delete</span>
-                    </button>
-                </div>
-            </div>
-        `).join('')}</div>`;
+        // Deprecated: History list moved to StaffManager.
     }
 
     showDayDetailsModal(dateKey) {
@@ -813,7 +627,7 @@ export class UIManager {
 
         if (currentView === 'monthly') {
             viewHeader.textContent = `${monthName} ${year}`;
-            summaryTitle.textContent = "Monthly Summary";
+            if (summaryTitle) summaryTitle.textContent = "Monthly Summary";
             mainViews.calendar.classList.remove('hidden');
             mainViews.calendar.classList.add('md:grid');
             mainViews.calendarMobile.classList.remove('hidden');
@@ -821,16 +635,16 @@ export class UIManager {
             this.renderCalendarGrid();
         } else if (currentView === 'yearly') {
             viewHeader.textContent = year;
-            summaryTitle.textContent = "Yearly Summary";
+            if (summaryTitle) summaryTitle.textContent = "Yearly Summary";
             mainViews.yearly.classList.remove('hidden');
             this.renderYearlySummary();
         } else if (currentView === 'madeira-holidays') {
             viewHeader.textContent = "Madeira Holidays";
-            summaryTitle.textContent = "Holiday List";
+            if (summaryTitle) summaryTitle.textContent = "Holiday List";
             mainViews.madeiraHolidays.classList.remove('hidden');
             this.renderMadeiraHolidays();
         } else if (currentView === 'vacation') {
-            summaryTitle.textContent = "Vacation Summary";
+            if (summaryTitle) summaryTitle.textContent = "Vacation Summary";
             mainViews.vacation.classList.remove('hidden');
             if (window.scheduleManager) {
                 window.scheduleManager.renderVacationPlanner();
@@ -843,7 +657,7 @@ export class UIManager {
             this.renderHistoryList();
         } else if (currentView === 'stats') {
             viewHeader.textContent = "Team Statistics";
-            summaryTitle.textContent = "Balance & Stats";
+            if (summaryTitle) summaryTitle.textContent = "Statistics";
             mainViews.stats.classList.remove('hidden');
             this.renderStats();
         }
