@@ -68,6 +68,9 @@ export class WelcomePackManager {
                     <button id="wp-log-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'log' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Log Pack</button>
                     <button id="wp-presets-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'presets' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Presets</button>
                     <button id="wp-inventory-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'inventory' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Inventory</button>
+                    <button id="wp-help-btn" class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-medium" title="User Guide & Help">
+                        <i class="fas fa-question-circle mr-1"></i> Help
+                    </button>
                 </div>
             </div>
             <div id="wp-view-container"></div>
@@ -83,6 +86,7 @@ export class WelcomePackManager {
         document.getElementById('wp-log-btn').onclick = () => { this.editingLogId = null; this.currentView = 'log'; this.render(); };
         document.getElementById('wp-presets-btn').onclick = () => { this.currentView = 'presets'; this.render(); };
         document.getElementById('wp-inventory-btn').onclick = () => { this.currentView = 'inventory'; this.render(); };
+        document.getElementById('wp-help-btn').onclick = () => { this.showHelpModal(); };
     }
 
     renderCurrentView() {
@@ -109,6 +113,8 @@ export class WelcomePackManager {
         const totalPacks = filteredLogs.length;
         const totalRevenue = filteredLogs.reduce((sum, log) => sum + (log.totalSell || 0), 0);
         const totalProfit = filteredLogs.reduce((sum, log) => sum + (log.profit || 0), 0);
+        const totalCost = totalRevenue - totalProfit;
+        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
         // Group by property
         const propertyStats = {};
@@ -147,9 +153,9 @@ export class WelcomePackManager {
             ` : ''}
 
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <!-- Date Filter Control -->
-                <div class="md:col-span-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-4">
+                <div class="md:col-span-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-4">
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-bold text-gray-700">Filter Date:</span>
                         <input type="date" id="wp-stats-start" value="${this.dashboardFilters.startDate}" class="border rounded p-1 text-sm">
@@ -162,24 +168,106 @@ export class WelcomePackManager {
                     </button>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Packs Delivered</h3>
-                    <p class="text-3xl font-bold text-gray-800">${totalPacks}</p>
+                <!-- KPI Cards -->
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Packs Delivered</h3>
+                                <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="The total number of welcome packs that have been logged as 'Delivered' within the selected date range."></i>
+                            </div>
+                            <p class="text-3xl font-bold text-gray-800">${totalPacks}</p>
+                        </div>
+                        <div class="p-2 bg-blue-50 text-blue-500 rounded-lg">
+                            <i class="fas fa-box"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Total Revenue</h3>
-                    <p class="text-3xl font-bold text-gray-800">€${totalRevenue.toFixed(2)}</p>
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-gray-500 hover:shadow-lg transition-shadow">
+                     <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-1 mb-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Cost</h3>
+                                <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="The sum of the cost price for all items included in the delivered packs. This represents your expense."></i>
+                            </div>
+                            <p class="text-3xl font-bold text-gray-800">€${totalCost.toFixed(2)}</p>
+                        </div>
+                         <div class="p-2 bg-gray-50 text-gray-500 rounded-lg">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Total Profit</h3>
-                    <p class="text-3xl font-bold text-gray-800">€${totalProfit.toFixed(2)}</p>
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+                     <div class="flex justify-between items-start">
+                        <div>
+                             <div class="flex items-center gap-1 mb-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Revenue</h3>
+                                <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="The total amount sold/charged for the welcome packs."></i>
+                            </div>
+                            <p class="text-3xl font-bold text-gray-800">€${totalRevenue.toFixed(2)}</p>
+                        </div>
+                         <div class="p-2 bg-green-50 text-green-500 rounded-lg">
+                            <i class="fas fa-euro-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
+                     <div class="flex justify-between items-start">
+                        <div>
+                             <div class="flex items-center gap-1 mb-1">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Profit (Margin)</h3>
+                                <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="Net profit (Revenue - Cost) and the profit margin percentage.<br>A margin above 30% is generally considered healthy (Green arrow)."></i>
+                             </div>
+                            <p class="text-3xl font-bold text-gray-800">€${totalProfit.toFixed(2)}</p>
+                            <p class="text-sm ${profitMargin >= 30 ? 'text-green-600' : 'text-amber-600'} font-medium mt-1">
+                                <i class="fas ${profitMargin >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${profitMargin.toFixed(1)}% Margin
+                            </p>
+                        </div>
+                         <div class="p-2 bg-purple-50 text-purple-500 rounded-lg">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Charts Section -->
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Performance Trends</h3>
+                        <i class="fas fa-info-circle text-gray-400 cursor-help outline-none" data-tippy-content="Shows the daily profit (Green line) and number of packs delivered (Blue bars) over the selected period.<br>Useful for spotting busy days."></i>
+                    </div>
+                    <div class="relative h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                         <canvas id="wp-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Distribution by Property</h3>
+                        <i class="fas fa-info-circle text-gray-400 cursor-help outline-none" data-tippy-content="Breakdown of how many packs were delivered to each property."></i>
+                    </div>
+                    <div class="relative h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                         <canvas id="wp-distribution-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Top Items Chart (New) -->
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                         <h3 class="text-lg font-bold text-gray-800">Top Items Used</h3>
+                         <i class="fas fa-info-circle text-gray-400 cursor-help outline-none" data-tippy-content="The 10 most frequently used items in packs.<br>Helps you know what to restock."></i>
+                    </div>
+                     <div class="relative h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                         <canvas id="wp-items-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity (Modified to fit) -->
                 <div class="bg-white p-6 rounded-xl shadow-md">
                     <h3 class="text-lg font-bold text-gray-800 mb-4">Recent Activity</h3>
-                    <div class="overflow-y-auto max-h-80 space-y-3">
+                    <div class="overflow-y-auto h-64 space-y-3 pr-2">
                         ${filteredLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10).map(log => `
                             <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
                                 <div>
@@ -204,18 +292,6 @@ export class WelcomePackManager {
                         `).join('') || '<p class="text-gray-500 text-center py-4">No packs logged yet.</p>'}
                     </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-xl shadow-md">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Packs by Property</h3>
-                    <div class="overflow-y-auto max-h-80 space-y-2">
-                        ${Object.entries(propertyStats).sort((a, b) => b[1] - a[1]).map(([name, count]) => `
-                            <div class="flex justify-between items-center p-2 border-b last:border-0 border-gray-100">
-                                <span class="text-gray-700">${name}</span>
-                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm font-medium">${count}</span>
-                            </div>
-                        `).join('') || '<p class="text-gray-500 text-center py-4">No data available.</p>'}
-                    </div>
-                </div>
             </div>
         `;
 
@@ -229,6 +305,334 @@ export class WelcomePackManager {
         };
 
         document.getElementById('wp-export-csv').onclick = () => this.exportToCSV(filteredLogs);
+
+        // Initialize Charts
+        this.initDashboardCharts(filteredLogs, items);
+
+        // Initialize Tooltips (Tippy.js)
+        if (typeof tippy !== 'undefined') {
+            tippy('[data-tippy-content]', {
+                theme: 'light-border',
+                animation: 'scale',
+                allowHTML: true,
+                maxWidth: 300
+            });
+        }
+    }
+
+    initDashboardCharts(logs, allItems) {
+        // Prepare Data
+
+        // 1. Trend Data (Group by Month or Day)
+        const dateGroups = {};
+        logs.forEach(log => {
+            // Simple daily grouping for the selected range
+            const date = log.date;
+            if (!dateGroups[date]) dateGroups[date] = { count: 0, profit: 0 };
+            dateGroups[date].count++;
+            dateGroups[date].profit += (log.profit || 0);
+        });
+
+        const sortedDates = Object.keys(dateGroups).sort();
+        const trendLabels = sortedDates; // formatted date could be better
+        const trendCounts = sortedDates.map(d => dateGroups[d].count);
+        const trendProfits = sortedDates.map(d => dateGroups[d].profit);
+
+        // 2. Property Distribution
+        const propStats = {};
+        logs.forEach(log => {
+            const propName = log.propertyName || log.property;
+            if (!propStats[propName]) propStats[propName] = 0;
+            propStats[propName]++;
+        });
+        const distLabels = Object.keys(propStats);
+        const distData = Object.values(propStats);
+
+        // 3. Top Items
+        const itemCounts = {};
+        logs.forEach(log => {
+            log.items.forEach(item => {
+                const itemName = item.name;
+                if (!itemCounts[itemName]) itemCounts[itemName] = 0;
+                itemCounts[itemName] += (item.qty || 1); // Assuming qty property, otherwise 1
+            });
+        });
+        // Sort by count desc
+        const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 10); // Top 10
+        const itemLabels = sortedItems.map(i => i[0]);
+        const itemData = sortedItems.map(i => i[1]);
+
+
+        // Render Charts using Chart.js
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded');
+            return;
+        }
+
+        // --- Trend Chart ---
+        const ctxTrend = document.getElementById('wp-trend-chart')?.getContext('2d');
+        if (ctxTrend) {
+            new Chart(ctxTrend, {
+                type: 'bar',
+                data: {
+                    labels: trendLabels,
+                    datasets: [
+                        {
+                            label: 'Profit (€)',
+                            data: trendProfits,
+                            backgroundColor: 'rgba(34, 197, 94, 0.5)', // Green
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            type: 'line',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Packs Delivered',
+                            data: trendCounts,
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)', // Blue
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Profit (€)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false }, // only want the grid lines for one axis to show up
+                            title: { display: true, text: 'Count' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Distribution Chart ---
+        const ctxDist = document.getElementById('wp-distribution-chart')?.getContext('2d');
+        if (ctxDist) {
+            new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: distLabels,
+                    datasets: [{
+                        data: distData,
+                        backgroundColor: [
+                            'rgba(233, 75, 90, 0.7)', // Brand Red
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(34, 197, 94, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(168, 85, 247, 0.7)',
+                            'rgba(236, 72, 153, 0.7)',
+                            'rgba(99, 102, 241, 0.7)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        // --- Items Chart ---
+        const ctxItems = document.getElementById('wp-items-chart')?.getContext('2d');
+        if (ctxItems) {
+            new Chart(ctxItems, {
+                type: 'bar',
+                data: {
+                    labels: itemLabels,
+                    datasets: [{
+                        label: 'Quantity Used',
+                        data: itemData,
+                        backgroundColor: 'rgba(233, 75, 90, 0.6)',
+                        borderColor: 'rgba(233, 75, 90, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal bar chart
+                }
+            });
+        }
+    }
+
+    /**
+     * Show the Help/Guide Modal
+     */
+    showHelpModal() {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('wp-help-modal');
+        if (existingModal) existingModal.remove();
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.id = 'wp-help-modal';
+        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity opacity-0';
+
+        // Trigger generic fade-in
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-95 opacity-0" id="wp-help-modal-inner">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6 flex justify-between items-center text-white">
+                    <div>
+                        <h2 class="text-2xl font-bold">Welcome Pack Manager Guide</h2>
+                        <p class="text-blue-100 opacity-90 text-sm mt-1">Learn how to manage packs, reservations, and inventory.</p>
+                    </div>
+                    <button id="wp-help-close" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        <!-- Nav Sidebar (Simple) -->
+                        <div class="md:col-span-1 space-y-2 sticky top-0">
+                            <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-blue-200 text-blue-700 font-bold flex items-center gap-3 transition-transform hover:translate-x-1" onclick="document.getElementById('help-section-workflow').scrollIntoView({behavior: 'smooth'})">
+                                <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                                Typical Workflow
+                            </button>
+                            <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-blue-600" onclick="document.getElementById('help-section-dashboard').scrollIntoView({behavior: 'smooth'})">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                                Understanding Stats
+                            </button>
+                             <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-blue-600" onclick="document.getElementById('help-section-inventory').scrollIntoView({behavior: 'smooth'})">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                                Inventory & Presets
+                            </button>
+                        </div>
+
+                        <!-- Main Guide Content -->
+                        <div class="md:col-span-2 space-y-8">
+                            
+                            <!-- SECTION 1: WORKFLOW -->
+                            <div id="help-section-workflow" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-tasks text-blue-500"></i> Daily Workflow
+                                </h3>
+                                <div class="space-y-4">
+                                    <div class="flex gap-4">
+                                        <div class="flex-shrink-0 mt-1">
+                                            <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">1</div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">Check Reservations</h4>
+                                            <p class="text-sm text-gray-600 mt-1">Go to the <strong>Reservations</strong> tab to see upcoming check-ins. This tells you which properties need a welcome pack soon.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                         <div class="flex-shrink-0 mt-1">
+                                            <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">2</div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">Log a Pack</h4>
+                                            <p class="text-sm text-gray-600 mt-1">Click <strong>Log Pack</strong>. Select the property and date. Add items manually or click "Load Preset" to fill the pack with standard items instantly.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                         <div class="flex-shrink-0 mt-1">
+                                            <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">3</div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">Save & Monitor</h4>
+                                            <p class="text-sm text-gray-600 mt-1">Once saved, the pack is recorded. The items are deduced from your Inventory, and the cost/revenue is added to the Dashboard stats.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="help-section-dashboard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-chart-pie text-purple-500"></i> Dashboard & Stats
+                                </h3>
+                                <p class="text-sm text-gray-600 mb-4">The dashboard gives you a financial overview. Hover over the <i class="fas fa-info-circle text-gray-400"></i> icons on the dashboard for detailed explanations.</p>
+                                <ul class="space-y-3 text-sm">
+                                    <li class="flex items-start gap-2">
+                                        <span class="font-bold text-gray-700 min-w-[100px]">Profit Margin:</span>
+                                        <span class="text-gray-600">Calculated as <code>(Total Profit / Total Revenue) * 100</code>. Aim for >30%.</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="font-bold text-gray-700 min-w-[100px]">Trends:</span>
+                                        <span class="text-gray-600">The "Performance Trends" chart shows if you are making more money (green line) even if delivering fewer packs (bars).</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                             <!-- SECTION 3: INVENTORY -->
+                            <div id="help-section-inventory" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-boxes text-amber-500"></i> Inventory & Presets
+                                </h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="bg-amber-50 p-3 rounded-lg">
+                                        <h4 class="font-bold text-amber-800 mb-1">Managing Stock</h4>
+                                        <p class="text-xs text-amber-700">Go to <strong>Inventory</strong> to add new items (e.g., "Wine Bottle", "cookies"). Set the 'Buy Price' (your cost) and 'Sell Price' (what you charge owner).</p>
+                                    </div>
+                                    <div class="bg-green-50 p-3 rounded-lg">
+                                        <h4 class="font-bold text-green-800 mb-1">Using Presets</h4>
+                                        <p class="text-xs text-green-700">In <strong>Presets</strong>, create a standard "Welcome Pack" containing your usual items. This saves time so you don't have to select 10 items every time you log a pack.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- Footer -->
+                <div class="p-4 bg-gray-100 border-t border-gray-200 text-center">
+                    <button id="wp-help-done-btn" class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                        Got it, thanks!
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Trigger inner scale animation
+        setTimeout(() => {
+            const inner = document.getElementById('wp-help-modal-inner');
+            inner.classList.remove('scale-95', 'opacity-0');
+            inner.classList.add('scale-100', 'opacity-100');
+        }, 50);
+
+        // Close handlers
+        const close = () => {
+            modal.classList.add('opacity-0'); // Fade out wrapper
+            const inner = document.getElementById('wp-help-modal-inner');
+            inner.classList.remove('scale-100', 'opacity-100');
+            inner.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.remove(), 300); // Remove after anim
+        };
+        document.getElementById('wp-help-close').onclick = close;
+        document.getElementById('wp-help-done-btn').onclick = close;
+        modal.onclick = (e) => {
+            if (e.target === modal) close();
+        };
     }
 
 
