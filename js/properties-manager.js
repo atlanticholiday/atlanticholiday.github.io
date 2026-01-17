@@ -8,22 +8,23 @@ export class PropertiesManager {
         this.properties = [];
         this.filteredProperties = [];
         this.unsubscribe = null;
-        
+
         // Filter and sort state
         this.currentSort = 'name-asc';
         this.currentSearch = '';
         this.currentTypeFilter = '';
         this.currentBedroomsFilter = '';
         this.currentDataFilter = '';
+        this.currentDateFilter = '';
         this.currentWifiSpeedFilter = '';
         this.currentEnergySourceFilter = '';
         this.currentView = 'cards'; // 'cards' or 'table'
         this.tableSortColumn = '';
         this.tableSortDirection = 'asc';
-        
+
         // Initialize event listeners after DOM is loaded
         setTimeout(() => this.initializeEventListeners(), 100);
-        
+
         // Start listening for property changes immediately
         console.log(`📋 [INITIALIZATION] Starting property listener from constructor`);
         this.listenForPropertyChanges();
@@ -119,19 +120,19 @@ export class PropertiesManager {
                 docChanges: snapshot.docChanges().length,
                 isFirstLoad: snapshot.docChanges().every(change => change.type === 'added')
             });
-            
+
             this.properties = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-            
+
             // Log properties for debugging
             if (this.properties.length > 0) {
                 console.log("📋 Properties loaded:", this.properties.map(p => `${p.name} (${p.location})`));
             } else {
                 console.log("⚠️ No properties found in shared collection");
             }
-            
+
             // Initialize filtered properties on first load
             if (this.filteredProperties.length === 0) {
                 this.filteredProperties = [...this.properties];
@@ -156,16 +157,16 @@ export class PropertiesManager {
 
     renderProperties() {
         console.log(`🎨 Rendering properties: ${this.properties.length} total, ${this.filteredProperties.length} filtered`);
-        
+
         // Apply filtering and sorting
         this.applyFiltersAndSort();
-        
+
         const propertiesGrid = document.getElementById('properties-grid');
         const propertiesTable = document.getElementById('properties-table');
         const noPropertiesMessage = document.getElementById('no-properties-message');
         const propertyCountElement = document.getElementById('property-count');
         const filteredCountElement = document.getElementById('filtered-count');
-        
+
         console.log(`🎨 DOM elements found: grid=${!!propertiesGrid}, table=${!!propertiesTable}, message=${!!noPropertiesMessage}`);
 
         // Update property counts
@@ -285,42 +286,42 @@ export class PropertiesManager {
 
     renderTableView() {
         const tableBody = document.getElementById('properties-table-body');
-        
+
         // Apply table-specific sorting if set
         let tableData = [...this.filteredProperties];
         if (this.tableSortColumn) {
             tableData.sort((a, b) => this.compareTableColumns(a, b, this.tableSortColumn, this.tableSortDirection));
         }
-        
+
         tableBody.innerHTML = tableData.map(property => {
             const displayType = property.typology || property.type;
-            
+
             // Format values for table display
             const floor = property.floor || '-';
-            const parking = property.parkingSpot 
+            const parking = property.parkingSpot
                 ? `${property.parkingSpot}${property.parkingFloor ? ` (${property.parkingFloor})` : ''}`
                 : '-';
-            
-            const wifiSpeed = property.wifiSpeed 
+
+            const wifiSpeed = property.wifiSpeed
                 ? property.wifiSpeed.charAt(0).toUpperCase() + property.wifiSpeed.slice(1)
                 : '-';
-            
-            const wifiAirbnb = property.wifiAirbnb === 'yes' 
-                ? '✓' 
-                : property.wifiAirbnb === 'featured' 
-                ? '⭐' 
-                : '-';
-            
-            const energy = property.energySource 
+
+            const wifiAirbnb = property.wifiAirbnb === 'yes'
+                ? '✓'
+                : property.wifiAirbnb === 'featured'
+                    ? '⭐'
+                    : '-';
+
+            const energy = property.energySource
                 ? property.energySource.charAt(0).toUpperCase() + property.energySource.slice(1)
                 : '-';
-            
-            const smartTv = property.smartTv === 'yes' 
-                ? '✓' 
-                : property.smartTv === 'multiple' 
-                ? '✓✓' 
-                : '-';
-            
+
+            const smartTv = property.smartTv === 'yes'
+                ? '✓'
+                : property.smartTv === 'multiple'
+                    ? '✓✓'
+                    : '-';
+
             const status = property.status || 'available';
             const statusClass = {
                 'available': 'text-green-600 bg-green-50',
@@ -329,11 +330,11 @@ export class PropertiesManager {
                 'renovation': 'text-orange-600 bg-orange-50',
                 'inactive': 'text-gray-600 bg-gray-50'
             }[status] || 'text-green-600 bg-green-50';
-            
+
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
             const rowClass = hasMissingInfo ? 'bg-red-50' : '';
-            
+
             return `
                 <tr class="hover:bg-gray-50 transition-colors ${rowClass}">
                     <td class="px-4 py-3 border-b">
@@ -381,16 +382,16 @@ export class PropertiesManager {
 
     renderListView() {
         const listContainer = document.getElementById('properties-list');
-        
+
         // Apply table-specific sorting if set
         let listData = [...this.filteredProperties];
         if (this.tableSortColumn) {
             listData.sort((a, b) => this.compareTableColumns(a, b, this.tableSortColumn, this.tableSortDirection));
         }
-        
+
         listContainer.innerHTML = listData.map(property => {
             const displayType = property.typology || property.type;
-            
+
             // Status badge with appropriate colors
             const getStatusBadge = (status) => {
                 const statusConfig = {
@@ -406,13 +407,13 @@ export class PropertiesManager {
 
             // Format bedroom display
             const bedroomDisplay = property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bed${(property.rooms || 0) !== 1 ? 's' : ''}`;
-            
+
             // Format additional details
             const details = [];
             if (property.bathrooms) details.push(`${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}`);
             if (property.floor) details.push(`Floor: ${property.floor}`);
             if (property.parkingSpot) details.push(`Parking: ${property.parkingSpot}`);
-            
+
             // Tech features
             const techFeatures = [];
             if (property.wifiSpeed) {
@@ -437,11 +438,11 @@ export class PropertiesManager {
             }
             if (property.smartTv === 'yes') techFeatures.push('Smart TV');
             if (property.smartTv === 'multiple') techFeatures.push('Multiple TVs');
-            
+
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
             const rowClass = hasMissingInfo ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200';
-            
+
             return `
                 <div class="border ${rowClass} rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
@@ -506,7 +507,7 @@ export class PropertiesManager {
 
     compareTableColumns(a, b, column, direction) {
         let valueA, valueB;
-        
+
         switch (column) {
             case 'name':
                 valueA = a.name?.toLowerCase() || '';
@@ -545,7 +546,7 @@ export class PropertiesManager {
             default:
                 return 0;
         }
-        
+
         if (valueA < valueB) return direction === 'asc' ? -1 : 1;
         if (valueA > valueB) return direction === 'asc' ? 1 : -1;
         return 0;
@@ -558,11 +559,11 @@ export class PropertiesManager {
             property.wifiSpeed,
             property.energySource
         ];
-        
+
         // Also check if parking info is partially missing
-        const hasPartialParking = (property.parkingSpot && !property.parkingFloor) || 
-                                 (!property.parkingSpot && property.parkingFloor);
-        
+        const hasPartialParking = (property.parkingSpot && !property.parkingFloor) ||
+            (!property.parkingSpot && property.parkingFloor);
+
         // Consider data incomplete if any required field is missing or parking info is partial
         return requiredFields.some(field => !field || field.trim() === '') || hasPartialParking;
     }
@@ -575,14 +576,14 @@ export class PropertiesManager {
             svg.className = 'w-4 h-4 text-gray-400';
             svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />';
         });
-        
+
         // Set active sort indicator
         if (this.tableSortColumn) {
             const activeHeader = document.querySelector(`[data-sort="${this.tableSortColumn}"]`);
             if (activeHeader) {
                 const svg = activeHeader.querySelector('svg');
                 svg.className = 'w-4 h-4 text-brand';
-                
+
                 if (this.tableSortDirection === 'asc') {
                     svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
                 } else {
@@ -597,32 +598,32 @@ export class PropertiesManager {
         document.getElementById('property-location').value = '';
         document.getElementById('property-type').value = '';
         document.getElementById('property-rooms').value = '';
-        
+
         // These fields might not exist in quick add form, so check before clearing
         const bathroomsField = document.getElementById('property-bathrooms');
         if (bathroomsField) bathroomsField.value = '';
-        
+
         const floorField = document.getElementById('property-floor');
         if (floorField) floorField.value = '';
-        
+
         const wifiSpeedField = document.getElementById('property-wifi-speed');
         if (wifiSpeedField) wifiSpeedField.value = '';
-        
+
         const wifiAirbnbField = document.getElementById('property-wifi-airbnb');
         if (wifiAirbnbField) wifiAirbnbField.value = 'no';
-        
+
         const parkingSpotField = document.getElementById('property-parking-spot');
         if (parkingSpotField) parkingSpotField.value = '';
-        
+
         const parkingFloorField = document.getElementById('property-parking-floor');
         if (parkingFloorField) parkingFloorField.value = '';
-        
+
         const energySourceField = document.getElementById('property-energy-source');
         if (energySourceField) energySourceField.value = '';
-        
+
         const smartTvField = document.getElementById('property-smart-tv');
         if (smartTvField) smartTvField.value = 'no';
-        
+
         document.getElementById('add-property-error').textContent = '';
     }
 
@@ -638,13 +639,13 @@ export class PropertiesManager {
         if (!data.type) {
             errors.push('Property type is required');
         }
-        
+
         // Validate property type
         const validTypes = ['apartment', 'villa', 'hotel', 'resort', 'aparthotel', 'guesthouse'];
         if (!validTypes.includes(data.type)) {
             errors.push(`Invalid property type "${data.type}". Must be one of: ${validTypes.join(', ')}`);
         }
-        
+
         if (data.rooms && (data.rooms < 0 || data.rooms > 50)) {
             errors.push('Number of bedrooms must be between 0 and 50');
         }
@@ -664,7 +665,7 @@ export class PropertiesManager {
         lines.forEach((line, index) => {
             const lineNumber = index + 1;
             const parts = line.split(',').map(part => part.trim());
-            
+
             if (parts.length < 3) {
                 errors.push({
                     lineNumber,
@@ -676,11 +677,11 @@ export class PropertiesManager {
             }
 
             const [name, location, typology, ...extra] = parts;
-            
+
             // Parse Portuguese property typology (T1, T2, V1, V2, etc.)
             const typologyUpper = typology.toUpperCase();
             const typologyMatch = typologyUpper.match(/^([TV])(\d+)$/);
-            
+
             if (!typologyMatch) {
                 errors.push({
                     lineNumber,
@@ -693,7 +694,7 @@ export class PropertiesManager {
 
             const [, typeCode, bedroomCount] = typologyMatch;
             const bedrooms = parseInt(bedroomCount);
-            
+
             if (bedrooms < 0 || bedrooms > 9) {
                 errors.push({
                     lineNumber,
@@ -743,7 +744,7 @@ export class PropertiesManager {
         return { properties, errors };
     }
 
-    async bulkAddProperties(properties, onProgress = () => {}) {
+    async bulkAddProperties(properties, onProgress = () => { }) {
         const results = {
             successful: 0,
             failed: 0,
@@ -752,13 +753,20 @@ export class PropertiesManager {
 
         for (let i = 0; i < properties.length; i++) {
             try {
-                await this.addProperty(properties[i]);
-                results.successful++;
+                // Check if property with same name already exists to avoid duplicates
+                const exists = this.properties.some(p => p.name?.toLowerCase() === properties[i].name?.toLowerCase());
+                if (exists) {
+                    results.errors.push(`Skipped "${properties[i].name}": Already exists`);
+                    results.failed++;
+                } else {
+                    await this.addProperty(properties[i]);
+                    results.successful++;
+                }
             } catch (error) {
                 results.failed++;
                 results.errors.push(`Failed to add "${properties[i].name}": ${error.message}`);
             }
-            
+
             // Call progress callback
             onProgress({
                 completed: i + 1,
@@ -770,20 +778,102 @@ export class PropertiesManager {
         return results;
     }
 
+    async importFromGoogleSheets(onProgress = () => { }) {
+        const SHEET_ID = '1mDZFHWcE29tQS-xzrfpJrgz3EEAaptYN70pmk4U7da0';
+        const GID = '1575728761';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
+        try {
+            console.log(`🔄 [SHEETS] Fetching from ${CSV_URL}`);
+            const response = await fetch(CSV_URL);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch sheet: ${response.status} ${response.statusText}`);
+            }
+            const csvText = await response.text();
+
+            // Parse CSV
+            const lines = csvText.split('\n');
+            // Remove first 2 header lines as per requirement (start from B3/etc, so row 3 is index 2)
+            const dataLines = lines.slice(2);
+
+            const propertiesToImport = [];
+            const errors = [];
+
+            dataLines.forEach((line, index) => {
+                if (!line.trim()) return;
+
+                // CSV parsing handling quotes is complex, but assuming simple comma separation for now
+                // Any commas inside values will break this. Stronger regex needed?
+                // Using a regex to split by comma but ignoring commas within quotes
+                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(part => {
+                    return part.trim().replace(/^"|"$/g, '').trim(); // Remove surrounding quotes
+                });
+
+                // Column mapping (0-indexed): 
+                // A=0, B=1 (Name), C=2 (Location), D=3 (Typology)
+                const name = parts[1];
+                const location = parts[2];
+                const typology = parts[3];
+
+                if (name && location && typology) {
+                    // Normalize Typology (T2 -> T2, T 2 -> T2)
+                    const cleanTypology = typology.toUpperCase().replace(/\s+/g, '');
+
+                    // Parse bedrooms from typology
+                    let rooms = 0;
+                    const match = cleanTypology.match(/\d+/);
+                    if (match) {
+                        rooms = parseInt(match[0]);
+                    }
+
+                    // Determine type
+                    let type = 'other';
+                    if (cleanTypology.startsWith('T')) type = 'apartment';
+                    else if (cleanTypology.startsWith('V')) type = 'villa';
+
+                    propertiesToImport.push({
+                        name: name,
+                        location: location,
+                        typology: cleanTypology,
+                        type: type,
+                        rooms: rooms,
+                        // Defaults
+                        wifiSpeed: 'standard',
+                        smartTv: 'no',
+                        energySource: 'electric',
+                        status: 'available'
+                    });
+                }
+            });
+
+            console.log(`🔄 [SHEETS] Found ${propertiesToImport.length} properties to import.`);
+
+            if (propertiesToImport.length === 0) {
+                return { successful: 0, failed: 0, errors: ['No valid properties found in sheet.'] };
+            }
+
+            return await this.bulkAddProperties(propertiesToImport, onProgress);
+
+        } catch (error) {
+            console.error('Error importing from Google Sheets:', error);
+            throw error;
+        }
+    }
+
     initializeEventListeners() {
         // Search input
         const searchInput = document.getElementById('property-search');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.currentSearch = e.target.value.toLowerCase().trim();
-                
+
                 // Add visual feedback for active search
                 if (this.currentSearch) {
                     searchInput.classList.add('ring-2', 'ring-blue-500', 'border-blue-500');
                 } else {
                     searchInput.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
                 }
-                
+
                 this.renderProperties();
             });
         }
@@ -824,6 +914,15 @@ export class PropertiesManager {
             });
         }
 
+        // Date Added filter
+        const dateFilter = document.getElementById('property-date-filter');
+        if (dateFilter) {
+            dateFilter.addEventListener('change', (e) => {
+                this.currentDateFilter = e.target.value;
+                this.renderProperties();
+            });
+        }
+
         // WiFi speed filter (in expanded filters section)
         const wifiSpeedFilter = document.getElementById('property-wifi-speed');
         if (wifiSpeedFilter) {
@@ -847,7 +946,7 @@ export class PropertiesManager {
         const listViewBtn = document.getElementById('list-view-btn');
         const tableViewBtn = document.getElementById('table-view-btn');
         const mapViewBtn = document.getElementById('map-view-btn');
-        
+
         if (cardViewBtn) {
             cardViewBtn.addEventListener('click', () => {
                 this.currentView = 'cards';
@@ -857,7 +956,7 @@ export class PropertiesManager {
                 this.renderProperties();
             });
         }
-        
+
         if (listViewBtn) {
             listViewBtn.addEventListener('click', () => {
                 this.currentView = 'list';
@@ -867,7 +966,7 @@ export class PropertiesManager {
                 this.renderProperties();
             });
         }
-        
+
         if (tableViewBtn) {
             tableViewBtn.addEventListener('click', () => {
                 this.currentView = 'table';
@@ -894,7 +993,7 @@ export class PropertiesManager {
         tableHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const sortColumn = header.dataset.sort;
-                
+
                 // Toggle sort direction if clicking the same column
                 if (this.tableSortColumn === sortColumn) {
                     this.tableSortDirection = this.tableSortDirection === 'asc' ? 'desc' : 'asc';
@@ -902,10 +1001,10 @@ export class PropertiesManager {
                     this.tableSortColumn = sortColumn;
                     this.tableSortDirection = 'asc';
                 }
-                
+
                 // Update visual indicators
                 this.updateTableSortIndicators();
-                
+
                 // Re-render table if currently showing
                 if (this.currentView === 'table') {
                     this.renderTableView();
@@ -920,6 +1019,49 @@ export class PropertiesManager {
                 this.clearAllFilters();
             });
         }
+        // Sync Sheet Button
+        const syncSheetBtn = document.getElementById('sync-sheets-btn');
+        if (syncSheetBtn) {
+            syncSheetBtn.addEventListener('click', async () => {
+                const statusEl = document.getElementById('sync-sheets-status');
+                const resultEl = document.getElementById('sync-sheets-result');
+                const btn = syncSheetBtn;
+
+                try {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    statusEl.classList.remove('hidden');
+                    if (resultEl) resultEl.innerHTML = '';
+
+                    const result = await this.importFromGoogleSheets((progress) => {
+                        const statusText = statusEl.querySelector('span');
+                        if (statusText) statusText.textContent = `Syncing... ${progress.completed}/${progress.total}`;
+                    });
+
+                    if (resultEl) {
+                        if (result.errors.length > 0 && result.successful === 0) {
+                            resultEl.innerHTML = `<div class="text-red-500 mt-2 font-medium">Failed to import properties. See errors below.</div>
+                                                   <div class="text-xs text-red-400 mt-1 max-h-20 overflow-y-auto">${result.errors.join('<br>')}</div>`;
+                        } else {
+                            resultEl.innerHTML = `
+                                <div class="text-green-600 mt-2 font-medium">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Successfully synced: ${result.successful} properties
+                                </div>
+                                ${result.failed > 0 ? `<div class="text-orange-500 text-xs mt-1">Skipped/Failed: ${result.failed} (duplicates or errors)</div>` : ''}
+                                `;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Sync failed:', error);
+                    if (resultEl) resultEl.innerHTML = `<div class="text-red-600 mt-2">Error: ${error.message}</div>`;
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    statusEl.classList.add('hidden');
+                }
+            });
+        }
     }
 
     applyFiltersAndSort() {
@@ -928,7 +1070,7 @@ export class PropertiesManager {
 
         // Apply search filter
         if (this.currentSearch) {
-            filtered = filtered.filter(property => 
+            filtered = filtered.filter(property =>
                 property.name.toLowerCase().includes(this.currentSearch) ||
                 property.location.toLowerCase().includes(this.currentSearch) ||
                 (property.description && property.description.toLowerCase().includes(this.currentSearch))
@@ -942,7 +1084,7 @@ export class PropertiesManager {
             } else if (this.currentTypeFilter === 'villa') {
                 filtered = filtered.filter(property => property.type === 'villa');
             } else if (this.currentTypeFilter === 'other') {
-                filtered = filtered.filter(property => 
+                filtered = filtered.filter(property =>
                     property.type !== 'apartment' && property.type !== 'villa'
                 );
             }
@@ -965,6 +1107,46 @@ export class PropertiesManager {
             } else if (this.currentDataFilter === 'missing') {
                 filtered = filtered.filter(property => this.hasIncompleteData(property));
             }
+        }
+
+        // Apply date added filter
+        if (this.currentDateFilter) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            filtered = filtered.filter(property => {
+                // Handle properties without valid createdAt date (treat as old)
+                // If it's a Firestore Timestamp, convert to Date, otherwise separate handling not strictly needed if we assume Date objects or Timestamps
+                let created = property.createdAt;
+                if (!created) return false;
+                if (typeof created.toDate === 'function') created = created.toDate(); // Firestore Timestamp
+                if (!(created instanceof Date)) created = new Date(created);
+                if (isNaN(created.getTime())) return false;
+
+                // Normalise created date to start of day for accurate comparison
+                const createdDay = new Date(created.getFullYear(), created.getMonth(), created.getDate());
+
+                switch (this.currentDateFilter) {
+                    case 'today':
+                        return createdDay.getTime() === today.getTime();
+                    case 'last-7': {
+                        const sevenDaysAgo = new Date(today);
+                        sevenDaysAgo.setDate(today.getDate() - 7);
+                        return createdDay >= sevenDaysAgo;
+                    }
+                    case 'last-30': {
+                        const thirtyDaysAgo = new Date(today);
+                        thirtyDaysAgo.setDate(today.getDate() - 30);
+                        return createdDay >= thirtyDaysAgo;
+                    }
+                    case 'this-month':
+                        return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+                    case 'this-year':
+                        return created.getFullYear() === now.getFullYear();
+                    default:
+                        return true;
+                }
+            });
         }
 
         // Apply WiFi speed filter
@@ -1012,7 +1194,7 @@ export class PropertiesManager {
         // Extract typology information for proper sorting
         const getTypologyOrder = (typology) => {
             if (!typology) return { prefix: 'z', number: 999 };
-            
+
             const match = typology.toUpperCase().match(/^([TV])(\d+)$/);
             if (match) {
                 return {
@@ -1020,7 +1202,7 @@ export class PropertiesManager {
                     number: parseInt(match[2])
                 };
             }
-            
+
             // For other property types, sort them after T and V
             return { prefix: 'z', number: 0 };
         };
@@ -1045,29 +1227,29 @@ export class PropertiesManager {
         this.currentDataFilter = '';
         this.currentWifiSpeedFilter = '';
         this.currentEnergySourceFilter = '';
-        
+
         // Reset form elements
         const searchInput = document.getElementById('property-search');
         if (searchInput) {
             searchInput.value = '';
             searchInput.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
         }
-        
+
         const typeFilter = document.getElementById('property-type-filter');
         if (typeFilter) typeFilter.value = '';
-        
+
         const bedroomsFilter = document.getElementById('property-bedrooms-filter');
         if (bedroomsFilter) bedroomsFilter.value = '';
-        
+
         const dataFilter = document.getElementById('property-data-filter');
         if (dataFilter) dataFilter.value = '';
-        
+
         const wifiSpeedFilter = document.getElementById('property-wifi-speed');
         if (wifiSpeedFilter) wifiSpeedFilter.value = '';
-        
+
         const energySourceFilter = document.getElementById('property-energy-source');
         if (energySourceFilter) energySourceFilter.value = '';
-        
+
         // Re-render with cleared filters
         this.renderProperties();
     }

@@ -1,4 +1,4 @@
- import { LOCATIONS, TRAVEL_FEES } from './locations.js';
+import { LOCATIONS, TRAVEL_FEES } from './locations.js';
 export class CleaningBillsManager {
   constructor() {
     this.defaultKg = 8.5;
@@ -108,10 +108,10 @@ export class CleaningBillsManager {
       const updated = {
         ...prefs,
         lastCompanyId: this.companyId,
-        lastPropertyByCompany: { ...(prefs.lastPropertyByCompany||{}), [this.companyId]: this.activePropertyId }
+        lastPropertyByCompany: { ...(prefs.lastPropertyByCompany || {}), [this.companyId]: this.activePropertyId }
       };
       localStorage.setItem('cleaningBillsPrefs', JSON.stringify(updated));
-    } catch {}
+    } catch { }
   }
 
   // ---------- DOM scaffold ----------
@@ -145,18 +145,39 @@ export class CleaningBillsManager {
 
     // Landing button card
     if (!document.getElementById('go-to-cleaning-bills-btn')) {
-      const propsBtn = document.getElementById('go-to-properties-btn');
-      if (propsBtn && propsBtn.parentElement) {
-        const parent = propsBtn.parentElement;
+      // Prioritize Other Tools grid
+      const otherToolsGrid = document.getElementById('other-tools-grid');
+      let parent = otherToolsGrid;
+      let refNode = null;
+
+      // Fallback: Try to find an existing dashboard grid by locating the properties button
+      if (!parent) {
+        const propsBtn = document.getElementById('go-to-properties-btn');
+        if (propsBtn && propsBtn.parentElement) {
+          parent = propsBtn.parentElement;
+        }
+      }
+
+      if (parent) {
         const card = document.createElement('button');
         card.id = 'go-to-cleaning-bills-btn';
-        card.className = propsBtn.className || 'dashboard-card';
-        card.innerHTML = propsBtn.innerHTML || '<span class="text-base">Cleaning Bills</span>';
-        try {
-          const textNode = card.querySelector('h3, span, .title');
-          if (textNode) textNode.textContent = 'Cleaning Bills';
-          else card.textContent = 'Cleaning Bills';
-        } catch {}
+        card.className = 'dashboard-card'; // Force standard class
+        card.innerHTML = `
+            <div class="card-icon bg-emerald-500/10 text-emerald-600">
+             <span class="text-2xl">🧹</span>
+            </div>
+            <div class="card-body">
+              <h3>Cleaning Bills</h3>
+              <p>Calculate cleaning fees.</p>
+            </div>
+        `;
+
+        // Try to match styling of sibling if possible
+        const sibling = parent.querySelector('.dashboard-card');
+        if (sibling) {
+          card.className = sibling.className;
+        }
+
         parent.appendChild(card);
       } else {
         const landing = document.getElementById('landing-page');
@@ -185,12 +206,12 @@ export class CleaningBillsManager {
     const labelNorm = norm(comp.label);
     const selectedCompanyProps = comp.propertyBased
       ? allProps.filter(p => {
-          const c = norm(p.cleaningCompanyContact);
-          if (c === labelNorm) return true;
-          // Legacy tolerance for That's Maid without apostrophe
-          if (comp.id === 'thatsMaid' && (c === 'thats maid')) return true;
-          return false;
-        })
+        const c = norm(p.cleaningCompanyContact);
+        if (c === labelNorm) return true;
+        // Legacy tolerance for That's Maid without apostrophe
+        if (comp.id === 'thatsMaid' && (c === 'thats maid')) return true;
+        return false;
+      })
       : [];
     // Ensure selected property is valid if company is property-based
     if (comp.propertyBased) {
@@ -201,7 +222,7 @@ export class CleaningBillsManager {
     }
 
     const typeOptions = Object.keys(this.CLEANING_FEES)
-      .map(k => `<option value="${k}" ${k===this.type?'selected':''}>${k} — ${this.formatCurrency(this.CLEANING_FEES[k])}</option>`)
+      .map(k => `<option value="${k}" ${k === this.type ? 'selected' : ''}>${k} — ${this.formatCurrency(this.CLEANING_FEES[k])}</option>`)
       .join('');
 
     // If a property is selected, auto-fill location from the property when none chosen yet
@@ -218,12 +239,12 @@ export class CleaningBillsManager {
       .join('');
 
     const companyOptions = this.COMPANIES
-      .map(c => `<option value="${c.id}" ${this.companyId===c.id?'selected':''}>${c.label}</option>`)
+      .map(c => `<option value="${c.id}" ${this.companyId === c.id ? 'selected' : ''}>${c.label}</option>`)
       .join('');
 
     const selectedPrice = Number((activeProp?.cleaningCompanyPrice ?? this.thatsMaidPrices[this.activePropertyId] ?? 0) || 0);
     const propertyOptions = selectedCompanyProps.length
-      ? selectedCompanyProps.map(p => `<option value="${p.id}" ${p.id===this.activePropertyId?'selected':''}>${p.name || p.displayName || p.id}</option>`).join('')
+      ? selectedCompanyProps.map(p => `<option value="${p.id}" ${p.id === this.activePropertyId ? 'selected' : ''}>${p.name || p.displayName || p.id}</option>`).join('')
       : `<option value="">No properties found for ${comp.label}</option>`;
 
     root.innerHTML = `
@@ -395,11 +416,11 @@ export class CleaningBillsManager {
     const compNow = this.getSelectedCompany();
     const cleaning = compNow?.propertyBased
       ? (() => {
-          const props = Array.isArray(window.propertiesManager?.properties) ? window.propertiesManager.properties : [];
-          const prop = props.find(p => p.id === this.activePropertyId);
-          const price = parseFloat(prop?.cleaningCompanyPrice);
-          return Number.isFinite(price) ? price : (Number(this.thatsMaidPrices[this.activePropertyId]) || 0);
-        })()
+        const props = Array.isArray(window.propertiesManager?.properties) ? window.propertiesManager.properties : [];
+        const prop = props.find(p => p.id === this.activePropertyId);
+        const price = parseFloat(prop?.cleaningCompanyPrice);
+        return Number.isFinite(price) ? price : (Number(this.thatsMaidPrices[this.activePropertyId]) || 0);
+      })()
       : (this.CLEANING_FEES[this.type] || 0);
     const travel = this.location ? (TRAVEL_FEES[this.location] || 0) : 0;
     const total = laundry + cleaning + travel;
@@ -462,8 +483,8 @@ export class CleaningBillsManager {
     el.innerHTML = `
       <div class="space-y-1">
         <div>Total posted: <strong>${this.formatCurrency(total)}</strong></div>
-        <div>Platform (${(pctPlat*100).toFixed(2)}%): <strong>${this.formatCurrency(platformFee)}</strong></div>
-        <div>VAT extracted ${(pctVat*100).toFixed(2)}%: <strong>${this.formatCurrency(vat)}</strong></div>
+        <div>Platform (${(pctPlat * 100).toFixed(2)}%): <strong>${this.formatCurrency(platformFee)}</strong></div>
+        <div>VAT extracted ${(pctVat * 100).toFixed(2)}%: <strong>${this.formatCurrency(vat)}</strong></div>
         <hr class="my-2" />
         <div class="text-sm text-gray-700">${expression}</div>
         <div class="text-lg">Net remaining: <strong>${this.formatCurrency(net)}</strong></div>
@@ -482,8 +503,8 @@ export class CleaningBillsManager {
     const { total, platformFee, vat, net, pctPlat, pctVat } = this.computeCommission();
     const lines = [
       `Total posted: ${this.formatCurrency(total)}`,
-      `Platform (${(pctPlat*100).toFixed(2)}%): ${this.formatCurrency(platformFee)}`,
-      `VAT extracted ${(pctVat*100).toFixed(2)}%: ${this.formatCurrency(vat)}`,
+      `Platform (${(pctPlat * 100).toFixed(2)}%): ${this.formatCurrency(platformFee)}`,
+      `VAT extracted ${(pctVat * 100).toFixed(2)}%: ${this.formatCurrency(vat)}`,
       `Net remaining: ${this.formatCurrency(net)}`,
     ];
     const text = lines.join('\n');
