@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlantic Holiday - Inventory Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="dashboard-header sticky top-0 z-10 bg-white/90 backdrop-blur-md shadow-sm">
+        <div class="container mx-auto px-4 py-4 max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift"
+                    title="Back to Dashboard">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <div class="header-brand flex items-center gap-3">
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo" />
+                    <div class="leading-tight">
+                        <div class="header-title brand-red text-xl font-bold">Inventory Generator</div>
+                        <div class="header-sub text-xs text-gray-500">Create Essentials Lists for Owners</div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button id="load-saved-btn"
+                    class="text-sm font-medium text-gray-600 hover:text-brand transition-colors">
+                    <i class="fas fa-history mr-1"></i> Saved Lists
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-5xl">
+
+        <!-- Setup / CSV Warning -->
+        <div id="csv-warning" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-md shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        Configuration file not found. Please upload <strong>AL Essencials List - ENG -
+                            BASE.csv</strong>.
+                    </p>
+                    <input type="file" id="csv-upload" accept=".csv"
+                        class="mt-2 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-100 file:text-yellow-700 hover:file:bg-yellow-200">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Inputs -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Property Details Card -->
+                <div class="bg-white rounded-xl shadow-md p-6 modal-content border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span
+                            class="w-6 h-6 rounded-full bg-brand-light text-brand text-xs flex items-center justify-center">1</span>
+                        Property Details
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">List Name / Property</label>
+                            <input type="text" id="list-name" placeholder="e.g. Ocean View T2"
+                                class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:border-brand transition-all text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Guest Capacity</label>
+                                <input type="number" id="guest-capacity" min="1" value="2"
+                                    class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:border-brand transition-all text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
+                                <input type="number" id="num-bathrooms" min="1" value="1"
+                                    class="w-full p-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:border-brand transition-all text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bed Config Card -->
+                <div class="bg-white rounded-xl shadow-md p-6 modal-content border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span
+                            class="w-6 h-6 rounded-full bg-brand-light text-brand text-xs flex items-center justify-center">2</span>
+                        Bed Configuration
+                    </h2>
+
+                    <div id="bed-list" class="space-y-3 mb-4">
+                        <!-- Dynamic Bed Rows will go here -->
+                        <div class="text-sm text-gray-500 text-center py-2 italic" id="no-beds-msg">No beds added yet.
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <select id="bed-type-select" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
+                            <option value="Single">Single Bed (90x200)</option>
+                            <option value="Double">Double Bed (140x200)</option>
+                            <option value="Queen">Queen Bed (160x200)</option>
+                            <option value="King">King Bed (180x200)</option>
+                            <option value="SofaBed">Sofa Bed</option>
+                            <option value="Cot">Baby Cot</option>
+                        </select>
+                        <button id="add-bed-btn"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-md transition-colors text-sm font-medium">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+
+                <button id="generate-btn" style="background-color: #e94b5a !important; color: white !important;"
+                    class="w-full btn-primary py-3 rounded-xl shadow-lg hover:shadow-xl transition-all hover-lift font-semibold text-lg flex justify-center items-center gap-2">
+                    <i class="fas fa-magic"></i> Generate List
+                </button>
+
+            </div>
+
+            <!-- Right Column: Results -->
+            <div class="lg:col-span-2">
+                <div
+                    class="bg-white rounded-xl shadow-md p-6 modal-content border border-gray-100 min-h-[600px] flex flex-col">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-list-check text-brand"></i> Essentials List
+                        </h2>
+                        <div class="flex gap-2" id="action-buttons">
+                            <button id="save-list-btn"
+                                class="hidden text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors">
+                                <i class="fas fa-save mr-1"></i> Save
+                            </button>
+                            <button id="export-btn"
+                                class="hidden text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors shadow-sm">
+                                <i class="fas fa-file-excel mr-1"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder State -->
+                    <div id="results-placeholder"
+                        class="flex-1 flex flex-col items-center justify-center text-gray-400 opacity-60">
+                        <svg class="w-20 h-20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        <p class="text-lg font-medium">Ready to generate</p>
+                        <p class="text-sm">Enter details and add beds to calculate inventory.</p>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div id="results-container" class="hidden flex-1 overflow-x-auto">
+                        <div
+                            class="mb-4 bg-blue-50 text-blue-800 p-3 rounded-md text-sm flex justify-between items-center">
+                            <span><strong>Summary:</strong> <span id="summary-text">0 Guests, 0 Beds</span></span>
+                        </div>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Item</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Category</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                        Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Items go here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        </div>
+        </div>
+        </div>
+
+        <!-- Saved Lists Modal -->
+        <div id="saved-lists-modal"
+            class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+            <div class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Saved Lists</h3>
+                    <button id="close-saved-lists-btn" class="text-gray-400 hover:text-gray-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mt-2 text-left">
+                    <div id="saved-lists-container" class="space-y-2 max-h-96 overflow-y-auto">
+                        <!-- Saved lists injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/data-manager.js"></script>
+    <script src="js/inventory-manager.js"></script>
+    <script>
+        // Initialize simple app
+        document.addEventListener('DOMContentLoaded', () => {
+            InventoryManager.init();
+        });
+    </script>
+</body>
+
+</html>
