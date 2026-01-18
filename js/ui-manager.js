@@ -1095,4 +1095,307 @@ export class UIManager {
             banner.classList.add('hidden');
         }
     }
+
+    /**
+     * Show the Schedule Help/Tutorial Modal
+     */
+    showScheduleHelpModal() {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('schedule-help-modal');
+        if (existingModal) existingModal.remove();
+
+        // Create modal content
+        const modal = document.createElement('div');
+        modal.id = 'schedule-help-modal';
+        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity opacity-0';
+
+        // Trigger generic fade-in
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-95 opacity-0" id="schedule-help-modal-inner">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-[#e94b5a] to-[#d3414f] p-6 flex justify-between items-center text-white">
+                    <div>
+                        <h2 class="text-2xl font-bold">Work Schedule Guide</h2>
+                        <p class="text-red-100 opacity-90 text-sm mt-1">Learn how to use the schedule, manage staff, and plan vacations.</p>
+                    </div>
+                    <button id="schedule-help-close" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        <!-- Nav Sidebar -->
+                        <div class="md:col-span-1 space-y-2 sticky top-0">
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-red-200 text-red-700 font-bold flex items-center gap-3 transition-transform hover:translate-x-1" data-section="overview">
+                                <span class="bg-red-100 text-red-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-home"></i></span>
+                                Getting Started
+                            </button>
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="monthly">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-calendar-alt"></i></span>
+                                Monthly View
+                            </button>
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="yearly">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-calendar"></i></span>
+                                Yearly View
+                            </button>
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="holidays">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-star"></i></span>
+                                Madeira Holidays
+                            </button>
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="stats">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-chart-bar"></i></span>
+                                Statistics
+                            </button>
+                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="vacation">
+                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-umbrella-beach"></i></span>
+                                Vacation Planner
+                            </button>
+                        </div>
+
+                        <!-- Main Guide Content -->
+                        <div class="md:col-span-2 space-y-6">
+                            
+                            <!-- SECTION: OVERVIEW -->
+                            <div id="help-section-overview" class="schedule-help-section bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-home text-red-500"></i> Getting Started
+                                </h3>
+                                <p class="text-gray-600 mb-4">The Work Schedule helps you manage your team's availability, track working days, and plan vacations. Here's a quick overview of the main features:</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="flex gap-4 items-start">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">View Tabs</h4>
+                                            <p class="text-sm text-gray-600">Use the tabs at the top to switch between <strong>Monthly</strong>, <strong>Yearly</strong>, <strong>Madeira Holidays</strong>, <strong>Stats</strong>, and <strong>Vacation Planner</strong> views.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 items-start">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">Employee Sidebar</h4>
+                                            <p class="text-sm text-gray-600">The left sidebar shows your team members. Click on any colleague to see their details, summary, or to edit their working days.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4 items-start">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-circle"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">Color Legend</h4>
+                                            <p class="text-sm text-gray-600"><span class="inline-block w-3 h-3 bg-green-600 rounded-full mr-1"></span> Working &nbsp; <span class="inline-block w-3 h-3 bg-yellow-600 rounded-full mr-1"></span> Holiday &nbsp; <span class="inline-block w-3 h-3 bg-gray-400 rounded-full mr-1"></span> Off/Weekend</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION: MONTHLY -->
+                            <div id="help-section-monthly" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-calendar-alt text-red-500"></i> Monthly View
+                                </h3>
+                                <p class="text-gray-600 mb-4">The Monthly View shows a calendar grid for the current month with each team member's status for every day.</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📅 Reading the Calendar</h4>
+                                        <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                                            <li>Each cell shows how many colleagues are working that day</li>
+                                            <li>Click on any day to view/edit who is working</li>
+                                            <li>Days with ★ indicate public holidays</li>
+                                            <li>Weekends are shown in gray</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">🔄 Changing Status</h4>
+                                        <p class="text-sm text-gray-600">Click on a day → In the popup, select a status for each colleague (Working, Off, Sick, etc.) → Changes save automatically.</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📄 Download PDF</h4>
+                                        <p class="text-sm text-gray-600">Click the <strong>download icon</strong> (📥) in the calendar controls to generate a printable PDF report of the month.</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">🖨️ Weekly Roster</h4>
+                                        <p class="text-sm text-gray-600">Click the <strong>print icon</strong> to view and print a weekly roster table showing shifts for each colleague.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION: YEARLY -->
+                            <div id="help-section-yearly" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-calendar text-red-500"></i> Yearly View
+                                </h3>
+                                <p class="text-gray-600 mb-4">Get a bird's-eye view of the entire year at a glance.</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📊 Yearly Summary</h4>
+                                        <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                                            <li>Shows a compact grid of all 12 months</li>
+                                            <li>Each month displays total working days for the team</li>
+                                            <li>Click on any month to jump to that month's detailed view</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">🔀 Navigation</h4>
+                                        <p class="text-sm text-gray-600">Use the <strong>←</strong> and <strong>→</strong> arrows to move between years. The year is displayed in the header.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION: MADEIRA HOLIDAYS -->
+                            <div id="help-section-holidays" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-star text-yellow-500"></i> Madeira Holidays
+                                </h3>
+                                <p class="text-gray-600 mb-4">This section lists all official public holidays and cultural events specific to Madeira.</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
+                                        <h4 class="font-bold text-yellow-800 mb-2">🌟 Public Holidays</h4>
+                                        <p class="text-sm text-yellow-700">On official public holidays, all colleagues are <strong>automatically marked as not working</strong>. You can manually override individual colleagues if needed by clicking on the day in Monthly View.</p>
+                                    </div>
+                                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                                        <h4 class="font-bold text-blue-800 mb-2">🎭 Cultural Events</h4>
+                                        <p class="text-sm text-blue-700">The "Cultural Events" tab shows festivals and celebrations that are <strong>not</strong> official holidays. Colleagues may still be scheduled to work on these days.</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📌 Regional Holidays</h4>
+                                        <p class="text-sm text-gray-600">Holidays marked with a "Regional" badge (like Madeira Day on July 1) are specific to Madeira and may not apply elsewhere in Portugal.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION: STATS -->
+                            <div id="help-section-stats" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-chart-bar text-purple-500"></i> Team Statistics
+                                </h3>
+                                <p class="text-gray-600 mb-4">View detailed statistics for each team member over the year.</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📈 Statistics Explained</h4>
+                                        <ul class="text-sm text-gray-600 space-y-2">
+                                            <li><strong>Vacation Used:</strong> Number of vacation days taken this year (weekdays only)</li>
+                                            <li><strong>Vacation Balance:</strong> Remaining vacation days from the standard 22-day allowance. <span class="text-green-600">Green = positive</span>, <span class="text-red-600">Red = over limit</span></li>
+                                            <li><strong>Extra Hours:</strong> Total overtime hours logged for the year</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-400">
+                                        <h4 class="font-bold text-green-800 mb-2">📤 Export to CSV</h4>
+                                        <p class="text-sm text-green-700">Click the <strong>"Export Stats to CSV"</strong> button to download a spreadsheet file with all the statistics. Perfect for HR reporting or payroll calculations.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION: VACATION PLANNER -->
+                            <div id="help-section-vacation" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-umbrella-beach text-blue-500"></i> Vacation Planner
+                                </h3>
+                                <p class="text-gray-600 mb-4">Plan and manage team vacations with an interactive calendar.</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">📅 Calendar Display</h4>
+                                        <p class="text-sm text-gray-600">The vacation planner shows a full calendar view with all booked vacations displayed as colored bars. Each colleague has a unique color for easy identification.</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">➕ Booking a Vacation</h4>
+                                        <ol class="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                                            <li>Click and drag on the calendar to select a date range</li>
+                                            <li>A booking modal will appear</li>
+                                            <li>Select the colleague and confirm the dates</li>
+                                            <li>Click "Book Vacation" to save</li>
+                                        </ol>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-bold text-gray-800 mb-2">✏️ Editing/Deleting</h4>
+                                        <p class="text-sm text-gray-600">Click on any existing vacation bar to view details. From there, you can edit the dates or delete the vacation entry.</p>
+                                    </div>
+                                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                                        <h4 class="font-bold text-blue-800 mb-2">💡 Tip</h4>
+                                        <p class="text-sm text-blue-700">Vacation days are automatically reflected in the Monthly View and Stats. You don't need to manually mark vacation days in the calendar!</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- Footer -->
+                <div class="p-4 bg-gray-100 border-t border-gray-200 text-center">
+                    <button id="schedule-help-done-btn" class="bg-[#e94b5a] hover:bg-[#d3414f] text-white px-8 py-2 rounded-lg font-medium transition-colors">
+                        Got it, thanks!
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Trigger inner scale animation
+        setTimeout(() => {
+            const inner = document.getElementById('schedule-help-modal-inner');
+            inner.classList.remove('scale-95', 'opacity-0');
+            inner.classList.add('scale-100', 'opacity-100');
+        }, 50);
+
+        // Section navigation
+        modal.querySelectorAll('.schedule-help-nav').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const section = btn.dataset.section;
+
+                // Update nav buttons
+                modal.querySelectorAll('.schedule-help-nav').forEach(navBtn => {
+                    navBtn.classList.remove('border-red-200', 'text-red-700', 'font-bold');
+                    navBtn.classList.add('border-gray-200', 'text-gray-700', 'font-medium');
+                    navBtn.querySelector('span').classList.remove('bg-red-100', 'text-red-600');
+                    navBtn.querySelector('span').classList.add('bg-gray-100', 'text-gray-500');
+                });
+                btn.classList.remove('border-gray-200', 'text-gray-700', 'font-medium');
+                btn.classList.add('border-red-200', 'text-red-700', 'font-bold');
+                btn.querySelector('span').classList.remove('bg-gray-100', 'text-gray-500');
+                btn.querySelector('span').classList.add('bg-red-100', 'text-red-600');
+
+                // Show correct section
+                modal.querySelectorAll('.schedule-help-section').forEach(sec => sec.classList.add('hidden'));
+                document.getElementById(`help-section-${section}`).classList.remove('hidden');
+            });
+        });
+
+        // Close handlers
+        const close = () => {
+            modal.classList.add('opacity-0');
+            const inner = document.getElementById('schedule-help-modal-inner');
+            inner.classList.remove('scale-100', 'opacity-100');
+            inner.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.remove(), 300);
+        };
+        document.getElementById('schedule-help-close').onclick = close;
+        document.getElementById('schedule-help-done-btn').onclick = close;
+        modal.onclick = (e) => {
+            if (e.target === modal) close();
+        };
+    }
 } 

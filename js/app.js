@@ -576,6 +576,16 @@ function setupGlobalEventListeners() {
 
             // Ensure work day selection checkboxes are rendered for the Add Colleague form
             try { uiManager.populateDayCheckboxes(); } catch (e) { console.warn('Failed to populate day checkboxes:', e); }
+
+            // Setup Schedule Help button
+            const scheduleHelpBtn = document.getElementById('schedule-help-btn');
+            if (scheduleHelpBtn) {
+                scheduleHelpBtn.onclick = () => {
+                    if (uiManager && typeof uiManager.showScheduleHelpModal === 'function') {
+                        uiManager.showScheduleHelpModal();
+                    }
+                };
+            }
         }, 100); // Small delay to ensure DOM is ready
     });
 
