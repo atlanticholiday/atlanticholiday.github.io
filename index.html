@@ -952,15 +952,25 @@ Mountain Villa, Sintra Hills, V4"
                         onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
                         class="dashboard-logo dashboard-logo--xl" />
                     <div class="leading-tight">
-                        <div class="header-title brand-red">Work Schedule</div>
-                        <div class="header-sub">Work Schedule Calculator</div>
+                        <div class="header-title brand-red" data-i18n="schedule.title">Work Schedule</div>
+                        <div class="header-sub" data-i18n="schedule.subtitle">Work Schedule Calculator</div>
                     </div>
                 </div>
                 <div class="header-right flex items-center gap-3">
+                    <!-- Language Switcher -->
+                    <div
+                        class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button id="lang-en"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100 active"
+                            title="English">🇬🇧</button>
+                        <button id="lang-pt"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            title="Português">🇵🇹</button>
+                    </div>
                     <button id="schedule-help-btn"
                         class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-medium"
-                        title="Schedule Guide & Help">
-                        <i class="fas fa-question-circle mr-1"></i> Help
+                        data-i18n-title="common.help">
+                        <i class="fas fa-question-circle mr-1"></i><span data-i18n="common.help">Help</span>
                     </button>
                     <button id="sign-out-btn"
                         class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
@@ -968,14 +978,14 @@ Mountain Villa, Sintra Hills, V4"
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                         </svg>
-                        Sign Out
+                        <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
         </header>
 
         <div id="loading" class="text-center p-8">
             <div class="loading-spinner mx-auto mb-4"></div>
-            <p class="text-lg text-gray-600">Loading your schedule...</p>
+            <p class="text-lg text-gray-600" data-i18n="schedule.loading">Loading your schedule...</p>
         </div>
 
         <div id="main-app" class="hidden fade-in-up">
@@ -983,18 +993,20 @@ Mountain Villa, Sintra Hills, V4"
             <div class="mb-8 flex justify-center">
                 <div class="inline-flex bg-gray-100 p-1 rounded-lg border border-gray-200">
                     <button id="monthly-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment">Monthly</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
+                        data-i18n="schedule.views.monthly">Monthly</button>
                     <button id="yearly-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Yearly</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                        data-i18n="schedule.views.yearly">Yearly</button>
                     <button id="madeira-holidays-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Madeira
-                        Holidays</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                        data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
                     <button id="stats-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Stats</button>
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                        data-i18n="schedule.views.stats">Stats</button>
                     <button id="vacation-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">Vacation
-                        Planner</button>
-
+                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                        data-i18n="schedule.views.vacationPlanner">Vacation Planner</button>
                 </div>
             </div>
 
@@ -1022,15 +1034,15 @@ Mountain Villa, Sintra Hills, V4"
                                 <div class="flex items-center justify-center gap-4 mt-2 text-sm">
                                     <div class="flex items-center gap-2">
                                         <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-                                        <span>Working</span>
+                                        <span data-i18n="schedule.legend.working">Working</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <div class="w-3 h-3 bg-yellow-600 rounded-full"></div>
-                                        <span>Holiday ★</span>
+                                        <span data-i18n="schedule.legend.holiday">Holiday ★</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-                                        <span>Off/Weekend</span>
+                                        <span data-i18n="schedule.legend.offWeekend">Off/Weekend</span>
                                     </div>
                                 </div>
                             </div>
@@ -1233,7 +1245,8 @@ Mountain Villa, Sintra Hills, V4"
         class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
         <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white modal-content">
             <div class="p-5 border-b flex justify-between items-center">
-                <h3 id="edit-working-days-header" class="text-xl leading-6 font-medium text-gray-900">Edit Working Days
+                <h3 id="edit-working-days-header" class="text-xl leading-6 font-medium text-gray-900"
+                    data-i18n="schedule.modals.editWorkingDays">Edit Working Days
                 </h3>
                 <button id="edit-working-days-close-btn"
                     class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
@@ -1254,9 +1267,11 @@ Mountain Villa, Sintra Hills, V4"
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
                     <button id="edit-working-days-cancel-btn"
-                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift"
+                        data-i18n="common.cancel">Cancel</button>
                     <button id="edit-working-days-save-btn"
-                        class="px-4 py-2 btn-primary rounded-md transition-all hover-lift">Save Changes</button>
+                        class="px-4 py-2 btn-primary rounded-md transition-all hover-lift" data-i18n="common.save">Save
+                        Changes</button>
                 </div>
             </div>
         </div>
@@ -1783,7 +1798,8 @@ Mountain Villa, Sintra Hills, V4"
         class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
         <div class="relative w-full max-w-md shadow-lg rounded-xl bg-white modal-content">
             <div class="p-5 border-b flex justify-between items-center">
-                <h3 class="text-xl leading-6 font-medium text-gray-900">Book Vacation</h3>
+                <h3 class="text-xl leading-6 font-medium text-gray-900" data-i18n="schedule.vacation.bookTitle">Book
+                    Vacation</h3>
                 <button id="book-vacation-close-btn"
                     class="text-gray-400 hover:text-gray-600 transition-colors hover-scale">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1794,7 +1810,8 @@ Mountain Villa, Sintra Hills, V4"
             </div>
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Colleague</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                        data-i18n="schedule.vacation.selectColleague">Colleague</label>
                     <select id="vacation-employee-select"
                         class="w-full p-3 border rounded-md focus-ring transition-all">
                         <!-- Populated by JS -->
@@ -1802,28 +1819,31 @@ Mountain Villa, Sintra Hills, V4"
                 </div>
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2"
+                            data-i18n="schedule.vacation.startDate">Start Date</label>
                         <input type="date" id="vacation-start-date"
                             class="w-full p-3 border rounded-md focus-ring transition-all">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2"
+                            data-i18n="schedule.vacation.endDate">End Date</label>
                         <input type="date" id="vacation-end-date"
                             class="w-full p-3 border rounded-md focus-ring transition-all">
                     </div>
                 </div>
-                <div class="flex justify-end gap-3">
-                    <button id="book-vacation-delete-btn"
-                        class="hidden px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors hover-lift mr-auto">Delete</button>
-                    <button id="book-vacation-cancel-btn"
-                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift">Cancel</button>
-                    <button id="book-vacation-save-btn"
-                        class="px-6 py-2 btn-primary rounded-md transition-all hover-lift">
-                        Schedule Vacation
-                    </button>
-                </div>
+                <button id="book-vacation-delete-btn"
+                    class="hidden px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors hover-lift mr-auto"
+                    data-i18n="schedule.vacation.deleteBtn">Delete</button>
+                <button id="book-vacation-cancel-btn"
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors hover-lift"
+                    data-i18n="common.cancel">Cancel</button>
+                <button id="book-vacation-save-btn" class="px-6 py-2 btn-primary rounded-md transition-all hover-lift"
+                    data-i18n="schedule.vacation.scheduleBtn">
+                    Schedule Vacation
+                </button>
             </div>
         </div>
+    </div>
     </div>
 
     <div id="operations-page" class="operations-page hidden min-h-screen bg-gray-50">

@@ -1,4 +1,5 @@
 import { Config } from './config.js';
+import { i18n, t } from './i18n.js';
 
 export class UIManager {
     constructor(dataManager, holidayCalculator, pdfGenerator) {
@@ -100,10 +101,10 @@ export class UIManager {
             // Indicators HTML
             let indicatorsHtml = '<div class="flex gap-1 mt-1 justify-center absolute bottom-2 left-0 right-0">';
             if (absentCount > 0) {
-                indicatorsHtml += `<span class="bg-red-500 rounded-full w-2 h-2" title="${absentCount} Absent"></span>`;
+                indicatorsHtml += `<span class="bg-red-500 rounded-full w-2 h-2" title="${absentCount} ${t('schedule.calendar.absent')}"></span>`;
             }
             if (vacationCount > 0) {
-                indicatorsHtml += `<span class="bg-yellow-400 rounded-full w-2 h-2" title="${vacationCount} On Vacation"></span>`;
+                indicatorsHtml += `<span class="bg-yellow-400 rounded-full w-2 h-2" title="${vacationCount} ${t('schedule.calendar.onVacation')}"></span>`;
             }
             indicatorsHtml += '</div>';
 
@@ -144,7 +145,7 @@ export class UIManager {
                         </svg>
                         <span class="text-xl font-bold">${workingCount}</span>
                     </div>
-                    <div class="text-xs text-gray-500">working</div>
+                    <div class="text-xs text-gray-500">${t('schedule.calendar.working')}</div>
                     ${indicatorsHtml}
                 `;
             }
@@ -204,12 +205,12 @@ export class UIManager {
             let indicatorsHtml = '';
             if (absentCount > 0) {
                 indicatorsHtml += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
-                    ${absentCount} Absent
+                    ${absentCount} ${t('schedule.calendar.absent')}
                 </span>`;
             }
             if (vacationCount > 0) {
                 indicatorsHtml += `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    ${vacationCount} Vacation
+                    ${vacationCount} ${t('schedule.summary.vacation')}
                 </span>`;
             }
 
@@ -231,7 +232,7 @@ export class UIManager {
                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                     </svg>
                     <span class="text-lg font-bold">${workingCount}</span>
-                    <span class="ml-1 text-sm">working</span>
+                    <span class="ml-1 text-sm">${t('schedule.calendar.working')}</span>
                 </div>
                 ${indicatorsHtml ? `<div class="mt-3">${indicatorsHtml}</div>` : ''}
             `;
@@ -247,7 +248,7 @@ export class UIManager {
 
         let tableHTML = `<div class="overflow-x-auto"><table class="w-full text-sm text-left">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                                <tr><th class="px-4 py-3">Month</th><th class="px-4 py-3">Worked</th><th class="px-4 py-3">Vacation</th><th class="px-4 py-3">Off</th><th class="px-4 py-3">Absent</th><th class="px-4 py-3">Extra Hours</th></tr>
+                                <tr><th class="px-4 py-3">${t('schedule.summary.month')}</th><th class="px-4 py-3">${t('schedule.summary.worked')}</th><th class="px-4 py-3">${t('schedule.summary.vacation')}</th><th class="px-4 py-3">${t('schedule.summary.off')}</th><th class="px-4 py-3">${t('schedule.summary.absent')}</th><th class="px-4 py-3">${t('schedule.summary.extraHours')}</th></tr>
                             </thead><tbody>`;
 
         Config.MONTHS_OF_YEAR.forEach((monthName, monthIndex) => {
@@ -753,25 +754,25 @@ export class UIManager {
         container.innerHTML = `
             <div class="space-y-6">
                 <div class="text-center mb-6">
-                    <h2 class="text-2xl font-bold text-gradient mb-3">Madeira Calendar</h2>
-                    <p class="text-gray-600">Public holidays and cultural events in Madeira</p>
+                    <h2 class="text-2xl font-bold text-gradient mb-3">${t('schedule.madeira.title')}</h2>
+                    <p class="text-gray-600">${t('schedule.madeira.subtitle')}</p>
                 </div>
                 
                 <!-- Tab Navigation -->
                 <div class="flex border-b border-gray-200 mb-6">
                     <button class="madeira-tab-btn active px-6 py-3 text-sm font-medium border-b-2 border-yellow-500 text-yellow-600" data-tab="holidays">
-                        Public Holidays
+                        ${t('schedule.madeira.publicHolidays')}
                     </button>
                     <button class="madeira-tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="events">
-                        Cultural Events
+                        ${t('schedule.madeira.culturalEvents')}
                     </button>
                 </div>
 
                 <!-- Public Holidays Tab -->
                 <div id="madeira-holidays-tab" class="madeira-tab-content">
                     <div class="mb-4">
-                        <h3 class="text-xl font-semibold text-gradient mb-2">Official Public Holidays</h3>
-                        <p class="text-sm text-gray-600 mb-4">On these days, all colleagues are automatically marked as not working</p>
+                        <h3 class="text-xl font-semibold text-gradient mb-2">${t('schedule.madeira.official')}</h3>
+                        <p class="text-sm text-gray-600 mb-4">${t('schedule.madeira.officialDesc')}</p>
                     </div>
                     
                     <div class="grid gap-3">
@@ -793,8 +794,7 @@ export class UIManager {
                         <div class="flex">
                             <div class="ml-3">
                                 <p class="text-sm text-yellow-800">
-                                    <strong>Automatic Holiday Management:</strong> On these days, all colleagues are automatically marked as not working. 
-                                    You can manually override individual colleagues if needed.
+                                    <strong>${t('schedule.madeira.autoManagement')}</strong> ${t('schedule.madeira.autoManagementDesc')}
                                 </p>
                             </div>
                         </div>

@@ -24,6 +24,7 @@ import { CleaningBillsManager } from './cleaning-bills-manager.js';
 import { WelcomePackManager } from './welcome-pack-manager.js';
 import { ScheduleManager } from './schedule-manager.js';
 import { StaffManager } from './staff-manager.js';
+import { i18n } from './i18n.js';
 import './allinfo-bulk-edit.js';
 import './allinfo-seq-edit.js';
 import './allinfo-accordion-edit.js';
@@ -57,7 +58,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.roleManager = roleManager;
         // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
         await setPersistence(auth, browserLocalPersistence);
-        setLogLevel('error');
+
+        // Initialize i18n (internationalization) system
+        await i18n.init();
+        i18n.setupLanguageSwitcher();
+
 
         // Add global Firestore read tracking
         let globalReadCount = 0;
@@ -208,6 +213,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Cleaning Bills page render
         document.addEventListener('cleaningBillsPageOpened', () => {
             try { cleaningBillsManager?.render(); } catch (e) { console.warn('Cleaning Bills render failed:', e); }
+        });
+
+        // Listen for language changes and refresh the current view
+        window.addEventListener('languageChanged', () => {
+            try {
+                // Refresh current view to update dynamic content
+                if (uiManager && typeof uiManager.updateView === 'function') {
+                    uiManager.updateView();
+                }
+            } catch (e) { console.warn('Language change refresh failed:', e); }
         });
 
         // User Management Page: populate allowed emails list when opened

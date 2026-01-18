@@ -1,0 +1,230 @@
+{
+  "common": {
+    "signOut": "Sign Out",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "search": "Search",
+    "loading": "Loading...",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "help": "Help",
+    "hours": "Hours",
+    "note": "Note",
+    "notes": "Notes",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status"
+  },
+  "days": {
+    "short": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "long": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ]
+  },
+  "months": {
+    "short": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "long": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ]
+  },
+  "statuses": {
+    "working": "Working",
+    "off": "Off",
+    "absent": "Absent",
+    "vacation": "On Vacation",
+    "sick": "Sick",
+    "personal": "Personal",
+    "unjustified": "Unjustified",
+    "scheduledOff": "Scheduled Off"
+  },
+  "landing": {
+    "welcome": "Welcome to your operations hub",
+    "subtitle": "Manage properties, schedules, safety and more — all in one beautiful place.",
+    "mainApps": "Main Apps",
+    "showMoreTools": "Show More Tools",
+    "hideMoreTools": "Hide More Tools",
+    "otherTools": "Other Tools"
+  },
+  "apps": {
+    "workSchedule": "Work Schedule",
+    "workScheduleDesc": "Plan staff schedules and holidays.",
+    "vehicles": "Vehicles",
+    "vehiclesDesc": "Manage fleet, insurance and inspections.",
+    "welcomePacks": "Welcome Packs",
+    "welcomePacksDesc": "Manage stocks and packs delivered.",
+    "staff": "Staff",
+    "staffDesc": "Manage team members and details.",
+    "properties": "Properties",
+    "propertiesDesc": "Manage short rentals and full inventory."
+  },
+  "schedule": {
+    "title": "Work Schedule",
+    "subtitle": "Work Schedule Calculator",
+    "loading": "Loading your schedule...",
+    "views": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "madeiraHolidays": "Madeira Holidays",
+      "stats": "Stats",
+      "vacationPlanner": "Vacation Planner"
+    },
+    "legend": {
+      "working": "Working",
+      "holiday": "Holiday ★",
+      "offWeekend": "Off/Weekend"
+    },
+    "actions": {
+      "printWeekly": "Print Weekly Roster",
+      "downloadPdf": "Download Monthly Team Report PDF"
+    },
+    "calendar": {
+      "working": "working",
+      "understaffed": "Understaffed",
+      "absent": "Absent",
+      "onVacation": "On Vacation"
+    },
+    "summary": {
+      "monthly": "Monthly Summary",
+      "yearly": "Yearly Summary",
+      "month": "Month",
+      "worked": "Worked",
+      "vacation": "Vacation",
+      "off": "Off",
+      "absent": "Absent",
+      "extraHours": "Extra Hours"
+    },
+    "modals": {
+      "dayDetails": "Day Details",
+      "dailyNote": "Daily Note (Visible to everyone)",
+      "dailyNotePlaceholder": "Add a note for this day (e.g. 'Bank Holiday', 'VIP Arrival')...",
+      "extraHours": "Extra Hours",
+      "extraHoursNote": "Reason for extra hours...",
+      "editWorkingDays": "Edit Working Days",
+      "editColleague": "Edit Colleague Information",
+      "employeeSummary": "Summary for",
+      "noExtraHours": "No extra hours or notes for this period."
+    },
+    "shifts": {
+      "title": "Manage Shift Presets",
+      "noPresets": "No presets added yet.",
+      "selectPreset": "Select a preset...",
+      "customShift": "Custom Shift...",
+      "minStaff": "Minimum Staff Threshold",
+      "addPreset": "Add Preset"
+    },
+    "vacation": {
+      "title": "Vacation Planner",
+      "subtitle": "Visualise and manage team vacations",
+      "bookNew": "Book New Vacation",
+      "upcomingList": "Upcoming Vacations List",
+      "bookTitle": "Book Vacation",
+      "editTitle": "Edit Vacation",
+      "scheduleBtn": "Schedule Vacation",
+      "updateBtn": "Update Vacation",
+      "deleteBtn": "Delete Vacation",
+      "selectColleague": "Select Colleague",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "confirmDelete": "Are you sure you want to delete this vacation?",
+      "selectDatesError": "Please select a colleague and dates.",
+      "saveFailed": "Failed to save vacation.",
+      "deleteFailed": "Failed to delete vacation."
+    },
+    "madeira": {
+      "title": "Madeira Calendar",
+      "subtitle": "Public holidays and cultural events in Madeira",
+      "publicHolidays": "Public Holidays",
+      "culturalEvents": "Cultural Events",
+      "official": "Official Public Holidays",
+      "officialDesc": "On these days, all colleagues are automatically marked as not working",
+      "regional": "Regional",
+      "autoManagement": "Automatic Holiday Management:",
+      "autoManagementDesc": "On these days, all colleagues are automatically marked as not working. You can manually override individual colleagues if needed."
+    },
+    "stats": {
+      "title": "Team Statistics",
+      "teamOverview": "Team Overview",
+      "individualStats": "Individual Statistics",
+      "totalWorkingDays": "Total Working Days",
+      "totalVacationDays": "Total Vacation Days",
+      "totalAbsentDays": "Total Absent Days",
+      "totalExtraHours": "Total Extra Hours"
+    }
+  },
+  "staff": {
+    "title": "Staff Management",
+    "subtitle": "Manage team members",
+    "teamMembers": "Team Members",
+    "addColleague": "Add Colleague",
+    "archiveHistory": "Archive/History",
+    "editInfo": "Edit Info",
+    "viewSummary": "View Summary",
+    "editDays": "Edit Days",
+    "archive": "Archive",
+    "restore": "Restore",
+    "deleteConfirm": "Are you sure you want to delete this colleague?",
+    "department": "Department",
+    "position": "Position",
+    "hireDate": "Hire Date",
+    "employmentType": "Employment Type",
+    "staffNumber": "Staff Number",
+    "vacationAdjustment": "Vacation Adjustment"
+  },
+  "login": {
+    "title": "Sign in to your account",
+    "email": "Email address",
+    "password": "Password",
+    "signIn": "Sign in"
+  },
+  "setup": {
+    "welcome": "Welcome to the Schedule Calculator!",
+    "emptySchedule": "Your schedule is currently empty. How would you like to get started?",
+    "startBlank": "Start With a Blank Schedule",
+    "startBlankDesc": "You can add your own colleagues manually."
+  }
+}

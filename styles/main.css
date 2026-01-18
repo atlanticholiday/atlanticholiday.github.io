@@ -1278,4 +1278,31 @@ header h1, header h2, header h3 {
 .header-right{justify-self:end}
 .header-brand{justify-self:center;display:flex;align-items:center;gap:10px;text-align:center}
 .header-title{font-weight:800;letter-spacing:-.02em}
-.header-sub{color:#6b7280;font-size:.875rem} 
+.header-sub{color:#6b7280;font-size:.875rem}
+
+/* Language Switcher Styles */
+.language-switcher {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-md);
+}
+
+.lang-btn {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    opacity: 0.5;
+    transition: var(--transition-smooth);
+}
+
+.lang-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.lang-btn.active {
+    opacity: 1;
+    background: rgba(233, 75, 90, 0.1);
+    border-radius: var(--radius-sm);
+}

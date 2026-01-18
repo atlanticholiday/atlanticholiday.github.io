@@ -1,0 +1,230 @@
+{
+    "common": {
+        "signOut": "Sair",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar",
+        "save": "Guardar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "add": "Adicionar",
+        "close": "Fechar",
+        "search": "Pesquisar",
+        "loading": "A carregar...",
+        "yes": "Sim",
+        "no": "Não",
+        "back": "Voltar",
+        "help": "Ajuda",
+        "hours": "Horas",
+        "note": "Nota",
+        "notes": "Notas",
+        "name": "Nome",
+        "email": "Email",
+        "phone": "Telefone",
+        "status": "Estado"
+    },
+    "days": {
+        "short": [
+            "Dom",
+            "Seg",
+            "Ter",
+            "Qua",
+            "Qui",
+            "Sex",
+            "Sáb"
+        ],
+        "long": [
+            "Domingo",
+            "Segunda-feira",
+            "Terça-feira",
+            "Quarta-feira",
+            "Quinta-feira",
+            "Sexta-feira",
+            "Sábado"
+        ]
+    },
+    "months": {
+        "short": [
+            "Jan",
+            "Fev",
+            "Mar",
+            "Abr",
+            "Mai",
+            "Jun",
+            "Jul",
+            "Ago",
+            "Set",
+            "Out",
+            "Nov",
+            "Dez"
+        ],
+        "long": [
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro"
+        ]
+    },
+    "statuses": {
+        "working": "A Trabalhar",
+        "off": "Folga",
+        "absent": "Ausente",
+        "vacation": "De Férias",
+        "sick": "Doente",
+        "personal": "Pessoal",
+        "unjustified": "Injustificado",
+        "scheduledOff": "Folga Programada"
+    },
+    "landing": {
+        "welcome": "Bem-vindo ao seu centro de operações",
+        "subtitle": "Gerir propriedades, horários, segurança e muito mais — tudo num só lugar.",
+        "mainApps": "Aplicações Principais",
+        "showMoreTools": "Mostrar Mais Ferramentas",
+        "hideMoreTools": "Ocultar Ferramentas",
+        "otherTools": "Outras Ferramentas"
+    },
+    "apps": {
+        "workSchedule": "Horário de Trabalho",
+        "workScheduleDesc": "Planear horários e férias da equipa.",
+        "vehicles": "Veículos",
+        "vehiclesDesc": "Gerir frota, seguros e inspeções.",
+        "welcomePacks": "Cabazes de Boas-Vindas",
+        "welcomePacksDesc": "Gerir stocks e entregas.",
+        "staff": "Equipa",
+        "staffDesc": "Gerir membros da equipa.",
+        "properties": "Propriedades",
+        "propertiesDesc": "Gerir alojamentos e inventário."
+    },
+    "schedule": {
+        "title": "Horário de Trabalho",
+        "subtitle": "Calculadora de Horários",
+        "loading": "A carregar o seu horário...",
+        "views": {
+            "monthly": "Mensal",
+            "yearly": "Anual",
+            "madeiraHolidays": "Feriados da Madeira",
+            "stats": "Estatísticas",
+            "vacationPlanner": "Planeador de Férias"
+        },
+        "legend": {
+            "working": "A Trabalhar",
+            "holiday": "Feriado ★",
+            "offWeekend": "Folga/Fim-de-semana"
+        },
+        "actions": {
+            "printWeekly": "Imprimir Escala Semanal",
+            "downloadPdf": "Descarregar Relatório Mensal em PDF"
+        },
+        "calendar": {
+            "working": "a trabalhar",
+            "understaffed": "Pessoal Insuficiente",
+            "absent": "Ausente",
+            "onVacation": "De Férias"
+        },
+        "summary": {
+            "monthly": "Resumo Mensal",
+            "yearly": "Resumo Anual",
+            "month": "Mês",
+            "worked": "Trabalhados",
+            "vacation": "Férias",
+            "off": "Folga",
+            "absent": "Ausente",
+            "extraHours": "Horas Extra"
+        },
+        "modals": {
+            "dayDetails": "Detalhes do Dia",
+            "dailyNote": "Nota Diária (Visível para todos)",
+            "dailyNotePlaceholder": "Adicione uma nota para este dia (ex: 'Feriado Bancário', 'Chegada VIP')...",
+            "extraHours": "Horas Extra",
+            "extraHoursNote": "Motivo das horas extra...",
+            "editWorkingDays": "Editar Dias de Trabalho",
+            "editColleague": "Editar Informações do Colega",
+            "employeeSummary": "Resumo de",
+            "noExtraHours": "Sem horas extra ou notas para este período."
+        },
+        "shifts": {
+            "title": "Gerir Turnos Pré-definidos",
+            "noPresets": "Ainda não há turnos pré-definidos.",
+            "selectPreset": "Selecione um turno...",
+            "customShift": "Turno Personalizado...",
+            "minStaff": "Mínimo de Funcionários",
+            "addPreset": "Adicionar Turno"
+        },
+        "vacation": {
+            "title": "Planeador de Férias",
+            "subtitle": "Visualizar e gerir férias da equipa",
+            "bookNew": "Marcar Novas Férias",
+            "upcomingList": "Lista de Férias Próximas",
+            "bookTitle": "Marcar Férias",
+            "editTitle": "Editar Férias",
+            "scheduleBtn": "Agendar Férias",
+            "updateBtn": "Atualizar Férias",
+            "deleteBtn": "Eliminar Férias",
+            "selectColleague": "Selecionar Colega",
+            "startDate": "Data de Início",
+            "endDate": "Data de Fim",
+            "confirmDelete": "Tem a certeza que pretende eliminar estas férias?",
+            "selectDatesError": "Por favor selecione um colega e as datas.",
+            "saveFailed": "Falha ao guardar férias.",
+            "deleteFailed": "Falha ao eliminar férias."
+        },
+        "madeira": {
+            "title": "Calendário da Madeira",
+            "subtitle": "Feriados públicos e eventos culturais na Madeira",
+            "publicHolidays": "Feriados Públicos",
+            "culturalEvents": "Eventos Culturais",
+            "official": "Feriados Oficiais",
+            "officialDesc": "Nestes dias, todos os colegas são automaticamente marcados como não trabalhando",
+            "regional": "Regional",
+            "autoManagement": "Gestão Automática de Feriados:",
+            "autoManagementDesc": "Nestes dias, todos os colegas são automaticamente marcados como não trabalhando. Pode substituir manualmente colegas individuais se necessário."
+        },
+        "stats": {
+            "title": "Estatísticas da Equipa",
+            "teamOverview": "Visão Geral da Equipa",
+            "individualStats": "Estatísticas Individuais",
+            "totalWorkingDays": "Total Dias Trabalhados",
+            "totalVacationDays": "Total Dias de Férias",
+            "totalAbsentDays": "Total Dias Ausente",
+            "totalExtraHours": "Total Horas Extra"
+        }
+    },
+    "staff": {
+        "title": "Gestão de Equipa",
+        "subtitle": "Gerir membros da equipa",
+        "teamMembers": "Membros da Equipa",
+        "addColleague": "Adicionar Colega",
+        "archiveHistory": "Arquivo/Histórico",
+        "editInfo": "Editar Info",
+        "viewSummary": "Ver Resumo",
+        "editDays": "Editar Dias",
+        "archive": "Arquivar",
+        "restore": "Restaurar",
+        "deleteConfirm": "Tem a certeza que pretende eliminar este colega?",
+        "department": "Departamento",
+        "position": "Cargo",
+        "hireDate": "Data de Contratação",
+        "employmentType": "Tipo de Contrato",
+        "staffNumber": "Número de Funcionário",
+        "vacationAdjustment": "Ajuste de Férias"
+    },
+    "login": {
+        "title": "Iniciar sessão na sua conta",
+        "email": "Endereço de email",
+        "password": "Palavra-passe",
+        "signIn": "Entrar"
+    },
+    "setup": {
+        "welcome": "Bem-vindo à Calculadora de Horários!",
+        "emptySchedule": "O seu horário está vazio. Como pretende começar?",
+        "startBlank": "Começar com Horário Vazio",
+        "startBlankDesc": "Pode adicionar os seus colegas manualmente."
+    }
+}
