@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlantic Holiday Test Runner</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #18202a;
+      --muted: #5e6b7a;
+      --ok: #0f9d58;
+      --fail: #d93025;
+      --border: #d9dee8;
+      --accent: #175cd3;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at top right, rgba(23, 92, 211, 0.08), transparent 28%),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 700px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(17, 24, 39, 0.05);
+    }
+
+    .card .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .results {
+      display: grid;
+      gap: 14px;
+    }
+
+    .suite {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 10px 30px rgba(17, 24, 39, 0.05);
+    }
+
+    .suite h2 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    .suite ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .suite li {
+      padding: 10px 0;
+      border-top: 1px solid #edf1f7;
+    }
+
+    .suite li:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .status {
+      font-weight: 700;
+      margin-right: 8px;
+    }
+
+    .pass .status,
+    .ok {
+      color: var(--ok);
+    }
+
+    .fail .status,
+    .bad {
+      color: var(--fail);
+    }
+
+    pre {
+      margin: 8px 0 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f5f7fb;
+      border: 1px solid #e7ebf3;
+      overflow: auto;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .toolbar a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Project Test Runner</h1>
+      <p>
+        Zero-dependency browser tests for core constants, i18n behavior, calculator logic, welcome pack parsing,
+        and lightweight HTML smoke checks.
+      </p>
+    </section>
+
+    <div class="toolbar">
+      <a href="../index.html">Open app</a>
+      <a href="../property-settings.html">Open property settings</a>
+      <a href="../inventory.html">Open inventory</a>
+    </div>
+
+    <section id="summary" class="summary" aria-live="polite"></section>
+    <section id="results" class="results" aria-live="polite"></section>
+    <section id="fixture" hidden></section>
+  </main>
+
+  <script type="module" src="./run.js"></script>
+</body>
+</html>

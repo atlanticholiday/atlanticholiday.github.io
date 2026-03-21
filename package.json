@@ -1,0 +1,11 @@
+{
+  "name": "horario",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "node tests/run-headless.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.58.2"
+  }
+}

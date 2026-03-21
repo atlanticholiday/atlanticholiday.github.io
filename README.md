@@ -66,6 +66,26 @@ The modular structure makes it easy to:
 - Test individual components in isolation
 - Maintain clean separation of concerns
 
+## Testing
+
+This repo now includes a zero-dependency browser test suite under `tests/`.
+
+How to use it:
+
+1. Serve the project with any simple static server.
+2. Open `tests/index.html` in the browser.
+3. Review the suite summary and failures directly in the page.
+
+Current coverage includes:
+
+- config and enum integrity checks
+- canonical location and travel fee consistency
+- i18n behavior and DOM updates
+- commission calculator logic
+- cleaning bills calculations and preferences
+- welcome pack VAT and iCal parsing
+- HTML and locale smoke checks
+
 ## File Descriptions
 
 - **index.html**: Clean HTML structure with external CSS and JS references
