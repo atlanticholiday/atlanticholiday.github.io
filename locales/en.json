@@ -120,6 +120,7 @@
     },
     "actions": {
       "printWeekly": "Print Weekly Roster",
+      "printTimesheet": "Print Weekly Time Sheet",
       "downloadPdf": "Download Monthly Team Report PDF"
     },
     "calendar": {

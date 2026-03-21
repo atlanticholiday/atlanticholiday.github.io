@@ -42,6 +42,14 @@ export class EventManager {
     setupAppEventListeners() {
         if (this.appListenersInitialized) return;
         this.appListenersInitialized = true;
+        const activatePrintModal = (modalId) => {
+            ['weekly-roster-modal', 'timesheet-modal'].forEach((id) => {
+                const modal = document.getElementById(id);
+                if (!modal) return;
+                modal.classList.toggle('active-print', id === modalId);
+            });
+        };
+
         document.getElementById('sign-out-btn').addEventListener('click', () => signOut(this.auth));
         document.getElementById('pdf-download-btn').addEventListener('click', () => {
             this.uiManager.pdfGenerator.generateTeamReportPDF(this.dataManager);
@@ -265,6 +273,7 @@ export class EventManager {
             printWeeklyBtn.addEventListener('click', () => {
                 const now = new Date();
                 this.uiManager.renderWeeklyRoster(now);
+                activatePrintModal('weekly-roster-modal');
                 document.getElementById('weekly-roster-modal').classList.remove('hidden');
             });
         }
@@ -273,12 +282,14 @@ export class EventManager {
         if (closeRosterBtn) {
             closeRosterBtn.addEventListener('click', () => {
                 document.getElementById('weekly-roster-modal').classList.add('hidden');
+                activatePrintModal(null);
             });
         }
 
         const printRosterActionBtn = document.getElementById('print-roster-action-btn');
         if (printRosterActionBtn) {
             printRosterActionBtn.addEventListener('click', () => {
+                activatePrintModal('weekly-roster-modal');
                 window.print();
             });
         }
@@ -301,6 +312,54 @@ export class EventManager {
                     const d = new Date(this.uiManager.currentRosterDate);
                     d.setDate(d.getDate() + 7);
                     this.uiManager.renderWeeklyRoster(d);
+                }
+            });
+        }
+
+        const printTimesheetBtn = document.getElementById('print-timesheet-btn');
+        if (printTimesheetBtn) {
+            printTimesheetBtn.addEventListener('click', () => {
+                const now = new Date();
+                this.uiManager.renderWeeklyTimesheet(now);
+                activatePrintModal('timesheet-modal');
+                document.getElementById('timesheet-modal').classList.remove('hidden');
+            });
+        }
+
+        const closeTimesheetBtn = document.getElementById('close-timesheet-btn');
+        if (closeTimesheetBtn) {
+            closeTimesheetBtn.addEventListener('click', () => {
+                document.getElementById('timesheet-modal').classList.add('hidden');
+                activatePrintModal(null);
+            });
+        }
+
+        const printTimesheetActionBtn = document.getElementById('print-timesheet-action-btn');
+        if (printTimesheetActionBtn) {
+            printTimesheetActionBtn.addEventListener('click', () => {
+                activatePrintModal('timesheet-modal');
+                window.print();
+            });
+        }
+
+        const prevTimesheetWeekBtn = document.getElementById('timesheet-prev-week');
+        if (prevTimesheetWeekBtn) {
+            prevTimesheetWeekBtn.addEventListener('click', () => {
+                if (this.uiManager.currentTimesheetDate) {
+                    const d = new Date(this.uiManager.currentTimesheetDate);
+                    d.setDate(d.getDate() - 7);
+                    this.uiManager.renderWeeklyTimesheet(d);
+                }
+            });
+        }
+
+        const nextTimesheetWeekBtn = document.getElementById('timesheet-next-week');
+        if (nextTimesheetWeekBtn) {
+            nextTimesheetWeekBtn.addEventListener('click', () => {
+                if (this.uiManager.currentTimesheetDate) {
+                    const d = new Date(this.uiManager.currentTimesheetDate);
+                    d.setDate(d.getDate() + 7);
+                    this.uiManager.renderWeeklyTimesheet(d);
                 }
             });
         }

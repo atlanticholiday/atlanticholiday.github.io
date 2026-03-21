@@ -938,6 +938,204 @@ export class UIManager {
         this.currentRosterDate = monday;
     }
 
+    getMondayForDate(startDate) {
+        const d = new Date(startDate);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
+    }
+
+    formatWeekLabel(startDate, endDate) {
+        return `${startDate.toLocaleDateString('en-GB')} - ${endDate.toLocaleDateString('en-GB')}`;
+    }
+
+    parseShiftHours(shiftText) {
+        if (!shiftText || typeof shiftText !== 'string') return null;
+
+        const match = shiftText.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
+        if (!match) return null;
+
+        const [, startHour, startMinute, endHour, endMinute] = match;
+        const start = (parseInt(startHour, 10) * 60) + parseInt(startMinute, 10);
+        let end = (parseInt(endHour, 10) * 60) + parseInt(endMinute, 10);
+        if (end < start) end += 24 * 60;
+
+        return (end - start) / 60;
+    }
+
+    formatDurationHours(hours) {
+        if (!Number.isFinite(hours) || hours <= 0) return '--:--';
+        const totalMinutes = Math.round(hours * 60);
+        const hh = Math.floor(totalMinutes / 60);
+        const mm = totalMinutes % 60;
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+
+    getPlannedTimesheetStatus(employee, date) {
+        const status = this.dataManager.getEmployeeStatusForDate(employee, date);
+        const holidayName = this.dataManager.getHolidaysForYear(date.getFullYear())[this.dataManager.getDateKey(date)];
+
+        if (holidayName) return `Holiday: ${holidayName}`;
+        if (status === 'Working') return (employee.shifts && employee.shifts.default) ? employee.shifts.default : '9:00-18:00';
+        if (status === 'On Vacation' || status === 'Vacation') return 'Vacation';
+        if (status === 'Scheduled Off' || status === 'Off') return 'Off';
+        return status;
+    }
+
+    renderWeeklyTimesheet(startDate) {
+        const container = document.getElementById('timesheet-content');
+        if (!container) return;
+
+        const monday = this.getMondayForDate(startDate);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        const label = document.getElementById('timesheet-week-label');
+        if (label) {
+            label.textContent = this.formatWeekLabel(monday, sunday);
+        }
+
+        this.currentTimesheetDate = monday;
+
+        const employees = this.dataManager.getActiveEmployees();
+        if (employees.length === 0) {
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto border rounded-xl p-8 text-center text-gray-600">
+                    No colleagues found. Add staff before printing a time sheet.
+                </div>
+            `;
+            return;
+        }
+
+        const pages = employees.map((employee) => {
+            const days = [];
+            let plannedWeeklyHours = 0;
+
+            for (let i = 0; i < 7; i++) {
+                const current = new Date(monday);
+                current.setDate(monday.getDate() + i);
+
+                const planned = this.getPlannedTimesheetStatus(employee, current);
+                const plannedHours = this.parseShiftHours(planned);
+                if (plannedHours) plannedWeeklyHours += plannedHours;
+
+                days.push({
+                    dateLabel: current.toLocaleDateString('en-GB', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    }),
+                    planned,
+                    dailyHours: plannedHours ? this.formatDurationHours(plannedHours) : ''
+                });
+            }
+
+            return `
+                <section class="timesheet-page max-w-7xl mx-auto mb-10 border border-gray-300 rounded-xl overflow-hidden">
+                    <div class="px-8 py-6 border-b bg-gray-50">
+                        <div class="flex items-start justify-between gap-6">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Registo de tempos de trabalho</h2>
+                                <p class="text-sm text-gray-600 mt-1">Artigo 202 do Codigo do Trabalho: inicio, termo, interrupcoes/intervalos, horas por dia e por semana, com visto/assinatura quando aplicavel.</p>
+                            </div>
+                            <div class="text-right text-sm text-gray-600">
+                                <div>Semana</div>
+                                <div class="font-semibold text-gray-900">${this.formatWeekLabel(monday, sunday)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-8 py-6 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="border rounded-lg p-3">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Empregador / estabelecimento</div>
+                                <div class="h-6 border-b border-dashed border-gray-400"></div>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Atividade / local de trabalho</div>
+                                <div class="h-6 border-b border-dashed border-gray-400"></div>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Trabalhador</div>
+                                <div class="font-semibold text-gray-900">${employee.name}</div>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Numero / horario base previsto</div>
+                                <div class="font-semibold text-gray-900">${employee.staffNumber ? employee.staffNumber : '-'} / ${employee.shifts?.default || '9:00-18:00'}</div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                            Preencher com as horas reais de entrada, intervalos nao incluidos e saida. Para trabalho no exterior, recolher o visto/assinatura e manter o registo visado no prazo legal.
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse border border-gray-300">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="border border-gray-300 p-2 text-left">Data</th>
+                                        <th class="border border-gray-300 p-2 text-left">Planeado</th>
+                                        <th class="border border-gray-300 p-2 text-left">Entrada</th>
+                                        <th class="border border-gray-300 p-2 text-left">Intervalos nao incluidos</th>
+                                        <th class="border border-gray-300 p-2 text-left">Saida</th>
+                                        <th class="border border-gray-300 p-2 text-left">Total diario</th>
+                                        <th class="border border-gray-300 p-2 text-left">Trabalho suplementar</th>
+                                        <th class="border border-gray-300 p-2 text-left">Fundamento / observacoes</th>
+                                        <th class="border border-gray-300 p-2 text-left">Assinatura / visto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${days.map((day) => `
+                                        <tr>
+                                            <td class="border border-gray-300 p-2 font-medium">${day.dateLabel}</td>
+                                            <td class="border border-gray-300 p-2">
+                                                <div>${day.planned}</div>
+                                                ${day.dailyHours ? `<div class="text-xs text-gray-500 mt-1">Previsto: ${day.dailyHours}</div>` : ''}
+                                            </td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="border rounded-lg p-4">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Resumo semanal</div>
+                                <div class="flex justify-between text-sm">
+                                    <span>Total semanal previsto</span>
+                                    <span class="font-semibold">${this.formatDurationHours(plannedWeeklyHours)}</span>
+                                </div>
+                                <div class="flex justify-between text-sm mt-2">
+                                    <span>Total semanal registado</span>
+                                    <span class="font-semibold">__________</span>
+                                </div>
+                            </div>
+                            <div class="border rounded-lg p-4">
+                                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Assinaturas</div>
+                                <div class="text-sm mb-4">Trabalhador: ____________________________________</div>
+                                <div class="text-sm">Conferido por: __________________________________</div>
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-gray-500">
+                            Conservar este registo durante 5 anos. Se houver trabalho suplementar, o respetivo fundamento deve ficar identificado no registo.
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        container.innerHTML = pages.join('');
+    }
+
     renderStats() {
         const container = document.getElementById('stats-container');
         if (!container) return;

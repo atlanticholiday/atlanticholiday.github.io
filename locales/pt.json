@@ -120,6 +120,7 @@
         },
         "actions": {
             "printWeekly": "Imprimir Escala Semanal",
+            "printTimesheet": "Imprimir Folha Semanal de Horas",
             "downloadPdf": "Descarregar Relatório Mensal em PDF"
         },
         "calendar": {

@@ -1062,6 +1062,15 @@ Mountain Villa, Sintra Hills, V4"
                                         d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" />
                                 </svg>
                             </button>
+                            <button id="print-timesheet-btn"
+                                class="absolute right-14 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
+                                title="Print Weekly Time Sheet"
+                                data-i18n-title="schedule.actions.printTimesheet">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </button>
 
                             <button id="pdf-download-btn"
                                 class="hidden ml-4 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
@@ -2671,7 +2680,7 @@ Mountain Villa, Sintra Hills, V4"
 
     <!-- XLSX (SheetJS) for Excel file parsing -->
     <!-- Weekly Roster Modal -->
-    <div id="weekly-roster-modal" class="hidden fixed inset-0 bg-white z-[60] overflow-auto flex flex-col">
+    <div id="weekly-roster-modal" class="print-modal hidden fixed inset-0 bg-white z-[60] overflow-auto flex flex-col">
         <div class="p-6 bg-gray-50 border-b flex justify-between items-center no-print">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Weekly Print View</h2>
@@ -2707,13 +2716,57 @@ Mountain Villa, Sintra Hills, V4"
         </div>
     </div>
 
+    <div id="timesheet-modal" class="print-modal hidden fixed inset-0 bg-white z-[60] overflow-auto flex flex-col">
+        <div class="p-6 bg-gray-50 border-b flex justify-between items-center no-print">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Time Sheet Print View</h2>
+                <p class="text-sm text-gray-600">Printable weekly registo de tempos de trabalho for signatures.</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="timesheet-prev-week" class="p-2 bg-white border rounded hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <span id="timesheet-week-label" class="font-medium self-center text-lg w-56 text-center">Current Week</span>
+                <button id="timesheet-next-week" class="p-2 bg-white border rounded hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="w-px bg-gray-300 mx-2"></div>
+                <button id="print-timesheet-action-btn"
+                    class="bg-brand text-white px-4 py-2 rounded shadow hover:bg-brand-dark flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </button>
+                <button id="close-timesheet-btn" class="text-gray-500 hover:text-gray-700 px-4 py-2">Close</button>
+            </div>
+        </div>
+        <div id="timesheet-content" class="p-8 flex-grow bg-white">
+            <!-- Printable time sheet inserted here -->
+        </div>
+    </div>
+
     <style>
         @media print {
-            body>*:not(#weekly-roster-modal) {
+            @page {
+                size: landscape;
+                margin: 10mm;
+            }
+
+            body>*:not(.print-modal.active-print) {
                 display: none !important;
             }
 
-            #weekly-roster-modal {
+            .print-modal {
+                display: none !important;
+            }
+
+            .print-modal.active-print {
                 display: block !important;
                 position: absolute !important;
                 top: 0 !important;
@@ -2757,6 +2810,14 @@ Mountain Villa, Sintra Hills, V4"
 
             th {
                 background-color: #f3f4f6 !important;
+            }
+
+            .timesheet-page {
+                page-break-after: always;
+            }
+
+            .timesheet-page:last-child {
+                page-break-after: auto;
             }
         }
     </style>
