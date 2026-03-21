@@ -1,12 +1,18 @@
 import { run } from "./test-harness.js";
 
-import "./unit/config.test.js";
-import "./unit/enums.test.js";
-import "./unit/locations.test.js";
-import "./unit/i18n.test.js";
-import "./unit/commission-calculator-manager.test.js";
-import "./unit/cleaning-bills-manager.test.js";
-import "./unit/welcome-pack-manager.test.js";
+import "./unit/core/config.test.js";
+import "./unit/core/i18n.test.js";
+import "./unit/shared/change-notifier.test.js";
+import "./unit/shared/enums.test.js";
+import "./unit/shared/locations.test.js";
+import "./unit/features/admin/user-management-controller.test.js";
+import "./unit/features/operations/cleaning-bills-manager.test.js";
+import "./unit/features/operations/commission-calculator-manager.test.js";
+import "./unit/features/operations/welcome-pack-manager.test.js";
+import "./unit/features/properties/property-form-utils.test.js";
+import "./unit/features/properties/properties-dashboard-controller.test.js";
+import "./unit/features/scheduling/employee-records.test.js";
+import "./unit/features/scheduling/holiday-calculator.test.js";
 import "./smoke/html-pages.test.js";
 import "./smoke/locales.test.js";
 

@@ -1,99 +1,76 @@
 # Atlantic Holiday - Work Schedule Calculator
 
-A web application for managing employee work schedules, vacations, and generating reports.
+Static web application for managing schedules, vacations, operations workflows, and property data.
 
-## Project Structure
+## Structure
 
-The application has been refactored into a modular structure for better maintainability:
-
-```
+```text
 horario/
-├── index.html              # Main HTML file
+├── index.html
+├── inventory.html
+├── property-settings.html
 ├── styles/
-│   └── main.css           # Custom CSS styles
 ├── js/
-│   ├── app.js             # Main application entry point
-│   ├── config.js          # Configuration constants
-│   ├── data-manager.js    # Firebase data operations
-│   ├── ui-manager.js      # UI rendering and updates
-│   ├── pdf-generator.js   # PDF report generation
-│   ├── holiday-calculator.js # Holiday calculations
-│   └── event-manager.js   # Event listeners and user interactions
-└── README.md              # This file
+│   ├── app/
+│   │   └── main.js
+│   ├── core/
+│   │   ├── config.js
+│   │   └── i18n.js
+│   ├── shared/
+│   │   ├── change-notifier.js
+│   │   ├── enums.js
+│   │   └── locations.js
+│   └── features/
+│       ├── admin/
+│       ├── inventory/
+│       ├── operations/
+│       ├── properties/
+│       └── scheduling/
+└── tests/
+    ├── smoke/
+    └── unit/
+        ├── core/
+        ├── shared/
+        └── features/
 ```
 
-## Architecture Overview
+## Architecture
 
-### Core Modules
+- `js/app/` contains application bootstrap and dependency wiring.
+- `js/core/` contains cross-cutting runtime concerns.
+- `js/shared/` contains reusable constants and low-level helpers.
+- `js/features/` groups behavior by business area instead of keeping a flat pile of `*manager.js` files.
 
-1. **app.js** - Main entry point that initializes Firebase and coordinates all modules
-2. **config.js** - Contains Firebase configuration and application constants
-3. **data-manager.js** - Handles all Firebase operations and data management
-4. **ui-manager.js** - Manages UI rendering, updates, and modal interactions
-5. **pdf-generator.js** - Generates PDF reports for teams and individuals
-6. **holiday-calculator.js** - Handles holiday calculations (placeholder for future expansion)
-7. **event-manager.js** - Manages all event listeners and user interactions
+Public page entry modules:
 
-### Key Features
-
-- **Employee Management**: Add, edit, archive, and restore employees
-- **Schedule Management**: Set working days, track attendance, and manage overrides
-- **Vacation Planning**: Schedule and manage employee vacations
-- **Holiday Integration**: Automatic holiday detection and handling
-- **PDF Reports**: Generate team and individual reports
-- **Drag & Drop**: Reorder employee list with drag and drop
-- **Real-time Updates**: Live synchronization with Firebase
-
-### Technology Stack
-
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Styling**: Tailwind CSS
-- **Backend**: Firebase (Authentication, Firestore)
-- **PDF Generation**: jsPDF with AutoTable plugin
-- **Fonts**: Inter (Google Fonts)
-
-## Getting Started
-
-1. Open `index.html` in a web browser
-2. Sign in with your Firebase credentials
-3. Start managing your team's schedule!
+- `index.html` -> `js/app/main.js`
+- `inventory.html` -> `js/features/inventory/main.js`
+- `property-settings.html` -> `js/features/properties/main.js`
 
 ## Development
 
-The modular structure makes it easy to:
-- Add new features by creating new modules
-- Modify existing functionality without affecting other parts
-- Test individual components in isolation
-- Maintain clean separation of concerns
+Rules for new work:
+
+- Put cross-feature runtime logic in `js/core/`.
+- Put reusable constants/helpers in `js/shared/`.
+- Put feature code in the matching `js/features/<feature>/`.
+- Avoid adding new top-level `js/*.js` files unless you are creating a deliberate page entry point.
 
 ## Testing
 
-This repo now includes a zero-dependency browser test suite under `tests/`.
+The repo includes a zero-dependency browser test suite under `tests/`.
 
-How to use it:
+Coverage currently includes:
 
-1. Serve the project with any simple static server.
-2. Open `tests/index.html` in the browser.
-3. Review the suite summary and failures directly in the page.
-
-Current coverage includes:
-
-- config and enum integrity checks
-- canonical location and travel fee consistency
-- i18n behavior and DOM updates
-- commission calculator logic
-- cleaning bills calculations and preferences
-- welcome pack VAT and iCal parsing
+- core config and i18n behavior
+- shared enums, locations, and notifier behavior
+- scheduling domain logic
+- cleaning bills, commission calculator, and welcome pack logic
+- user-management controller behavior
 - HTML and locale smoke checks
 
-## File Descriptions
+Run the headless suite with:
 
-- **index.html**: Clean HTML structure with external CSS and JS references
-- **styles/main.css**: All custom styles and CSS variables
-- **js/app.js**: Application initialization and module coordination
-- **js/config.js**: Firebase config and application constants
-- **js/data-manager.js**: All data operations and Firebase interactions
-- **js/ui-manager.js**: UI rendering, updates, and modal management
-- **js/pdf-generator.js**: PDF report generation functionality
-- **js/holiday-calculator.js**: Holiday calculation logic (expandable)
-- **js/event-manager.js**: Event handling and user interaction management 
+```powershell
+C:\Program Files\nodejs\node.exe tests/run-headless.mjs
+```

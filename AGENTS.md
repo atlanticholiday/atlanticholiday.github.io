@@ -9,14 +9,14 @@ This file gives future agents quick project context at the start of a new conver
 - Project type: static web app
 - Main entry point: `index.html`
 - Main styles: `styles/`
-- Main JavaScript modules: `js/`
+- Main JavaScript entry/module roots: `js/app/`, `js/core/`, `js/shared/`, `js/features/`
 - Localized strings: `locales/en.json`, `locales/pt.json`
 - Other important standalone pages: `inventory.html`, `property-settings.html`, `safety-test.html`
 
 ## Working Style For This Repo
 
 - Prefer small, targeted edits over broad refactors unless the task clearly calls for restructuring.
-- Check existing module boundaries in `js/` before adding new logic; this project already splits functionality across many manager files.
+- Add new logic to the matching feature folder under `js/features/` and reserve `js/core/` and `js/shared/` for cross-feature code.
 - Keep HTML, CSS, and JavaScript changes aligned. Many features in this repo touch more than one of those areas.
 - Preserve existing naming and organizational patterns when extending a feature.
 - Be careful with large files, especially `index.html`, because it is substantial and easy to change accidentally.
@@ -66,6 +66,22 @@ When making changes, note the most relevant checks, for example:
 Test:
 
 - Open `tests/index.html` through a local static server and confirm all suites pass after touching shared logic.
+- Pattern: Property dashboard behavior on `index.html` now lives in `js/features/properties/properties-dashboard-controller.js`; keep `js/app/main.js` focused on app composition.
+- Fix: The old return-from-settings writeback loop was removed because `property-settings-controller.js` already updates Firestore directly.
+- Test: `C:\Program Files\nodejs\node.exe tests/run-headless.mjs`
+
+Pattern:
+
+- `DataManager` now supports multiple listeners through `subscribeToDataChanges()`. Prefer that over replacing a single callback when UI modules need to react to shared data updates.
+- Keep holiday/date rules in `js/features/scheduling/holiday-calculator.js` and employee normalization/status logic in `js/features/scheduling/employee-records.js`; `DataManager` should stay focused on Firestore orchestration.
+- User-management admin page wiring now lives in `js/features/admin/user-management-controller.js`; `js/app/main.js` should stay focused on composing dependencies and startup flow.
+- Page-specific public entry modules are `js/app/main.js`, `js/features/inventory/main.js`, and `js/features/properties/main.js`.
+
+Test:
+
+- Shared scheduling behavior now has browser-suite coverage in `tests/unit/features/scheduling/`.
+- Shared/core utilities are covered under `tests/unit/shared/` and `tests/unit/core/`.
+- User-management rendering and admin actions are covered in `tests/unit/features/admin/user-management-controller.test.js`.
 
 ## Suggested Update Format
 
