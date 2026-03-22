@@ -49,6 +49,11 @@ export class EventManager {
                 modal.classList.toggle('active-print', id === modalId);
             });
         };
+        const openWeeklyTimesheet = (date = new Date()) => {
+            this.uiManager.renderWeeklyTimesheet(date);
+            activatePrintModal('timesheet-modal');
+            document.getElementById('timesheet-modal').classList.remove('hidden');
+        };
 
         document.getElementById('sign-out-btn').addEventListener('click', () => signOut(this.auth));
         document.getElementById('pdf-download-btn').addEventListener('click', () => {
@@ -188,6 +193,83 @@ export class EventManager {
             }
         });
 
+        const timeClockContent = document.getElementById('time-clock-page-content');
+        if (timeClockContent) {
+            timeClockContent.addEventListener('click', async (e) => {
+                const feedback = document.getElementById('time-clock-feedback');
+                const actionButton = e.target.closest('[data-time-clock-action]');
+                if (actionButton) {
+                    if (feedback) feedback.textContent = '';
+                    try {
+                        await this.dataManager.recordCurrentUserAttendance(actionButton.dataset.timeClockAction);
+                        const refreshedFeedback = document.getElementById('time-clock-feedback');
+                        if (refreshedFeedback) {
+                            refreshedFeedback.textContent = `${actionButton.textContent.trim()} saved.`;
+                        }
+                    } catch (error) {
+                        if (feedback) {
+                            feedback.textContent = error.message || 'Failed to save attendance.';
+                        }
+                    }
+                    return;
+                }
+
+                const reviewButton = e.target.closest('[data-attendance-review-employee-id]');
+                if (reviewButton) {
+                    try {
+                        await this.dataManager.setAttendanceRecordReview(
+                            reviewButton.dataset.attendanceReviewEmployeeId,
+                            reviewButton.dataset.attendanceReviewDateKey,
+                            {
+                                status: 'reviewed',
+                                note: 'Reviewed in the attendance panel.'
+                            }
+                        );
+                    } catch (error) {
+                        const adjustmentFeedback = document.getElementById('attendance-adjustment-feedback');
+                        if (adjustmentFeedback) {
+                            adjustmentFeedback.textContent = error.message || 'Failed to mark the record as reviewed.';
+                        }
+                    }
+                    return;
+                }
+
+            });
+
+            timeClockContent.addEventListener('submit', async (e) => {
+                if (e.target.id !== 'attendance-adjustment-form') return;
+                e.preventDefault();
+
+                const employeeId = document.getElementById('attendance-adjustment-employee')?.value;
+                const dateKey = document.getElementById('attendance-adjustment-date')?.value;
+                const time = document.getElementById('attendance-adjustment-time')?.value;
+                const type = document.getElementById('attendance-adjustment-type')?.value;
+                const note = document.getElementById('attendance-adjustment-note')?.value || '';
+                const feedback = document.getElementById('attendance-adjustment-feedback');
+                if (feedback) feedback.textContent = '';
+
+                try {
+                    await this.dataManager.addManualAttendanceEvent(employeeId, dateKey, type, time, note);
+                    const refreshedFeedback = document.getElementById('attendance-adjustment-feedback');
+                    if (refreshedFeedback) {
+                        refreshedFeedback.textContent = 'Manual event saved and flagged for review.';
+                    }
+                    const noteInput = document.getElementById('attendance-adjustment-note');
+                    if (noteInput) noteInput.value = '';
+                } catch (error) {
+                    if (feedback) {
+                        feedback.textContent = error.message || 'Failed to save the manual event.';
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#open-attendance-print-from-clock-btn')) {
+                openWeeklyTimesheet(new Date());
+            }
+        });
+
 
 
         // Manage Shifts Modal Listeners
@@ -296,10 +378,7 @@ export class EventManager {
         const printTimesheetBtn = document.getElementById('print-timesheet-btn');
         if (printTimesheetBtn) {
             printTimesheetBtn.addEventListener('click', () => {
-                const now = new Date();
-                this.uiManager.renderWeeklyTimesheet(now);
-                activatePrintModal('timesheet-modal');
-                document.getElementById('timesheet-modal').classList.remove('hidden');
+                openWeeklyTimesheet(new Date());
             });
         }
 

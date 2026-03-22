@@ -76,12 +76,16 @@ Pattern:
 - Keep holiday/date rules in `js/features/scheduling/holiday-calculator.js` and employee normalization/status logic in `js/features/scheduling/employee-records.js`; `DataManager` should stay focused on Firestore orchestration.
 - User-management admin page wiring now lives in `js/features/admin/user-management-controller.js`; `js/app/main.js` should stay focused on composing dependencies and startup flow.
 - Page-specific public entry modules are `js/app/main.js`, `js/features/inventory/main.js`, and `js/features/properties/main.js`.
+- Digital clock-in/out now lives in the scheduling feature: attendance calculations are in `js/features/scheduling/attendance-records.js`, Firestore attendance orchestration is in `js/features/scheduling/data-manager.js`, and the employee/manager UI is rendered from `js/features/scheduling/ui-manager.js` into `#time-clock-page-content`.
+- Clock-only employee mode is derived from a Firebase Auth email matching an active employee `email` field, unless the user has a privileged role such as `admin`, `manager`, or `supervisor`.
+- User Management now exposes an `#access-link-overview` panel showing whether each active colleague is missing an email, missing app access, clock-only, or privileged; keep that in sync when changing login/role behavior.
 
 Test:
 
 - Shared scheduling behavior now has browser-suite coverage in `tests/unit/features/scheduling/`.
 - Shared/core utilities are covered under `tests/unit/shared/` and `tests/unit/core/`.
 - User-management rendering and admin actions are covered in `tests/unit/features/admin/user-management-controller.test.js`.
+- Digital attendance flows are covered in `tests/unit/features/scheduling/attendance-records.test.js`; after clock changes, run `C:\Program Files\nodejs\node.exe tests/run-headless.mjs` and manually verify clock-in, break start/end, clock-out, and a manager-side manual adjustment on `#time-clock-page`.
 
 ## Suggested Update Format
 

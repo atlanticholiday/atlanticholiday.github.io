@@ -7,6 +7,16 @@ import {
     isDateInVacation as checkDateInVacation,
     partitionEmployeesByArchiveStatus
 } from './employee-records.js';
+import {
+    appendAttendanceEvent,
+    createAttendanceRecord,
+    formatLocalDateTime,
+    getAttendanceActionState,
+    getAttendanceReviewQueue,
+    getWeeklyAttendanceSummary,
+    setAttendanceReview,
+    summarizeAttendanceRecord
+} from './attendance-records.js';
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
 
 export class DataManager {
@@ -28,6 +38,13 @@ export class DataManager {
         this.minStaffThreshold = 0;
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
+        this.unsubscribeAttendance = null;
+        this.attendanceRecords = {};
+        this.currentUserContext = {
+            uid: null,
+            email: null,
+            roles: []
+        };
 
         // Initialize holidays for current year immediately
         this.initializeHolidays();
@@ -37,6 +54,19 @@ export class DataManager {
         this.userId = userId;
     }
 
+    setCurrentUserContext({ uid = null, email = null, roles = [] } = {}) {
+        this.currentUserContext = {
+            uid,
+            email: typeof email === 'string' ? email.trim().toLowerCase() : null,
+            roles: Array.isArray(roles) ? roles : []
+        };
+        this.notifyDataChange();
+    }
+
+    clearCurrentUserContext() {
+        this.setCurrentUserContext();
+    }
+
     initializeHolidays() {
         const currentYear = new Date().getFullYear();
         this.preloadHolidaysAroundYear(currentYear);
@@ -44,6 +74,10 @@ export class DataManager {
 
     getEmployeesCollectionRef() {
         return collection(this.db, "employees");
+    }
+
+    getAttendanceCollectionRef() {
+        return collection(this.db, "attendance_records");
     }
 
     preloadHolidaysAroundYear(year) {
@@ -134,6 +168,27 @@ export class DataManager {
             }
             this.notifyDataChange();
         }, (error) => console.error("Error listening for settings:", error));
+    }
+
+    listenForAttendanceChanges() {
+        this.unsubscribeAttendance = onSnapshot(this.getAttendanceCollectionRef(), (snapshot) => {
+            const nextAttendanceRecords = { ...this.attendanceRecords };
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "removed") {
+                    delete nextAttendanceRecords[change.doc.id];
+                    return;
+                }
+
+                nextAttendanceRecords[change.doc.id] = {
+                    id: change.doc.id,
+                    ...change.doc.data()
+                };
+            });
+
+            this.attendanceRecords = nextAttendanceRecords;
+            this.notifyDataChange();
+        }, (error) => console.error("Error listening for attendance:", error));
     }
 
     async saveShiftPreset(name, start, end) {
@@ -296,6 +351,224 @@ export class DataManager {
         await setDoc(doc(this.db, "employees", 'metadata'), { initialized: true });
         this.listenForEmployeeChanges();
         this.listenForDailyNotes();
+        this.listenForAttendanceChanges();
+    }
+
+    stopRealtimeListeners() {
+        [
+            this.unsubscribe,
+            this.unsubscribeNotes,
+            this.unsubscribeShiftPresets,
+            this.unsubscribeSettings,
+            this.unsubscribeAttendance
+        ].forEach((unsubscribe) => {
+            if (typeof unsubscribe === 'function') {
+                unsubscribe();
+            }
+        });
+
+        this.unsubscribe = null;
+        this.unsubscribeNotes = null;
+        this.unsubscribeShiftPresets = null;
+        this.unsubscribeSettings = null;
+        this.unsubscribeAttendance = null;
+    }
+
+    getCurrentUserContext() {
+        return this.currentUserContext;
+    }
+
+    getCurrentUserRoles() {
+        return this.currentUserContext.roles || [];
+    }
+
+    hasPrivilegedRole() {
+        const privilegedRoles = new Set(['admin', 'manager', 'supervisor']);
+        return this.getCurrentUserRoles().some((role) => privilegedRoles.has(role));
+    }
+
+    getCurrentUserEmployee() {
+        const currentEmail = this.currentUserContext.email;
+        if (!currentEmail) {
+            return null;
+        }
+
+        return this.activeEmployees.find((employee) => {
+            return typeof employee?.email === 'string' && employee.email.trim().toLowerCase() === currentEmail;
+        }) || null;
+    }
+
+    isClockOnlyUser() {
+        return Boolean(this.getCurrentUserEmployee()) && !this.hasPrivilegedRole();
+    }
+
+    getAttendanceDocId(employeeId, dateKey) {
+        return `${employeeId}_${dateKey}`;
+    }
+
+    getAttendanceRecord(employeeId, date) {
+        if (!employeeId || !date) {
+            return null;
+        }
+
+        const dateKey = typeof date === 'string' ? date : this.getDateKey(date);
+        return this.attendanceRecords[this.getAttendanceDocId(employeeId, dateKey)] || null;
+    }
+
+    getAttendanceRecordsForEmployee(employeeId) {
+        if (!employeeId) {
+            return [];
+        }
+
+        return Object.values(this.attendanceRecords)
+            .filter((record) => record.employeeId === employeeId)
+            .sort((left, right) => left.dateKey.localeCompare(right.dateKey));
+    }
+
+    getAttendanceRecordsForEmployeeWeek(employeeId, startDate) {
+        const monday = new Date(startDate);
+        monday.setHours(0, 0, 0, 0);
+
+        return Array.from({ length: 7 }, (_, offset) => {
+            const current = new Date(monday);
+            current.setDate(monday.getDate() + offset);
+            return this.getAttendanceRecord(employeeId, current);
+        });
+    }
+
+    getAttendanceSummary(employeeId, date, { referenceDateTime = null } = {}) {
+        return summarizeAttendanceRecord(this.getAttendanceRecord(employeeId, date), { referenceDateTime });
+    }
+
+    getCurrentUserAttendanceSummary(date = new Date(), { referenceDateTime = null } = {}) {
+        const employee = this.getCurrentUserEmployee();
+        if (!employee) {
+            return null;
+        }
+
+        return this.getAttendanceSummary(employee.id, date, { referenceDateTime });
+    }
+
+    getCurrentUserWeekAttendanceSummary(startDate, { referenceDateTime = null } = {}) {
+        const employee = this.getCurrentUserEmployee();
+        if (!employee) {
+            return null;
+        }
+
+        return this.getEmployeeWeekAttendanceSummary(employee.id, startDate, { referenceDateTime });
+    }
+
+    getEmployeeWeekAttendanceSummary(employeeId, startDate, { referenceDateTime = null } = {}) {
+        const records = this.getAttendanceRecordsForEmployeeWeek(employeeId, startDate);
+        return getWeeklyAttendanceSummary(records, { referenceDateTime });
+    }
+
+    getAttendanceReviewQueue({ referenceDateTime = null } = {}) {
+        return getAttendanceReviewQueue(Object.values(this.attendanceRecords), { referenceDateTime });
+    }
+
+    async saveAttendanceEvent(employeeId, eventInput) {
+        const employee = this.activeEmployees.find((entry) => entry.id === employeeId)
+            || this.archivedEmployees.find((entry) => entry.id === employeeId);
+
+        if (!employee) {
+            throw new Error('Employee not found for attendance record.');
+        }
+
+        const dateKey = eventInput.dateKey || eventInput.occurredAt.slice(0, 10);
+        const docRef = doc(this.db, "attendance_records", this.getAttendanceDocId(employeeId, dateKey));
+
+        await runTransaction(this.db, async (transaction) => {
+            const recordSnapshot = await transaction.get(docRef);
+            const baseRecord = recordSnapshot.exists()
+                ? { id: recordSnapshot.id, ...recordSnapshot.data() }
+                : createAttendanceRecord({
+                    employeeId,
+                    employeeName: employee.name || '',
+                    dateKey
+                });
+
+            const nextRecord = appendAttendanceEvent(baseRecord, {
+                ...eventInput,
+                employeeId,
+                employeeName: employee.name || ''
+            });
+
+            transaction.set(docRef, nextRecord);
+        });
+    }
+
+    async recordCurrentUserAttendance(eventType) {
+        const employee = this.getCurrentUserEmployee();
+        if (!employee) {
+            throw new Error('Your account is not linked to a colleague record yet.');
+        }
+
+        const occurredAt = formatLocalDateTime();
+        const dateKey = occurredAt.slice(0, 10);
+        const currentRecord = this.getAttendanceRecord(employee.id, dateKey);
+        const actionState = getAttendanceActionState(currentRecord);
+        const allowedActions = [actionState.primaryAction, actionState.secondaryAction].filter(Boolean);
+
+        if (!allowedActions.includes(eventType)) {
+            throw new Error('This attendance action is not available right now.');
+        }
+
+        await this.saveAttendanceEvent(employee.id, {
+            type: eventType,
+            occurredAt,
+            dateKey,
+            source: 'web',
+            actorUid: this.currentUserContext.uid,
+            actorEmail: this.currentUserContext.email
+        });
+    }
+
+    async addManualAttendanceEvent(employeeId, dateKey, eventType, localTime, note = '') {
+        if (!employeeId || !dateKey || !eventType || !localTime) {
+            throw new Error('Employee, date, event type, and time are required.');
+        }
+
+        await this.saveAttendanceEvent(employeeId, {
+            type: eventType,
+            occurredAt: `${dateKey}T${localTime.length === 5 ? `${localTime}:00` : localTime}`,
+            dateKey,
+            source: 'manual',
+            actorUid: this.currentUserContext.uid,
+            actorEmail: this.currentUserContext.email,
+            note
+        });
+    }
+
+    async setAttendanceRecordReview(employeeId, dateKey, { status = null, note = null } = {}) {
+        const employee = this.activeEmployees.find((entry) => entry.id === employeeId)
+            || this.archivedEmployees.find((entry) => entry.id === employeeId);
+
+        if (!employee) {
+            throw new Error('Employee not found for attendance review.');
+        }
+
+        const docRef = doc(this.db, "attendance_records", this.getAttendanceDocId(employeeId, dateKey));
+
+        await runTransaction(this.db, async (transaction) => {
+            const recordSnapshot = await transaction.get(docRef);
+            const baseRecord = recordSnapshot.exists()
+                ? { id: recordSnapshot.id, ...recordSnapshot.data() }
+                : createAttendanceRecord({
+                    employeeId,
+                    employeeName: employee.name || '',
+                    dateKey
+                });
+
+            const nextRecord = setAttendanceReview(baseRecord, {
+                status,
+                note,
+                reviewedBy: this.currentUserContext.email,
+                reviewedAt: new Date().toISOString()
+            });
+
+            transaction.set(docRef, nextRecord);
+        });
     }
 
     getHolidays(year) {

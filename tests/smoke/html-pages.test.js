@@ -3,7 +3,7 @@ import { describe, test, assert } from "../test-harness.js";
 describe("HTML smoke", () => {
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
-      { path: "../index.html", markers: ["main-app", "landing-page"] },
+      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page"] },
       { path: "../property-settings.html", markers: ["property-settings-form", "save-settings"] },
       { path: "../inventory.html", markers: ["inventory"] }
     ];

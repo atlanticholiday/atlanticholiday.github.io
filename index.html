@@ -152,7 +152,7 @@
             <div class="container mx-auto px-4 max-w-6xl">
                 <div class="hero-inner">
                     <div class="hero-copy">
-                        <h2 class="hero-title">Welcome to your operations hub</h2>
+                        <h2 id="landing-hero-title" class="hero-title">Welcome to your operations hub</h2>
                         <p class="hero-subtitle">Manage properties, schedules, safety and more — all in one beautiful
                             place.</p>
                     </div>
@@ -166,6 +166,19 @@
             <!-- Primary apps -->
             <h2 class="text-xl font-semibold text-gray-800 mb-4 px-2">Main Apps</h2>
             <div class="dashboard-grid mb-12">
+                <button id="go-to-time-clock-btn" class="dashboard-card">
+                    <div class="card-icon bg-slate-900/10 text-slate-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <h3>Time Clock</h3>
+                        <p>Clock in, take breaks and clock out.</p>
+                    </div>
+                </button>
+
                 <button id="go-to-schedule-btn" class="dashboard-card">
                     <div class="card-icon bg-green-500/10 text-green-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -355,6 +368,44 @@
         </div>
     </div>
 
+    <div id="time-clock-page" class="hidden min-h-screen bg-slate-100">
+        <header class="dashboard-header">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-time-clock-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo dashboard-logo--xl" />
+                    <div class="leading-tight">
+                        <div class="header-title brand-red">Digital Time Clock</div>
+                        <div class="header-sub">Attendance, breaks and weekly review</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="time-clock-sign-out-btn"
+                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <div id="time-clock-page-content"></div>
+        </div>
+    </div>
+
     <!-- User Management Pages -->
     <div id="user-management-page" class="hidden min-h-screen bg-gray-50">
         <header class="dashboard-header">
@@ -389,6 +440,26 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Existing Users</h2>
                 <ul id="user-list" class="list-disc list-inside text-gray-700"></ul>
             </div>
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6 modal-content">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Test Users</h2>
+                <p class="text-sm text-gray-600 mb-4">Create one safe test login for each preset role. These are meant for checking what each access level sees in the app.</p>
+                <ul id="test-user-presets" class="list-disc list-inside text-gray-700 space-y-1 mb-4"></ul>
+                <div class="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 mb-4">
+                    Shared password: <strong id="test-user-password"></strong>
+                </div>
+                <button id="create-test-users-btn" class="btn-primary px-6 py-3 rounded-md transition-all hover-lift">
+                    Create Test Users
+                </button>
+                <p id="test-user-feedback" class="text-sm text-gray-600 mt-3"></p>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6 modal-content">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Colleague Access Links</h2>
+                <p class="text-sm text-gray-600 mb-4">This shows whether each staff profile is linked to a login, and whether that login is clock-only or privileged.</p>
+                <div id="access-link-overview" class="space-y-3"></div>
+                <div class="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700">
+                    Password flow: create access with a temporary password, set the same email on the colleague record, then use <strong>Reset Password</strong> so the colleague chooses their own password by email.
+                </div>
+            </div>
             <div class="bg-white rounded-xl shadow-md p-6 modal-content">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Add New Access</h2>
                 <div class="mb-4">
@@ -410,10 +481,20 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Roles</h2>
                 <ul id="roles-list" class="list-disc list-inside text-gray-700 mb-4"></ul>
                 <div class="flex gap-2">
-                    <input type="text" id="new-role-key" placeholder="Role key (e.g. admin)"
-                        class="flex-1 p-3 border rounded-md focus-ring transition-all">
-                    <input type="text" id="new-role-title" placeholder="Role title (e.g. Administrator)"
-                        class="flex-1 p-3 border rounded-md focus-ring transition-all">
+                    <select id="new-role-key" class="flex-1 p-3 border rounded-md focus-ring transition-all bg-white">
+                        <option value="">Choose role key</option>
+                        <option value="admin">admin</option>
+                        <option value="manager">manager</option>
+                        <option value="supervisor">supervisor</option>
+                        <option value="employee">employee</option>
+                    </select>
+                    <select id="new-role-title" class="flex-1 p-3 border rounded-md focus-ring transition-all bg-white">
+                        <option value="">Choose role title</option>
+                        <option value="Administrator">Administrator</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Employee">Employee</option>
+                    </select>
                     <button id="add-role-btn" class="btn-primary px-4 py-2 rounded-md transition-all hover-lift">Add
                         Role</button>
                 </div>
@@ -2594,7 +2675,7 @@ Mountain Villa, Sintra Hills, V4"
         <div class="p-6 bg-gray-50 border-b flex justify-between items-center no-print">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Time Sheet Print View</h2>
-                <p class="text-sm text-gray-600">Printable weekly registo de tempos de trabalho for signatures.</p>
+                <p class="text-sm text-gray-600">Printable weekly registo de tempos de trabalho from the digital clock log.</p>
             </div>
             <div class="flex gap-3">
                 <button id="timesheet-prev-week" class="p-2 bg-white border rounded hover:bg-gray-50">

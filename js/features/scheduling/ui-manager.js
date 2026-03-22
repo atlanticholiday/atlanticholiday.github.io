@@ -1,14 +1,17 @@
 import { Config } from '../../core/config.js';
 import { i18n, t } from '../../core/i18n.js';
+import { formatLocalDateTime, formatTimeLabel } from './attendance-records.js';
 
 export class UIManager {
     constructor(dataManager, pdfGenerator) {
         this.dataManager = dataManager;
         this.pdfGenerator = pdfGenerator;
         this.isStaffMode = false; // Staff read-only mode
+        this.liveClockTimer = null;
 
         this.dataManager.subscribeToDataChanges(() => {
             this.updateView();
+            this.renderTimeClockPage();
 
             // Refresh day details modal if it's open
             if (document.getElementById('day-details-modal').classList.contains('hidden') === false) {
@@ -16,6 +19,60 @@ export class UIManager {
             }
         });
 
+        this.startLiveClock();
+
+    }
+
+    startLiveClock() {
+        if (this.liveClockTimer) {
+            clearInterval(this.liveClockTimer);
+        }
+
+        this.liveClockTimer = setInterval(() => {
+            const now = new Date();
+            const currentTime = document.getElementById('time-clock-current-time');
+            const currentDate = document.getElementById('time-clock-current-date');
+
+            if (currentTime) {
+                currentTime.textContent = now.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+
+            if (currentDate) {
+                currentDate.textContent = now.toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+            }
+
+            document.querySelectorAll('[data-live-duration-start]').forEach((element) => {
+                const startedAt = element.dataset.liveDurationStart;
+                if (!startedAt) return;
+                element.textContent = this.formatMinutesAsDuration(this.getMinutesBetween(startedAt, formatLocalDateTime(now)));
+            });
+        }, 1000);
+    }
+
+    getMinutesBetween(startDateTime, endDateTime) {
+        const start = new Date(startDateTime);
+        const end = new Date(endDateTime);
+        return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+    }
+
+    formatMinutesAsDuration(minutes) {
+        if (!Number.isFinite(minutes) || minutes <= 0) {
+            return '00:00';
+        }
+
+        const safeMinutes = Math.max(0, Math.round(minutes));
+        const hours = Math.floor(safeMinutes / 60);
+        const remainder = safeMinutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
     }
 
     populateDayCheckboxes() {
@@ -960,6 +1017,335 @@ export class UIManager {
         return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     }
 
+    formatAttendanceEventLabel(eventType) {
+        const labels = {
+            clockIn: 'Clock in',
+            clockOut: 'Clock out',
+            breakStart: 'Start break',
+            breakEnd: 'End break'
+        };
+
+        return labels[eventType] || eventType;
+    }
+
+    getAttendanceStatusCopy(summary) {
+        if (!summary) {
+            return {
+                badge: 'Not linked',
+                title: 'Ask an admin to link your employee email before using the time clock.',
+                tone: 'bg-amber-100 text-amber-700 border-amber-200'
+            };
+        }
+
+        if (summary.status === 'working') {
+            return {
+                badge: 'Clocked in',
+                title: 'You are currently on shift.',
+                tone: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+            };
+        }
+
+        if (summary.status === 'on-break') {
+            return {
+                badge: 'On break',
+                title: 'Your break is active.',
+                tone: 'bg-amber-100 text-amber-700 border-amber-200'
+            };
+        }
+
+        return {
+            badge: 'Clocked out',
+            title: 'You are not currently clocked in.',
+            tone: 'bg-slate-100 text-slate-700 border-slate-200'
+        };
+    }
+
+    renderTimeClockPage() {
+        const container = document.getElementById('time-clock-page-content');
+        if (!container) return;
+
+        const now = new Date();
+        const referenceDateTime = formatLocalDateTime(now);
+        const employee = this.dataManager.getCurrentUserEmployee();
+        const todayRecord = employee ? this.dataManager.getAttendanceRecord(employee.id, now) : null;
+        const todaySummary = employee
+            ? this.dataManager.getCurrentUserAttendanceSummary(now, { referenceDateTime })
+            : null;
+        const weekSummary = employee
+            ? this.dataManager.getCurrentUserWeekAttendanceSummary(this.getMondayForDate(now), { referenceDateTime })
+            : null;
+        const statusCopy = this.getAttendanceStatusCopy(todaySummary);
+        const reviewQueue = this.dataManager.getAttendanceReviewQueue({ referenceDateTime }).slice(0, 6);
+        const canManageAttendance = !this.dataManager.isClockOnlyUser();
+        const primaryAction = todaySummary?.primaryAction || 'clockIn';
+        const secondaryAction = todaySummary?.secondaryAction || null;
+        const weekStart = this.getMondayForDate(now);
+        const schedulePreview = employee
+            ? Array.from({ length: 7 }, (_, offset) => {
+                const current = new Date(weekStart);
+                current.setDate(weekStart.getDate() + offset);
+                return {
+                    date: current,
+                    planned: this.getPlannedTimesheetStatus(employee, current)
+                };
+            })
+            : [];
+        const adjustmentEmployeeOptions = this.dataManager.getActiveEmployees()
+            .map((entry) => `<option value="${entry.id}">${entry.name}</option>`)
+            .join('');
+        const timeline = todaySummary?.punches?.length
+            ? todaySummary.punches.map((punch) => {
+                const sourceTag = punch.source === 'manual'
+                    ? '<span class="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Manual</span>'
+                    : '<span class="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 px-2 py-1 rounded-full">Web</span>';
+
+                return `
+                    <li class="flex items-start justify-between gap-4 py-3 border-b last:border-b-0">
+                        <div>
+                            <div class="font-medium text-slate-900">${this.formatAttendanceEventLabel(punch.type)}</div>
+                            <div class="text-sm text-slate-500">${punch.note || 'Saved immediately to the attendance log.'}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="font-semibold text-slate-900">${formatTimeLabel(punch.occurredAt)}</div>
+                            <div class="mt-1">${sourceTag}</div>
+                        </div>
+                    </li>
+                `;
+            }).join('')
+            : '<li class="py-6 text-sm text-slate-500">No punches recorded yet today.</li>';
+
+        const managerPanel = canManageAttendance ? `
+            <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    <div class="flex-1">
+                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Manager Review</div>
+                        <h3 class="text-2xl font-semibold text-slate-900">Exceptions and manual adjustments</h3>
+                        <p class="text-slate-600 mt-2 max-w-2xl">Use this panel for missed punches, reconstructed entries, and days that still need review before export.</p>
+                    </div>
+                    <button id="open-attendance-print-from-clock-btn" class="px-4 py-2 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
+                        Open Weekly Print View
+                    </button>
+                </div>
+                <div class="grid gap-6 lg:grid-cols-[1fr_0.95fr] mt-8">
+                    <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="font-semibold text-slate-900">Needs attention</div>
+                            <div class="text-sm text-slate-500">${reviewQueue.length} open</div>
+                        </div>
+                        <div id="attendance-review-list" class="space-y-3">
+                            ${reviewQueue.length ? reviewQueue.map(({ record, summary }) => `
+                                <article class="rounded-2xl bg-white border border-slate-200 p-4">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <div class="font-medium text-slate-900">${record.employeeName || 'Unknown colleague'}</div>
+                                            <div class="text-sm text-slate-500">${record.dateKey}</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="text-sm text-emerald-700 hover:text-emerald-800"
+                                            data-attendance-review-employee-id="${record.employeeId}"
+                                            data-attendance-review-date-key="${record.dateKey}">
+                                            Mark reviewed
+                                        </button>
+                                    </div>
+                                    <div class="mt-3 text-sm text-slate-600">
+                                        ${summary.hasOpenSession ? 'Open session still needs confirmation.' : (record.review.note || 'Manual adjustment awaiting confirmation.')}
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                        <span class="px-2 py-1 rounded-full bg-slate-100">Worked ${this.formatMinutesAsDuration(summary.workedMinutes)}</span>
+                                        <span class="px-2 py-1 rounded-full bg-slate-100">Break ${this.formatMinutesAsDuration(summary.breakMinutes)}</span>
+                                    </div>
+                                </article>
+                            `).join('') : '<div class="rounded-2xl bg-white border border-dashed border-slate-300 p-6 text-sm text-slate-500">No attendance exceptions right now.</div>'}
+                        </div>
+                    </div>
+                    <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                        <div class="font-semibold text-slate-900 mb-2">Add manual event</div>
+                        <p class="text-sm text-slate-500 mb-4">Use this only for missed punches or reviewed corrections. Every manual entry is flagged for review.</p>
+                        <form id="attendance-adjustment-form" class="space-y-3">
+                            <select id="attendance-adjustment-employee" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                ${adjustmentEmployeeOptions}
+                            </select>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input id="attendance-adjustment-date" type="date" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" value="${this.dataManager.getDateKey(now)}">
+                                <input id="attendance-adjustment-time" type="time" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" value="${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}">
+                            </div>
+                            <select id="attendance-adjustment-type" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                <option value="clockIn">Clock in</option>
+                                <option value="breakStart">Start break</option>
+                                <option value="breakEnd">End break</option>
+                                <option value="clockOut">Clock out</option>
+                            </select>
+                            <textarea id="attendance-adjustment-note" rows="3" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" placeholder="Reason for the correction"></textarea>
+                            <button type="submit" class="w-full rounded-full bg-slate-900 text-white px-4 py-3 hover:bg-slate-800 transition-colors">Save Manual Event</button>
+                            <p id="attendance-adjustment-feedback" class="text-sm text-slate-500 h-5"></p>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        ` : '';
+
+        container.innerHTML = `
+            <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                <section class="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_52%,#334155_100%)] text-white p-8 shadow-xl overflow-hidden relative">
+                    <div class="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.28),transparent_58%)] pointer-events-none"></div>
+                    <div class="relative">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border ${statusCopy.tone} text-sm font-medium">
+                            <span class="w-2 h-2 rounded-full bg-current"></span>
+                            ${statusCopy.badge}
+                        </div>
+                        <div class="mt-6">
+                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300 mb-3">Digital Time Clock</div>
+                            <h2 class="text-4xl font-semibold tracking-tight">${employee ? employee.name : 'Self-service attendance'}</h2>
+                            <p class="mt-3 text-slate-300 max-w-xl">${statusCopy.title}</p>
+                        </div>
+                        <div class="mt-10">
+                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                        </div>
+                        ${employee ? `
+                            <div class="mt-10 flex flex-wrap gap-3">
+                                <button data-time-clock-action="${primaryAction}" class="rounded-full bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors">
+                                    ${this.formatAttendanceEventLabel(primaryAction)}
+                                </button>
+                                ${secondaryAction ? `
+                                    <button data-time-clock-action="${secondaryAction}" class="rounded-full border border-white/30 text-white px-6 py-3 font-semibold hover:bg-white/10 transition-colors">
+                                        ${this.formatAttendanceEventLabel(secondaryAction)}
+                                    </button>
+                                ` : ''}
+                            </div>
+                        ` : `
+                            <div class="mt-10 rounded-3xl border border-white/15 bg-white/5 p-5 text-slate-200">
+                                You can still use the manager review tools below, but employee self-service will stay locked until a colleague profile is linked to your login email.
+                            </div>
+                        `}
+                        <p id="time-clock-feedback" class="mt-4 text-sm text-slate-300 h-5"></p>
+                    </div>
+                </section>
+
+                <section class="rounded-[32px] bg-white border border-slate-200 shadow-sm p-6">
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Today</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">Live summary</h3>
+                    <div class="grid grid-cols-2 gap-3 mt-6">
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <div class="text-sm text-slate-500">Worked</div>
+                            <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.workedMinutes || 0)}</div>
+                        </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <div class="text-sm text-slate-500">Breaks</div>
+                            <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.breakMinutes || 0)}</div>
+                        </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <div class="text-sm text-slate-500">First in</div>
+                            <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.firstClockIn)}</div>
+                        </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <div class="text-sm text-slate-500">Last out</div>
+                            <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.lastClockOut)}</div>
+                        </div>
+                    </div>
+                    ${todaySummary?.activeSessionStartedAt || todaySummary?.activeBreakStartedAt ? `
+                        <div class="mt-5 rounded-3xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? 'Current break' : 'Current shift block'}</div>
+                            <div class="mt-1 text-2xl font-semibold text-emerald-900" data-live-duration-start="${todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt}">
+                                ${this.formatMinutesAsDuration(
+                                    this.getMinutesBetween(todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt, referenceDateTime)
+                                )}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="mt-6 rounded-3xl bg-slate-900 text-white p-5">
+                        <div class="text-sm text-slate-300">This week</div>
+                        <div class="mt-2 text-3xl font-semibold">${this.formatMinutesAsDuration(weekSummary?.workedMinutes || 0)}</div>
+                        <div class="mt-1 text-slate-300">Worked across ${weekSummary?.daysWithPunches || 0} day(s)</div>
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Today&apos;s Log</div>
+                            <h3 class="text-2xl font-semibold text-slate-900">Punch timeline</h3>
+                        </div>
+                        ${todayRecord?.review?.status === 'needs-attention' ? '<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Needs review</span>' : ''}
+                    </div>
+                    <ul class="mt-6">${timeline}</ul>
+                </section>
+
+                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Weekly Snapshot</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">Attendance totals</h3>
+                    <div class="space-y-4 mt-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Worked time</span>
+                            <span class="font-semibold text-slate-900">${this.formatMinutesAsDuration(weekSummary?.workedMinutes || 0)}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Break time</span>
+                            <span class="font-semibold text-slate-900">${this.formatMinutesAsDuration(weekSummary?.breakMinutes || 0)}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Open sessions</span>
+                            <span class="font-semibold text-slate-900">${weekSummary?.openSessions || 0}</span>
+                        </div>
+                    </div>
+                    <div class="mt-6 rounded-3xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600">
+                        The website stores clock-in, clock-out, breaks, and manual adjustments in a weekly register that managers can review or print when needed.
+                    </div>
+                </section>
+
+                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">This Week</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">Your planned schedule</h3>
+                    <div class="grid gap-3 mt-6 md:grid-cols-2 xl:grid-cols-4">
+                        ${schedulePreview.length ? schedulePreview.map((day) => `
+                            <article class="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                                <div class="text-sm text-slate-500">${day.date.toLocaleDateString('en-GB', { weekday: 'long' })}</div>
+                                <div class="text-lg font-semibold text-slate-900 mt-1">${day.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</div>
+                                <div class="mt-3 text-sm text-slate-700">${day.planned}</div>
+                            </article>
+                        `).join('') : '<div class="text-sm text-slate-500">No linked colleague schedule available yet.</div>'}
+                    </div>
+                </section>
+
+                ${managerPanel}
+            </div>
+        `;
+    }
+
+    getBreakIntervalsText(punches = []) {
+        const intervals = [];
+        let breakStart = null;
+
+        punches.forEach((punch) => {
+            if (punch.type === 'breakStart') {
+                breakStart = punch.occurredAt;
+            } else if ((punch.type === 'breakEnd' || punch.type === 'clockOut') && breakStart) {
+                intervals.push(`${formatTimeLabel(breakStart)}-${formatTimeLabel(punch.occurredAt)}`);
+                breakStart = null;
+            }
+        });
+
+        return intervals.join(', ');
+    }
+
+    getAttendanceNotesText(record = null) {
+        if (!record) return '';
+
+        const notes = [];
+        if (record.review?.note) {
+            notes.push(record.review.note);
+        }
+
+        (record.punches || [])
+            .filter((punch) => punch.note)
+            .forEach((punch) => {
+                notes.push(`${this.formatAttendanceEventLabel(punch.type)}: ${punch.note}`);
+            });
+
+        return notes.join(' | ');
+    }
+
     getPlannedTimesheetStatus(employee, date) {
         const status = this.dataManager.getEmployeeStatusForDate(employee, date);
         const holidayName = this.dataManager.getHolidaysForYear(date.getFullYear())[this.dataManager.getDateKey(date)];
@@ -999,14 +1385,28 @@ export class UIManager {
         const pages = employees.map((employee) => {
             const days = [];
             let plannedWeeklyHours = 0;
+            let recordedWeeklyMinutes = 0;
 
             for (let i = 0; i < 7; i++) {
                 const current = new Date(monday);
                 current.setDate(monday.getDate() + i);
+                const dateKey = this.dataManager.getDateKey(current);
 
                 const planned = this.getPlannedTimesheetStatus(employee, current);
                 const plannedHours = this.parseShiftHours(planned);
                 if (plannedHours) plannedWeeklyHours += plannedHours;
+
+                const referenceDateTime = dateKey === this.dataManager.getDateKey(new Date())
+                    ? formatLocalDateTime(new Date())
+                    : null;
+                const attendanceRecord = this.dataManager.getAttendanceRecord(employee.id, current);
+                const attendanceSummary = this.dataManager.getAttendanceSummary(employee.id, current, { referenceDateTime });
+                recordedWeeklyMinutes += attendanceSummary.workedMinutes || 0;
+
+                const recordedHours = (attendanceSummary.workedMinutes || 0) / 60;
+                const manualExtraHours = Number(employee.extraHours?.[dateKey] || 0);
+                const calculatedExtraHours = Math.max(0, recordedHours - (plannedHours || 0));
+                const extraHoursValue = manualExtraHours > 0 ? manualExtraHours : calculatedExtraHours;
 
                 days.push({
                     dateLabel: current.toLocaleDateString('en-GB', {
@@ -1016,7 +1416,14 @@ export class UIManager {
                         year: 'numeric'
                     }),
                     planned,
-                    dailyHours: plannedHours ? this.formatDurationHours(plannedHours) : ''
+                    dailyHours: plannedHours ? this.formatDurationHours(plannedHours) : '',
+                    startTime: formatTimeLabel(attendanceSummary.firstClockIn),
+                    breakWindows: this.getBreakIntervalsText(attendanceSummary.punches),
+                    endTime: formatTimeLabel(attendanceSummary.lastClockOut),
+                    recordedHours: this.formatMinutesAsDuration(attendanceSummary.workedMinutes || 0),
+                    extraHours: extraHoursValue > 0 ? this.formatDurationHours(extraHoursValue) : '',
+                    notes: this.getAttendanceNotesText(attendanceRecord),
+                    proof: attendanceRecord?.punches?.length ? 'Digital log' : ''
                 });
             }
 
@@ -1082,13 +1489,13 @@ export class UIManager {
                                                 <div>${day.planned}</div>
                                                 ${day.dailyHours ? `<div class="text-xs text-gray-500 mt-1">Previsto: ${day.dailyHours}</div>` : ''}
                                             </td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
-                                            <td class="border border-gray-300 p-2 h-12"></td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.startTime !== '--:--' ? day.startTime : ''}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.breakWindows}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.endTime !== '--:--' ? day.endTime : ''}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.recordedHours !== '00:00' ? day.recordedHours : ''}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.extraHours}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.notes}</td>
+                                            <td class="border border-gray-300 p-2 h-12">${day.proof}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -1104,12 +1511,12 @@ export class UIManager {
                                 </div>
                                 <div class="flex justify-between text-sm mt-2">
                                     <span>Total semanal registado</span>
-                                    <span class="font-semibold">__________</span>
+                                    <span class="font-semibold">${this.formatMinutesAsDuration(recordedWeeklyMinutes)}</span>
                                 </div>
                             </div>
                             <div class="border rounded-lg p-4">
                                 <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Assinaturas</div>
-                                <div class="text-sm mb-4">Trabalhador: ____________________________________</div>
+                                <div class="text-sm mb-4">Trabalhador (quando aplicavel): ____________________</div>
                                 <div class="text-sm">Conferido por: __________________________________</div>
                             </div>
                         </div>

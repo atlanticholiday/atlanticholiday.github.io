@@ -5,12 +5,30 @@ import { UserManagementController } from "../../../../js/features/admin/user-man
 function createFixture() {
   resetDom(`
     <ul id="user-list"></ul>
+    <ul id="test-user-presets"></ul>
+    <strong id="test-user-password"></strong>
+    <button id="create-test-users-btn">Create Test Users</button>
+    <p id="test-user-feedback"></p>
+    <ul id="roles-list"></ul>
+    <div id="access-link-overview"></div>
     <input id="new-user-email">
     <input id="new-user-password">
     <p id="create-user-error"></p>
     <button id="create-user-btn">Create</button>
-    <input id="new-role-key">
-    <input id="new-role-title">
+    <select id="new-role-key">
+      <option value=""></option>
+      <option value="admin">admin</option>
+      <option value="manager">manager</option>
+      <option value="supervisor">supervisor</option>
+      <option value="employee">employee</option>
+    </select>
+    <select id="new-role-title">
+      <option value=""></option>
+      <option value="Administrator">Administrator</option>
+      <option value="Manager">Manager</option>
+      <option value="Supervisor">Supervisor</option>
+      <option value="Employee">Employee</option>
+    </select>
     <p id="add-role-error"></p>
     <button id="add-role-btn">Add Role</button>
   `);
@@ -61,6 +79,7 @@ describe("UserManagementController", () => {
       roleManager,
       createAuthUser: async () => {},
       sendPasswordReset: async () => {},
+      getEmployees: () => [{ id: "emp-1", name: "Ana", email: "ana@example.com" }],
       windowRef: { alert() {}, confirm() { return true; } }
     });
 
@@ -80,6 +99,88 @@ describe("UserManagementController", () => {
     assert.equal(setRolesCalls.length, 1);
     assert.equal(setRolesCalls[0].email, "ana@example.com");
     assert.deepEqual(setRolesCalls[0].roles, ["manager", "ops"]);
+    assert.includes(document.getElementById("roles-list").textContent, "manager");
+    assert.includes(document.getElementById("access-link-overview").textContent, "Privileged access");
+  });
+
+  test("syncs preset role key and title dropdowns", () => {
+    createFixture();
+
+    const controller = new UserManagementController({
+      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async setRoles() {}, async removeEmail() {}, async addEmail() {} },
+      roleManager: { async listRoles() { return []; }, async addRole() {} },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    controller.init();
+
+    const keySelect = document.getElementById("new-role-key");
+    const titleSelect = document.getElementById("new-role-title");
+
+    keySelect.value = "manager";
+    keySelect.dispatchEvent(new Event("change"));
+    assert.equal(titleSelect.value, "Manager");
+
+    titleSelect.value = "Supervisor";
+    titleSelect.dispatchEvent(new Event("change"));
+    assert.equal(keySelect.value, "supervisor");
+  });
+
+  test("creates preset test users, assigns matching roles, and links employee records", async () => {
+    createFixture();
+
+    const createdAuthUsers = [];
+    const addedEmails = [];
+    const assignedRoles = [];
+    const ensuredEmployees = [];
+
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return addedEmails;
+        },
+        async getRoles(email) {
+          const found = assignedRoles.find((entry) => entry.email === email);
+          return found ? found.roles : [];
+        },
+        async setRoles(email, roles) {
+          assignedRoles.push({ email, roles });
+        },
+        async removeEmail() {},
+        async addEmail(email) {
+          if (!addedEmails.includes(email)) {
+            addedEmails.push(email);
+          }
+        }
+      },
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async (email, password) => {
+        createdAuthUsers.push({ email, password });
+      },
+      sendPasswordReset: async () => {},
+      ensureEmployeeForAccess: async (payload) => {
+        ensuredEmployees.push(payload);
+      },
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    controller.init();
+    await controller.handleCreateTestUsers();
+
+    assert.equal(createdAuthUsers.length, 4);
+    assert.equal(addedEmails.length, 4);
+    assert.equal(assignedRoles.length, 4);
+    assert.equal(ensuredEmployees.length, 4);
+    assert.includes(document.getElementById("test-user-feedback").textContent, "Test users ready");
+    assert.includes(document.getElementById("test-user-presets").textContent, "test-admin@horario.test");
+    assert.equal(document.getElementById("test-user-password").textContent, "Test1234!");
   });
 
   test("creates a user, clears the form, and refreshes the full admin list", async () => {
@@ -114,6 +215,7 @@ describe("UserManagementController", () => {
         createdUsers.push({ email, password });
       },
       sendPasswordReset: async () => {},
+      getEmployees: () => [{ id: "emp-1", name: "New User", email: "new@example.com" }],
       windowRef: { alert() {}, confirm() { return true; } }
     });
 

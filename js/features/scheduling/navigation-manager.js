@@ -9,6 +9,7 @@ export class NavigationManager {
             reservations: 'reservations-page',
             login: 'login-screen',
             setup: 'setup-screen',
+            timeClock: 'time-clock-page',
             allinfo: 'allinfo-page',
             userManagement: 'user-management-page',
             rnal: 'rnal-page',
@@ -66,6 +67,10 @@ export class NavigationManager {
 
     showSetupPage() {
         this.showPage('setup');
+    }
+
+    showTimeClockPage() {
+        this.showPage('timeClock');
     }
 
     showUserManagementPage() {
@@ -139,6 +144,7 @@ export class NavigationManager {
         const goToCleaningBillsBtn = document.getElementById('go-to-cleaning-bills-btn');
         const goToCommissionCalculatorBtn = document.getElementById('go-to-commission-calculator-btn');
         const goToStaffBtn = document.getElementById('go-to-staff-btn');
+        const goToTimeClockBtn = document.getElementById('go-to-time-clock-btn');
 
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -221,6 +227,14 @@ export class NavigationManager {
             });
         }
 
+        if (goToTimeClockBtn) {
+            goToTimeClockBtn.addEventListener('click', () => {
+                this.showTimeClockPage();
+                const event = new CustomEvent('timeClockPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
         // All Info navigation
         const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
         if (goToAllInfoBtn) {
@@ -281,6 +295,7 @@ export class NavigationManager {
         const backToLandingFromVisitsBtn = document.getElementById('back-to-landing-from-visits-btn');
         const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
         const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
+        const backToLandingFromTimeClockBtn = document.getElementById('back-to-landing-from-time-clock-btn');
 
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -338,6 +353,12 @@ export class NavigationManager {
 
         if (backToLandingFromCommissionCalculatorBtn) {
             backToLandingFromCommissionCalculatorBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromTimeClockBtn) {
+            backToLandingFromTimeClockBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }

@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -37,9 +37,116 @@ import { UIManager } from '../features/scheduling/ui-manager.js';
 let db, auth, userId;
 let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
+let timeClockAutoOpenedForUser = false;
 
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, scheduleManager, staffManager;
+
+async function createSecondaryAuthUser(email, password) {
+    const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const secondaryApp = initializeApp(Config.firebaseConfig, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+
+    try {
+        await createUserWithEmailAndPassword(secondaryAuth, email, password);
+        await signOut(secondaryAuth).catch(() => {});
+    } finally {
+        await deleteApp(secondaryApp).catch(() => {});
+    }
+}
+
+async function ensureEmployeeForAccess({ name, email, notes = '' } = {}) {
+    if (!dataManager || !name || !email) {
+        return null;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingEmployee = dataManager.getActiveEmployees().find((employee) => {
+        return typeof employee?.email === 'string' && employee.email.trim().toLowerCase() === normalizedEmail;
+    });
+
+    if (existingEmployee) {
+        return existingEmployee;
+    }
+
+    const createdEmployee = await dataManager.addEmployee(name, '', [1, 2, 3, 4, 5]);
+    await dataManager.updateEmployee(createdEmployee.id, {
+        name,
+        workDays: [1, 2, 3, 4, 5],
+        staffNumber: '',
+        email,
+        notes,
+        defaultShift: '9:00-18:00'
+    });
+
+    return createdEmployee;
+}
+
+function syncAccessModeUi() {
+    if (!dataManager) return;
+
+    const employee = dataManager.getCurrentUserEmployee();
+    const clockOnlyMode = dataManager.isClockOnlyUser();
+    const landingPage = document.getElementById('landing-page');
+    if (landingPage) {
+        landingPage.dataset.accessMode = clockOnlyMode ? 'clock-only' : 'manager';
+    }
+
+    const dashboardButtons = [
+        'go-to-schedule-btn',
+        'go-to-vehicles-btn',
+        'go-to-welcome-packs-btn',
+        'go-to-staff-btn',
+        'go-to-properties-btn',
+        'go-to-allinfo-btn',
+        'go-to-rnal-btn',
+        'go-to-checklists-btn',
+        'go-to-owners-btn',
+        'go-to-safety-btn',
+        'go-to-reservations-btn',
+        'go-to-user-management-btn',
+        'go-to-inventory-btn'
+    ];
+
+    dashboardButtons.forEach((buttonId) => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.classList.toggle('hidden', clockOnlyMode);
+        }
+    });
+
+    const moreToolsToggle = document.getElementById('toggle-more-tools-btn');
+    const moreToolsSection = document.getElementById('more-tools-section');
+    if (moreToolsToggle) {
+        moreToolsToggle.classList.toggle('hidden', clockOnlyMode);
+    }
+    if (moreToolsSection && clockOnlyMode) {
+        moreToolsSection.classList.add('hidden');
+    }
+
+    const heroTitle = document.getElementById('landing-hero-title') || document.querySelector('#landing-page .hero-title');
+    const heroSubtitle = document.getElementById('landing-hero-subtitle') || document.querySelector('#landing-page .hero-subtitle');
+    if (heroTitle) {
+        heroTitle.textContent = clockOnlyMode
+            ? (employee ? `${employee.name}, clock in for your shift` : 'Clock in and out for your shift')
+            : 'Welcome to your operations hub';
+    }
+    if (heroSubtitle) {
+        heroSubtitle.textContent = clockOnlyMode
+            ? 'Use the digital time clock to record shifts, breaks, and clock-out times.'
+            : 'Manage properties, schedules, safety and more, all in one beautiful place.';
+    }
+
+    const timeClockBackButton = document.getElementById('back-to-landing-from-time-clock-btn');
+    if (timeClockBackButton) {
+        timeClockBackButton.classList.toggle('hidden', clockOnlyMode);
+    }
+
+    if (clockOnlyMode && navigationManager && !timeClockAutoOpenedForUser) {
+        navigationManager.showTimeClockPage();
+        timeClockAutoOpenedForUser = true;
+    }
+}
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -122,6 +229,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize DataManager
         dataManager = new DataManager(db, auth.currentUser ? auth.currentUser.uid : null, holidayCalculator);
         window.dataManager = dataManager; // For debugging
+        dataManager.subscribeToDataChanges(() => {
+            syncAccessModeUi();
+        });
 
         // Initialize PDF Generator
         pdfGenerator = new PDFGenerator();
@@ -243,8 +353,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const userManagementController = new UserManagementController({
             accessManager,
             roleManager,
-            createAuthUser: (email, password) => createUserWithEmailAndPassword(auth, email, password),
-            sendPasswordReset: (email) => sendPasswordResetEmail(auth, email)
+            createAuthUser: (email, password) => createSecondaryAuthUser(email, password),
+            sendPasswordReset: (email) => sendPasswordResetEmail(auth, email),
+            getEmployees: () => dataManager?.getActiveEmployees?.() || [],
+            ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload)
         });
         userManagementController.init();
 
@@ -260,6 +372,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // }
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
+                timeClockAutoOpenedForUser = false;
+                const roles = user.email
+                    ? await accessManager.getRoles(user.email).catch((error) => {
+                        console.warn('Failed to load roles for current user:', error);
+                        return [];
+                    })
+                    : [];
+                dataManager.setCurrentUserContext({
+                    uid: user.uid,
+                    email: user.email,
+                    roles
+                });
                 // Bind user to Checklists manager for per-user persistence key
                 if (checklistsManager) {
                     checklistsManager.setUser(userId);
@@ -321,6 +445,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 console.log(`🔐 [INITIALIZATION] User logged out`);
                 userId = null;
+                timeClockAutoOpenedForUser = false;
+                dataManager?.clearCurrentUserContext?.();
+                dataManager?.stopRealtimeListeners?.();
                 navigationManager.showLoginPage();
                 if (unsubscribe) unsubscribe();
                 if (propertiesManager) {
@@ -371,7 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.id === 'sign-out-btn' || e.target.id === 'landing-sign-out-btn' || e.target.id === 'properties-sign-out-btn' || e.target.id === 'operations-sign-out-btn' || e.target.id === 'reservations-sign-out-btn' || e.target.id === 'vehicles-sign-out-btn' || e.target.id === 'owners-sign-out-btn' || e.target.id === 'welcome-sign-out-btn') {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #time-clock-sign-out-btn')) {
             signOut(auth);
         }
     });
@@ -494,6 +621,12 @@ function setupGlobalEventListeners() {
         }, 100); // Small delay to ensure DOM is ready
     });
 
+    document.addEventListener('timeClockPageOpened', () => {
+        setTimeout(() => {
+            uiManager?.renderTimeClockPage?.();
+        }, 50);
+    });
+
     document.addEventListener('reservationsPageOpened', () => {
         if (reservationsManager) {
             console.log('Reservations page opened, initializing...');
@@ -539,6 +672,7 @@ async function setupApp() {
         dataManager.listenForDailyNotes();
         dataManager.listenForShiftPresets();
         dataManager.listenForGlobalSettings();
+        dataManager.listenForAttendanceChanges();
 
         // Show the main app interface
         const loadingEl = document.getElementById('loading');
@@ -593,6 +727,7 @@ async function initializeScheduleApp() {
                 dataManager.listenForDailyNotes();
                 dataManager.listenForShiftPresets();
                 dataManager.listenForGlobalSettings();
+                dataManager.listenForAttendanceChanges();
             } else {
                 console.log('✅ [OPTIMIZATION] Employee listener already active');
             }
