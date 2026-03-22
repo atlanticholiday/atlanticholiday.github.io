@@ -24,4 +24,13 @@ describe("Access linking", () => {
     assert.equal(byName.Carla.status, "missing-email");
     assert.equal(byName.Duarte.status, "missing-access");
   });
+
+  test("matches gmail aliases canonically", () => {
+    const [row] = buildEmployeeAccessOverview(
+      [{ id: "1", name: "Nastassja", email: "nastassjadeaguiaratlantic@gmail.com" }],
+      [{ email: "nastassja.deaguiaratlantic+clock@gmail.com", roles: ["employee"] }]
+    );
+
+    assert.equal(row.status, "clock-only");
+  });
 });

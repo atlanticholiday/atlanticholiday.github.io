@@ -3,6 +3,7 @@ import { run } from "./test-harness.js";
 import "./unit/core/config.test.js";
 import "./unit/core/i18n.test.js";
 import "./unit/shared/change-notifier.test.js";
+import "./unit/shared/email.test.js";
 import "./unit/shared/enums.test.js";
 import "./unit/shared/locations.test.js";
 import "./unit/features/admin/access-linking.test.js";

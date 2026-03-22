@@ -66,6 +66,52 @@ describe("Attendance records", () => {
     assert.equal(summary.hasOpenSession, false);
   });
 
+  test("automatically deducts one lunch hour for a closed single-block full day with no break punches", () => {
+    let record = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
+    record = appendAttendanceEvent(record, { type: "clockIn", occurredAt: "2026-03-23T09:00:00" });
+    record = appendAttendanceEvent(record, { type: "clockOut", occurredAt: "2026-03-23T18:00:00" });
+
+    const summary = summarizeAttendanceRecord(record);
+    assert.equal(summary.workedMinutes, 480);
+    assert.equal(summary.breakMinutes, 60);
+    assert.equal(summary.autoBreakMinutes, 60);
+  });
+
+  test("does not auto-deduct lunch for short or split days", () => {
+    let shortDay = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
+    shortDay = appendAttendanceEvent(shortDay, { type: "clockIn", occurredAt: "2026-03-23T09:00:00" });
+    shortDay = appendAttendanceEvent(shortDay, { type: "clockOut", occurredAt: "2026-03-23T13:00:00" });
+
+    let splitDay = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-24" });
+    splitDay = appendAttendanceEvent(splitDay, { type: "clockIn", occurredAt: "2026-03-24T09:00:00" });
+    splitDay = appendAttendanceEvent(splitDay, { type: "clockOut", occurredAt: "2026-03-24T12:00:00" });
+    splitDay = appendAttendanceEvent(splitDay, { type: "clockIn", occurredAt: "2026-03-24T13:00:00" });
+    splitDay = appendAttendanceEvent(splitDay, { type: "clockOut", occurredAt: "2026-03-24T18:00:00" });
+
+    const shortSummary = summarizeAttendanceRecord(shortDay);
+    const splitSummary = summarizeAttendanceRecord(splitDay);
+
+    assert.equal(shortSummary.workedMinutes, 240);
+    assert.equal(shortSummary.breakMinutes, 0);
+    assert.equal(shortSummary.autoBreakMinutes, 0);
+    assert.equal(splitSummary.workedMinutes, 480);
+    assert.equal(splitSummary.breakMinutes, 0);
+    assert.equal(splitSummary.autoBreakMinutes, 0);
+  });
+
+  test("treats a missing attendance record as an empty day", () => {
+    const summary = summarizeAttendanceRecord(null, {
+      referenceDateTime: "2026-03-23T10:00:00"
+    });
+
+    assert.equal(summary.status, "clocked-out");
+    assert.equal(summary.primaryAction, "clockIn");
+    assert.equal(summary.punches.length, 0);
+    assert.equal(summary.workedMinutes, 0);
+    assert.equal(summary.breakMinutes, 0);
+    assert.equal(summary.hasOpenSession, false);
+  });
+
   test("flags records needing review from open sessions or manager adjustments", () => {
     let openRecord = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
     openRecord = appendAttendanceEvent(openRecord, { type: "clockIn", occurredAt: "2026-03-23T09:00:00" });
@@ -108,7 +154,8 @@ describe("Attendance records", () => {
     assert.equal(reviewed.review.status, "reviewed");
     assert.equal(reviewed.review.note, "Checked by manager");
     assert.equal(reviewed.review.reviewedBy, "manager@example.com");
-    assert.equal(weeklySummary.workedMinutes, 900);
+    assert.equal(weeklySummary.workedMinutes, 780);
+    assert.equal(weeklySummary.breakMinutes, 120);
     assert.equal(weeklySummary.daysWithPunches, 2);
   });
 

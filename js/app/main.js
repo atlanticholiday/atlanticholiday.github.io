@@ -32,12 +32,15 @@ import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
 import { UIManager } from '../features/scheduling/ui-manager.js';
+import { canonicalizeEmail } from '../shared/email.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, userId;
 let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 let timeClockAutoOpenedForUser = false;
+let unsubscribePendingAccessLinkSync = null;
+let pendingMigrationTimeoutId = null;
 
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, scheduleManager, staffManager;
@@ -60,12 +63,15 @@ async function ensureEmployeeForAccess({ name, email, notes = '' } = {}) {
         return null;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = canonicalizeEmail(email);
     const existingEmployee = dataManager.getActiveEmployees().find((employee) => {
-        return typeof employee?.email === 'string' && employee.email.trim().toLowerCase() === normalizedEmail;
+        return canonicalizeEmail(employee?.email) === normalizedEmail;
     });
 
     if (existingEmployee) {
+        await accessManager?.syncEmployeeLink?.(email, existingEmployee).catch((error) => {
+            console.warn('Failed to sync existing employee access link:', error);
+        });
         return existingEmployee;
     }
 
@@ -79,7 +85,87 @@ async function ensureEmployeeForAccess({ name, email, notes = '' } = {}) {
         defaultShift: '9:00-18:00'
     });
 
+    await accessManager?.syncEmployeeLink?.(email, {
+        id: createdEmployee.id,
+        name,
+        email,
+        isArchived: false
+    }).catch((error) => {
+        console.warn('Failed to sync created employee access link:', error);
+    });
+
     return createdEmployee;
+}
+
+async function syncEmployeeAccessLinks() {
+    if (!accessManager || !dataManager?.hasPrivilegedRole?.()) {
+        return;
+    }
+
+    const users = await accessManager.listEmails().catch((error) => {
+        console.warn('Failed to list access emails for employee-link sync:', error);
+        return [];
+    });
+    if (!users.length) {
+        return;
+    }
+
+    const employeesByEmail = new Map();
+    [
+        ...dataManager.getArchivedEmployees(),
+        ...dataManager.getActiveEmployees()
+    ].forEach((employee) => {
+        const normalizedEmail = canonicalizeEmail(employee?.email);
+        if (normalizedEmail) {
+            employeesByEmail.set(normalizedEmail, employee);
+        }
+    });
+
+    await Promise.all(users.map((email) => {
+        return accessManager.syncEmployeeLink(
+            email,
+            employeesByEmail.get(canonicalizeEmail(email)) || null
+        );
+    }));
+}
+
+function scheduleInitialEmployeeAccessLinkSync() {
+    if (!dataManager || !accessManager) {
+        return;
+    }
+
+    unsubscribePendingAccessLinkSync?.();
+    unsubscribePendingAccessLinkSync = null;
+
+    const attemptSync = async () => {
+        if (!dataManager.hasPrivilegedRole()) {
+            return false;
+        }
+
+        const hasEmployees = dataManager.getActiveEmployees().length > 0 || dataManager.getArchivedEmployees().length > 0;
+        if (!hasEmployees) {
+            return false;
+        }
+
+        await syncEmployeeAccessLinks();
+        return true;
+    };
+
+    const finalizeSyncAttempt = () => {
+        attemptSync()
+            .then((didSync) => {
+                if (didSync && unsubscribePendingAccessLinkSync) {
+                    unsubscribePendingAccessLinkSync();
+                    unsubscribePendingAccessLinkSync = null;
+                }
+            })
+            .catch((error) => {
+                console.warn('Failed to sync stored employee access links:', error);
+            });
+    };
+
+    unsubscribePendingAccessLinkSync = dataManager.subscribeToDataChanges(finalizeSyncAttempt);
+    finalizeSyncAttempt();
 }
 
 function syncAccessModeUi() {
@@ -387,16 +473,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 timeClockAutoOpenedForUser = false;
-                const roles = user.email
-                    ? await accessManager.getRoles(user.email).catch((error) => {
-                        console.warn('Failed to load roles for current user:', error);
-                        return [];
+                const accessEntry = user.email
+                    ? await accessManager.getAccessEntry(user.email).catch((error) => {
+                        console.warn('Failed to load access entry for current user:', error);
+                        return null;
                     })
-                    : [];
+                    : null;
                 dataManager.setCurrentUserContext({
                     uid: user.uid,
                     email: user.email,
-                    roles
+                    roles: accessEntry?.roles || [],
+                    linkedEmployee: accessEntry?.linkedEmployeeId ? {
+                        id: accessEntry.linkedEmployeeId,
+                        name: accessEntry.linkedEmployeeName || '',
+                        email: accessEntry.linkedEmployeeEmail || user.email,
+                        isArchived: Boolean(accessEntry.linkedEmployeeArchived)
+                    } : null
                 });
                 // Bind user to Checklists manager for per-user persistence key
                 if (checklistsManager) {
@@ -442,12 +534,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 navigationManager.showLandingPage();
                 setupApp();
+                scheduleInitialEmployeeAccessLinkSync();
                 syncAccessModeUi();
                 routeCurrentUserAccess();
 
                 // OPTIMIZATION: Run migration AFTER properties have loaded to avoid duplicate reads
                 console.log(`⏰ [OPTIMIZATION] Scheduling migration check after properties load...`);
-                setTimeout(() => {
+                if (pendingMigrationTimeoutId) {
+                    clearTimeout(pendingMigrationTimeoutId);
+                }
+                pendingMigrationTimeoutId = setTimeout(() => {
                     if (!migrationCompleted) {
                         console.log(`🔄 [MIGRATION] Running migration check after properties loaded...`);
                         checkAndMigrateUserProperties({
@@ -457,11 +553,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                         migrationCompleted = true;
                     }
+                    pendingMigrationTimeoutId = null;
                 }, 2000); // Wait 2 seconds for properties to load
             } else {
                 console.log(`🔐 [INITIALIZATION] User logged out`);
                 userId = null;
                 timeClockAutoOpenedForUser = false;
+                if (pendingMigrationTimeoutId) {
+                    clearTimeout(pendingMigrationTimeoutId);
+                    pendingMigrationTimeoutId = null;
+                }
+                unsubscribePendingAccessLinkSync?.();
+                unsubscribePendingAccessLinkSync = null;
                 dataManager?.clearCurrentUserContext?.();
                 dataManager?.stopRealtimeListeners?.();
                 dataManager?.resetSessionState?.();

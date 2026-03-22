@@ -76,9 +76,12 @@ Pattern:
 - Keep holiday/date rules in `js/features/scheduling/holiday-calculator.js` and employee normalization/status logic in `js/features/scheduling/employee-records.js`; `DataManager` should stay focused on Firestore orchestration.
 - User-management admin page wiring now lives in `js/features/admin/user-management-controller.js`; `js/app/main.js` should stay focused on composing dependencies and startup flow.
 - Page-specific public entry modules are `js/app/main.js`, `js/features/inventory/main.js`, and `js/features/properties/main.js`.
+- Employee self-service attendance now also relies on the `allowedEmails` document storing `linkedEmployeeId`/`linkedEmployeeName`/`linkedEmployeeEmail`; this is synced from User Management so time-clock punch actions can still resolve the colleague when the full `employees` list is unavailable in that session.
 - Digital clock-in/out now lives in the scheduling feature: attendance calculations are in `js/features/scheduling/attendance-records.js`, Firestore attendance orchestration is in `js/features/scheduling/data-manager.js`, and the employee/manager UI is rendered from `js/features/scheduling/ui-manager.js` into `#time-clock-page-content`.
 - Clock-only employee mode is derived from a Firebase Auth email matching an active employee `email` field, unless the user has a privileged role such as `admin`, `manager`, or `supervisor`.
 - User Management now exposes an `#access-link-overview` panel showing whether each active colleague is missing an email, missing app access, clock-only, or privileged; keep that in sync when changing login/role behavior.
+- Fix: `summarizeAttendanceRecord()` must tolerate `null` records because first-time employee sessions render the time clock before any attendance document exists; regression coverage is in `tests/unit/features/scheduling/attendance-records.test.js`.
+- Pattern: automatic lunch deduction is computed in `summarizeAttendanceRecord()` for closed single-block days with one `clockIn`, one `clockOut`, no break punches, and at least 6 worked hours; keep printouts and self-service history aligned with that shared summary output.
 
 Test:
 

@@ -45,12 +45,16 @@ describe("UserManagementController", () => {
     createFixture();
 
     const setRolesCalls = [];
+    const syncEmployeeLinkCalls = [];
     const accessManager = {
       async listEmails() {
         return ["ana@example.com"];
       },
       async getRoles() {
         return ["manager"];
+      },
+      async syncEmployeeLink(email, employee) {
+        syncEmployeeLinkCalls.push({ email, employee });
       },
       async setRoles(email, roles) {
         setRolesCalls.push({ email, roles });
@@ -99,8 +103,49 @@ describe("UserManagementController", () => {
     assert.equal(setRolesCalls.length, 1);
     assert.equal(setRolesCalls[0].email, "ana@example.com");
     assert.deepEqual(setRolesCalls[0].roles, ["manager", "ops"]);
+    assert.equal(syncEmployeeLinkCalls.length, 1);
+    assert.equal(syncEmployeeLinkCalls[0].email, "ana@example.com");
+    assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
     assert.includes(document.getElementById("roles-list").textContent, "manager");
     assert.includes(document.getElementById("access-link-overview").textContent, "Privileged access");
+  });
+
+  test("syncs stored employee links from matching staff emails during refresh", async () => {
+    createFixture();
+
+    const syncEmployeeLinkCalls = [];
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["nastassja.deaguiaratlantic+clock@gmail.com"];
+        },
+        async getRoles() {
+          return ["employee"];
+        },
+        async syncEmployeeLink(email, employee) {
+          syncEmployeeLinkCalls.push({ email, employee });
+        },
+        async setRoles() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [{ key: "employee", title: "Employee" }];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      getEmployees: () => [{ id: "emp-1", name: "Nastassja", email: "nastassjadeaguiaratlantic@gmail.com" }],
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    await controller.refreshUserList();
+
+    assert.equal(syncEmployeeLinkCalls.length, 1);
+    assert.equal(syncEmployeeLinkCalls[0].email, "nastassja.deaguiaratlantic+clock@gmail.com");
+    assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
   });
 
   test("syncs preset role key and title dropdowns", () => {

@@ -1,6 +1,4 @@
-function normalizeEmail(value) {
-    return typeof value === 'string' ? value.trim().toLowerCase() : null;
-}
+import { canonicalizeEmail, getNormalizedEmailDisplay } from '../../shared/email.js';
 
 function normalizeName(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -10,13 +8,14 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
     const privilegedRoleSet = new Set(privilegedRoles);
     const usersByEmail = new Map(
         users
-            .filter((user) => normalizeEmail(user?.email))
-            .map((user) => [normalizeEmail(user.email), user])
+            .filter((user) => canonicalizeEmail(user?.email))
+            .map((user) => [canonicalizeEmail(user.email), user])
     );
 
     return employees
         .map((employee) => {
-            const email = normalizeEmail(employee?.email);
+            const email = canonicalizeEmail(employee?.email);
+            const displayEmail = getNormalizedEmailDisplay(employee?.email);
             const matchedUser = email ? usersByEmail.get(email) : null;
             const roles = Array.isArray(matchedUser?.roles) ? matchedUser.roles : [];
             const privileged = roles.some((role) => privilegedRoleSet.has(role));
@@ -26,6 +25,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     employeeId: employee?.id || null,
                     employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
                     email: null,
+                    displayEmail: null,
                     roles: [],
                     status: 'missing-email',
                     label: 'Missing staff email',
@@ -38,6 +38,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     employeeId: employee?.id || null,
                     employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
                     email,
+                    displayEmail,
                     roles: [],
                     status: 'missing-access',
                     label: 'No app access',
@@ -50,6 +51,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     employeeId: employee?.id || null,
                     employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
                     email,
+                    displayEmail,
                     roles,
                     status: 'privileged',
                     label: 'Privileged access',
@@ -61,6 +63,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                 employeeId: employee?.id || null,
                 employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
                 email,
+                displayEmail,
                 roles,
                 status: 'clock-only',
                 label: 'Clock-only employee',

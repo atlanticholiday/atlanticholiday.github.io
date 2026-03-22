@@ -1,5 +1,7 @@
 const VALID_EVENT_TYPES = new Set(['clockIn', 'clockOut', 'breakStart', 'breakEnd']);
 const VALID_REVIEW_STATUSES = new Set(['needs-attention', 'reviewed']);
+const AUTO_LUNCH_DEDUCTION_MINUTES = 60;
+const AUTO_LUNCH_MINIMUM_WORKED_MINUTES = 6 * 60;
 
 function pad(value) {
     return String(value).padStart(2, '0');
@@ -75,8 +77,9 @@ export function createAttendanceRecord({ employeeId, employeeName = '', dateKey,
 }
 
 export function normalizeAttendanceRecord(record = {}) {
-    const punches = Array.isArray(record.punches)
-        ? record.punches
+    const safeRecord = record && typeof record === 'object' ? record : {};
+    const punches = Array.isArray(safeRecord.punches)
+        ? safeRecord.punches
             .filter((punch) => VALID_EVENT_TYPES.has(punch?.type) && typeof punch?.occurredAt === 'string')
             .map((punch) => ({
                 id: normalizeOptionalText(punch.id) || createEventId(punch.type, normalizeLocalDateTime(punch.occurredAt)),
@@ -92,18 +95,18 @@ export function normalizeAttendanceRecord(record = {}) {
         : [];
 
     return {
-        employeeId: record.employeeId || null,
-        employeeName: typeof record.employeeName === 'string' ? record.employeeName.trim() : '',
-        dateKey: normalizeOptionalText(record.dateKey),
+        employeeId: safeRecord.employeeId || null,
+        employeeName: typeof safeRecord.employeeName === 'string' ? safeRecord.employeeName.trim() : '',
+        dateKey: normalizeOptionalText(safeRecord.dateKey),
         punches,
         review: {
-            status: normalizeReviewStatus(record.review?.status),
-            note: normalizeOptionalText(record.review?.note),
-            reviewedAt: normalizeOptionalText(record.review?.reviewedAt),
-            reviewedBy: normalizeOptionalText(record.review?.reviewedBy)
+            status: normalizeReviewStatus(safeRecord.review?.status),
+            note: normalizeOptionalText(safeRecord.review?.note),
+            reviewedAt: normalizeOptionalText(safeRecord.review?.reviewedAt),
+            reviewedBy: normalizeOptionalText(safeRecord.review?.reviewedBy)
         },
-        createdAt: normalizeOptionalText(record.createdAt),
-        updatedAt: normalizeOptionalText(record.updatedAt)
+        createdAt: normalizeOptionalText(safeRecord.createdAt),
+        updatedAt: normalizeOptionalText(safeRecord.updatedAt)
     };
 }
 
@@ -252,11 +255,29 @@ export function summarizeAttendanceRecord(record, { referenceDateTime = null } =
     }
 
     const actionState = getAttendanceActionState(normalizedRecord);
+    const clockInCount = punches.filter((punch) => punch.type === 'clockIn').length;
+    const clockOutCount = punches.filter((punch) => punch.type === 'clockOut').length;
+    const hasExplicitBreakPunches = punches.some((punch) => punch.type === 'breakStart' || punch.type === 'breakEnd');
+    const isClosedDay = !activeSessionStartedAt && !activeBreakStartedAt;
+    const qualifiesForAutoLunch = isClosedDay
+        && clockInCount === 1
+        && clockOutCount === 1
+        && !hasExplicitBreakPunches
+        && workedMinutes >= AUTO_LUNCH_MINIMUM_WORKED_MINUTES;
+    const autoBreakMinutes = qualifiesForAutoLunch
+        ? Math.min(AUTO_LUNCH_DEDUCTION_MINUTES, workedMinutes)
+        : 0;
+
+    if (autoBreakMinutes > 0) {
+        workedMinutes -= autoBreakMinutes;
+        breakMinutes += autoBreakMinutes;
+    }
 
     return {
         ...actionState,
         workedMinutes,
         breakMinutes,
+        autoBreakMinutes,
         firstClockIn,
         lastClockOut,
         activeSessionStartedAt,

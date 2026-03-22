@@ -18,6 +18,7 @@ import {
     summarizeAttendanceRecord
 } from './attendance-records.js';
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
+import { canonicalizeEmail } from '../../shared/email.js';
 
 export class DataManager {
     constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
@@ -43,7 +44,9 @@ export class DataManager {
         this.currentUserContext = {
             uid: null,
             email: null,
-            roles: []
+            emailCanonical: null,
+            roles: [],
+            linkedEmployee: null
         };
 
         // Initialize holidays for current year immediately
@@ -54,11 +57,18 @@ export class DataManager {
         this.userId = userId;
     }
 
-    setCurrentUserContext({ uid = null, email = null, roles = [] } = {}) {
+    setCurrentUserContext({ uid = null, email = null, roles = [], linkedEmployee = null } = {}) {
         this.currentUserContext = {
             uid,
             email: typeof email === 'string' ? email.trim().toLowerCase() : null,
-            roles: Array.isArray(roles) ? roles : []
+            emailCanonical: canonicalizeEmail(email),
+            roles: Array.isArray(roles) ? roles : [],
+            linkedEmployee: linkedEmployee?.id ? {
+                id: linkedEmployee.id,
+                name: linkedEmployee.name || '',
+                email: typeof linkedEmployee.email === 'string' ? linkedEmployee.email.trim().toLowerCase() : null,
+                isArchived: Boolean(linkedEmployee.isArchived)
+            } : null
         };
         this.notifyDataChange();
     }
@@ -399,14 +409,47 @@ export class DataManager {
     }
 
     getCurrentUserEmployee() {
-        const currentEmail = this.currentUserContext.email;
-        if (!currentEmail) {
-            return null;
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        if (linkedEmployeeId) {
+            const matchedActiveEmployee = this.activeEmployees.find((employee) => employee?.id === linkedEmployeeId);
+            if (matchedActiveEmployee) {
+                return matchedActiveEmployee;
+            }
+
+            const matchedArchivedEmployee = this.archivedEmployees.find((employee) => employee?.id === linkedEmployeeId);
+            if (matchedArchivedEmployee) {
+                return null;
+            }
         }
 
-        return this.activeEmployees.find((employee) => {
-            return typeof employee?.email === 'string' && employee.email.trim().toLowerCase() === currentEmail;
-        }) || null;
+        const currentEmail = this.currentUserContext.emailCanonical;
+        if (currentEmail) {
+            const matchedActiveEmployee = this.activeEmployees.find((employee) => {
+                return canonicalizeEmail(employee?.email) === currentEmail;
+            });
+            if (matchedActiveEmployee) {
+                return matchedActiveEmployee;
+            }
+
+            const matchedArchivedEmployee = this.archivedEmployees.find((employee) => {
+                return canonicalizeEmail(employee?.email) === currentEmail;
+            });
+            if (matchedArchivedEmployee) {
+                return null;
+            }
+        }
+
+        const linkedEmployee = this.currentUserContext.linkedEmployee;
+        if (linkedEmployee?.id && !linkedEmployee.isArchived) {
+            return {
+                id: linkedEmployee.id,
+                name: linkedEmployee.name || 'Linked colleague',
+                email: linkedEmployee.email || this.currentUserContext.email,
+                isLinkedFallback: true
+            };
+        }
+
+        return null;
     }
 
     isClockOnlyUser() {
@@ -478,9 +521,32 @@ export class DataManager {
         return getAttendanceReviewQueue(Object.values(this.attendanceRecords), { referenceDateTime });
     }
 
-    async saveAttendanceEvent(employeeId, eventInput) {
-        const employee = this.activeEmployees.find((entry) => entry.id === employeeId)
+    resolveAttendanceEmployee(employeeId) {
+        if (!employeeId) {
+            return null;
+        }
+
+        const matchedEmployee = this.activeEmployees.find((entry) => entry.id === employeeId)
             || this.archivedEmployees.find((entry) => entry.id === employeeId);
+
+        if (matchedEmployee) {
+            return matchedEmployee;
+        }
+
+        const linkedEmployee = this.currentUserContext.linkedEmployee;
+        if (linkedEmployee?.id === employeeId && !linkedEmployee.isArchived) {
+            return {
+                id: linkedEmployee.id,
+                name: linkedEmployee.name || '',
+                email: linkedEmployee.email || this.currentUserContext.email
+            };
+        }
+
+        return null;
+    }
+
+    async saveAttendanceEvent(employeeId, eventInput) {
+        const employee = this.resolveAttendanceEmployee(employeeId);
 
         if (!employee) {
             throw new Error('Employee not found for attendance record.');
@@ -512,7 +578,7 @@ export class DataManager {
     async recordCurrentUserAttendance(eventType) {
         const employee = this.getCurrentUserEmployee();
         if (!employee) {
-            throw new Error('Your account is not linked to a colleague record yet.');
+            throw new Error(`Your login email (${this.currentUserContext.email || 'unknown'}) is not linked to an active colleague record yet.`);
         }
 
         const occurredAt = formatLocalDateTime();

@@ -1,4 +1,5 @@
 import { buildEmployeeAccessOverview } from './access-linking.js';
+import { canonicalizeEmail } from '../../shared/email.js';
 
 const PRESET_ROLES = [
     { key: 'admin', title: 'Administrator' },
@@ -110,6 +111,18 @@ export class UserManagementController {
             }))
         );
         const employees = await Promise.resolve(this.getEmployees());
+        const employeesByEmail = new Map(
+            employees
+                .filter((employee) => canonicalizeEmail(employee?.email))
+                .map((employee) => [canonicalizeEmail(employee.email), employee])
+        );
+
+        await Promise.all(
+            users.map((user) => this.accessManager.syncEmployeeLink?.(
+                user.email,
+                employeesByEmail.get(canonicalizeEmail(user.email)) || null
+            ))
+        );
 
         this.renderUserList(users, roles);
         this.renderRolesList(roles);
@@ -159,7 +172,7 @@ export class UserManagementController {
             <article class="border border-gray-200 rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div class="font-semibold text-gray-900">${row.employeeName}</div>
-                    <div class="text-sm text-gray-600">${row.email || 'No email on staff record'}</div>
+                    <div class="text-sm text-gray-600">${row.displayEmail || row.email || 'No email on staff record'}</div>
                     <div class="text-sm text-gray-500 mt-1">${row.helpText}</div>
                 </div>
                 <div class="sm:text-right">

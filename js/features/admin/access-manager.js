@@ -1,5 +1,6 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getEmailLookupKeys, getNormalizedEmailDisplay } from "../../shared/email.js";
 
 export class AccessManager {
     constructor(db) {
@@ -9,17 +10,45 @@ export class AccessManager {
 
     async listEmails() {
         const snapshot = await getDocs(collection(this.db, this.collectionPath));
-        return snapshot.docs.map(doc => doc.id);
+        return snapshot.docs.map((docSnapshot) => docSnapshot.data().displayEmail || docSnapshot.id);
+    }
+
+    async getAccessEntry(email) {
+        const keys = getEmailLookupKeys(email);
+
+        for (const key of keys) {
+            const snap = await getDoc(doc(this.db, this.collectionPath, key));
+            if (!snap.exists()) {
+                continue;
+            }
+
+            const data = snap.data();
+            return {
+                id: snap.id,
+                email: data.displayEmail || snap.id,
+                displayEmail: data.displayEmail || snap.id,
+                roles: Array.isArray(data.roles) ? data.roles : [],
+                linkedEmployeeId: data.linkedEmployeeId || null,
+                linkedEmployeeName: data.linkedEmployeeName || null,
+                linkedEmployeeEmail: data.linkedEmployeeEmail || null,
+                linkedEmployeeArchived: Boolean(data.linkedEmployeeArchived)
+            };
+        }
+
+        return null;
     }
 
     async addEmail(email) {
-        const key = email.toLowerCase();
-        await setDoc(doc(this.db, this.collectionPath, key), { addedAt: new Date() });
+        const [primaryKey] = getEmailLookupKeys(email);
+        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
+            addedAt: new Date(),
+            displayEmail: getNormalizedEmailDisplay(email)
+        }, { merge: true });
     }
 
     async removeEmail(email) {
-        const key = email.toLowerCase();
-        await deleteDoc(doc(this.db, this.collectionPath, key));
+        const keys = getEmailLookupKeys(email);
+        await Promise.all(keys.map((key) => deleteDoc(doc(this.db, this.collectionPath, key))));
     }
 
     /**
@@ -27,9 +56,8 @@ export class AccessManager {
      * @returns Array of role keys
      */
     async getRoles(email) {
-        const key = email.toLowerCase();
-        const snap = await getDoc(doc(this.db, this.collectionPath, key));
-        return snap.exists() && snap.data().roles ? snap.data().roles : [];
+        const entry = await this.getAccessEntry(email);
+        return entry?.roles || [];
     }
 
     /**
@@ -37,13 +65,42 @@ export class AccessManager {
      * @param roles Array of role keys
      */
     async setRoles(email, roles) {
-        const key = email.toLowerCase();
-        await updateDoc(doc(this.db, this.collectionPath, key), { roles: roles });
+        const [primaryKey] = getEmailLookupKeys(email);
+        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
+            roles,
+            displayEmail: getNormalizedEmailDisplay(email)
+        }, { merge: true });
     }
 
     async isEmailAllowed(email) {
-        const key = email.toLowerCase();
-        const snap = await getDoc(doc(this.db, this.collectionPath, key));
-        return snap.exists();
+        const keys = getEmailLookupKeys(email);
+        for (const key of keys) {
+            const snap = await getDoc(doc(this.db, this.collectionPath, key));
+            if (snap.exists()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    async syncEmployeeLink(email, employee = null) {
+        const [primaryKey] = getEmailLookupKeys(email);
+        const payload = {
+            displayEmail: getNormalizedEmailDisplay(email)
+        };
+
+        if (employee?.id) {
+            payload.linkedEmployeeId = employee.id;
+            payload.linkedEmployeeName = employee.name || '';
+            payload.linkedEmployeeEmail = getNormalizedEmailDisplay(employee.email || email);
+            payload.linkedEmployeeArchived = Boolean(employee.isArchived);
+        } else {
+            payload.linkedEmployeeId = deleteField();
+            payload.linkedEmployeeName = deleteField();
+            payload.linkedEmployeeEmail = deleteField();
+            payload.linkedEmployeeArchived = deleteField();
+        }
+
+        await setDoc(doc(this.db, this.collectionPath, primaryKey), payload, { merge: true });
     }
 } 
