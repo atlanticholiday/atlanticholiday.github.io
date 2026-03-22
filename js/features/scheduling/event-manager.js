@@ -420,6 +420,14 @@ export class EventManager {
             });
         }
 
+        const timesheetEmployeeSelect = document.getElementById('timesheet-employee-select');
+        if (timesheetEmployeeSelect) {
+            timesheetEmployeeSelect.addEventListener('change', (e) => {
+                this.uiManager.currentTimesheetEmployeeId = e.target.value || null;
+                this.uiManager.renderWeeklyTimesheet(this.uiManager.currentTimesheetDate || new Date());
+            });
+        }
+
         // Export Stats CSV Listener (delegated)
         document.addEventListener('click', (e) => {
             if (e.target.closest('#export-stats-csv-btn')) {
