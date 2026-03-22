@@ -148,6 +148,20 @@ function syncAccessModeUi() {
     }
 }
 
+function routeCurrentUserAccess() {
+    if (!navigationManager || !dataManager) return;
+
+    if (dataManager.isClockOnlyUser()) {
+        navigationManager.showTimeClockPage();
+        timeClockAutoOpenedForUser = true;
+        return;
+    }
+
+    if (!navigationManager.getCurrentPage() || navigationManager.getCurrentPage() === 'login') {
+        navigationManager.showLandingPage();
+    }
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -428,6 +442,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 navigationManager.showLandingPage();
                 setupApp();
+                syncAccessModeUi();
+                routeCurrentUserAccess();
 
                 // OPTIMIZATION: Run migration AFTER properties have loaded to avoid duplicate reads
                 console.log(`⏰ [OPTIMIZATION] Scheduling migration check after properties load...`);
@@ -448,6 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 timeClockAutoOpenedForUser = false;
                 dataManager?.clearCurrentUserContext?.();
                 dataManager?.stopRealtimeListeners?.();
+                dataManager?.resetSessionState?.();
                 navigationManager.showLoginPage();
                 if (unsubscribe) unsubscribe();
                 if (propertiesManager) {

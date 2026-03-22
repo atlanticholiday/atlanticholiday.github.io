@@ -67,6 +67,17 @@ export class DataManager {
         this.setCurrentUserContext();
     }
 
+    resetSessionState() {
+        this.activeEmployees = [];
+        this.archivedEmployees = [];
+        this.attendanceRecords = {};
+        this.dailyNotes = {};
+        this.shiftPresets = [];
+        this.minStaffThreshold = 0;
+        this.selectedDateKey = null;
+        this.notifyDataChange();
+    }
+
     initializeHolidays() {
         const currentYear = new Date().getFullYear();
         this.preloadHolidaysAroundYear(currentYear);
