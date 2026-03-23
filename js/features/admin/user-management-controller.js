@@ -1,11 +1,13 @@
 import { buildEmployeeAccessOverview } from './access-linking.js';
 import { canonicalizeEmail } from '../../shared/email.js';
+import { TIME_CLOCK_STATION_ROLE } from '../../shared/access-roles.js';
 
 const PRESET_ROLES = [
     { key: 'admin', title: 'Administrator' },
     { key: 'manager', title: 'Manager' },
     { key: 'supervisor', title: 'Supervisor' },
-    { key: 'employee', title: 'Employee' }
+    { key: 'employee', title: 'Employee' },
+    { key: TIME_CLOCK_STATION_ROLE, title: 'Time Clock Station' }
 ];
 
 const TEST_USER_PASSWORD = 'Test1234!';
@@ -165,6 +167,7 @@ export class UserManagementController {
             'missing-email': 'bg-amber-100 text-amber-800',
             'missing-access': 'bg-rose-100 text-rose-800',
             'clock-only': 'bg-sky-100 text-sky-800',
+            'station': 'bg-violet-100 text-violet-800',
             'privileged': 'bg-emerald-100 text-emerald-800'
         };
 

@@ -1,10 +1,11 @@
 import { canonicalizeEmail, getNormalizedEmailDisplay } from '../../shared/email.js';
+import { PRIVILEGED_ROLE_KEYS, hasTimeClockStationRole } from '../../shared/access-roles.js';
 
 function normalizeName(value) {
     return typeof value === 'string' ? value.trim() : '';
 }
 
-export function buildEmployeeAccessOverview(employees = [], users = [], privilegedRoles = ['admin', 'manager', 'supervisor']) {
+export function buildEmployeeAccessOverview(employees = [], users = [], privilegedRoles = PRIVILEGED_ROLE_KEYS) {
     const privilegedRoleSet = new Set(privilegedRoles);
     const usersByEmail = new Map(
         users
@@ -18,6 +19,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
             const displayEmail = getNormalizedEmailDisplay(employee?.email);
             const matchedUser = email ? usersByEmail.get(email) : null;
             const roles = Array.isArray(matchedUser?.roles) ? matchedUser.roles : [];
+            const station = hasTimeClockStationRole(roles);
             const privileged = roles.some((role) => privilegedRoleSet.has(role));
 
             if (!email) {
@@ -43,6 +45,19 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     status: 'missing-access',
                     label: 'No app access',
                     helpText: 'Create access for this email in User Management.'
+                };
+            }
+
+            if (station) {
+                return {
+                    employeeId: employee?.id || null,
+                    employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
+                    email,
+                    displayEmail,
+                    roles,
+                    status: 'station',
+                    label: 'Shared station',
+                    helpText: 'This login opens the shared tablet picker so any colleague can clock in or out.'
                 };
             }
 
