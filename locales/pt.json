@@ -104,14 +104,42 @@
     },
     "schedule": {
         "title": "Horário de Trabalho",
-        "subtitle": "Calculadora de Horários",
+        "subtitle": "Calendário da equipa, escala e planeamento de férias",
         "loading": "A carregar o seu horário...",
+        "navigation": {
+            "subtitle": "Escolha uma vista de planeamento ou abra uma vista de referência.",
+            "planning": "Planeamento",
+            "reference": "Referência"
+        },
+        "workspace": {
+            "heading": "Espaço de planeamento",
+            "title": "Mantenha cobertura, férias e escala na mesma vista.",
+            "lead": "Use as vistas de planeamento para decisões do dia a dia e as vistas de referência para revisão anual e contexto local de feriados.",
+            "currentView": "Vista atual",
+            "period": "Período",
+            "activeColleagues": "Colegas ativos",
+            "upcomingVacations": "Férias próximas",
+            "awayToday": "Ausentes hoje",
+            "coverageTarget": "Meta de cobertura",
+            "notSet": "Não definido",
+            "clearDay": "Sem conflitos"
+        },
         "views": {
             "monthly": "Mensal",
             "yearly": "Anual",
+            "vacationBoard": "Painel de Férias",
             "madeiraHolidays": "Feriados da Madeira",
             "stats": "Estatísticas",
             "vacationPlanner": "Planeador de Férias"
+        },
+        "viewDescriptions": {
+            "monthly": "Veja a cobertura dia a dia, detete ausências rapidamente e abra qualquer data para ajustes.",
+            "monthlyShort": "Cobertura imediata",
+            "yearly": "Reveja totais mensais de dias trabalhados, férias, ausências e horas extra.",
+            "vacationBoard": "Partilhe um mapa de ausências em modo só de leitura por colega, mês e departamento antes de marcar novas férias.",
+            "vacation": "Reveja férias próximas, marque intervalos e alinhe a equipa antes de aprovar ausências.",
+            "stats": "Confirme saldos de férias e totais anuais antes de exportar dados para payroll ou planeamento.",
+            "madeiraHolidays": "Consulte feriados locais e eventos importantes da ilha ao planear a cobertura."
         },
         "legend": {
             "working": "A Trabalhar",
@@ -137,7 +165,8 @@
             "vacation": "Férias",
             "off": "Folga",
             "absent": "Ausente",
-            "extraHours": "Horas Extra"
+            "extraHours": "Horas Extra",
+            "total": "Total"
         },
         "modals": {
             "dayDetails": "Detalhes do Dia",
@@ -173,8 +202,50 @@
             "endDate": "Data de Fim",
             "confirmDelete": "Tem a certeza que pretende eliminar estas férias?",
             "selectDatesError": "Por favor selecione um colega e as datas.",
+            "invalidRangeError": "Por favor selecione um intervalo de datas válido.",
             "saveFailed": "Falha ao guardar férias.",
-            "deleteFailed": "Falha ao eliminar férias."
+            "deleteFailed": "Falha ao eliminar férias.",
+            "noUpcoming": "Ainda não existem férias futuras planeadas.",
+            "durationSingle": "1 dia",
+            "durationPlural": "{{count}} dias"
+        },
+        "board": {
+            "title": "Painel de Férias da Equipa",
+            "subtitle": "Mapa de ausências em modo apenas leitura para planear em conjunto antes de marcar novas férias.",
+            "readOnly": "Painel só de leitura",
+            "navigationSubtitle": "Este painel partilhado é só de leitura. Use filtros e a mudança de ano para se organizar com a equipa.",
+            "accessBannerKicker": "Acesso partilhado a férias",
+            "accessBannerTitle": "Está a ver o painel de férias em modo só de leitura.",
+            "accessBannerBody": "As marcações e alterações do horário continuam reservadas a gestores. Use os filtros e a linha temporal anual para ver quando a equipa está ausente antes de pedir as suas férias.",
+            "searchLabel": "Pesquisar",
+            "searchPlaceholder": "Pesquisar colega ou departamento",
+            "departmentLabel": "Departamento",
+            "allDepartments": "Todos os departamentos",
+            "unassignedDepartment": "Sem departamento",
+            "clearFilters": "Limpar filtros",
+            "colleagueColumn": "Colega",
+            "daysBooked": "dias marcados",
+            "awayTodayBadge": "Ausente hoje",
+            "availableBadge": "Disponível",
+            "emptyTitle": "Ainda não há férias com estes filtros",
+            "emptyBody": "Experimente outra pesquisa ou departamento, ou mude de ano para rever outros planos de férias.",
+            "summaryLabel": "Resumo",
+            "summaryAwayToday": "Ausentes hoje",
+            "summaryPlanned": "Colegas com férias",
+            "summaryPeakMonth": "Mês de maior saída",
+            "summaryNextDeparture": "Próxima saída",
+            "summaryYourDepartment": "O seu departamento",
+            "noPeakMonth": "Sem pico ainda",
+            "noNextDeparture": "Sem férias futuras",
+            "upcomingLabel": "Próximas",
+            "upcomingTitle": "Próximas férias",
+            "readOnlyNote": "Este painel mantém-se em modo só de leitura para que os colegas se possam organizar sem alterar o horário.",
+            "noUpcoming": "Não há férias futuras nesta vista.",
+            "youBadge": "Você",
+            "timeClockCta": "Abrir painel de férias",
+            "timeClockHint": "Consulte as férias da equipa antes de planear as suas.",
+            "previousYear": "Ano anterior",
+            "nextYear": "Próximo ano"
         },
         "madeira": {
             "title": "Calendário da Madeira",
@@ -185,7 +256,11 @@
             "officialDesc": "Nestes dias, todos os colegas são automaticamente marcados como não trabalhando",
             "regional": "Regional",
             "autoManagement": "Gestão Automática de Feriados:",
-            "autoManagementDesc": "Nestes dias, todos os colegas são automaticamente marcados como não trabalhando. Pode substituir manualmente colegas individuais se necessário."
+            "autoManagementDesc": "Nestes dias, todos os colegas são automaticamente marcados como não trabalhando. Pode substituir manualmente colegas individuais se necessário.",
+            "eventsTitle": "Eventos culturais e festivais",
+            "eventsSubtitle": "Celebrações principais ao longo do ano que podem afetar trânsito, procura ou cobertura.",
+            "eventsNoteLabel": "Nota:",
+            "eventsNoteText": "Estes eventos são culturais e não feriados oficiais. Os colegas podem continuar escalados se não ajustar a cobertura manualmente."
         },
         "stats": {
             "title": "Estatísticas da Equipa",
@@ -194,7 +269,11 @@
             "totalWorkingDays": "Total Dias Trabalhados",
             "totalVacationDays": "Total Dias de Férias",
             "totalAbsentDays": "Total Dias Ausente",
-            "totalExtraHours": "Total Horas Extra"
+            "totalExtraHours": "Total Horas Extra",
+            "exportCsv": "Exportar CSV",
+            "vacationUsed": "Férias usadas",
+            "vacationBalance": "Saldo de férias",
+            "balanceAlerts": "Alertas de saldo"
         }
     },
     "staff": {

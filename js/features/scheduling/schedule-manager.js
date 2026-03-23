@@ -1,4 +1,5 @@
 import { i18n, t } from '../../core/i18n.js';
+import { SCHEDULE_VIEWS } from './schedule-view-config.js';
 
 export class ScheduleManager {
     constructor(dataManager, uiManager) {
@@ -30,9 +31,8 @@ export class ScheduleManager {
         if (bookVacationSave) bookVacationSave.addEventListener('click', () => this.handleBookVacation());
 
         // View Toggles
-        const views = ['monthly', 'yearly', 'madeira-holidays', 'stats', 'vacation'];
-        views.forEach(view => {
-            const btn = document.getElementById(`${view}-view-btn`);
+        SCHEDULE_VIEWS.forEach(({ id, view }) => {
+            const btn = document.getElementById(id);
             if (btn) {
                 // Clone to remove old listeners
                 const newBtn = btn.cloneNode(true);
@@ -73,6 +73,7 @@ export class ScheduleManager {
 
         // 3. Prepare Calendar Events
         const employees = this.dataManager.getActiveEmployees();
+        const vacationEntries = this.dataManager.getSharedVacationEntries();
         const events = [];
         const employeeColors = {};
 
@@ -86,18 +87,23 @@ export class ScheduleManager {
 
         employees.forEach(emp => {
             employeeColors[emp.id] = getEmployeeColor(emp.name);
-            (emp.vacations || []).forEach((vac, idx) => {
-                const endPlusOne = new Date(vac.endDate);
-                endPlusOne.setDate(endPlusOne.getDate() + 1);
-                events.push({
-                    title: emp.name,
-                    start: vac.startDate,
-                    end: endPlusOne.toISOString().split('T')[0],
-                    allDay: true,
-                    backgroundColor: employeeColors[emp.id],
-                    borderColor: 'transparent',
-                    extendedProps: { employeeId: emp.id, vacationIndex: idx }
-                });
+        });
+
+        vacationEntries.forEach((vacation) => {
+            const endPlusOne = new Date(vacation.endDate);
+            endPlusOne.setDate(endPlusOne.getDate() + 1);
+            events.push({
+                title: vacation.employeeName,
+                start: vacation.startDate,
+                end: endPlusOne.toISOString().split('T')[0],
+                allDay: true,
+                backgroundColor: employeeColors[vacation.employeeId],
+                borderColor: 'transparent',
+                extendedProps: {
+                    employeeId: vacation.employeeId,
+                    vacationId: vacation.id,
+                    endDate: vacation.endDate
+                }
             });
         });
 
@@ -117,17 +123,13 @@ export class ScheduleManager {
                     this.openBookVacationModal(info.startStr, info.endStr ? new Date(new Date(info.endStr).setDate(new Date(info.endStr).getDate() - 1)).toISOString().split('T')[0] : info.startStr);
                 },
                 eventClick: (info) => {
-                    const { employeeId, vacationIndex } = info.event.extendedProps;
-
-                    // Adjust end date back by 1 day because FullCalendar is exclusive on end dates for allDay events
-                    const endDate = new Date(info.event.end);
-                    endDate.setDate(endDate.getDate() - 1);
+                    const { employeeId, vacationId, endDate } = info.event.extendedProps;
 
                     this.openBookVacationModal(
                         info.event.startStr,
-                        endDate.toISOString().split('T')[0],
+                        endDate,
                         employeeId,
-                        vacationIndex
+                        vacationId
                     );
                 },
                 height: 'auto'
@@ -137,10 +139,68 @@ export class ScheduleManager {
 
         // 5. Render Simple List View (Optional but helpful)
         const listView = document.getElementById('vacation-list-view');
-        // Sort all vacations by start date logic could go here
+        if (listView) {
+            const todayKey = this.getLocalDateKey(new Date());
+            const upcomingVacations = vacationEntries
+                .map((vacation) => ({
+                    ...vacation,
+                    employeeColor: employeeColors[vacation.employeeId]
+                }))
+                .filter((vacation) => vacation.endDate >= todayKey)
+                .sort((left, right) => left.startDate.localeCompare(right.startDate));
+
+            if (!upcomingVacations.length) {
+                listView.innerHTML = `
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                        ${t('schedule.vacation.noUpcoming')}
+                    </div>
+                `;
+            } else {
+                listView.innerHTML = upcomingVacations.map((vacation) => `
+                    <button
+                        type="button"
+                        class="w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md"
+                        data-open-vacation
+                        data-employee-id="${vacation.employeeId}"
+                        data-vacation-id="${vacation.id}">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-3">
+                                    <span class="h-3 w-3 shrink-0 rounded-full" style="background-color: ${vacation.employeeColor};"></span>
+                                    <span class="truncate text-base font-semibold text-slate-900">${vacation.employeeName}</span>
+                                </div>
+                                <p class="mt-2 text-sm text-slate-600">${this.formatVacationRange(vacation.startDate, vacation.endDate)}</p>
+                            </div>
+                            <span class="inline-flex shrink-0 items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                                ${this.getVacationDurationLabel(vacation.startDate, vacation.endDate)}
+                            </span>
+                        </div>
+                    </button>
+                `).join('');
+
+                listView.querySelectorAll('[data-open-vacation]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const employeeId = button.dataset.employeeId;
+                        const vacationId = button.dataset.vacationId;
+                        const vacation = this.dataManager.getVacationRecordById(vacationId, { includeArchived: false });
+
+                        if (!employeeId || !vacation) {
+                            return;
+                        }
+
+                        this.openBookVacationModal(
+                            vacation.startDate,
+                            vacation.endDate,
+                            employeeId,
+                            vacationId
+                        );
+                    });
+                });
+            }
+        }
     }
 
-    openBookVacationModal(startDateStr = '', endDateStr = '', employeeId = null, vacationIndex = null) {
+    openBookVacationModal(startDateStr = '', endDateStr = '', employeeId = null, vacationId = null) {
         const modal = document.getElementById('book-vacation-modal');
         const select = document.getElementById('vacation-employee-select');
         const startInput = document.getElementById('vacation-start-date');
@@ -159,22 +219,22 @@ export class ScheduleManager {
         // Reset state
         modal.dataset.editing = 'false';
         delete modal.dataset.employeeId;
-        delete modal.dataset.vacationIndex;
+        delete modal.dataset.vacationId;
         select.disabled = false;
-        saveBtn.textContent = 'Schedule Vacation';
+        saveBtn.textContent = t('schedule.vacation.scheduleBtn');
         if (deleteBtn) deleteBtn.classList.add('hidden');
-        if (title) title.textContent = 'Book Vacation';
+        if (title) title.textContent = t('schedule.vacation.bookTitle');
 
         // Edit Mode
-        if (employeeId && vacationIndex !== null && vacationIndex !== undefined) {
+        if (employeeId && vacationId) {
             modal.dataset.editing = 'true';
             modal.dataset.employeeId = employeeId;
-            modal.dataset.vacationIndex = vacationIndex;
+            modal.dataset.vacationId = vacationId;
             select.value = employeeId;
             select.disabled = true; // Don't switch employee when editing specific vacation
-            saveBtn.textContent = 'Update Vacation';
+            saveBtn.textContent = t('schedule.vacation.updateBtn');
             if (deleteBtn) deleteBtn.classList.remove('hidden');
-            if (title) title.textContent = 'Edit Vacation';
+            if (title) title.textContent = t('schedule.vacation.editTitle');
         }
 
         modal.classList.remove('hidden');
@@ -188,16 +248,16 @@ export class ScheduleManager {
         const endDate = document.getElementById('vacation-end-date').value;
 
         if (!employeeId || !startDate || !endDate) {
-            alert("Please select a colleague and dates.");
+            alert(t('schedule.vacation.selectDatesError'));
             return;
         }
 
         try {
             if (modal.dataset.editing === 'true') {
                 const originalEmployeeId = modal.dataset.employeeId;
-                const vacationIndex = parseInt(modal.dataset.vacationIndex);
+                const vacationId = modal.dataset.vacationId;
                 // In case for some reason select value is different (though disabled), use original
-                await this.dataManager.handleUpdateVacation(originalEmployeeId, vacationIndex, startDate, endDate);
+                await this.dataManager.handleUpdateVacation(originalEmployeeId, vacationId, startDate, endDate);
             } else {
                 await this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
             }
@@ -209,7 +269,7 @@ export class ScheduleManager {
             }
         } catch (e) {
             console.error(e);
-            alert("Failed to save vacation.");
+            alert(t('schedule.vacation.saveFailed'));
         }
     }
 
@@ -218,17 +278,50 @@ export class ScheduleManager {
         if (modal.dataset.editing !== 'true') return;
 
         const employeeId = modal.dataset.employeeId;
-        const vacationIndex = parseInt(modal.dataset.vacationIndex);
+        const vacationId = modal.dataset.vacationId;
 
-        if (confirm("Are you sure you want to delete this vacation?")) {
+        if (confirm(t('schedule.vacation.confirmDelete'))) {
             try {
-                await this.dataManager.handleDeleteVacation(employeeId, vacationIndex);
+                await this.dataManager.handleDeleteVacation(employeeId, vacationId);
                 modal.classList.add('hidden');
                 this.renderVacationPlanner();
             } catch (e) {
                 console.error(e);
-                alert("Failed to delete vacation.");
+                alert(t('schedule.vacation.deleteFailed'));
             }
         }
+    }
+
+    formatVacationRange(startDate, endDate) {
+        const locale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
+        const dateFormat = new Intl.DateTimeFormat(locale, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        return `${dateFormat.format(new Date(startDate))} - ${dateFormat.format(new Date(endDate))}`;
+    }
+
+    getVacationDurationLabel(startDate, endDate) {
+        const duration = this.getInclusiveDayCount(startDate, endDate);
+        if (duration === 1) {
+            return t('schedule.vacation.durationSingle');
+        }
+
+        return t('schedule.vacation.durationPlural', { count: duration });
+    }
+
+    getInclusiveDayCount(startDate, endDate) {
+        const start = new Date(`${startDate}T00:00:00`);
+        const end = new Date(`${endDate}T00:00:00`);
+        return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+    }
+
+    getLocalDateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 }

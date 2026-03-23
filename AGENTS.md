@@ -79,8 +79,19 @@ Pattern:
 - Employee self-service attendance now also relies on the `allowedEmails` document storing `linkedEmployeeId`/`linkedEmployeeName`/`linkedEmployeeEmail`; this is synced from User Management so time-clock punch actions can still resolve the colleague when the full `employees` list is unavailable in that session.
 - Digital clock-in/out now lives in the scheduling feature: attendance calculations are in `js/features/scheduling/attendance-records.js`, Firestore attendance orchestration is in `js/features/scheduling/data-manager.js`, and the employee/manager UI is rendered from `js/features/scheduling/ui-manager.js` into `#time-clock-page-content`.
 - Clock-only employee mode is derived from a Firebase Auth email matching an active employee `email` field, unless the user has a privileged role such as `admin`, `manager`, or `supervisor`.
+- Pattern: shared-tablet time clock mode now lives in the same `#time-clock-page` render path; kiosk filtering/initials helpers are in `js/features/scheduling/time-clock-station.js`, and the dedicated tablet login role key is `time-clock-station`.
+- Pattern: schedule view button metadata now lives in `js/features/scheduling/schedule-view-config.js`; reuse that registry when adding or removing schedule tabs so `ScheduleManager` and `UIManager` stay aligned.
+- Pattern: active schedule page rendering now routes through `js/features/scheduling/views/`; keep monthly, yearly, Madeira reference, stats, and shell summary changes in those modules instead of growing `ui-manager.js` further.
+- Pattern: shared vacation storage now lives in `vacation_records` as well as legacy `employee.vacations`; normalization and merge helpers are in `js/features/scheduling/vacation-records.js`, and `DataManager` now backfills missing records plus exposes `getSharedVacationEntries()` for future colleague-facing vacation views.
+- Pattern: the read-only vacation board now lives in `js/features/scheduling/views/vacation-board-view.js` with pure board shaping in `js/features/scheduling/views/vacation-board-view-model.js`; keep new board filters, summary metrics, and month slicing in the model so they stay testable.
+- Pattern: linked employee users can now reach the shared vacation board from the time clock via `openSharedVacationBoardRequested`; `DataManager.canAccessVacationBoard()` / `isVacationBoardOnlyUser()` gate that path, and board-only users are forced into the `vacation-board` schedule view.
 - User Management now exposes an `#access-link-overview` panel showing whether each active colleague is missing an email, missing app access, clock-only, or privileged; keep that in sync when changing login/role behavior.
 - Fix: `summarizeAttendanceRecord()` must tolerate `null` records because first-time employee sessions render the time clock before any attendance document exists; regression coverage is in `tests/unit/features/scheduling/attendance-records.test.js`.
+- Fix: vacation booking/edit/delete now flows through `js/features/scheduling/schedule-manager.js` and the modal-based planner; avoid reintroducing legacy inline vacation handlers in `event-manager.js`.
+- Fix: the vacation planner now edits by stable vacation record id instead of employee vacation array index, so calendar/list clicks stay aligned once vacations come from the shared record layer.
+- Gotcha: the new vacation board is read-only inside the schedule workspace only; clock-only users are still routed to `#time-clock-page`, so broader colleague access needs separate navigation/access work.
+- Gotcha: the schedule back button is wired in both `navigation-manager.js` and `js/app/main.js`; keep their `data-target-page="timeClock"` behavior aligned or board-only users will bounce back to landing.
+- Pattern: the schedule shell now relies on `#schedule-shell-summary`, `#view-header-kicker`, and `#view-header-context`; if the schedule layout changes, keep those IDs wired so `UIManager.updateView()` can refresh the current workspace summary and view copy.
 - Pattern: automatic lunch deduction is computed in `summarizeAttendanceRecord()` for closed single-block days with one `clockIn`, one `clockOut`, no break punches, and at least 6 worked hours; keep printouts and self-service history aligned with that shared summary output.
 
 Test:
@@ -88,7 +99,13 @@ Test:
 - Shared scheduling behavior now has browser-suite coverage in `tests/unit/features/scheduling/`.
 - Shared/core utilities are covered under `tests/unit/shared/` and `tests/unit/core/`.
 - User-management rendering and admin actions are covered in `tests/unit/features/admin/user-management-controller.test.js`.
+- Test: access gating for the shared vacation board now lives in `tests/unit/shared/access-roles.test.js`; if employee/station role behavior changes, rerun `C:\Program Files\nodejs\node.exe tests/run-headless.mjs`.
 - Digital attendance flows are covered in `tests/unit/features/scheduling/attendance-records.test.js`; after clock changes, run `C:\Program Files\nodejs\node.exe tests/run-headless.mjs` and manually verify clock-in, break start/end, clock-out, and a manager-side manual adjustment on `#time-clock-page`.
+- Test: the read-only vacation board state is covered in `tests/unit/features/scheduling/vacation-board-view-model.test.js`; after board changes, run `C:\Program Files\nodejs\node.exe tests/run-headless.mjs` and manually verify year switching, search, and department filtering on the schedule page.
+- Test: shared vacation normalization and merge coverage now lives in `tests/unit/features/scheduling/vacation-records.test.js`; run `C:\Program Files\nodejs\node.exe tests/run-headless.mjs` after changing vacation storage or planner wiring.
+- Test: for the shared tablet kiosk, sign in with a `time-clock-station` account or use the manager station-mode toggle on `#time-clock-page`, search/select a colleague, save clock-in/break/clock-out actions, and confirm the screen returns to the colleague picker after a successful punch.
+- Test: on `#app-content`, switch between the Planning and Reference schedule tab groups, open Vacation Planner, and confirm upcoming vacation cards open the booking modal for the correct colleague/date range.
+- Test: after schedule shell changes, verify Monthly shows the desktop grid plus mobile cards correctly, Yearly and Stats use the extracted views, and the Madeira reference tabs switch without duplicating click handlers.
 
 ## Suggested Update Format
 

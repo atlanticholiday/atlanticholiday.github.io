@@ -187,8 +187,8 @@
                         </svg>
                     </div>
                     <div class="card-body">
-                        <h3>Work Schedule</h3>
-                        <p>Plan staff schedules and holidays.</p>
+                        <h3 id="go-to-schedule-title">Work Schedule</h3>
+                        <p id="go-to-schedule-description">Plan staff schedules and holidays.</p>
                     </div>
                 </button>
 
@@ -454,7 +454,7 @@
             </div>
             <div class="bg-white rounded-xl shadow-md p-6 mb-6 modal-content">
                 <h2 class="text-xl font-semibold text-gray-900 mb-2">Colleague Access Links</h2>
-                <p class="text-sm text-gray-600 mb-4">This shows whether each staff profile is linked to a login, and whether that login is clock-only or privileged.</p>
+                <p class="text-sm text-gray-600 mb-4">This shows whether each staff profile is linked to a login, and whether that login is clock-only, shared-station, or privileged.</p>
                 <div id="access-link-overview" class="space-y-3"></div>
                 <div class="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700">
                     Password flow: create access with a temporary password, set the same email on the colleague record, then use <strong>Reset Password</strong> so the colleague chooses their own password by email.
@@ -487,6 +487,7 @@
                         <option value="manager">manager</option>
                         <option value="supervisor">supervisor</option>
                         <option value="employee">employee</option>
+                        <option value="time-clock-station">time-clock-station</option>
                     </select>
                     <select id="new-role-title" class="flex-1 p-3 border rounded-md focus-ring transition-all bg-white">
                         <option value="">Choose role title</option>
@@ -494,6 +495,7 @@
                         <option value="Manager">Manager</option>
                         <option value="Supervisor">Supervisor</option>
                         <option value="Employee">Employee</option>
+                        <option value="Time Clock Station">Time Clock Station</option>
                     </select>
                     <button id="add-role-btn" class="btn-primary px-4 py-2 rounded-md transition-all hover-lift">Add
                         Role</button>
@@ -1010,7 +1012,7 @@ Mountain Villa, Sintra Hills, V4"
         </div>
     </div>
 
-    <div id="app-content" class="hidden min-h-screen bg-gray-50">
+    <div id="app-content" class="hidden min-h-screen bg-slate-50">
         <header class="dashboard-header">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
                 <div class="header-left">
@@ -1027,7 +1029,7 @@ Mountain Villa, Sintra Hills, V4"
                         class="dashboard-logo dashboard-logo--xl" />
                     <div class="leading-tight">
                         <div class="header-title brand-red" data-i18n="schedule.title">Work Schedule</div>
-                        <div class="header-sub" data-i18n="schedule.subtitle">Work Schedule Calculator</div>
+                        <div class="header-sub" data-i18n="schedule.subtitle">Team calendar, staffing and vacation planning</div>
                     </div>
                 </div>
                 <div class="header-right flex items-center gap-3">
@@ -1063,48 +1065,80 @@ Mountain Villa, Sintra Hills, V4"
         </div>
 
         <div id="main-app" class="hidden fade-in-up">
-            <!-- View Toggles (Segmented Control) -->
-            <div class="mb-8 flex justify-center">
-                <div class="inline-flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-                    <button id="monthly-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
-                        data-i18n="schedule.views.monthly">Monthly</button>
-                    <button id="yearly-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                        data-i18n="schedule.views.yearly">Yearly</button>
-                    <button id="madeira-holidays-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                        data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
-                    <button id="stats-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                        data-i18n="schedule.views.stats">Stats</button>
-                    <button id="vacation-view-btn"
-                        class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                        data-i18n="schedule.views.vacationPlanner">Vacation Planner</button>
-                </div>
-            </div>
+            <div class="container mx-auto max-w-7xl px-4 py-8 lg:py-10">
+                <div class="space-y-8">
+                    <div id="schedule-access-banner" class="hidden"></div>
+                    <section
+                        class="overflow-hidden rounded-[34px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1)_0%,rgba(248,250,252,1)_52%,rgba(238,242,255,1)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+                        <div class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:px-8 lg:py-8">
+                            <div class="max-w-3xl">
+                                <div class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500"
+                                    data-i18n="schedule.workspace.heading">Planning workspace</div>
+                                <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 lg:text-4xl"
+                                    data-i18n="schedule.workspace.title">Keep coverage, leave, and staffing in one view.</h2>
+                                <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600"
+                                    data-i18n="schedule.workspace.lead">Use the planning views for day-to-day decisions and the reference views for yearly review and local holiday context.</p>
+                            </div>
+                            <div id="schedule-shell-summary"
+                                class="rounded-[28px] border border-white/60 bg-white/70 p-5 shadow-sm backdrop-blur"></div>
+                        </div>
+                    </section>
 
-            <!-- Main Grid Layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div class="space-y-3">
+                        <p id="schedule-navigation-subtitle" class="text-center text-sm text-slate-500" data-i18n="schedule.navigation.subtitle">Choose a planning view or open a reference view.</p>
+                        <div class="flex flex-col items-center gap-3 xl:flex-row xl:justify-center xl:items-stretch">
+                            <div id="schedule-planning-group" class="w-full max-w-3xl rounded-[28px] border border-slate-200 bg-white/90 p-2 shadow-sm">
+                                <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                    data-i18n="schedule.navigation.planning">Planning</div>
+                                <div class="flex flex-wrap gap-1">
+                                    <button id="monthly-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
+                                        data-i18n="schedule.views.monthly">Monthly</button>
+                                    <button id="yearly-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                        data-i18n="schedule.views.yearly">Yearly</button>
+                                    <button id="vacation-board-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                        data-i18n="schedule.views.vacationBoard">Vacation Board</button>
+                                    <button id="vacation-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                        data-i18n="schedule.views.vacationPlanner">Vacation Planner</button>
+                                </div>
+                            </div>
+                            <div id="schedule-reference-group" class="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white/90 p-2 shadow-sm">
+                                <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                    data-i18n="schedule.navigation.reference">Reference</div>
+                                <div class="flex flex-wrap gap-1">
+                                    <button id="stats-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                        data-i18n="schedule.views.stats">Stats</button>
+                                    <button id="madeira-holidays-view-btn"
+                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                        data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- Main Content Area (Full Width) -->
-                <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-md modal-content">
+                    <section class="overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                     <div id="add-colleague-section" class="hidden">
                         <!-- Removed inline form, moved to modal -->
                     </div>
-                    <!-- Main Content Area -->
-                    <div>
-                        <div id="calendar-controls" class="flex justify-center items-center gap-8 mb-6 relative">
+                    <div class="px-5 py-6 lg:px-6 lg:py-7">
+                        <div id="calendar-controls" class="relative mb-6 flex flex-wrap items-center justify-center gap-4 rounded-[28px] border border-slate-200 bg-slate-50/80 px-5 py-5">
                             <button id="prev-btn"
-                                class="p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift">
+                                class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 19l-7-7 7-7" />
                                 </svg>
                             </button>
-                            <div class="text-center">
-                                <h2 id="view-header" class="text-2xl font-semibold text-gradient"></h2>
+                            <div class="max-w-2xl text-center">
+                                <div id="view-header-kicker"
+                                    class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"></div>
+                                <h2 id="view-header" class="mt-2 text-3xl font-semibold tracking-tight text-slate-950"></h2>
+                                <p id="view-header-context" class="mt-2 text-sm leading-6 text-slate-500"></p>
                                 <div class="flex items-center justify-center gap-4 mt-2 text-sm">
                                     <div class="flex items-center gap-2">
                                         <div class="w-3 h-3 bg-green-600 rounded-full"></div>
@@ -1121,7 +1155,7 @@ Mountain Villa, Sintra Hills, V4"
                                 </div>
                             </div>
                             <button id="next-btn"
-                                class="p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift">
+                                class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1129,7 +1163,7 @@ Mountain Villa, Sintra Hills, V4"
                                 </svg>
                             </button>
                             <button id="print-weekly-btn"
-                                class="absolute right-0 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
+                                class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900"
                                 title="Print Weekly Roster">
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1137,7 +1171,7 @@ Mountain Villa, Sintra Hills, V4"
                                 </svg>
                             </button>
                             <button id="print-timesheet-btn"
-                                class="absolute right-14 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
+                                class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900"
                                 title="Print Weekly Time Sheet"
                                 data-i18n-title="schedule.actions.printTimesheet">
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1147,7 +1181,7 @@ Mountain Villa, Sintra Hills, V4"
                             </button>
 
                             <button id="pdf-download-btn"
-                                class="hidden ml-4 p-3 rounded-full hover:bg-gray-200 transition-colors hover-lift"
+                                class="hidden inline-flex items-center justify-center rounded-full bg-slate-950 p-3 text-white shadow-sm transition-colors hover:bg-slate-800"
                                 title="Download Monthly Team Report PDF">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
@@ -1157,15 +1191,16 @@ Mountain Villa, Sintra Hills, V4"
                             </button>
 
                         </div>
-                        <div id="calendar-grid" class="hidden grid-cols-7 gap-3"></div>
-                        <div id="calendar-mobile-cards" class="hidden space-y-3"></div>
+                        <div id="calendar-grid" class="hidden md:grid grid-cols-7 gap-3"></div>
+                        <div id="calendar-mobile-cards" class="hidden space-y-3 md:hidden"></div>
                         <div id="yearly-summary-container" class="hidden"></div>
+                        <div id="vacation-board-container" class="hidden"></div>
                         <div id="madeira-holidays-container" class="hidden"></div>
                         <div id="vacation-planner-container" class="hidden"></div>
 
                         <div id="stats-container" class="hidden"></div>
                     </div>
-                </div>
+                    </section>
             </div>
         </div>
     </div>

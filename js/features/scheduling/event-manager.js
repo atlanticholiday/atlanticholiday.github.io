@@ -155,59 +155,57 @@ export class EventManager {
             this.saveEmployeeChanges();
         });
 
-        document.getElementById('vacation-planner-container').addEventListener('click', e => {
-            const editBtn = e.target.closest('.edit-vacation-btn');
-            const scheduleBtn = e.target.closest('.schedule-vacation-btn');
-            const deleteBtn = e.target.closest('.delete-vacation-btn');
-            // Handle edit click: populate inputs and switch button to update mode
-            if (editBtn) {
-                const employeeId = editBtn.dataset.employeeId;
-                const vacationIndex = parseInt(editBtn.dataset.vacationIndex);
-                const emp = this.dataManager.getActiveEmployees().find(emp => emp.id === employeeId);
-                if (!emp) return;
-                const vac = emp.vacations[vacationIndex];
-                document.getElementById(`vacation-start-${employeeId}`).value = vac.startDate;
-                document.getElementById(`vacation-end-${employeeId}`).value = vac.endDate;
-                const btn = document.querySelector(`.schedule-vacation-btn[data-employee-id="${employeeId}"]`);
-                btn.textContent = 'Update';
-                btn.dataset.editIndex = vacationIndex;
-                return;
-            }
-            if (scheduleBtn) {
-                const employeeId = scheduleBtn.dataset.employeeId;
-                const startDate = document.getElementById(`vacation-start-${employeeId}`).value;
-                const endDate = document.getElementById(`vacation-end-${employeeId}`).value;
-                if (scheduleBtn.dataset.editIndex !== undefined) {
-                    const vacIndex = parseInt(scheduleBtn.dataset.editIndex);
-                    this.dataManager.handleUpdateVacation(employeeId, vacIndex, startDate, endDate);
-                    delete scheduleBtn.dataset.editIndex;
-                    scheduleBtn.textContent = 'Schedule';
-                } else {
-                    this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
-                }
-            } else if (deleteBtn) {
-                const { employeeId, vacationIndex } = deleteBtn.dataset;
-                this.uiManager.showConfirmationModal('Delete Vacation', 'Are you sure you want to delete this vacation?', () => {
-                    this.dataManager.handleDeleteVacation(employeeId, parseInt(vacationIndex));
-                });
-            }
-        });
-
         const timeClockContent = document.getElementById('time-clock-page-content');
         if (timeClockContent) {
             timeClockContent.addEventListener('click', async (e) => {
+                const modeButton = e.target.closest('[data-time-clock-mode]');
+                if (modeButton) {
+                    this.uiManager.setTimeClockMode(modeButton.dataset.timeClockMode);
+                    return;
+                }
+
+                const colleagueButton = e.target.closest('[data-time-clock-station-employee-id]');
+                if (colleagueButton) {
+                    this.uiManager.selectTimeClockStationEmployee(colleagueButton.dataset.timeClockStationEmployeeId);
+                    return;
+                }
+
+                const clearSelectionButton = e.target.closest('[data-time-clock-station-clear-selection]');
+                if (clearSelectionButton) {
+                    this.uiManager.clearTimeClockStationSelection();
+                    return;
+                }
+
+                const openSharedVacationBoardButton = e.target.closest('[data-open-shared-vacation-board]');
+                if (openSharedVacationBoardButton) {
+                    document.dispatchEvent(new CustomEvent('openSharedVacationBoardRequested'));
+                    return;
+                }
+
                 const feedback = document.getElementById('time-clock-feedback');
                 const actionButton = e.target.closest('[data-time-clock-action]');
                 if (actionButton) {
                     if (feedback) feedback.textContent = '';
                     try {
-                        await this.dataManager.recordCurrentUserAttendance(actionButton.dataset.timeClockAction);
-                        const refreshedFeedback = document.getElementById('time-clock-feedback');
-                        if (refreshedFeedback) {
-                            refreshedFeedback.textContent = `${actionButton.textContent.trim()} saved.`;
+                        const selectedEmployeeId = actionButton.dataset.timeClockEmployeeId;
+                        if (selectedEmployeeId) {
+                            await this.dataManager.recordAttendanceForEmployee(
+                                selectedEmployeeId,
+                                actionButton.dataset.timeClockAction,
+                                { source: 'station' }
+                            );
+                            this.uiManager.handleTimeClockStationAttendanceSaved(selectedEmployeeId, actionButton.textContent.trim());
+                        } else {
+                            await this.dataManager.recordCurrentUserAttendance(actionButton.dataset.timeClockAction);
+                            const refreshedFeedback = document.getElementById('time-clock-feedback');
+                            if (refreshedFeedback) {
+                                refreshedFeedback.textContent = `${actionButton.textContent.trim()} saved.`;
+                            }
                         }
                     } catch (error) {
-                        if (feedback) {
+                        if (actionButton.dataset.timeClockEmployeeId) {
+                            this.uiManager.setTimeClockStationFeedback(error.message || 'Failed to save attendance.', 'error');
+                        } else if (feedback) {
                             feedback.textContent = error.message || 'Failed to save attendance.';
                         }
                     }
@@ -234,6 +232,12 @@ export class EventManager {
                     return;
                 }
 
+            });
+
+            timeClockContent.addEventListener('input', (e) => {
+                if (e.target.id === 'time-clock-station-search') {
+                    this.uiManager.setTimeClockStationSearch(e.target.value);
+                }
             });
 
             timeClockContent.addEventListener('submit', async (e) => {

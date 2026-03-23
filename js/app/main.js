@@ -173,9 +173,13 @@ function syncAccessModeUi() {
 
     const employee = dataManager.getCurrentUserEmployee();
     const clockOnlyMode = dataManager.isClockOnlyUser();
+    const stationMode = dataManager.isTimeClockStationUser();
+    const boardOnlyMode = dataManager.isVacationBoardOnlyUser();
+    const canAccessVacationBoard = dataManager.canAccessVacationBoard();
+    const limitedTimeClockMode = clockOnlyMode || stationMode;
     const landingPage = document.getElementById('landing-page');
     if (landingPage) {
-        landingPage.dataset.accessMode = clockOnlyMode ? 'clock-only' : 'manager';
+        landingPage.dataset.accessMode = stationMode ? 'station' : (clockOnlyMode ? 'clock-only' : 'manager');
     }
 
     const dashboardButtons = [
@@ -197,38 +201,66 @@ function syncAccessModeUi() {
     dashboardButtons.forEach((buttonId) => {
         const button = document.getElementById(buttonId);
         if (button) {
-            button.classList.toggle('hidden', clockOnlyMode);
+            const shouldHide = buttonId === 'go-to-schedule-btn'
+                ? (stationMode || (!canAccessVacationBoard && limitedTimeClockMode))
+                : limitedTimeClockMode;
+            button.classList.toggle('hidden', shouldHide);
         }
     });
+
+    const scheduleButton = document.getElementById('go-to-schedule-btn');
+    const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
+    const scheduleButtonDescription = document.getElementById('go-to-schedule-description');
+    if (scheduleButtonTitle) {
+        scheduleButtonTitle.textContent = boardOnlyMode ? 'Vacation Board' : 'Work Schedule';
+    }
+    if (scheduleButtonDescription) {
+        scheduleButtonDescription.textContent = boardOnlyMode
+            ? 'Check team vacations in a read-only board.'
+            : 'Plan staff schedules and holidays.';
+    }
+    if (scheduleButton) {
+        scheduleButton.dataset.accessMode = boardOnlyMode ? 'vacation-board' : 'full';
+    }
 
     const moreToolsToggle = document.getElementById('toggle-more-tools-btn');
     const moreToolsSection = document.getElementById('more-tools-section');
     if (moreToolsToggle) {
-        moreToolsToggle.classList.toggle('hidden', clockOnlyMode);
+        moreToolsToggle.classList.toggle('hidden', limitedTimeClockMode);
     }
-    if (moreToolsSection && clockOnlyMode) {
+    if (moreToolsSection && limitedTimeClockMode) {
         moreToolsSection.classList.add('hidden');
     }
 
     const heroTitle = document.getElementById('landing-hero-title') || document.querySelector('#landing-page .hero-title');
     const heroSubtitle = document.getElementById('landing-hero-subtitle') || document.querySelector('#landing-page .hero-subtitle');
     if (heroTitle) {
-        heroTitle.textContent = clockOnlyMode
+        heroTitle.textContent = stationMode
+            ? 'Shared time clock station'
+            : clockOnlyMode
             ? (employee ? `${employee.name}, clock in for your shift` : 'Clock in and out for your shift')
             : 'Welcome to your operations hub';
     }
     if (heroSubtitle) {
-        heroSubtitle.textContent = clockOnlyMode
-            ? 'Use the digital time clock to record shifts, breaks, and clock-out times.'
+        heroSubtitle.textContent = stationMode
+            ? 'Use the shared tablet picker to select any colleague and record shifts, breaks, and clock-out times.'
+            : clockOnlyMode
+            ? 'Use the digital time clock to record shifts, breaks, and check the team vacation board before planning leave.'
             : 'Manage properties, schedules, safety and more, all in one beautiful place.';
     }
 
     const timeClockBackButton = document.getElementById('back-to-landing-from-time-clock-btn');
     if (timeClockBackButton) {
-        timeClockBackButton.classList.toggle('hidden', clockOnlyMode);
+        timeClockBackButton.classList.toggle('hidden', limitedTimeClockMode);
     }
 
-    if (clockOnlyMode && navigationManager && !timeClockAutoOpenedForUser) {
+    const scheduleBackButton = document.getElementById('back-to-landing-from-schedule-btn');
+    if (scheduleBackButton) {
+        scheduleBackButton.dataset.targetPage = boardOnlyMode ? 'timeClock' : 'landing';
+        scheduleBackButton.title = boardOnlyMode ? 'Back to time clock' : 'Back to landing';
+    }
+
+    if (limitedTimeClockMode && navigationManager && !timeClockAutoOpenedForUser) {
         navigationManager.showTimeClockPage();
         timeClockAutoOpenedForUser = true;
     }
@@ -237,7 +269,7 @@ function syncAccessModeUi() {
 function routeCurrentUserAccess() {
     if (!navigationManager || !dataManager) return;
 
-    if (dataManager.isClockOnlyUser()) {
+    if (dataManager.isClockOnlyUser() || dataManager.isTimeClockStationUser()) {
         navigationManager.showTimeClockPage();
         timeClockAutoOpenedForUser = true;
         return;
@@ -687,6 +719,12 @@ function setupGlobalEventListeners() {
 
     if (backToLandingFromScheduleBtn) {
         backToLandingFromScheduleBtn.addEventListener('click', () => {
+            if (backToLandingFromScheduleBtn.dataset.targetPage === 'timeClock') {
+                navigationManager.showTimeClockPage();
+                document.dispatchEvent(new CustomEvent('timeClockPageOpened'));
+                return;
+            }
+
             navigationManager.showLandingPage();
         });
     }
@@ -709,6 +747,9 @@ function setupGlobalEventListeners() {
     document.addEventListener('schedulePageOpened', () => {
         console.log('Schedule page opened, initializing...');
         setTimeout(() => {
+            if (dataManager?.isVacationBoardOnlyUser?.()) {
+                dataManager.setCurrentView('vacation-board');
+            }
             // OPTIMIZATION: Only initialize if we don't already have employee data
             console.log('📅 [SCHEDULE PAGE] Checking if initialization needed...');
             if (!dataManager.activeEmployees || dataManager.activeEmployees.length === 0) {
@@ -745,6 +786,16 @@ function setupGlobalEventListeners() {
         setTimeout(() => {
             uiManager?.renderTimeClockPage?.();
         }, 50);
+    });
+
+    document.addEventListener('openSharedVacationBoardRequested', () => {
+        if (!dataManager?.canAccessVacationBoard?.()) {
+            return;
+        }
+
+        dataManager.setCurrentView('vacation-board');
+        navigationManager.showSchedulePage();
+        document.dispatchEvent(new CustomEvent('schedulePageOpened'));
     });
 
     document.addEventListener('reservationsPageOpened', () => {
@@ -789,6 +840,7 @@ async function setupApp() {
         });
 
         dataManager.listenForEmployeeChanges();
+        dataManager.listenForVacationRecordChanges();
         dataManager.listenForDailyNotes();
         dataManager.listenForShiftPresets();
         dataManager.listenForGlobalSettings();
@@ -844,6 +896,7 @@ async function initializeScheduleApp() {
             if (!dataManager.unsubscribe) {
                 console.log('🔄 [OPTIMIZATION] Starting employee listener for first time');
                 dataManager.listenForEmployeeChanges();
+                dataManager.listenForVacationRecordChanges();
                 dataManager.listenForDailyNotes();
                 dataManager.listenForShiftPresets();
                 dataManager.listenForGlobalSettings();

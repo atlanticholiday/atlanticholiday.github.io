@@ -1,6 +1,14 @@
 import { Config } from '../../core/config.js';
 import { i18n, t } from '../../core/i18n.js';
 import { formatLocalDateTime, formatTimeLabel } from './attendance-records.js';
+import { SCHEDULE_VIEWS } from './schedule-view-config.js';
+import { filterTimeClockStationEmployees, getTimeClockStationEmployeeInitials } from './time-clock-station.js';
+import { renderMadeiraReferenceView } from './views/madeira-reference-view.js';
+import { renderMonthlyCalendarMobileCards, renderMonthlyCalendarView } from './views/monthly-schedule-view.js';
+import { renderVacationBoardView } from './views/vacation-board-view.js';
+import { getScheduleViewMeta, renderScheduleAccessBanner, renderScheduleWorkspaceSummary } from './views/schedule-shell-view.js';
+import { renderStatsScheduleView } from './views/stats-schedule-view.js';
+import { renderYearlySummaryView } from './views/yearly-schedule-view.js';
 
 export class UIManager {
     constructor(dataManager, pdfGenerator) {
@@ -9,6 +17,16 @@ export class UIManager {
         this.isStaffMode = false; // Staff read-only mode
         this.liveClockTimer = null;
         this.currentTimesheetEmployeeId = null;
+        this.timeClockStationPreviewEnabled = false;
+        this.timeClockStationEmployeeId = null;
+        this.timeClockStationSearch = '';
+        this.timeClockStationFeedback = '';
+        this.timeClockStationFeedbackTone = 'success';
+        this.timeClockStationResetTimer = null;
+        this.vacationBoardFilters = {
+            search: '',
+            department: 'all'
+        };
 
         this.dataManager.subscribeToDataChanges(() => {
             this.updateView();
@@ -609,7 +627,8 @@ export class UIManager {
 
         this.renderEmployeeList();
 
-        const monthName = this.dataManager.getCurrentDate().toLocaleString('default', { month: 'long' });
+        const displayLocale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
+        const monthName = this.dataManager.getCurrentDate().toLocaleString(displayLocale, { month: 'long' });
 
         const viewHeader = document.getElementById('view-header');
         const summaryTitle = document.getElementById('summary-title');
@@ -663,7 +682,7 @@ export class UIManager {
 
         if (currentView === 'monthly') {
             viewHeader.textContent = `${monthName} ${year}`;
-            if (summaryTitle) summaryTitle.textContent = "Monthly Summary";
+            if (summaryTitle) summaryTitle.textContent = t('schedule.summary.monthly');
             mainViews.calendar.classList.remove('hidden');
             mainViews.calendar.classList.add('md:grid');
             mainViews.calendarMobile.classList.remove('hidden');
@@ -671,29 +690,33 @@ export class UIManager {
             this.renderCalendarGrid();
         } else if (currentView === 'yearly') {
             viewHeader.textContent = year;
-            if (summaryTitle) summaryTitle.textContent = "Yearly Summary";
+            if (summaryTitle) summaryTitle.textContent = t('schedule.summary.yearly');
             mainViews.yearly.classList.remove('hidden');
             this.renderYearlySummary();
         } else if (currentView === 'madeira-holidays') {
-            viewHeader.textContent = "Madeira Holidays";
-            if (summaryTitle) summaryTitle.textContent = "Holiday List";
+            viewHeader.textContent = t('schedule.views.madeiraHolidays');
+            if (summaryTitle) summaryTitle.textContent = t('schedule.navigation.reference');
             mainViews.madeiraHolidays.classList.remove('hidden');
             this.renderMadeiraHolidays();
         } else if (currentView === 'vacation') {
-            if (summaryTitle) summaryTitle.textContent = "Vacation Summary";
+            if (summaryTitle) summaryTitle.textContent = t('schedule.vacation.title');
             mainViews.vacation.classList.remove('hidden');
             if (window.scheduleManager) {
                 window.scheduleManager.renderVacationPlanner();
             }
         } else if (currentView === 'stats') {
-            viewHeader.textContent = "Team Statistics";
-            if (summaryTitle) summaryTitle.textContent = "Statistics";
+            viewHeader.textContent = t('schedule.stats.title');
+            if (summaryTitle) summaryTitle.textContent = t('schedule.stats.title');
             mainViews.stats.classList.remove('hidden');
             this.renderStats();
         }
     }
 
     switchView(view) {
+        if (this.isVacationBoardOnlyMode()) {
+            view = 'vacation-board';
+        }
+
         const currentView = this.dataManager.getCurrentView();
         const currentDate = this.dataManager.getCurrentDate();
 
@@ -704,33 +727,7 @@ export class UIManager {
         }
 
         this.dataManager.setCurrentView(view);
-
-        // Update button styles
-        const buttons = [
-            { id: 'monthly-view-btn', view: 'monthly' },
-            { id: 'yearly-view-btn', view: 'yearly' },
-            { id: 'madeira-holidays-view-btn', view: 'madeira-holidays' },
-            { id: 'stats-view-btn', view: 'stats' },
-            { id: 'vacation-view-btn', view: 'vacation' },
-            { id: 'reorder-view-btn', view: 'reorder' },
-            { id: 'history-view-btn', view: 'history' }
-        ];
-
-        buttons.forEach(btn => {
-            const el = document.getElementById(btn.id);
-            if (el) {
-                if (btn.view === view) {
-                    // Active state
-                    el.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
-                    el.classList.remove('text-gray-600', 'hover:text-gray-900');
-                } else {
-                    // Inactive state
-                    el.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
-                    el.classList.add('text-gray-600', 'hover:text-gray-900');
-                }
-            }
-        });
-
+        this.syncScheduleNavigationState(view);
         this.updateView();
     }
 
@@ -1061,9 +1058,447 @@ export class UIManager {
         };
     }
 
+    isTimeClockStationMode() {
+        if (this.dataManager.isTimeClockStationUser()) {
+            return true;
+        }
+
+        return this.timeClockStationPreviewEnabled && this.dataManager.hasPrivilegedRole();
+    }
+
+    canToggleTimeClockStationMode() {
+        return this.dataManager.hasPrivilegedRole() && !this.dataManager.isTimeClockStationUser();
+    }
+
+    clearTimeClockStationResetTimer() {
+        if (this.timeClockStationResetTimer) {
+            clearTimeout(this.timeClockStationResetTimer);
+            this.timeClockStationResetTimer = null;
+        }
+    }
+
+    resetTimeClockStationState({ clearSearch = false, clearFeedback = true } = {}) {
+        this.clearTimeClockStationResetTimer();
+        this.timeClockStationEmployeeId = null;
+        if (clearSearch) {
+            this.timeClockStationSearch = '';
+        }
+        if (clearFeedback) {
+            this.timeClockStationFeedback = '';
+            this.timeClockStationFeedbackTone = 'success';
+        }
+    }
+
+    setTimeClockMode(mode) {
+        if (mode === 'station') {
+            if (!this.dataManager.hasPrivilegedRole()) {
+                return;
+            }
+
+            this.timeClockStationPreviewEnabled = true;
+            this.resetTimeClockStationState({ clearSearch: false });
+            this.renderTimeClockPage();
+            return;
+        }
+
+        if (mode === 'self-service' && this.canToggleTimeClockStationMode()) {
+            this.timeClockStationPreviewEnabled = false;
+            this.resetTimeClockStationState({ clearSearch: false });
+            this.renderTimeClockPage();
+        }
+    }
+
+    setTimeClockStationSearch(query = '') {
+        this.timeClockStationSearch = typeof query === 'string' ? query : '';
+        this.renderTimeClockPage();
+
+        requestAnimationFrame(() => {
+            const searchInput = document.getElementById('time-clock-station-search');
+            if (!searchInput) return;
+            searchInput.focus();
+            const cursorPosition = searchInput.value.length;
+            if (typeof searchInput.setSelectionRange === 'function') {
+                searchInput.setSelectionRange(cursorPosition, cursorPosition);
+            }
+        });
+    }
+
+    selectTimeClockStationEmployee(employeeId) {
+        if (!employeeId) {
+            return;
+        }
+
+        this.clearTimeClockStationResetTimer();
+        this.timeClockStationEmployeeId = employeeId;
+        this.timeClockStationFeedback = '';
+        this.timeClockStationFeedbackTone = 'success';
+        this.renderTimeClockPage();
+    }
+
+    clearTimeClockStationSelection() {
+        this.resetTimeClockStationState({ clearSearch: false });
+        this.renderTimeClockPage();
+    }
+
+    setTimeClockStationFeedback(message = '', tone = 'success') {
+        this.clearTimeClockStationResetTimer();
+        this.timeClockStationFeedback = message;
+        this.timeClockStationFeedbackTone = tone === 'error' ? 'error' : 'success';
+        this.renderTimeClockPage();
+    }
+
+    handleTimeClockStationAttendanceSaved(employeeId, actionLabel) {
+        const employee = this.dataManager.resolveAttendanceEmployee(employeeId);
+        const employeeName = employee?.name || 'selected colleague';
+        this.timeClockStationFeedback = `${actionLabel} saved for ${employeeName}. Returning to the colleague list...`;
+        this.timeClockStationFeedbackTone = 'success';
+        this.renderTimeClockPage();
+        this.scheduleTimeClockStationReset();
+    }
+
+    scheduleTimeClockStationReset(delayMs = 2500) {
+        this.clearTimeClockStationResetTimer();
+        this.timeClockStationResetTimer = setTimeout(() => {
+            this.resetTimeClockStationState({ clearSearch: true });
+            this.renderTimeClockPage();
+        }, delayMs);
+    }
+
+    getTimeClockModeToggleMarkup(activeMode = 'self-service') {
+        if (this.canToggleTimeClockStationMode()) {
+            return `
+                <div class="inline-flex items-center rounded-full bg-white/10 border border-white/10 p-1">
+                    <button
+                        type="button"
+                        data-time-clock-mode="self-service"
+                        class="px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeMode === 'self-service' ? 'bg-white text-slate-900' : 'text-slate-200 hover:text-white'}">
+                        Self-service
+                    </button>
+                    <button
+                        type="button"
+                        data-time-clock-mode="station"
+                        class="px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeMode === 'station' ? 'bg-white text-slate-900' : 'text-slate-200 hover:text-white'}">
+                        Station mode
+                    </button>
+                </div>
+            `;
+        }
+
+        if (this.dataManager.isTimeClockStationUser()) {
+            return `
+                <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm text-slate-100">
+                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-300"></span>
+                    Shared tablet station
+                </div>
+            `;
+        }
+
+        return '';
+    }
+
+    getTimeClockStationTileStatus(summary = null) {
+        if (summary?.status === 'working') {
+            return {
+                badge: 'On shift',
+                tone: 'bg-emerald-100 text-emerald-800',
+                detail: 'Clocked in and working.'
+            };
+        }
+
+        if (summary?.status === 'on-break') {
+            return {
+                badge: 'On break',
+                tone: 'bg-amber-100 text-amber-800',
+                detail: 'Break is active right now.'
+            };
+        }
+
+        return {
+            badge: 'Ready',
+            tone: 'bg-slate-100 text-slate-700',
+            detail: 'Tap to record the next attendance action.'
+        };
+    }
+
+    renderTimeClockStationPage(container) {
+        const now = new Date();
+        const referenceDateTime = formatLocalDateTime(now);
+        const employees = this.dataManager.getActiveEmployees();
+        const filteredEmployees = filterTimeClockStationEmployees(employees, this.timeClockStationSearch);
+        const selectedEmployee = employees.find((employee) => employee.id === this.timeClockStationEmployeeId) || null;
+        if (this.timeClockStationEmployeeId && !selectedEmployee) {
+            this.resetTimeClockStationState({ clearSearch: false });
+        }
+
+        const modeToggle = this.getTimeClockModeToggleMarkup('station');
+
+        if (!selectedEmployee) {
+            const employeeDirectoryMarkup = filteredEmployees.length
+                ? filteredEmployees.map((employee) => {
+                    const summary = this.dataManager.getAttendanceSummary(employee.id, now, { referenceDateTime });
+                    const statusCopy = this.getTimeClockStationTileStatus(summary);
+                    const staffMeta = [
+                        employee.staffNumber ? `Staff #${employee.staffNumber}` : null,
+                        employee.shifts?.default || null
+                    ].filter(Boolean).join(' / ');
+
+                    return `
+                        <button
+                            type="button"
+                            data-time-clock-station-employee-id="${employee.id}"
+                            class="group rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-400">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-lg font-semibold text-white">
+                                    ${getTimeClockStationEmployeeInitials(employee.name)}
+                                </div>
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusCopy.tone}">
+                                    ${statusCopy.badge}
+                                </span>
+                            </div>
+                            <div class="mt-8">
+                                <div class="text-2xl font-semibold tracking-tight text-slate-900">${employee.name}</div>
+                                <div class="mt-2 text-sm text-slate-500">${staffMeta || 'Active colleague'}</div>
+                                <div class="mt-4 text-sm text-slate-600">${statusCopy.detail}</div>
+                            </div>
+                            <div class="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-slate-400">
+                                <span>${this.formatAttendanceEventLabel(summary?.primaryAction || 'clockIn')}</span>
+                                <span>${this.formatMinutesAsDuration(summary?.workedMinutes || 0)}</span>
+                            </div>
+                        </button>
+                    `;
+                }).join('')
+                : `
+                    <div class="rounded-[28px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-12 text-center text-slate-500">
+                        No colleagues matched that search. Try a different name or staff number.
+                    </div>
+                `;
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <section class="rounded-[36px] bg-[linear-gradient(135deg,#020617_0%,#0f172a_46%,#1e293b_100%)] text-white p-8 lg:p-10 shadow-xl overflow-hidden relative">
+                        <div class="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_58%)] pointer-events-none"></div>
+                        <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+                            <div class="max-w-3xl">
+                                <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100">
+                                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-300"></span>
+                                    Station mode
+                                </div>
+                                <div class="mt-6 text-xs uppercase tracking-[0.28em] text-slate-300">Digital Time Clock</div>
+                                <h2 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Tap your name to continue</h2>
+                                <p class="mt-4 max-w-2xl text-lg text-slate-300">
+                                    Use the shared tablet to find a colleague, open the action panel, and save the next clock event in one tap.
+                                </p>
+                                <div class="mt-6">${modeToggle}</div>
+                            </div>
+                            <div class="rounded-[32px] border border-white/10 bg-white/8 px-6 py-5 backdrop-blur-sm">
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Current time</div>
+                                <div id="time-clock-current-time" class="mt-3 text-5xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                                <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                        <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Directory</div>
+                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Find colleague</h3>
+                            <p class="mt-2 text-sm text-slate-500">Search by name, staff number, department, or position. Only active colleagues appear in the shared station.</p>
+                            <label class="mt-6 block">
+                                <span class="sr-only">Search colleague</span>
+                                <input
+                                    id="time-clock-station-search"
+                                    type="search"
+                                    value="${this.timeClockStationSearch}"
+                                    placeholder="Search name or staff #"
+                                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none">
+                            </label>
+                            <div class="mt-5 rounded-2xl bg-slate-900 px-4 py-4 text-white">
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Visible now</div>
+                                <div class="mt-2 text-4xl font-semibold tracking-tight">${filteredEmployees.length}</div>
+                                <div class="mt-1 text-sm text-slate-300">of ${employees.length} active colleagues</div>
+                            </div>
+                            <div class="mt-5 space-y-3 text-sm text-slate-600">
+                                <div class="flex items-center justify-between">
+                                    <span>On shift</span>
+                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Working</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>On break</span>
+                                    <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Paused</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>Ready</span>
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Clock event</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Colleagues</div>
+                                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Choose your user</h3>
+                                </div>
+                                <div class="text-sm text-slate-500">${filteredEmployees.length} shown</div>
+                            </div>
+                            <div class="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                                ${employeeDirectoryMarkup}
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const todaySummary = this.dataManager.getAttendanceSummary(selectedEmployee.id, now, { referenceDateTime });
+        const todayRecord = this.dataManager.getAttendanceRecord(selectedEmployee.id, now);
+        const tileStatus = this.getTimeClockStationTileStatus(todaySummary);
+        const primaryAction = todaySummary?.primaryAction || 'clockIn';
+        const secondaryAction = todaySummary?.secondaryAction || null;
+        const feedbackClasses = this.timeClockStationFeedbackTone === 'error'
+            ? 'text-rose-200'
+            : 'text-emerald-200';
+        const timeline = todaySummary?.punches?.length
+            ? todaySummary.punches.map((punch) => `
+                <li class="flex items-start justify-between gap-4 border-b border-slate-200 py-3 last:border-b-0">
+                    <div>
+                        <div class="font-medium text-slate-900">${this.formatAttendanceEventLabel(punch.type)}</div>
+                        <div class="text-sm text-slate-500">${punch.note || 'Saved to the shared attendance log.'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-slate-900">${formatTimeLabel(punch.occurredAt)}</div>
+                        <div class="mt-1 text-xs uppercase tracking-wide text-slate-400">${punch.source === 'station' ? 'Station' : 'Web'}</div>
+                    </div>
+                </li>
+            `).join('')
+            : '<li class="py-6 text-sm text-slate-500">No punches recorded yet today.</li>';
+
+        container.innerHTML = `
+            <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <section class="rounded-[36px] bg-[linear-gradient(135deg,#020617_0%,#0f172a_46%,#1e293b_100%)] text-white p-8 lg:p-10 shadow-xl overflow-hidden relative">
+                    <div class="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.2),transparent_62%)] pointer-events-none"></div>
+                    <div class="relative">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <button
+                                type="button"
+                                data-time-clock-station-clear-selection
+                                class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-white/12">
+                                <span aria-hidden="true">←</span>
+                                Change colleague
+                            </button>
+                            ${modeToggle}
+                        </div>
+                        <div class="mt-8 inline-flex items-center gap-2 rounded-full border ${tileStatus.tone.replace('bg-', 'border-').replace('text-', 'text-')} bg-white/10 px-3 py-1 text-sm font-medium">
+                            <span class="inline-block h-2 w-2 rounded-full bg-current"></span>
+                            ${tileStatus.badge}
+                        </div>
+                        <div class="mt-6">
+                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300">Digital Time Clock</div>
+                            <h2 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">${selectedEmployee.name}</h2>
+                            <p class="mt-3 max-w-2xl text-lg text-slate-300">${tileStatus.detail}</p>
+                            <p class="mt-2 text-sm text-slate-400">${selectedEmployee.staffNumber ? `Staff #${selectedEmployee.staffNumber}` : 'Shared tablet session'}</p>
+                        </div>
+                        <div class="mt-10">
+                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                        </div>
+                        <div class="mt-10 grid gap-3 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                data-time-clock-action="${primaryAction}"
+                                data-time-clock-employee-id="${selectedEmployee.id}"
+                                class="rounded-[28px] bg-white px-6 py-5 text-left text-slate-900 transition-colors hover:bg-slate-100">
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Primary action</div>
+                                <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(primaryAction)}</div>
+                            </button>
+                            ${secondaryAction ? `
+                                <button
+                                    type="button"
+                                    data-time-clock-action="${secondaryAction}"
+                                    data-time-clock-employee-id="${selectedEmployee.id}"
+                                    class="rounded-[28px] border border-white/20 bg-white/8 px-6 py-5 text-left text-white transition-colors hover:bg-white/12">
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Secondary action</div>
+                                    <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(secondaryAction)}</div>
+                                </button>
+                            ` : `
+                                <div class="rounded-[28px] border border-white/12 bg-white/5 px-6 py-5 text-slate-300">
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Next step</div>
+                                    <div class="mt-2 text-2xl font-semibold">No secondary action</div>
+                                    <div class="mt-2 text-sm text-slate-400">Use the main button to record the next punch.</div>
+                                </div>
+                            `}
+                        </div>
+                        <p id="time-clock-feedback" class="mt-5 min-h-6 text-sm ${feedbackClasses}">
+                            ${this.timeClockStationFeedback || 'Use one action only once. After a successful save, the station returns to the colleague list automatically.'}
+                        </p>
+                    </div>
+                </section>
+
+                <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Today</div>
+                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Live summary</h3>
+                    <div class="mt-6 grid grid-cols-2 gap-3">
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="text-sm text-slate-500">Worked</div>
+                            <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.workedMinutes || 0)}</div>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="text-sm text-slate-500">Breaks</div>
+                            <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.breakMinutes || 0)}</div>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="text-sm text-slate-500">First in</div>
+                            <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.firstClockIn)}</div>
+                        </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="text-sm text-slate-500">Last out</div>
+                            <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.lastClockOut)}</div>
+                        </div>
+                    </div>
+                    ${(todaySummary?.activeSessionStartedAt || todaySummary?.activeBreakStartedAt) ? `
+                        <div class="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? 'Current break' : 'Current shift block'}</div>
+                            <div class="mt-1 text-3xl font-semibold text-emerald-900" data-live-duration-start="${todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt}">
+                                ${this.formatMinutesAsDuration(this.getMinutesBetween(todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt, referenceDateTime))}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="mt-5 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                            No active shift block is open right now.
+                        </div>
+                    `}
+                    <div class="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                        Single-block days of 06:00 or longer still auto-deduct 01:00 for lunch when no break punches are recorded.
+                    </div>
+                </section>
+
+                <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Today&apos;s log</div>
+                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Punch timeline</h3>
+                        </div>
+                        ${todayRecord?.review?.status === 'needs-attention' ? '<span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Needs review</span>' : ''}
+                    </div>
+                    <ul class="mt-6">${timeline}</ul>
+                </section>
+            </div>
+        `;
+    }
+
     renderTimeClockPage() {
         const container = document.getElementById('time-clock-page-content');
         if (!container) return;
+
+        if (this.isTimeClockStationMode()) {
+            this.renderTimeClockStationPage(container);
+            return;
+        }
+        this.renderSelfServiceTimeClockPage(container);
+    }
+
+    renderSelfServiceTimeClockPage(container) {
 
         const now = new Date();
         const referenceDateTime = formatLocalDateTime(now);
@@ -1080,6 +1515,7 @@ export class UIManager {
         const reviewQueue = this.dataManager.getAttendanceReviewQueue({ referenceDateTime }).slice(0, 6);
         const canManageAttendance = !this.dataManager.isClockOnlyUser();
         const isClockOnlyUser = this.dataManager.isClockOnlyUser();
+        const canOpenVacationBoard = this.dataManager.canAccessVacationBoard();
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
         const secondaryAction = todaySummary?.secondaryAction || null;
         const shouldShowSecondaryAction = Boolean(
@@ -1280,6 +1716,14 @@ export class UIManager {
                             <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                             <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
+                        ${canOpenVacationBoard ? `
+                            <div class="mt-8 flex flex-wrap items-center gap-3">
+                                <button type="button" data-open-shared-vacation-board class="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/16">
+                                    ${t('schedule.board.timeClockCta')}
+                                </button>
+                                <p class="text-sm text-slate-300">${t('schedule.board.timeClockHint')}</p>
+                            </div>
+                        ` : ''}
                         ${employee ? `
                             <div class="mt-10 flex flex-wrap gap-3">
                                 <button data-time-clock-action="${primaryAction}" class="rounded-full bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors">
@@ -1757,6 +2201,187 @@ export class UIManager {
                 </div>
             </div>
         `;
+    }
+
+    renderCalendarGrid() {
+        renderMonthlyCalendarView(this);
+    }
+
+    renderCalendarMobileCards() {
+        renderMonthlyCalendarMobileCards(this);
+    }
+
+    renderYearlySummary() {
+        renderYearlySummaryView(this);
+    }
+
+    renderMadeiraHolidays() {
+        renderMadeiraReferenceView();
+    }
+
+    renderVacationBoard() {
+        renderVacationBoardView(this);
+    }
+
+    isVacationBoardOnlyMode() {
+        return this.dataManager.isVacationBoardOnlyUser();
+    }
+
+    syncScheduleNavigationState(activeView) {
+        const limitedBoardMode = this.isVacationBoardOnlyMode();
+        const buttons = [
+            ...SCHEDULE_VIEWS,
+            { id: 'reorder-view-btn', view: 'reorder' },
+            { id: 'history-view-btn', view: 'history' }
+        ];
+
+        buttons.forEach((buttonConfig) => {
+            const element = document.getElementById(buttonConfig.id);
+            if (!element) {
+                return;
+            }
+
+            const shouldHide = limitedBoardMode && buttonConfig.view !== 'vacation-board';
+            element.classList.toggle('hidden', shouldHide);
+
+            if (buttonConfig.view === activeView) {
+                element.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
+                element.classList.remove('text-gray-600', 'hover:text-gray-900');
+            } else {
+                element.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
+                element.classList.add('text-gray-600', 'hover:text-gray-900');
+            }
+        });
+
+        const referenceGroup = document.getElementById('schedule-reference-group');
+        referenceGroup?.classList.toggle('hidden', limitedBoardMode);
+
+        const navigationSubtitle = document.getElementById('schedule-navigation-subtitle');
+        if (navigationSubtitle) {
+            navigationSubtitle.textContent = limitedBoardMode
+                ? t('schedule.board.navigationSubtitle')
+                : t('schedule.navigation.subtitle');
+        }
+
+        const helpButton = document.getElementById('schedule-help-btn');
+        helpButton?.classList.toggle('hidden', limitedBoardMode);
+    }
+
+    updateView() {
+        const limitedBoardMode = this.isVacationBoardOnlyMode();
+        const currentView = limitedBoardMode ? 'vacation-board' : this.dataManager.getCurrentView();
+        const currentDate = this.dataManager.getCurrentDate();
+        const displayLocale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
+        const viewMeta = getScheduleViewMeta(currentView);
+
+        if (limitedBoardMode && this.dataManager.getCurrentView() !== 'vacation-board') {
+            this.dataManager.setCurrentView('vacation-board');
+        }
+
+        this.dataManager.ensureHolidaysForYear(currentDate.getFullYear());
+        this.dataManager.ensureHolidaysForYear(currentDate.getFullYear() - 1);
+        this.dataManager.ensureHolidaysForYear(currentDate.getFullYear() + 1);
+        this.renderEmployeeList();
+        renderScheduleWorkspaceSummary(this.dataManager);
+        renderScheduleAccessBanner(this.dataManager);
+        this.syncScheduleNavigationState(currentView);
+
+        const viewHeader = document.getElementById('view-header');
+        const viewHeaderKicker = document.getElementById('view-header-kicker');
+        const viewHeaderContext = document.getElementById('view-header-context');
+        const calendarControls = document.getElementById('calendar-controls');
+        const pdfDownloadButton = document.getElementById('pdf-download-btn');
+
+        if (viewHeaderKicker) {
+            viewHeaderKicker.textContent = t(viewMeta.titleKey);
+        }
+        if (viewHeaderContext) {
+            viewHeaderContext.textContent = t(viewMeta.descriptionKey);
+        }
+
+        const mainViews = {
+            calendar: document.getElementById('calendar-grid'),
+            calendarMobile: document.getElementById('calendar-mobile-cards'),
+            yearly: document.getElementById('yearly-summary-container'),
+            vacationBoard: document.getElementById('vacation-board-container'),
+            madeiraHolidays: document.getElementById('madeira-holidays-container'),
+            stats: document.getElementById('stats-container'),
+            vacation: document.getElementById('vacation-planner-container')
+        };
+
+        Object.values(mainViews).forEach((element) => {
+            element?.classList.add('hidden');
+        });
+        mainViews.calendar?.classList.remove('md:grid');
+
+        const addColleagueSection = document.getElementById('add-colleague-section');
+        if (addColleagueSection) {
+            addColleagueSection.style.display = 'none';
+        }
+
+        const showCalendarControls = ['monthly', 'yearly'].includes(currentView);
+        calendarControls?.classList.toggle('hidden', !showCalendarControls);
+        pdfDownloadButton?.classList.toggle('hidden', currentView !== 'monthly');
+
+        if (currentView === 'monthly') {
+            if (viewHeader) {
+                viewHeader.textContent = new Intl.DateTimeFormat(displayLocale, {
+                    month: 'long',
+                    year: 'numeric'
+                }).format(currentDate);
+            }
+
+            mainViews.calendar?.classList.remove('hidden');
+            mainViews.calendar?.classList.add('md:grid');
+            mainViews.calendarMobile?.classList.remove('hidden');
+            this.renderCalendarGrid();
+            return;
+        }
+
+        if (currentView === 'yearly') {
+            if (viewHeader) {
+                viewHeader.textContent = new Intl.DateTimeFormat(displayLocale, {
+                    year: 'numeric'
+                }).format(currentDate);
+            }
+
+            mainViews.yearly?.classList.remove('hidden');
+            this.renderYearlySummary();
+            return;
+        }
+
+        if (currentView === 'vacation-board') {
+            if (viewHeader) {
+                viewHeader.textContent = new Intl.DateTimeFormat(displayLocale, {
+                    year: 'numeric'
+                }).format(currentDate);
+            }
+
+            mainViews.vacationBoard?.classList.remove('hidden');
+            this.renderVacationBoard();
+            return;
+        }
+
+        if (currentView === 'madeira-holidays') {
+            mainViews.madeiraHolidays?.classList.remove('hidden');
+            this.renderMadeiraHolidays();
+            return;
+        }
+
+        if (currentView === 'vacation') {
+            mainViews.vacation?.classList.remove('hidden');
+            window.scheduleManager?.renderVacationPlanner();
+            return;
+        }
+
+        if (currentView === 'stats') {
+            mainViews.stats?.classList.remove('hidden');
+            this.renderStats();
+        }
+    }
+
+    renderStats() {
+        renderStatsScheduleView(this);
     }
 
     exportStatsToCSV() {

@@ -317,6 +317,14 @@ export class NavigationManager {
 
         if (backToLandingFromScheduleBtn) {
             backToLandingFromScheduleBtn.addEventListener('click', () => {
+                const targetPage = backToLandingFromScheduleBtn.dataset.targetPage;
+                if (targetPage === 'timeClock') {
+                    this.showTimeClockPage();
+                    const event = new CustomEvent('timeClockPageOpened');
+                    document.dispatchEvent(event);
+                    return;
+                }
+
                 this.showLandingPage();
             });
         }

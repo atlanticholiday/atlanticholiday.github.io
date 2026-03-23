@@ -1,4 +1,5 @@
 import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { t } from '../../core/i18n.js';
 import { ChangeNotifier } from '../../shared/change-notifier.js';
 import {
     buildEmployeeUpdatePayload,
@@ -7,6 +8,15 @@ import {
     isDateInVacation as checkDateInVacation,
     partitionEmployeesByArchiveStatus
 } from './employee-records.js';
+import {
+    buildSharedVacationEntries,
+    createVacationRecord,
+    getVacationRecordDocId,
+    groupVacationRecordsByEmployee,
+    mergeEmployeeVacations,
+    normalizeVacationEntry,
+    toEmployeeVacationEntry
+} from './vacation-records.js';
 import {
     appendAttendanceEvent,
     createAttendanceRecord,
@@ -19,13 +29,22 @@ import {
 } from './attendance-records.js';
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
 import { canonicalizeEmail } from '../../shared/email.js';
+import {
+    canAccessSharedVacationBoard,
+    hasPrivilegedRole,
+    hasTimeClockStationRole,
+    isSharedVacationBoardOnlyUser
+} from '../../shared/access-roles.js';
 
 export class DataManager {
     constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
         this.db = db;
         this.userId = userId;
+        this.rawActiveEmployees = [];
+        this.rawArchivedEmployees = [];
         this.activeEmployees = [];
         this.archivedEmployees = [];
+        this.vacationRecords = [];
         this.holidayCalculator = holidayCalculator;
         this.changeNotifier = new ChangeNotifier();
         this.currentDate = new Date();
@@ -40,7 +59,10 @@ export class DataManager {
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
+        this.unsubscribeVacationRecords = null;
         this.attendanceRecords = {};
+        this.hasLoadedVacationRecords = false;
+        this.isSyncingLegacyVacationRecords = false;
         this.currentUserContext = {
             uid: null,
             email: null,
@@ -78,13 +100,17 @@ export class DataManager {
     }
 
     resetSessionState() {
+        this.rawActiveEmployees = [];
+        this.rawArchivedEmployees = [];
         this.activeEmployees = [];
         this.archivedEmployees = [];
+        this.vacationRecords = [];
         this.attendanceRecords = {};
         this.dailyNotes = {};
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
         this.selectedDateKey = null;
+        this.hasLoadedVacationRecords = false;
         this.notifyDataChange();
     }
 
@@ -99,6 +125,10 @@ export class DataManager {
 
     getAttendanceCollectionRef() {
         return collection(this.db, "attendance_records");
+    }
+
+    getVacationRecordsCollectionRef() {
+        return collection(this.db, "vacation_records");
     }
 
     preloadHolidaysAroundYear(year) {
@@ -142,11 +172,22 @@ export class DataManager {
             }
 
             const { activeEmployees, archivedEmployees } = partitionEmployeesByArchiveStatus(allEmployees);
-            this.activeEmployees = activeEmployees;
-            this.archivedEmployees = archivedEmployees;
-            this.preloadHolidaysAroundYear(this.currentDate.getFullYear());
-            this.notifyDataChange();
+            this.rawActiveEmployees = activeEmployees;
+            this.rawArchivedEmployees = archivedEmployees;
+            this.rebuildEmployeesFromSources();
+            this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
         }, (error) => console.error("Error listening:", error));
+    }
+
+    listenForVacationRecordChanges() {
+        this.unsubscribeVacationRecords = onSnapshot(this.getVacationRecordsCollectionRef(), (snapshot) => {
+            this.vacationRecords = snapshot.docs
+                .map((recordDoc) => normalizeVacationEntry({ id: recordDoc.id, ...recordDoc.data() }))
+                .filter(Boolean);
+            this.hasLoadedVacationRecords = true;
+            this.rebuildEmployeesFromSources();
+            this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
+        }, (error) => console.error("Error listening for vacation records:", error));
     }
 
     listenForDailyNotes() {
@@ -274,39 +315,228 @@ export class DataManager {
         return this.dailyNotes[dateKey] || '';
     }
 
-    async handleScheduleVacation(employeeId, startDate, endDate) {
-        if (!startDate || !endDate || new Date(endDate) < new Date(startDate)) {
-            alert("Please select a valid date range.");
+    rebuildEmployeesFromSources() {
+        const vacationRecordsByEmployee = groupVacationRecordsByEmployee(this.vacationRecords);
+        const mergeEmployee = (employee) => ({
+            ...employee,
+            vacations: mergeEmployeeVacations(
+                employee.vacations || [],
+                vacationRecordsByEmployee.get(employee.id) || [],
+                employee.id
+            )
+        });
+
+        this.activeEmployees = this.rawActiveEmployees.map(mergeEmployee);
+        this.archivedEmployees = this.rawArchivedEmployees.map(mergeEmployee);
+        this.preloadHolidaysAroundYear(this.currentDate.getFullYear());
+        this.notifyDataChange();
+    }
+
+    getEmployeeById(employeeId) {
+        return this.activeEmployees.find((employee) => employee.id === employeeId)
+            || this.archivedEmployees.find((employee) => employee.id === employeeId)
+            || null;
+    }
+
+    serializeEmployeeVacations(vacations = [], employeeId = null) {
+        return vacations
+            .map((vacation) => toEmployeeVacationEntry(vacation, employeeId))
+            .filter(Boolean)
+            .map((vacation) => ({
+                id: vacation.id,
+                startDate: vacation.startDate,
+                endDate: vacation.endDate
+            }));
+    }
+
+    findEmployeeVacationIndex(employee, vacationReference) {
+        if (!employee || !Array.isArray(employee.vacations) || employee.vacations.length === 0) {
+            return -1;
+        }
+
+        if (Number.isInteger(vacationReference)) {
+            return vacationReference >= 0 && vacationReference < employee.vacations.length
+                ? vacationReference
+                : -1;
+        }
+
+        const requestedId = typeof vacationReference === 'string'
+            ? vacationReference.trim()
+            : normalizeVacationEntry(vacationReference, { employeeId: employee.id })?.id;
+
+        if (requestedId) {
+            return employee.vacations.findIndex((vacation) => {
+                return toEmployeeVacationEntry(vacation, employee.id)?.id === requestedId;
+            });
+        }
+
+        return -1;
+    }
+
+    createVacationRecordPayload(vacationRecord, source = 'planner') {
+        return {
+            employeeId: vacationRecord.employeeId,
+            startDate: vacationRecord.startDate,
+            endDate: vacationRecord.endDate,
+            status: vacationRecord.status,
+            visibility: vacationRecord.visibility,
+            note: vacationRecord.note,
+            source
+        };
+    }
+
+    async syncLegacyVacationRecords() {
+        if (!this.hasLoadedVacationRecords || this.isSyncingLegacyVacationRecords) {
             return;
         }
-        const empDoc = this.activeEmployees.find(e => e.id === employeeId);
-        if (!empDoc) return;
 
-        const newVacation = { startDate, endDate };
-        const updatedVacations = [...(empDoc.vacations || []), newVacation];
+        const employees = [...this.rawActiveEmployees, ...this.rawArchivedEmployees];
+        if (!employees.length) {
+            return;
+        }
 
-        const docRef = doc(this.db, "employees", employeeId);
-        await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to schedule vacation", e));
+        const existingRecordIds = new Set(
+            this.vacationRecords
+                .map((record) => record?.id || getVacationRecordDocId(record?.employeeId, record?.startDate, record?.endDate))
+                .filter(Boolean)
+        );
+
+        const recordsToBackfill = employees.flatMap((employee) => {
+            return (employee.vacations || [])
+                .map((vacation) => createVacationRecord({
+                    employeeId: employee.id,
+                    startDate: vacation?.startDate,
+                    endDate: vacation?.endDate
+                }, { source: 'employee-doc' }))
+                .filter((record) => record && !existingRecordIds.has(record.id));
+        });
+
+        if (!recordsToBackfill.length) {
+            return;
+        }
+
+        this.isSyncingLegacyVacationRecords = true;
+
+        try {
+            await Promise.all(recordsToBackfill.map((record) => {
+                const recordRef = doc(this.db, "vacation_records", record.id);
+                return setDoc(recordRef, this.createVacationRecordPayload(record, 'employee-doc'), { merge: true });
+            }));
+        } finally {
+            this.isSyncingLegacyVacationRecords = false;
+        }
     }
 
-    async handleDeleteVacation(employeeId, vacationIndex) {
-        const empDoc = this.activeEmployees.find(e => e.id === employeeId);
+    async handleScheduleVacation(employeeId, startDate, endDate) {
+        if (!this.isValidVacationRange(startDate, endDate)) {
+            alert(t('schedule.vacation.invalidRangeError'));
+            return;
+        }
+        const empDoc = this.getEmployeeById(employeeId);
+        if (!empDoc) return;
+
+        const vacationRecord = createVacationRecord({ employeeId, startDate, endDate }, { source: 'planner' });
+        if (!vacationRecord) {
+            return;
+        }
+
+        const updatedVacations = mergeEmployeeVacations(
+            empDoc.vacations || [],
+            [vacationRecord],
+            employeeId
+        );
+
+        const employeeRef = doc(this.db, "employees", employeeId);
+        const vacationRecordRef = doc(this.db, "vacation_records", vacationRecord.id);
+        await Promise.all([
+            updateDoc(employeeRef, { vacations: this.serializeEmployeeVacations(updatedVacations, employeeId) }),
+            setDoc(vacationRecordRef, this.createVacationRecordPayload(vacationRecord), { merge: true })
+        ]).catch(e => console.error("Failed to schedule vacation", e));
+    }
+
+    async handleDeleteVacation(employeeId, vacationReference) {
+        const empDoc = this.getEmployeeById(employeeId);
         if (!empDoc || !empDoc.vacations) return;
 
+        const vacationIndex = this.findEmployeeVacationIndex(empDoc, vacationReference);
+        if (vacationIndex < 0) {
+            return;
+        }
+
+        const vacationToDelete = toEmployeeVacationEntry(empDoc.vacations[vacationIndex], employeeId);
         const updatedVacations = empDoc.vacations.filter((_, index) => index !== vacationIndex);
 
-        const docRef = doc(this.db, "employees", employeeId);
-        await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to delete vacation", e));
+        const employeeRef = doc(this.db, "employees", employeeId);
+        const writes = [
+            updateDoc(employeeRef, { vacations: this.serializeEmployeeVacations(updatedVacations, employeeId) })
+        ];
+
+        if (vacationToDelete?.id) {
+            writes.push(deleteDoc(doc(this.db, "vacation_records", vacationToDelete.id)));
+        }
+
+        await Promise.all(writes).catch(e => console.error("Failed to delete vacation", e));
     }
     // Add a method to update an existing vacation entry
-    async handleUpdateVacation(employeeId, vacationIndex, startDate, endDate) {
-        const empDoc = this.activeEmployees.find(e => e.id === employeeId);
+    async handleUpdateVacation(employeeId, vacationReference, startDate, endDate) {
+        if (!this.isValidVacationRange(startDate, endDate)) {
+            alert(t('schedule.vacation.invalidRangeError'));
+            return;
+        }
+
+        const empDoc = this.getEmployeeById(employeeId);
         if (!empDoc) return;
-        const updatedVacations = empDoc.vacations.map((vac, idx) =>
-            idx === vacationIndex ? { startDate, endDate } : vac
-        );
-        const docRef = doc(this.db, "employees", employeeId);
-        await updateDoc(docRef, { vacations: updatedVacations }).catch(e => console.error("Failed to update vacation", e));
+
+        const vacationIndex = this.findEmployeeVacationIndex(empDoc, vacationReference);
+        if (vacationIndex < 0) {
+            return;
+        }
+
+        const previousVacation = toEmployeeVacationEntry(empDoc.vacations[vacationIndex], employeeId);
+        if (!previousVacation) {
+            return;
+        }
+
+        const updatedVacation = createVacationRecord({
+            employeeId,
+            startDate,
+            endDate,
+            status: previousVacation.status,
+            note: previousVacation.note,
+            visibility: previousVacation.visibility
+        }, { source: 'planner', visibility: previousVacation.visibility || 'team' });
+
+        if (!updatedVacation) {
+            return;
+        }
+
+        const updatedVacations = empDoc.vacations.map((vacation, index) => {
+            return index === vacationIndex ? updatedVacation : vacation;
+        });
+
+        const employeeRef = doc(this.db, "employees", employeeId);
+        const writes = [
+            updateDoc(employeeRef, { vacations: this.serializeEmployeeVacations(updatedVacations, employeeId) }),
+            setDoc(
+                doc(this.db, "vacation_records", updatedVacation.id),
+                this.createVacationRecordPayload(updatedVacation),
+                { merge: true }
+            )
+        ];
+
+        if (previousVacation.id && previousVacation.id !== updatedVacation.id) {
+            writes.push(deleteDoc(doc(this.db, "vacation_records", previousVacation.id)));
+        }
+
+        await Promise.all(writes).catch(e => console.error("Failed to update vacation", e));
+    }
+
+    isValidVacationRange(startDate, endDate) {
+        if (!startDate || !endDate) {
+            return false;
+        }
+
+        return new Date(`${endDate}T00:00:00`) >= new Date(`${startDate}T00:00:00`);
     }
 
     getEmployeeOrderFromDom() {
@@ -371,6 +601,7 @@ export class DataManager {
     async initializeDatabase() {
         await setDoc(doc(this.db, "employees", 'metadata'), { initialized: true });
         this.listenForEmployeeChanges();
+        this.listenForVacationRecordChanges();
         this.listenForDailyNotes();
         this.listenForAttendanceChanges();
     }
@@ -381,7 +612,8 @@ export class DataManager {
             this.unsubscribeNotes,
             this.unsubscribeShiftPresets,
             this.unsubscribeSettings,
-            this.unsubscribeAttendance
+            this.unsubscribeAttendance,
+            this.unsubscribeVacationRecords
         ].forEach((unsubscribe) => {
             if (typeof unsubscribe === 'function') {
                 unsubscribe();
@@ -393,6 +625,7 @@ export class DataManager {
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
+        this.unsubscribeVacationRecords = null;
     }
 
     getCurrentUserContext() {
@@ -404,8 +637,11 @@ export class DataManager {
     }
 
     hasPrivilegedRole() {
-        const privilegedRoles = new Set(['admin', 'manager', 'supervisor']);
-        return this.getCurrentUserRoles().some((role) => privilegedRoles.has(role));
+        return hasPrivilegedRole(this.getCurrentUserRoles());
+    }
+
+    isTimeClockStationUser() {
+        return hasTimeClockStationRole(this.getCurrentUserRoles());
     }
 
     getCurrentUserEmployee() {
@@ -453,7 +689,21 @@ export class DataManager {
     }
 
     isClockOnlyUser() {
-        return Boolean(this.getCurrentUserEmployee()) && !this.hasPrivilegedRole();
+        return !this.isTimeClockStationUser()
+            && Boolean(this.getCurrentUserEmployee())
+            && !this.hasPrivilegedRole();
+    }
+
+    canAccessVacationBoard() {
+        return canAccessSharedVacationBoard(this.getCurrentUserRoles(), {
+            hasEmployeeLink: Boolean(this.getCurrentUserEmployee())
+        });
+    }
+
+    isVacationBoardOnlyUser() {
+        return isSharedVacationBoardOnlyUser(this.getCurrentUserRoles(), {
+            hasEmployeeLink: Boolean(this.getCurrentUserEmployee())
+        });
     }
 
     getAttendanceDocId(employeeId, dateKey) {
@@ -575,13 +825,12 @@ export class DataManager {
         });
     }
 
-    async recordCurrentUserAttendance(eventType) {
-        const employee = this.getCurrentUserEmployee();
+    async recordAttendanceForEmployee(employeeId, eventType, { source = 'web', occurredAt = formatLocalDateTime() } = {}) {
+        const employee = this.resolveAttendanceEmployee(employeeId);
         if (!employee) {
-            throw new Error(`Your login email (${this.currentUserContext.email || 'unknown'}) is not linked to an active colleague record yet.`);
+            throw new Error('Employee not found for attendance record.');
         }
 
-        const occurredAt = formatLocalDateTime();
         const dateKey = occurredAt.slice(0, 10);
         const currentRecord = this.getAttendanceRecord(employee.id, dateKey);
         const actionState = getAttendanceActionState(currentRecord);
@@ -595,10 +844,19 @@ export class DataManager {
             type: eventType,
             occurredAt,
             dateKey,
-            source: 'web',
+            source,
             actorUid: this.currentUserContext.uid,
             actorEmail: this.currentUserContext.email
         });
+    }
+
+    async recordCurrentUserAttendance(eventType) {
+        const employee = this.getCurrentUserEmployee();
+        if (!employee) {
+            throw new Error(`Your login email (${this.currentUserContext.email || 'unknown'}) is not linked to an active colleague record yet.`);
+        }
+
+        await this.recordAttendanceForEmployee(employee.id, eventType, { source: 'web' });
     }
 
     async addManualAttendanceEvent(employeeId, dateKey, eventType, localTime, note = '') {
@@ -662,6 +920,68 @@ export class DataManager {
 
     getEmployeeStatusForDate(employee, date) {
         return resolveEmployeeStatusForDate(employee, date, this.getHolidaysForYear(date.getFullYear()));
+    }
+
+    getVacationRecords() {
+        return [...this.vacationRecords];
+    }
+
+    getSharedVacationEntries({ includeArchived = false } = {}) {
+        const employees = includeArchived
+            ? [...this.activeEmployees, ...this.archivedEmployees]
+            : [...this.activeEmployees];
+
+        const collectionEntries = buildSharedVacationEntries(this.vacationRecords, employees);
+        const fallbackEntries = employees.flatMap((employee) => {
+            return (employee.vacations || []).map((vacation) => {
+                const employeeVacation = toEmployeeVacationEntry(vacation, employee.id);
+                if (!employeeVacation) {
+                    return null;
+                }
+
+                return {
+                    id: employeeVacation.id,
+                    employeeId: employee.id,
+                    employeeName: employee.name || '',
+                    employeeDepartment: employee.department || null,
+                    startDate: employeeVacation.startDate,
+                    endDate: employeeVacation.endDate,
+                    status: employeeVacation.status,
+                    note: employeeVacation.note,
+                    visibility: employeeVacation.visibility
+                };
+            });
+        }).filter(Boolean);
+
+        const mergedEntries = new Map();
+        fallbackEntries.forEach((entry) => {
+            mergedEntries.set(entry.id || `${entry.employeeId}__${entry.startDate}__${entry.endDate}`, entry);
+        });
+        collectionEntries.forEach((entry) => {
+            mergedEntries.set(entry.id || `${entry.employeeId}__${entry.startDate}__${entry.endDate}`, entry);
+        });
+
+        return [...mergedEntries.values()].sort((left, right) => {
+            const startComparison = left.startDate.localeCompare(right.startDate);
+            if (startComparison !== 0) {
+                return startComparison;
+            }
+
+            const endComparison = left.endDate.localeCompare(right.endDate);
+            if (endComparison !== 0) {
+                return endComparison;
+            }
+
+            return (left.employeeName || '').localeCompare(right.employeeName || '');
+        });
+    }
+
+    getVacationRecordById(recordId, { includeArchived = true } = {}) {
+        if (typeof recordId !== 'string' || !recordId.trim()) {
+            return null;
+        }
+
+        return this.getSharedVacationEntries({ includeArchived }).find((record) => record.id === recordId.trim()) || null;
     }
 
     // Getters for UI access

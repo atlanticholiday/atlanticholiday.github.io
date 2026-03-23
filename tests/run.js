@@ -3,6 +3,7 @@ import { run } from "./test-harness.js";
 import "./unit/core/config.test.js";
 import "./unit/core/i18n.test.js";
 import "./unit/shared/change-notifier.test.js";
+import "./unit/shared/access-roles.test.js";
 import "./unit/shared/email.test.js";
 import "./unit/shared/enums.test.js";
 import "./unit/shared/locations.test.js";
@@ -16,6 +17,9 @@ import "./unit/features/properties/properties-dashboard-controller.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
 import "./unit/features/scheduling/holiday-calculator.test.js";
+import "./unit/features/scheduling/time-clock-station.test.js";
+import "./unit/features/scheduling/vacation-board-view-model.test.js";
+import "./unit/features/scheduling/vacation-records.test.js";
 import "./smoke/html-pages.test.js";
 import "./smoke/locales.test.js";
 

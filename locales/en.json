@@ -104,14 +104,42 @@
   },
   "schedule": {
     "title": "Work Schedule",
-    "subtitle": "Work Schedule Calculator",
+    "subtitle": "Team calendar, staffing and vacation planning",
     "loading": "Loading your schedule...",
+    "navigation": {
+      "subtitle": "Choose a planning view or open a reference view.",
+      "planning": "Planning",
+      "reference": "Reference"
+    },
+    "workspace": {
+      "heading": "Planning workspace",
+      "title": "Keep coverage, leave, and staffing in one view.",
+      "lead": "Use the planning views for day-to-day decisions and the reference views for yearly review and local holiday context.",
+      "currentView": "Current view",
+      "period": "Period",
+      "activeColleagues": "Active colleagues",
+      "upcomingVacations": "Upcoming vacations",
+      "awayToday": "Away today",
+      "coverageTarget": "Coverage target",
+      "notSet": "Not set",
+      "clearDay": "No conflicts"
+    },
     "views": {
       "monthly": "Monthly",
       "yearly": "Yearly",
+      "vacationBoard": "Vacation Board",
       "madeiraHolidays": "Madeira Holidays",
       "stats": "Stats",
       "vacationPlanner": "Vacation Planner"
+    },
+    "viewDescriptions": {
+      "monthly": "Scan staffing day by day, spot absences fast, and open any date for adjustments.",
+      "monthlyShort": "Coverage at a glance",
+      "yearly": "Review month-by-month totals for worked days, leave, absences, and extra hours.",
+      "vacationBoard": "Share a read-only leave map by colleague, month, and department before anyone books time away.",
+      "vacation": "Review upcoming leave, book ranges, and keep the team aligned before approving time away.",
+      "stats": "Check leave balances and yearly totals before exporting data for payroll or planning.",
+      "madeiraHolidays": "Reference local public holidays and major island events while planning coverage."
     },
     "legend": {
       "working": "Working",
@@ -137,7 +165,8 @@
       "vacation": "Vacation",
       "off": "Off",
       "absent": "Absent",
-      "extraHours": "Extra Hours"
+      "extraHours": "Extra Hours",
+      "total": "Total"
     },
     "modals": {
       "dayDetails": "Day Details",
@@ -173,8 +202,50 @@
       "endDate": "End Date",
       "confirmDelete": "Are you sure you want to delete this vacation?",
       "selectDatesError": "Please select a colleague and dates.",
+      "invalidRangeError": "Please select a valid date range.",
       "saveFailed": "Failed to save vacation.",
-      "deleteFailed": "Failed to delete vacation."
+      "deleteFailed": "Failed to delete vacation.",
+      "noUpcoming": "No upcoming vacations planned.",
+      "durationSingle": "1 day",
+      "durationPlural": "{{count}} days"
+    },
+    "board": {
+      "title": "Team Vacation Board",
+      "subtitle": "Read-only leave map for planning around each other before new vacations are booked.",
+      "readOnly": "Read-only board",
+      "navigationSubtitle": "This shared board stays read-only. Use filters and year switching to plan around each other.",
+      "accessBannerKicker": "Shared leave access",
+      "accessBannerTitle": "You are viewing the read-only vacation board.",
+      "accessBannerBody": "Booking and schedule edits stay manager-only. Use filters and the yearly timeline to see when teammates are away before requesting your own leave.",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search colleague or department",
+      "departmentLabel": "Department",
+      "allDepartments": "All departments",
+      "unassignedDepartment": "No department",
+      "clearFilters": "Clear filters",
+      "colleagueColumn": "Colleague",
+      "daysBooked": "days booked",
+      "awayTodayBadge": "Away today",
+      "availableBadge": "Available",
+      "emptyTitle": "No vacation matches yet",
+      "emptyBody": "Try a different search or department, or switch year to review other vacation plans.",
+      "summaryLabel": "Planning summary",
+      "summaryAwayToday": "Away today",
+      "summaryPlanned": "Colleagues with leave",
+      "summaryPeakMonth": "Peak month",
+      "summaryNextDeparture": "Next departure",
+      "summaryYourDepartment": "Your department",
+      "noPeakMonth": "No peak yet",
+      "noNextDeparture": "No future leave",
+      "upcomingLabel": "Upcoming",
+      "upcomingTitle": "Next vacations",
+      "readOnlyNote": "This board stays read-only so colleagues can coordinate leave without touching schedule data.",
+      "noUpcoming": "No upcoming vacations in this view.",
+      "youBadge": "You",
+      "timeClockCta": "Open vacation board",
+      "timeClockHint": "Check team vacations before planning leave.",
+      "previousYear": "Previous year",
+      "nextYear": "Next year"
     },
     "madeira": {
       "title": "Madeira Calendar",
@@ -185,7 +256,11 @@
       "officialDesc": "On these days, all colleagues are automatically marked as not working",
       "regional": "Regional",
       "autoManagement": "Automatic Holiday Management:",
-      "autoManagementDesc": "On these days, all colleagues are automatically marked as not working. You can manually override individual colleagues if needed."
+      "autoManagementDesc": "On these days, all colleagues are automatically marked as not working. You can manually override individual colleagues if needed.",
+      "eventsTitle": "Cultural Events and Festivals",
+      "eventsSubtitle": "Major celebrations throughout the year that may affect traffic, demand, or staffing.",
+      "eventsNoteLabel": "Note:",
+      "eventsNoteText": "These are cultural events rather than official public holidays. Colleagues may still be scheduled unless you adjust coverage manually."
     },
     "stats": {
       "title": "Team Statistics",
@@ -194,7 +269,11 @@
       "totalWorkingDays": "Total Working Days",
       "totalVacationDays": "Total Vacation Days",
       "totalAbsentDays": "Total Absent Days",
-      "totalExtraHours": "Total Extra Hours"
+      "totalExtraHours": "Total Extra Hours",
+      "exportCsv": "Export CSV",
+      "vacationUsed": "Vacation Used",
+      "vacationBalance": "Vacation Balance",
+      "balanceAlerts": "Balance alerts"
     }
   },
   "staff": {
