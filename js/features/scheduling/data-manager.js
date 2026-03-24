@@ -35,6 +35,7 @@ import {
     hasTimeClockStationRole,
     isSharedVacationBoardOnlyUser
 } from '../../shared/access-roles.js';
+import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 
 export class DataManager {
     constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
@@ -65,6 +66,14 @@ export class DataManager {
         this.attendanceRecords = {};
         this.hasLoadedVacationRecords = false;
         this.isSyncingLegacyVacationRecords = false;
+        this.attendanceSyncState = {
+            online: this.getBrowserOnlineStatus(),
+            fromCache: false,
+            hasPendingWrites: false,
+            lastError: null,
+            lastSnapshotAt: null,
+            lastSuccessfulSyncAt: null
+        };
         this.currentUserContext = {
             uid: null,
             email: null,
@@ -72,6 +81,8 @@ export class DataManager {
             roles: [],
             linkedEmployee: null
         };
+
+        this.bindBrowserConnectivityListeners();
 
         // Initialize holidays for current year immediately
         this.initializeHolidays();
@@ -115,6 +126,14 @@ export class DataManager {
         this.minStaffThreshold = 0;
         this.selectedDateKey = null;
         this.hasLoadedVacationRecords = false;
+        this.attendanceSyncState = {
+            online: this.getBrowserOnlineStatus(),
+            fromCache: false,
+            hasPendingWrites: false,
+            lastError: null,
+            lastSnapshotAt: null,
+            lastSuccessfulSyncAt: null
+        };
         this.notifyDataChange();
     }
 
@@ -139,12 +158,52 @@ export class DataManager {
         this.holidayCalculator.preloadYears([year - 1, year, year + 1]);
     }
 
+    getBrowserOnlineStatus() {
+        if (typeof navigator === 'undefined' || typeof navigator.onLine !== 'boolean') {
+            return true;
+        }
+
+        return navigator.onLine;
+    }
+
+    bindBrowserConnectivityListeners() {
+        if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
+            return;
+        }
+
+        window.addEventListener('online', () => {
+            this.updateAttendanceSyncState({
+                online: true,
+                lastError: null
+            });
+            this.notifyDataChange();
+        });
+
+        window.addEventListener('offline', () => {
+            this.updateAttendanceSyncState({
+                online: false
+            });
+            this.notifyDataChange();
+        });
+    }
+
     subscribeToDataChanges(callback) {
         return this.changeNotifier.subscribe(callback);
     }
 
     setOnDataChangeCallback(callback) {
         return this.subscribeToDataChanges(callback);
+    }
+
+    updateAttendanceSyncState(partialState = {}) {
+        this.attendanceSyncState = {
+            ...this.attendanceSyncState,
+            ...partialState
+        };
+    }
+
+    getAttendanceSyncState() {
+        return { ...this.attendanceSyncState };
     }
 
     notifyDataChange() {
@@ -246,7 +305,7 @@ export class DataManager {
     }
 
     listenForAttendanceChanges() {
-        this.unsubscribeAttendance = onSnapshot(this.getAttendanceCollectionRef(), (snapshot) => {
+        this.unsubscribeAttendance = onSnapshot(this.getAttendanceCollectionRef(), { includeMetadataChanges: true }, (snapshot) => {
             const nextAttendanceRecords = { ...this.attendanceRecords };
 
             snapshot.docChanges().forEach((change) => {
@@ -261,9 +320,29 @@ export class DataManager {
                 };
             });
 
+            const snapshotAt = new Date().toISOString();
             this.attendanceRecords = nextAttendanceRecords;
+            this.updateAttendanceSyncState({
+                online: this.getBrowserOnlineStatus(),
+                fromCache: snapshot.metadata.fromCache,
+                hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                lastError: null,
+                lastSnapshotAt: snapshotAt,
+                lastSuccessfulSyncAt: (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites)
+                    ? snapshotAt
+                    : this.attendanceSyncState.lastSuccessfulSyncAt
+            });
             this.notifyDataChange();
-        }, (error) => console.error("Error listening for attendance:", error));
+        }, (error) => {
+            this.updateAttendanceSyncState({
+                online: this.getBrowserOnlineStatus(),
+                fromCache: true,
+                hasPendingWrites: false,
+                lastError: error?.message || 'attendance-sync-error'
+            });
+            this.notifyDataChange();
+            console.error("Error listening for attendance:", error);
+        });
     }
 
     async saveShiftPreset(name, start, end) {
@@ -820,7 +899,7 @@ export class DataManager {
         const employee = this.resolveAttendanceEmployee(employeeId);
 
         if (!employee) {
-            throw new Error('Employee not found for attendance record.');
+            throw new Error(t('timeClock.errors.employeeNotFound'));
         }
 
         const dateKey = eventInput.dateKey || eventInput.occurredAt.slice(0, 10);
@@ -849,7 +928,7 @@ export class DataManager {
     async recordAttendanceForEmployee(employeeId, eventType, { source = 'web', occurredAt = formatLocalDateTime() } = {}) {
         const employee = this.resolveAttendanceEmployee(employeeId);
         if (!employee) {
-            throw new Error('Employee not found for attendance record.');
+            throw new Error(t('timeClock.errors.employeeNotFound'));
         }
 
         const dateKey = occurredAt.slice(0, 10);
@@ -858,7 +937,7 @@ export class DataManager {
         const allowedActions = [actionState.primaryAction, actionState.secondaryAction].filter(Boolean);
 
         if (!allowedActions.includes(eventType)) {
-            throw new Error('This attendance action is not available right now.');
+            throw new Error(t('timeClock.errors.actionUnavailable'));
         }
 
         await this.saveAttendanceEvent(employee.id, {
@@ -874,7 +953,9 @@ export class DataManager {
     async recordCurrentUserAttendance(eventType) {
         const employee = this.getCurrentUserEmployee();
         if (!employee) {
-            throw new Error(`Your login email (${this.currentUserContext.email || 'unknown'}) is not linked to an active colleague record yet.`);
+            throw new Error(t('timeClock.errors.loginNotLinked', {
+                email: this.currentUserContext.email || 'unknown'
+            }));
         }
 
         await this.recordAttendanceForEmployee(employee.id, eventType, { source: 'web' });
@@ -882,7 +963,16 @@ export class DataManager {
 
     async addManualAttendanceEvent(employeeId, dateKey, eventType, localTime, note = '') {
         if (!employeeId || !dateKey || !eventType || !localTime) {
-            throw new Error('Employee, date, event type, and time are required.');
+            throw new Error(t('timeClock.errors.manualFieldsRequired'));
+        }
+
+        if (!this.currentUserContext.uid && !this.currentUserContext.email) {
+            throw new Error(t('timeClock.feedback.manualActorRequired'));
+        }
+
+        const normalizedNote = normalizeManualAttendanceNote(note);
+        if (!normalizedNote) {
+            throw new Error(t('timeClock.feedback.manualReasonRequired'));
         }
 
         await this.saveAttendanceEvent(employeeId, {
@@ -892,7 +982,7 @@ export class DataManager {
             source: 'manual',
             actorUid: this.currentUserContext.uid,
             actorEmail: this.currentUserContext.email,
-            note
+            note: normalizedNote
         });
     }
 
@@ -901,7 +991,7 @@ export class DataManager {
             || this.archivedEmployees.find((entry) => entry.id === employeeId);
 
         if (!employee) {
-            throw new Error('Employee not found for attendance review.');
+            throw new Error(t('timeClock.errors.reviewEmployeeNotFound'));
         }
 
         const docRef = doc(this.db, "attendance_records", this.getAttendanceDocId(employeeId, dateKey));

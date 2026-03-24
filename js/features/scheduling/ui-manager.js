@@ -1,7 +1,9 @@
 import { Config } from '../../core/config.js';
 import { i18n, t } from '../../core/i18n.js';
 import { formatLocalDateTime, formatTimeLabel } from './attendance-records.js';
+import { getAttendancePrintRange, normalizeAttendancePrintMode } from './attendance-print-period.js';
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
+import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './time-clock-controls.js';
 import { filterTimeClockStationEmployees, getTimeClockStationEmployeeInitials } from './time-clock-station.js';
 import { renderMadeiraReferenceView } from './views/madeira-reference-view.js';
 import { renderMonthlyCalendarMobileCards, renderMonthlyCalendarView } from './views/monthly-schedule-view.js';
@@ -17,12 +19,17 @@ export class UIManager {
         this.isStaffMode = false; // Staff read-only mode
         this.liveClockTimer = null;
         this.currentTimesheetEmployeeId = null;
+        this.currentTimesheetMode = 'week';
         this.timeClockStationPreviewEnabled = false;
         this.timeClockStationEmployeeId = null;
         this.timeClockStationSearch = '';
         this.timeClockStationFeedback = '';
         this.timeClockStationFeedbackTone = 'success';
+        this.timeClockStationNotice = '';
+        this.timeClockStationNoticeTone = 'info';
         this.timeClockStationResetTimer = null;
+        this.timeClockStationIdleTimer = null;
+        this.timeClockStationIdleMs = 60000;
         this.vacationBoardFilters = {
             search: '',
             department: 'all'
@@ -38,8 +45,32 @@ export class UIManager {
             }
         });
 
+        window.addEventListener('languageChanged', () => {
+            this.renderTimeClockPage();
+
+            const timesheetModal = document.getElementById('timesheet-modal');
+            const isTimesheetOpen = timesheetModal && !timesheetModal.classList.contains('hidden');
+            if (isTimesheetOpen) {
+                this.renderAttendanceTimesheet(this.currentTimesheetDate || new Date(), this.currentTimesheetMode);
+            }
+        });
+
         this.startLiveClock();
 
+    }
+
+    getCurrentLocale() {
+        return i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
+    }
+
+    formatLocaleDate(date, options = {}) {
+        if (!date) return '';
+        return new Intl.DateTimeFormat(this.getCurrentLocale(), options).format(date);
+    }
+
+    formatLocaleTime(date, options = {}) {
+        if (!date) return '';
+        return new Intl.DateTimeFormat(this.getCurrentLocale(), options).format(date);
     }
 
     startLiveClock() {
@@ -53,7 +84,7 @@ export class UIManager {
             const currentDate = document.getElementById('time-clock-current-date');
 
             if (currentTime) {
-                currentTime.textContent = now.toLocaleTimeString('en-GB', {
+                currentTime.textContent = this.formatLocaleTime(now, {
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit'
@@ -61,7 +92,7 @@ export class UIManager {
             }
 
             if (currentDate) {
-                currentDate.textContent = now.toLocaleDateString('en-GB', {
+                currentDate.textContent = this.formatLocaleDate(now, {
                     weekday: 'long',
                     day: '2-digit',
                     month: 'long',
@@ -990,7 +1021,7 @@ export class UIManager {
     }
 
     formatWeekLabel(startDate, endDate) {
-        return `${startDate.toLocaleDateString('en-GB')} - ${endDate.toLocaleDateString('en-GB')}`;
+        return `${this.formatLocaleDate(startDate, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${this.formatLocaleDate(endDate, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
     }
 
     parseShiftHours(shiftText) {
@@ -1017,10 +1048,10 @@ export class UIManager {
 
     formatAttendanceEventLabel(eventType) {
         const labels = {
-            clockIn: 'Clock in',
-            clockOut: 'Clock out',
-            breakStart: 'Start break',
-            breakEnd: 'End break'
+            clockIn: t('timeClock.actions.clockIn'),
+            clockOut: t('timeClock.actions.clockOut'),
+            breakStart: t('timeClock.actions.breakStart'),
+            breakEnd: t('timeClock.actions.breakEnd')
         };
 
         return labels[eventType] || eventType;
@@ -1029,33 +1060,143 @@ export class UIManager {
     getAttendanceStatusCopy(summary) {
         if (!summary) {
             return {
-                badge: 'Not linked',
-                title: 'Ask an admin to link your employee email before using the time clock.',
+                badge: t('timeClock.status.notLinkedBadge'),
+                title: t('timeClock.status.notLinkedTitle'),
                 tone: 'bg-amber-100 text-amber-700 border-amber-200'
             };
         }
 
         if (summary.status === 'working') {
             return {
-                badge: 'Clocked in',
-                title: 'You are currently on shift.',
+                badge: t('timeClock.status.workingBadge'),
+                title: t('timeClock.status.workingTitle'),
                 tone: 'bg-emerald-100 text-emerald-700 border-emerald-200'
             };
         }
 
         if (summary.status === 'on-break') {
             return {
-                badge: 'On break',
-                title: 'Your break is active.',
+                badge: t('timeClock.status.breakBadge'),
+                title: t('timeClock.status.breakTitle'),
                 tone: 'bg-amber-100 text-amber-700 border-amber-200'
             };
         }
 
         return {
-            badge: 'Clocked out',
-            title: 'You are not currently clocked in.',
+            badge: t('timeClock.status.clockedOutBadge'),
+            title: t('timeClock.status.clockedOutTitle'),
             tone: 'bg-slate-100 text-slate-700 border-slate-200'
         };
+    }
+
+    getAttendanceDayCountLabel(count = 0) {
+        return count === 1
+            ? t('timeClock.labels.daySingular', { count })
+            : t('timeClock.labels.dayPlural', { count });
+    }
+
+    getAttendancePrintModeLabel(mode = 'week') {
+        return t(normalizeAttendancePrintMode(mode) === 'month' ? 'timeClock.print.monthly' : 'timeClock.print.weekly');
+    }
+
+    getAttendancePrintLabel(referenceDate = new Date(), mode = 'week') {
+        const { startDate, endDate } = getAttendancePrintRange(referenceDate, mode);
+        return normalizeAttendancePrintMode(mode) === 'month'
+            ? this.formatLocaleDate(startDate, { month: 'long', year: 'numeric' })
+            : this.formatWeekLabel(startDate, endDate);
+    }
+
+    getAttendancePrintSummaryKey(mode = 'week', totalType = 'planned') {
+        const normalizedMode = normalizeAttendancePrintMode(mode);
+        if (normalizedMode === 'month') {
+            return totalType === 'planned'
+                ? 'timeClock.print.plannedTotalMonthly'
+                : 'timeClock.print.recordedTotalMonthly';
+        }
+
+        return totalType === 'planned'
+            ? 'timeClock.print.plannedTotalWeekly'
+            : 'timeClock.print.recordedTotalWeekly';
+    }
+
+    getTimeClockSyncCopy() {
+        const syncState = this.dataManager.getAttendanceSyncState?.() || {};
+        const stage = getAttendanceSyncStage(syncState);
+        const lastSyncTime = syncState.lastSuccessfulSyncAt
+            ? this.formatLocaleTime(new Date(syncState.lastSuccessfulSyncAt), {
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : null;
+
+        if (stage === 'error') {
+            return {
+                badge: t('timeClock.sync.errorBadge'),
+                detail: t('timeClock.sync.errorDetail')
+            };
+        }
+
+        if (stage === 'offline-pending') {
+            return {
+                badge: t('timeClock.sync.offlinePendingBadge'),
+                detail: t('timeClock.sync.offlinePendingDetail')
+            };
+        }
+
+        if (stage === 'offline') {
+            return {
+                badge: t('timeClock.sync.offlineBadge'),
+                detail: t('timeClock.sync.offlineDetail')
+            };
+        }
+
+        if (stage === 'pending') {
+            return {
+                badge: t('timeClock.sync.pendingBadge'),
+                detail: t('timeClock.sync.pendingDetail')
+            };
+        }
+
+        if (stage === 'cached') {
+            return {
+                badge: t('timeClock.sync.cachedBadge'),
+                detail: lastSyncTime
+                    ? t('timeClock.sync.cachedDetailWithTime', { time: lastSyncTime })
+                    : t('timeClock.sync.cachedDetail')
+            };
+        }
+
+        return {
+            badge: t('timeClock.sync.syncedBadge'),
+            detail: lastSyncTime
+                ? t('timeClock.sync.syncedDetailWithTime', { time: lastSyncTime })
+                : t('timeClock.sync.syncedDetail')
+        };
+    }
+
+    getTimeClockHeroStatusMarkup({ includeStationIdle = false } = {}) {
+        const syncCopy = this.getTimeClockSyncCopy();
+        const cards = [`
+            <div class="rounded-[24px] border border-white/12 bg-white/8 px-4 py-4 backdrop-blur-sm">
+                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${syncCopy.badge}</div>
+                <div class="mt-2 text-sm text-slate-100">${syncCopy.detail}</div>
+            </div>
+        `];
+
+        if (includeStationIdle) {
+            cards.push(`
+                <div class="rounded-[24px] border border-white/12 bg-white/8 px-4 py-4 backdrop-blur-sm">
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.idleResetBadge')}</div>
+                    <div class="mt-2 text-sm text-slate-100">${t('timeClock.station.idleResetDetail', { seconds: Math.round(this.timeClockStationIdleMs / 1000) })}</div>
+                </div>
+            `);
+        }
+
+        return `
+            <div class="mt-6 grid gap-3 ${cards.length > 1 ? 'sm:grid-cols-2' : ''} max-w-3xl">
+                ${cards.join('')}
+            </div>
+        `;
     }
 
     isTimeClockStationMode() {
@@ -1070,11 +1211,50 @@ export class UIManager {
         return this.dataManager.hasPrivilegedRole() && !this.dataManager.isTimeClockStationUser();
     }
 
+    clearTimeClockStationIdleTimer() {
+        if (this.timeClockStationIdleTimer) {
+            clearTimeout(this.timeClockStationIdleTimer);
+            this.timeClockStationIdleTimer = null;
+        }
+    }
+
     clearTimeClockStationResetTimer() {
         if (this.timeClockStationResetTimer) {
             clearTimeout(this.timeClockStationResetTimer);
             this.timeClockStationResetTimer = null;
         }
+    }
+
+    clearTimeClockStationNotice() {
+        this.timeClockStationNotice = '';
+        this.timeClockStationNoticeTone = 'info';
+    }
+
+    setTimeClockStationNotice(message = '', tone = 'info') {
+        this.timeClockStationNotice = typeof message === 'string' ? message : '';
+        this.timeClockStationNoticeTone = tone === 'warning' ? 'warning' : 'info';
+    }
+
+    ensureTimeClockStationIdleTimer() {
+        if (!this.isTimeClockStationMode() || this.timeClockStationIdleTimer) {
+            return;
+        }
+
+        this.registerTimeClockStationActivity();
+    }
+
+    registerTimeClockStationActivity() {
+        if (!this.isTimeClockStationMode()) {
+            this.clearTimeClockStationIdleTimer();
+            return;
+        }
+
+        this.clearTimeClockStationIdleTimer();
+        this.timeClockStationIdleTimer = setTimeout(() => {
+            this.resetTimeClockStationState({ clearSearch: true, clearFeedback: true });
+            this.setTimeClockStationNotice(t('timeClock.station.idleResetNotice'), 'warning');
+            this.renderTimeClockPage();
+        }, this.timeClockStationIdleMs);
     }
 
     resetTimeClockStationState({ clearSearch = false, clearFeedback = true } = {}) {
@@ -1096,13 +1276,17 @@ export class UIManager {
             }
 
             this.timeClockStationPreviewEnabled = true;
+            this.clearTimeClockStationNotice();
             this.resetTimeClockStationState({ clearSearch: false });
+            this.registerTimeClockStationActivity();
             this.renderTimeClockPage();
             return;
         }
 
         if (mode === 'self-service' && this.canToggleTimeClockStationMode()) {
             this.timeClockStationPreviewEnabled = false;
+            this.clearTimeClockStationIdleTimer();
+            this.clearTimeClockStationNotice();
             this.resetTimeClockStationState({ clearSearch: false });
             this.renderTimeClockPage();
         }
@@ -1110,6 +1294,8 @@ export class UIManager {
 
     setTimeClockStationSearch(query = '') {
         this.timeClockStationSearch = typeof query === 'string' ? query : '';
+        this.clearTimeClockStationNotice();
+        this.registerTimeClockStationActivity();
         this.renderTimeClockPage();
 
         requestAnimationFrame(() => {
@@ -1129,6 +1315,8 @@ export class UIManager {
         }
 
         this.clearTimeClockStationResetTimer();
+        this.clearTimeClockStationNotice();
+        this.registerTimeClockStationActivity();
         this.timeClockStationEmployeeId = employeeId;
         this.timeClockStationFeedback = '';
         this.timeClockStationFeedbackTone = 'success';
@@ -1136,12 +1324,14 @@ export class UIManager {
     }
 
     clearTimeClockStationSelection() {
+        this.registerTimeClockStationActivity();
         this.resetTimeClockStationState({ clearSearch: false });
         this.renderTimeClockPage();
     }
 
     setTimeClockStationFeedback(message = '', tone = 'success') {
         this.clearTimeClockStationResetTimer();
+        this.registerTimeClockStationActivity();
         this.timeClockStationFeedback = message;
         this.timeClockStationFeedbackTone = tone === 'error' ? 'error' : 'success';
         this.renderTimeClockPage();
@@ -1149,8 +1339,9 @@ export class UIManager {
 
     handleTimeClockStationAttendanceSaved(employeeId, actionLabel) {
         const employee = this.dataManager.resolveAttendanceEmployee(employeeId);
-        const employeeName = employee?.name || 'selected colleague';
-        this.timeClockStationFeedback = `${actionLabel} saved for ${employeeName}. Returning to the colleague list...`;
+        const employeeName = employee?.name || t('timeClock.station.selectedColleagueFallback');
+        this.clearTimeClockStationNotice();
+        this.timeClockStationFeedback = t('timeClock.station.feedbackSaved', { action: actionLabel, name: employeeName });
         this.timeClockStationFeedbackTone = 'success';
         this.renderTimeClockPage();
         this.scheduleTimeClockStationReset();
@@ -1172,13 +1363,13 @@ export class UIManager {
                         type="button"
                         data-time-clock-mode="self-service"
                         class="px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeMode === 'self-service' ? 'bg-white text-slate-900' : 'text-slate-200 hover:text-white'}">
-                        Self-service
+                        ${t('timeClock.modes.selfService')}
                     </button>
                     <button
                         type="button"
                         data-time-clock-mode="station"
                         class="px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeMode === 'station' ? 'bg-white text-slate-900' : 'text-slate-200 hover:text-white'}">
-                        Station mode
+                        ${t('timeClock.modes.station')}
                     </button>
                 </div>
             `;
@@ -1188,7 +1379,7 @@ export class UIManager {
             return `
                 <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm text-slate-100">
                     <span class="inline-block h-2 w-2 rounded-full bg-emerald-300"></span>
-                    Shared tablet station
+                    ${t('timeClock.modes.sharedTabletStation')}
                 </div>
             `;
         }
@@ -1199,24 +1390,24 @@ export class UIManager {
     getTimeClockStationTileStatus(summary = null) {
         if (summary?.status === 'working') {
             return {
-                badge: 'On shift',
+                badge: t('timeClock.station.tileWorkingBadge'),
                 tone: 'bg-emerald-100 text-emerald-800',
-                detail: 'Clocked in and working.'
+                detail: t('timeClock.station.tileWorkingDetail')
             };
         }
 
         if (summary?.status === 'on-break') {
             return {
-                badge: 'On break',
+                badge: t('timeClock.station.tileBreakBadge'),
                 tone: 'bg-amber-100 text-amber-800',
-                detail: 'Break is active right now.'
+                detail: t('timeClock.station.tileBreakDetail')
             };
         }
 
         return {
-            badge: 'Ready',
+            badge: t('timeClock.station.tileReadyBadge'),
             tone: 'bg-slate-100 text-slate-700',
-            detail: 'Tap to record the next attendance action.'
+            detail: t('timeClock.station.tileReadyDetail')
         };
     }
 
@@ -1225,6 +1416,15 @@ export class UIManager {
         const referenceDateTime = formatLocalDateTime(now);
         const employees = this.dataManager.getActiveEmployees();
         const filteredEmployees = filterTimeClockStationEmployees(employees, this.timeClockStationSearch);
+        const heroStatusMarkup = this.getTimeClockHeroStatusMarkup({ includeStationIdle: true });
+        const stationNoticeMarkup = this.timeClockStationNotice
+            ? `
+                <div class="rounded-[28px] border ${this.timeClockStationNoticeTone === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-sky-200 bg-sky-50 text-sky-900'} px-6 py-4">
+                    <div class="text-xs uppercase tracking-[0.24em] ${this.timeClockStationNoticeTone === 'warning' ? 'text-amber-700' : 'text-sky-700'}">${t('timeClock.station.noticeBadge')}</div>
+                    <div class="mt-2 text-sm">${this.timeClockStationNotice}</div>
+                </div>
+            `
+            : '';
         const selectedEmployee = employees.find((employee) => employee.id === this.timeClockStationEmployeeId) || null;
         if (this.timeClockStationEmployeeId && !selectedEmployee) {
             this.resetTimeClockStationState({ clearSearch: false });
@@ -1238,7 +1438,7 @@ export class UIManager {
                     const summary = this.dataManager.getAttendanceSummary(employee.id, now, { referenceDateTime });
                     const statusCopy = this.getTimeClockStationTileStatus(summary);
                     const staffMeta = [
-                        employee.staffNumber ? `Staff #${employee.staffNumber}` : null,
+                        employee.staffNumber ? `${t('staff.staffNumber')} #${employee.staffNumber}` : null,
                         employee.shifts?.default || null
                     ].filter(Boolean).join(' / ');
 
@@ -1257,7 +1457,7 @@ export class UIManager {
                             </div>
                             <div class="mt-8">
                                 <div class="text-2xl font-semibold tracking-tight text-slate-900">${employee.name}</div>
-                                <div class="mt-2 text-sm text-slate-500">${staffMeta || 'Active colleague'}</div>
+                                <div class="mt-2 text-sm text-slate-500">${staffMeta || t('timeClock.station.activeColleague')}</div>
                                 <div class="mt-4 text-sm text-slate-600">${statusCopy.detail}</div>
                             </div>
                             <div class="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-slate-400">
@@ -1269,7 +1469,7 @@ export class UIManager {
                 }).join('')
                 : `
                     <div class="rounded-[28px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-12 text-center text-slate-500">
-                        No colleagues matched that search. Try a different name or staff number.
+                        ${t('timeClock.station.noMatches')}
                     </div>
                 `;
 
@@ -1281,54 +1481,57 @@ export class UIManager {
                             <div class="max-w-3xl">
                                 <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100">
                                     <span class="inline-block h-2 w-2 rounded-full bg-emerald-300"></span>
-                                    Station mode
+                                    ${t('timeClock.modes.station')}
                                 </div>
-                                <div class="mt-6 text-xs uppercase tracking-[0.28em] text-slate-300">Digital Time Clock</div>
-                                <h2 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Tap your name to continue</h2>
+                                <div class="mt-6 text-xs uppercase tracking-[0.28em] text-slate-300">${t('timeClock.station.kicker')}</div>
+                                <h2 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">${t('timeClock.station.title')}</h2>
                                 <p class="mt-4 max-w-2xl text-lg text-slate-300">
-                                    Use the shared tablet to find a colleague, open the action panel, and save the next clock event in one tap.
+                                    ${t('timeClock.station.description')}
                                 </p>
+                                ${heroStatusMarkup}
                                 <div class="mt-6">${modeToggle}</div>
                             </div>
                             <div class="rounded-[32px] border border-white/10 bg-white/8 px-6 py-5 backdrop-blur-sm">
-                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Current time</div>
-                                <div id="time-clock-current-time" class="mt-3 text-5xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
-                                <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.currentTime')}</div>
+                                <div id="time-clock-current-time" class="mt-3 text-5xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                                <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                             </div>
                         </div>
                     </section>
 
+                    ${stationNoticeMarkup}
+
                     <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
                         <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Directory</div>
-                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Find colleague</h3>
-                            <p class="mt-2 text-sm text-slate-500">Search by name, staff number, department, or position. Only active colleagues appear in the shared station.</p>
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.directoryKicker')}</div>
+                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">${t('timeClock.station.directoryTitle')}</h3>
+                            <p class="mt-2 text-sm text-slate-500">${t('timeClock.station.directoryDescription')}</p>
                             <label class="mt-6 block">
-                                <span class="sr-only">Search colleague</span>
+                                <span class="sr-only">${t('timeClock.print.colleagueLabel')}</span>
                                 <input
                                     id="time-clock-station-search"
                                     type="search"
                                     value="${this.timeClockStationSearch}"
-                                    placeholder="Search name or staff #"
+                                    placeholder="${t('timeClock.station.searchPlaceholder')}"
                                     class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none">
                             </label>
                             <div class="mt-5 rounded-2xl bg-slate-900 px-4 py-4 text-white">
-                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Visible now</div>
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.visibleNow')}</div>
                                 <div class="mt-2 text-4xl font-semibold tracking-tight">${filteredEmployees.length}</div>
-                                <div class="mt-1 text-sm text-slate-300">of ${employees.length} active colleagues</div>
+                                <div class="mt-1 text-sm text-slate-300">${t('timeClock.station.visibleCount', { shown: filteredEmployees.length, total: employees.length })}</div>
                             </div>
                             <div class="mt-5 space-y-3 text-sm text-slate-600">
                                 <div class="flex items-center justify-between">
-                                    <span>On shift</span>
-                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Working</span>
+                                    <span>${t('timeClock.station.tileWorkingBadge')}</span>
+                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">${t('statuses.working')}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span>On break</span>
-                                    <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Paused</span>
+                                    <span>${t('timeClock.station.tileBreakBadge')}</span>
+                                    <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">${t('timeClock.station.legendPaused')}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span>Ready</span>
-                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Clock event</span>
+                                    <span>${t('timeClock.station.tileReadyBadge')}</span>
+                                    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">${t('timeClock.station.legendClockEvent')}</span>
                                 </div>
                             </div>
                         </section>
@@ -1336,10 +1539,10 @@ export class UIManager {
                         <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Colleagues</div>
-                                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Choose your user</h3>
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.colleaguesKicker')}</div>
+                                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">${t('timeClock.station.colleaguesTitle')}</h3>
                                 </div>
-                                <div class="text-sm text-slate-500">${filteredEmployees.length} shown</div>
+                                <div class="text-sm text-slate-500">${t('timeClock.station.shownCount', { count: filteredEmployees.length })}</div>
                             </div>
                             <div class="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                                 ${employeeDirectoryMarkup}
@@ -1364,15 +1567,15 @@ export class UIManager {
                 <li class="flex items-start justify-between gap-4 border-b border-slate-200 py-3 last:border-b-0">
                     <div>
                         <div class="font-medium text-slate-900">${this.formatAttendanceEventLabel(punch.type)}</div>
-                        <div class="text-sm text-slate-500">${punch.note || 'Saved to the shared attendance log.'}</div>
+                        <div class="text-sm text-slate-500">${punch.note || t('timeClock.station.savedSharedLog')}</div>
                     </div>
                     <div class="text-right">
                         <div class="font-semibold text-slate-900">${formatTimeLabel(punch.occurredAt)}</div>
-                        <div class="mt-1 text-xs uppercase tracking-wide text-slate-400">${punch.source === 'station' ? 'Station' : 'Web'}</div>
+                        <div class="mt-1 text-xs uppercase tracking-wide text-slate-400">${punch.source === 'station' ? t('timeClock.station.sourceStation') : t('timeClock.station.sourceWeb')}</div>
                     </div>
                 </li>
             `).join('')
-            : '<li class="py-6 text-sm text-slate-500">No punches recorded yet today.</li>';
+            : `<li class="py-6 text-sm text-slate-500">${t('timeClock.station.noPunchesToday')}</li>`;
 
         container.innerHTML = `
             <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -1384,8 +1587,8 @@ export class UIManager {
                                 type="button"
                                 data-time-clock-station-clear-selection
                                 class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-white/12">
-                                <span aria-hidden="true">←</span>
-                                Change colleague
+                                <span aria-hidden="true">&larr;</span>
+                                ${t('timeClock.station.changeColleague')}
                             </button>
                             ${modeToggle}
                         </div>
@@ -1394,14 +1597,15 @@ export class UIManager {
                             ${tileStatus.badge}
                         </div>
                         <div class="mt-6">
-                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300">Digital Time Clock</div>
+                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300">${t('timeClock.station.kicker')}</div>
                             <h2 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">${selectedEmployee.name}</h2>
                             <p class="mt-3 max-w-2xl text-lg text-slate-300">${tileStatus.detail}</p>
-                            <p class="mt-2 text-sm text-slate-400">${selectedEmployee.staffNumber ? `Staff #${selectedEmployee.staffNumber}` : 'Shared tablet session'}</p>
+                            <p class="mt-2 text-sm text-slate-400">${selectedEmployee.staffNumber ? `${t('staff.staffNumber')} #${selectedEmployee.staffNumber}` : t('timeClock.station.sharedSession')}</p>
+                            ${heroStatusMarkup}
                         </div>
                         <div class="mt-10">
-                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
-                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
                         <div class="mt-10 grid gap-3 sm:grid-cols-2">
                             <button
@@ -1409,7 +1613,7 @@ export class UIManager {
                                 data-time-clock-action="${primaryAction}"
                                 data-time-clock-employee-id="${selectedEmployee.id}"
                                 class="rounded-[28px] bg-white px-6 py-5 text-left text-slate-900 transition-colors hover:bg-slate-100">
-                                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Primary action</div>
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">${t('timeClock.station.primaryAction')}</div>
                                 <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(primaryAction)}</div>
                             </button>
                             ${secondaryAction ? `
@@ -1418,68 +1622,68 @@ export class UIManager {
                                     data-time-clock-action="${secondaryAction}"
                                     data-time-clock-employee-id="${selectedEmployee.id}"
                                     class="rounded-[28px] border border-white/20 bg-white/8 px-6 py-5 text-left text-white transition-colors hover:bg-white/12">
-                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-300">Secondary action</div>
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.secondaryAction')}</div>
                                     <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(secondaryAction)}</div>
                                 </button>
                             ` : `
                                 <div class="rounded-[28px] border border-white/12 bg-white/5 px-6 py-5 text-slate-300">
-                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Next step</div>
-                                    <div class="mt-2 text-2xl font-semibold">No secondary action</div>
-                                    <div class="mt-2 text-sm text-slate-400">Use the main button to record the next punch.</div>
+                                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.nextStep')}</div>
+                                    <div class="mt-2 text-2xl font-semibold">${t('timeClock.station.noSecondaryAction')}</div>
+                                    <div class="mt-2 text-sm text-slate-400">${t('timeClock.station.nextPunchHint')}</div>
                                 </div>
                             `}
                         </div>
                         <p id="time-clock-feedback" class="mt-5 min-h-6 text-sm ${feedbackClasses}">
-                            ${this.timeClockStationFeedback || 'Use one action only once. After a successful save, the station returns to the colleague list automatically.'}
+                            ${this.timeClockStationFeedback || t('timeClock.station.defaultFeedback')}
                         </p>
                     </div>
                 </section>
 
                 <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
-                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Today</div>
-                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Live summary</h3>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.todayKicker')}</div>
+                    <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">${t('timeClock.station.liveSummaryTitle')}</h3>
                     <div class="mt-6 grid grid-cols-2 gap-3">
                         <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-500">Worked</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.station.worked')}</div>
                             <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.workedMinutes || 0)}</div>
                         </div>
                         <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-500">Breaks</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.station.breaks')}</div>
                             <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.breakMinutes || 0)}</div>
                         </div>
                         <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-500">First in</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.station.firstIn')}</div>
                             <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.firstClockIn)}</div>
                         </div>
                         <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="text-sm text-slate-500">Last out</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.station.lastOut')}</div>
                             <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.lastClockOut)}</div>
                         </div>
                     </div>
                     ${(todaySummary?.activeSessionStartedAt || todaySummary?.activeBreakStartedAt) ? `
                         <div class="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-4">
-                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? 'Current break' : 'Current shift block'}</div>
+                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? t('timeClock.station.currentBreak') : t('timeClock.station.currentShiftBlock')}</div>
                             <div class="mt-1 text-3xl font-semibold text-emerald-900" data-live-duration-start="${todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt}">
                                 ${this.formatMinutesAsDuration(this.getMinutesBetween(todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt, referenceDateTime))}
                             </div>
                         </div>
                     ` : `
                         <div class="mt-5 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                            No active shift block is open right now.
+                            ${t('timeClock.station.noActiveShift')}
                         </div>
                     `}
                     <div class="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                        Single-block days of 06:00 or longer still auto-deduct 01:00 for lunch when no break punches are recorded.
+                        ${t('timeClock.station.autoLunchHint')}
                     </div>
                 </section>
 
                 <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Today&apos;s log</div>
-                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Punch timeline</h3>
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.todayLogKicker')}</div>
+                            <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">${t('timeClock.station.timelineTitle')}</h3>
                         </div>
-                        ${todayRecord?.review?.status === 'needs-attention' ? '<span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Needs review</span>' : ''}
+                        ${todayRecord?.review?.status === 'needs-attention' ? `<span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">${t('timeClock.station.needsReview')}</span>` : ''}
                     </div>
                     <ul class="mt-6">${timeline}</ul>
                 </section>
@@ -1492,9 +1696,12 @@ export class UIManager {
         if (!container) return;
 
         if (this.isTimeClockStationMode()) {
+            this.ensureTimeClockStationIdleTimer();
             this.renderTimeClockStationPage(container);
             return;
         }
+
+        this.clearTimeClockStationIdleTimer();
         this.renderSelfServiceTimeClockPage(container);
     }
 
@@ -1502,6 +1709,7 @@ export class UIManager {
 
         const now = new Date();
         const referenceDateTime = formatLocalDateTime(now);
+        const heroStatusMarkup = this.getTimeClockHeroStatusMarkup();
         const loginEmail = this.dataManager.getCurrentUserContext()?.email;
         const employee = this.dataManager.getCurrentUserEmployee();
         const todayRecord = employee ? this.dataManager.getAttendanceRecord(employee.id, now) : null;
@@ -1545,14 +1753,14 @@ export class UIManager {
         const timeline = todaySummary?.punches?.length
             ? todaySummary.punches.map((punch) => {
                 const sourceTag = punch.source === 'manual'
-                    ? '<span class="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Manual</span>'
-                    : '<span class="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 px-2 py-1 rounded-full">Web</span>';
+                    ? `<span class="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-1 rounded-full">${t('timeClock.selfService.manualTag')}</span>`
+                    : `<span class="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 px-2 py-1 rounded-full">${t('timeClock.selfService.webTag')}</span>`;
 
                 return `
                     <li class="flex items-start justify-between gap-4 py-3 border-b last:border-b-0">
                         <div>
                             <div class="font-medium text-slate-900">${this.formatAttendanceEventLabel(punch.type)}</div>
-                            <div class="text-sm text-slate-500">${punch.note || 'Saved immediately to the attendance log.'}</div>
+                            <div class="text-sm text-slate-500">${punch.note || t('timeClock.selfService.savedImmediate')}</div>
                         </div>
                         <div class="text-right shrink-0">
                             <div class="font-semibold text-slate-900">${formatTimeLabel(punch.occurredAt)}</div>
@@ -1561,7 +1769,7 @@ export class UIManager {
                     </li>
                 `;
             }).join('')
-            : '<li class="py-6 text-sm text-slate-500">No punches recorded yet today.</li>';
+            : `<li class="py-6 text-sm text-slate-500">${t('timeClock.station.noPunchesToday')}</li>`;
         const historyMarkup = historyRecords.length
             ? historyRecords.map((record) => {
                 const summary = this.dataManager.getAttendanceSummary(
@@ -1578,45 +1786,45 @@ export class UIManager {
                             <span>${formatTimeLabel(punch.occurredAt)}</span>
                         </span>
                     `).join('')
-                    : '<span class="text-sm text-slate-500">No punches recorded for this day.</span>';
+                    : `<span class="text-sm text-slate-500">${t('timeClock.selfService.noPunchesForDay')}</span>`;
 
                 return `
                     <article class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div>
-                                <div class="text-lg font-semibold text-slate-900">${new Date(`${record.dateKey}T00:00:00`).toLocaleDateString('en-GB', {
+                                <div class="text-lg font-semibold text-slate-900">${this.formatLocaleDate(new Date(`${record.dateKey}T00:00:00`), {
                                     weekday: 'long',
                                     day: '2-digit',
                                     month: 'long',
                                     year: 'numeric'
                                 })}</div>
-                                <div class="text-sm text-slate-500 mt-1">${summary.punches.length} attendance event(s)</div>
+                                <div class="text-sm text-slate-500 mt-1">${t('timeClock.selfService.attendanceEventsCount', { count: summary.punches.length })}</div>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                ${summary.autoBreakMinutes ? '<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Auto lunch deduction</span>' : ''}
-                                ${record.review?.status === 'needs-attention' ? '<span class="px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">Needs review</span>' : ''}
-                                ${record.review?.status === 'reviewed' ? '<span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Reviewed</span>' : ''}
+                                ${summary.autoBreakMinutes ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">${t('timeClock.selfService.autoLunchDeduction')}</span>` : ''}
+                                ${record.review?.status === 'needs-attention' ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">${t('timeClock.station.needsReview')}</span>` : ''}
+                                ${record.review?.status === 'reviewed' ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">${t('timeClock.selfService.reviewed')}</span>` : ''}
                             </div>
                         </div>
                         <div class="grid gap-3 mt-5 md:grid-cols-4">
                             <div class="rounded-2xl bg-white border border-slate-200 p-4">
-                                <div class="text-xs uppercase tracking-wide text-slate-400">First in</div>
+                                <div class="text-xs uppercase tracking-wide text-slate-400">${t('timeClock.selfService.firstIn')}</div>
                                 <div class="mt-2 text-xl font-semibold text-slate-900">${formatTimeLabel(summary.firstClockIn)}</div>
                             </div>
                             <div class="rounded-2xl bg-white border border-slate-200 p-4">
-                                <div class="text-xs uppercase tracking-wide text-slate-400">Last out</div>
+                                <div class="text-xs uppercase tracking-wide text-slate-400">${t('timeClock.selfService.lastOut')}</div>
                                 <div class="mt-2 text-xl font-semibold text-slate-900">${formatTimeLabel(summary.lastClockOut)}</div>
                             </div>
                             <div class="rounded-2xl bg-white border border-slate-200 p-4">
-                                <div class="text-xs uppercase tracking-wide text-slate-400">Worked</div>
+                                <div class="text-xs uppercase tracking-wide text-slate-400">${t('timeClock.selfService.worked')}</div>
                                 <div class="mt-2 text-xl font-semibold text-slate-900">${this.formatMinutesAsDuration(summary.workedMinutes || 0)}</div>
                             </div>
                             <div class="rounded-2xl bg-white border border-slate-200 p-4">
-                                <div class="text-xs uppercase tracking-wide text-slate-400">Break</div>
+                                <div class="text-xs uppercase tracking-wide text-slate-400">${t('timeClock.selfService.breaks')}</div>
                                 <div class="mt-2 text-xl font-semibold text-slate-900">${this.formatMinutesAsDuration(summary.breakMinutes || 0)}</div>
                             </div>
                         </div>
-                        <div class="mt-4 text-sm text-slate-600">${breakText || 'No break recorded for this day.'}</div>
+                        <div class="mt-4 text-sm text-slate-600">${breakText || t('timeClock.selfService.noBreakRecorded')}</div>
                         ${notesText ? `<div class="mt-3 text-sm text-slate-600">${notesText}</div>` : ''}
                         <div class="mt-4 flex flex-wrap gap-2">
                             ${punchTags}
@@ -1624,32 +1832,32 @@ export class UIManager {
                     </article>
                 `;
             }).join('')
-            : '<div class="rounded-3xl border border-dashed border-slate-300 p-8 text-sm text-slate-500">No attendance history yet.</div>';
+            : `<div class="rounded-3xl border border-dashed border-slate-300 p-8 text-sm text-slate-500">${t('timeClock.selfService.historyEmpty')}</div>`;
 
         const managerPanel = canManageAttendance ? `
             <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
                 <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                     <div class="flex-1">
-                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Manager Review</div>
-                        <h3 class="text-2xl font-semibold text-slate-900">Exceptions and manual adjustments</h3>
-                        <p class="text-slate-600 mt-2 max-w-2xl">Use this panel for missed punches, reconstructed entries, and days that still need review before export.</p>
+                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.managerReviewKicker')}</div>
+                        <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.managerReviewTitle')}</h3>
+                        <p class="text-slate-600 mt-2 max-w-2xl">${t('timeClock.selfService.managerReviewDescription')}</p>
                     </div>
                     <button id="open-attendance-print-from-clock-btn" class="px-4 py-2 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
-                        Open Weekly Print View
+                        ${t('timeClock.actions.openPrintView')}
                     </button>
                 </div>
                 <div class="grid gap-6 lg:grid-cols-[1fr_0.95fr] mt-8">
                     <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                         <div class="flex items-center justify-between mb-4">
-                            <div class="font-semibold text-slate-900">Needs attention</div>
-                            <div class="text-sm text-slate-500">${reviewQueue.length} open</div>
+                            <div class="font-semibold text-slate-900">${t('timeClock.selfService.needsAttention')}</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.selfService.reviewQueueOpen', { count: reviewQueue.length })}</div>
                         </div>
                         <div id="attendance-review-list" class="space-y-3">
                             ${reviewQueue.length ? reviewQueue.map(({ record, summary }) => `
                                 <article class="rounded-2xl bg-white border border-slate-200 p-4">
                                     <div class="flex items-start justify-between gap-4">
                                         <div>
-                                            <div class="font-medium text-slate-900">${record.employeeName || 'Unknown colleague'}</div>
+                                            <div class="font-medium text-slate-900">${record.employeeName || t('timeClock.selfService.unknownColleague')}</div>
                                             <div class="text-sm text-slate-500">${record.dateKey}</div>
                                         </div>
                                         <button
@@ -1657,23 +1865,24 @@ export class UIManager {
                                             class="text-sm text-emerald-700 hover:text-emerald-800"
                                             data-attendance-review-employee-id="${record.employeeId}"
                                             data-attendance-review-date-key="${record.dateKey}">
-                                            Mark reviewed
+                                            ${t('timeClock.actions.markReviewed')}
                                         </button>
                                     </div>
                                     <div class="mt-3 text-sm text-slate-600">
-                                        ${summary.hasOpenSession ? 'Open session still needs confirmation.' : (record.review.note || 'Manual adjustment awaiting confirmation.')}
+                                        ${summary.hasOpenSession ? t('timeClock.selfService.openSessionNeedsConfirmation') : (record.review.note || t('timeClock.selfService.manualAdjustmentAwaiting'))}
                                     </div>
                                     <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                        <span class="px-2 py-1 rounded-full bg-slate-100">Worked ${this.formatMinutesAsDuration(summary.workedMinutes)}</span>
-                                        <span class="px-2 py-1 rounded-full bg-slate-100">Break ${this.formatMinutesAsDuration(summary.breakMinutes)}</span>
+                                        <span class="px-2 py-1 rounded-full bg-slate-100">${t('timeClock.selfService.workedBadge', { duration: this.formatMinutesAsDuration(summary.workedMinutes) })}</span>
+                                        <span class="px-2 py-1 rounded-full bg-slate-100">${t('timeClock.selfService.breakBadge', { duration: this.formatMinutesAsDuration(summary.breakMinutes) })}</span>
                                     </div>
                                 </article>
-                            `).join('') : '<div class="rounded-2xl bg-white border border-dashed border-slate-300 p-6 text-sm text-slate-500">No attendance exceptions right now.</div>'}
+                            `).join('') : `<div class="rounded-2xl bg-white border border-dashed border-slate-300 p-6 text-sm text-slate-500">${t('timeClock.selfService.reviewEmpty')}</div>`}
                         </div>
                     </div>
                     <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                        <div class="font-semibold text-slate-900 mb-2">Add manual event</div>
-                        <p class="text-sm text-slate-500 mb-4">Use this only for missed punches or reviewed corrections. Every manual entry is flagged for review.</p>
+                        <div class="font-semibold text-slate-900 mb-2">${t('timeClock.selfService.addManualEvent')}</div>
+                        <p class="text-sm text-slate-500 mb-4">${t('timeClock.selfService.addManualEventDescription')}</p>
+                        <p class="text-xs text-slate-500 mb-4">${t('timeClock.selfService.correctionRequirement', { count: MANUAL_ATTENDANCE_NOTE_MIN_LENGTH })}</p>
                         <form id="attendance-adjustment-form" class="space-y-3">
                             <select id="attendance-adjustment-employee" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
                                 ${adjustmentEmployeeOptions}
@@ -1683,13 +1892,13 @@ export class UIManager {
                                 <input id="attendance-adjustment-time" type="time" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" value="${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}">
                             </div>
                             <select id="attendance-adjustment-type" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
-                                <option value="clockIn">Clock in</option>
-                                <option value="breakStart">Start break</option>
-                                <option value="breakEnd">End break</option>
-                                <option value="clockOut">Clock out</option>
+                                <option value="clockIn">${t('timeClock.actions.clockIn')}</option>
+                                <option value="breakStart">${t('timeClock.actions.breakStart')}</option>
+                                <option value="breakEnd">${t('timeClock.actions.breakEnd')}</option>
+                                <option value="clockOut">${t('timeClock.actions.clockOut')}</option>
                             </select>
-                            <textarea id="attendance-adjustment-note" rows="3" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" placeholder="Reason for the correction"></textarea>
-                            <button type="submit" class="w-full rounded-full bg-slate-900 text-white px-4 py-3 hover:bg-slate-800 transition-colors">Save Manual Event</button>
+                            <textarea id="attendance-adjustment-note" rows="3" minlength="${MANUAL_ATTENDANCE_NOTE_MIN_LENGTH}" required class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900" placeholder="${t('timeClock.selfService.correctionReasonPlaceholder')}"></textarea>
+                            <button type="submit" class="w-full rounded-full bg-slate-900 text-white px-4 py-3 hover:bg-slate-800 transition-colors">${t('timeClock.actions.saveManualEvent')}</button>
                             <p id="attendance-adjustment-feedback" class="text-sm text-slate-500 h-5"></p>
                         </form>
                     </div>
@@ -1707,14 +1916,15 @@ export class UIManager {
                             ${statusCopy.badge}
                         </div>
                         <div class="mt-6">
-                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300 mb-3">Digital Time Clock</div>
-                            <h2 class="text-4xl font-semibold tracking-tight">${employee ? employee.name : 'Self-service attendance'}</h2>
+                            <div class="text-xs uppercase tracking-[0.28em] text-slate-300 mb-3">${t('timeClock.selfService.kicker')}</div>
+                            <h2 class="text-4xl font-semibold tracking-tight">${employee ? employee.name : t('timeClock.selfService.fallbackTitle')}</h2>
                             <p class="mt-3 text-slate-300 max-w-xl">${statusCopy.title}</p>
-                            <p class="mt-2 text-sm text-slate-400">Signed in as: ${loginEmail || 'unknown email'}</p>
+                            <p class="mt-2 text-sm text-slate-400">${t('timeClock.selfService.signedInAs', { email: loginEmail || t('timeClock.selfService.unknownEmail') })}</p>
+                            ${heroStatusMarkup}
                         </div>
                         <div class="mt-10">
-                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
-                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                            <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                            <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
                         ${canOpenVacationBoard ? `
                             <div class="mt-8 flex flex-wrap items-center gap-3">
@@ -1737,7 +1947,7 @@ export class UIManager {
                             </div>
                         ` : `
                             <div class="mt-10 rounded-3xl border border-white/15 bg-white/5 p-5 text-slate-200">
-                                You can still use the manager review tools below, but employee self-service will stay locked until an active colleague profile is linked to your login email.
+                                ${t('timeClock.selfService.lockedHint')}
                             </div>
                         `}
                         <p id="time-clock-feedback" class="mt-4 text-sm text-slate-300 h-5"></p>
@@ -1745,29 +1955,29 @@ export class UIManager {
                 </section>
 
                 <section class="rounded-[32px] bg-white border border-slate-200 shadow-sm p-6">
-                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Today</div>
-                    <h3 class="text-2xl font-semibold text-slate-900">Live summary</h3>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.todayKicker')}</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.liveSummaryTitle')}</h3>
                     <div class="grid grid-cols-2 gap-3 mt-6">
                         <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="text-sm text-slate-500">Worked</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.selfService.worked')}</div>
                             <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.workedMinutes || 0)}</div>
                         </div>
                         <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="text-sm text-slate-500">Breaks</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.selfService.breaks')}</div>
                             <div class="mt-2 text-3xl font-semibold text-slate-900">${this.formatMinutesAsDuration(todaySummary?.breakMinutes || 0)}</div>
                         </div>
                         <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="text-sm text-slate-500">First in</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.selfService.firstIn')}</div>
                             <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.firstClockIn)}</div>
                         </div>
                         <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                            <div class="text-sm text-slate-500">Last out</div>
+                            <div class="text-sm text-slate-500">${t('timeClock.selfService.lastOut')}</div>
                             <div class="mt-2 text-2xl font-semibold text-slate-900">${formatTimeLabel(todaySummary?.lastClockOut)}</div>
                         </div>
                     </div>
                     ${todaySummary?.activeSessionStartedAt || todaySummary?.activeBreakStartedAt ? `
                         <div class="mt-5 rounded-3xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? 'Current break' : 'Current shift block'}</div>
+                            <div class="text-sm text-emerald-700">${todaySummary?.activeBreakStartedAt ? t('timeClock.selfService.currentBreak') : t('timeClock.selfService.currentShiftBlock')}</div>
                             <div class="mt-1 text-2xl font-semibold text-emerald-900" data-live-duration-start="${todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt}">
                                 ${this.formatMinutesAsDuration(
                                     this.getMinutesBetween(todaySummary.activeBreakStartedAt || todaySummary.activeSessionStartedAt, referenceDateTime)
@@ -1776,65 +1986,65 @@ export class UIManager {
                         </div>
                     ` : ''}
                     <div class="mt-6 rounded-3xl bg-slate-900 text-white p-5">
-                        <div class="text-sm text-slate-300">This week</div>
+                        <div class="text-sm text-slate-300">${t('timeClock.selfService.thisWeek')}</div>
                         <div class="mt-2 text-3xl font-semibold">${this.formatMinutesAsDuration(weekSummary?.workedMinutes || 0)}</div>
-                        <div class="mt-1 text-slate-300">Worked across ${weekSummary?.daysWithPunches || 0} day(s)</div>
+                        <div class="mt-1 text-slate-300">${t('timeClock.selfService.workedAcrossDays', { count: weekSummary?.daysWithPunches || 0, daysLabel: this.getAttendanceDayCountLabel(weekSummary?.daysWithPunches || 0) })}</div>
                     </div>
                     <div class="mt-5 rounded-3xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-                        Single-block workdays of 06:00 or longer automatically deduct 01:00 for lunch when no break punches are recorded.
+                        ${t('timeClock.selfService.autoLunchHint')}
                     </div>
                 </section>
 
                 <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Today&apos;s Log</div>
-                            <h3 class="text-2xl font-semibold text-slate-900">Punch timeline</h3>
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.todayLogKicker')}</div>
+                            <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.timelineTitle')}</h3>
                         </div>
-                        ${todayRecord?.review?.status === 'needs-attention' ? '<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Needs review</span>' : ''}
+                        ${todayRecord?.review?.status === 'needs-attention' ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">${t('timeClock.station.needsReview')}</span>` : ''}
                     </div>
                     <ul class="mt-6">${timeline}</ul>
                 </section>
 
                 <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
-                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">Weekly Snapshot</div>
-                    <h3 class="text-2xl font-semibold text-slate-900">Attendance totals</h3>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.weeklySnapshotKicker')}</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.attendanceTotalsTitle')}</h3>
                     <div class="space-y-4 mt-6">
                         <div class="flex items-center justify-between">
-                            <span class="text-slate-600">Worked time</span>
+                            <span class="text-slate-600">${t('timeClock.selfService.workedTime')}</span>
                             <span class="font-semibold text-slate-900">${this.formatMinutesAsDuration(weekSummary?.workedMinutes || 0)}</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-slate-600">Break time</span>
+                            <span class="text-slate-600">${t('timeClock.selfService.breakTime')}</span>
                             <span class="font-semibold text-slate-900">${this.formatMinutesAsDuration(weekSummary?.breakMinutes || 0)}</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-slate-600">Open sessions</span>
+                            <span class="text-slate-600">${t('timeClock.selfService.openSessions')}</span>
                             <span class="font-semibold text-slate-900">${weekSummary?.openSessions || 0}</span>
                         </div>
                     </div>
                     <div class="mt-6 rounded-3xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600">
-                        The website stores clock-in, clock-out, breaks, and manual adjustments in a weekly register that managers can review or print when needed.
+                        ${t('timeClock.selfService.registerHint')}
                     </div>
                 </section>
 
                 <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
-                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">This Week</div>
-                    <h3 class="text-2xl font-semibold text-slate-900">Your planned schedule</h3>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.plannedScheduleKicker')}</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.plannedScheduleTitle')}</h3>
                     <div class="grid gap-3 mt-6 md:grid-cols-2 xl:grid-cols-4">
                         ${schedulePreview.length ? schedulePreview.map((day) => `
                             <article class="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-                                <div class="text-sm text-slate-500">${day.date.toLocaleDateString('en-GB', { weekday: 'long' })}</div>
-                                <div class="text-lg font-semibold text-slate-900 mt-1">${day.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</div>
+                                <div class="text-sm text-slate-500">${this.formatLocaleDate(day.date, { weekday: 'long' })}</div>
+                                <div class="text-lg font-semibold text-slate-900 mt-1">${this.formatLocaleDate(day.date, { day: '2-digit', month: '2-digit' })}</div>
                                 <div class="mt-3 text-sm text-slate-700">${day.planned}</div>
                             </article>
-                        `).join('') : '<div class="text-sm text-slate-500">No linked colleague schedule available yet.</div>'}
+                        `).join('') : `<div class="text-sm text-slate-500">${t('timeClock.selfService.noLinkedSchedule')}</div>`}
                     </div>
                 </section>
 
                 <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
-                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">History</div>
-                    <h3 class="text-2xl font-semibold text-slate-900">All attendance history</h3>
+                    <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.historyKicker')}</div>
+                    <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.historyTitle')}</h3>
                     <div class="space-y-4 mt-6">
                         ${historyMarkup}
                     </div>
@@ -1868,7 +2078,9 @@ export class UIManager {
         }
 
         if (summary?.autoBreakMinutes) {
-            return `Automatic lunch deduction (${this.formatMinutesAsDuration(summary.autoBreakMinutes)})`;
+            return t('timeClock.notes.autoLunchBreak', {
+                duration: this.formatMinutesAsDuration(summary.autoBreakMinutes)
+            });
         }
 
         return '';
@@ -1880,7 +2092,9 @@ export class UIManager {
         const safeRecord = record || {};
         const notes = [];
         if (summary?.autoBreakMinutes) {
-            notes.push(`Automatic lunch deduction applied: ${this.formatMinutesAsDuration(summary.autoBreakMinutes)}`);
+            notes.push(t('timeClock.notes.autoLunchApplied', {
+                duration: this.formatMinutesAsDuration(summary.autoBreakMinutes)
+            }));
         }
 
         if (safeRecord.review?.note) {
@@ -1900,10 +2114,14 @@ export class UIManager {
         const status = this.dataManager.getEmployeeStatusForDate(employee, date);
         const holidayName = this.dataManager.getHolidaysForYear(date.getFullYear())[this.dataManager.getDateKey(date)];
 
-        if (holidayName) return `Holiday: ${holidayName}`;
+        if (holidayName) return t('timeClock.print.holidayLabel', { name: holidayName });
         if (status === 'Working') return (employee.shifts && employee.shifts.default) ? employee.shifts.default : '9:00-18:00';
-        if (status === 'On Vacation' || status === 'Vacation') return 'Vacation';
-        if (status === 'Scheduled Off' || status === 'Off') return 'Off';
+        if (status === 'On Vacation' || status === 'Vacation') return t('statuses.vacation');
+        if (status === 'Scheduled Off' || status === 'Off') return t('statuses.scheduledOff');
+        if (status === 'Absent') return t('statuses.absent');
+        if (status === 'Sick') return t('statuses.sick');
+        if (status === 'Personal') return t('statuses.personal');
+        if (status === 'Unjustified') return t('statuses.unjustified');
         return status;
     }
 
@@ -1927,33 +2145,37 @@ export class UIManager {
         return fallbackEmployee;
     }
 
-    renderWeeklyTimesheet(startDate) {
+    renderAttendanceTimesheet(referenceDate = new Date(), mode = this.currentTimesheetMode) {
         const container = document.getElementById('timesheet-content');
         if (!container) return;
 
-        const monday = this.getMondayForDate(startDate);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
+        this.currentTimesheetMode = normalizeAttendancePrintMode(mode);
+        const { startDate, endDate } = getAttendancePrintRange(referenceDate, this.currentTimesheetMode);
 
         const label = document.getElementById('timesheet-week-label');
         if (label) {
-            label.textContent = this.formatWeekLabel(monday, sunday);
+            label.textContent = this.getAttendancePrintLabel(startDate, this.currentTimesheetMode);
         }
 
-        this.currentTimesheetDate = monday;
+        const periodModeSelect = document.getElementById('timesheet-period-mode');
+        if (periodModeSelect) {
+            periodModeSelect.value = this.currentTimesheetMode;
+        }
+
+        this.currentTimesheetDate = startDate;
 
         const employees = this.dataManager.getActiveEmployees();
         const employeeSelect = document.getElementById('timesheet-employee-select');
         if (employees.length === 0) {
             this.currentTimesheetEmployeeId = null;
             if (employeeSelect) {
-                employeeSelect.innerHTML = '<option value="">Select colleague</option>';
+                employeeSelect.innerHTML = `<option value="">${t('timeClock.print.selectColleague')}</option>`;
                 employeeSelect.value = '';
                 employeeSelect.disabled = true;
             }
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto border rounded-xl p-8 text-center text-gray-600">
-                    No colleagues found. Add staff before printing a time sheet.
+                    ${t('timeClock.print.emptyTitle')}
                 </div>
             `;
             return;
@@ -1971,7 +2193,7 @@ export class UIManager {
         if (!selectedEmployee) {
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto border rounded-xl p-8 text-center text-gray-600">
-                    Select a colleague to open the time sheet print view.
+                    ${t('timeClock.print.selectPrompt')}
                 </div>
             `;
             return;
@@ -1979,24 +2201,23 @@ export class UIManager {
 
         const employee = selectedEmployee;
         const days = [];
-        let plannedWeeklyHours = 0;
-        let recordedWeeklyMinutes = 0;
+        let plannedTotalHours = 0;
+        let recordedTotalMinutes = 0;
 
-        for (let i = 0; i < 7; i++) {
-            const current = new Date(monday);
-            current.setDate(monday.getDate() + i);
+        for (let current = new Date(startDate); current <= endDate; current.setDate(current.getDate() + 1)) {
+            const currentDate = new Date(current);
             const dateKey = this.dataManager.getDateKey(current);
 
-            const planned = this.getPlannedTimesheetStatus(employee, current);
+            const planned = this.getPlannedTimesheetStatus(employee, currentDate);
             const plannedHours = this.parseShiftHours(planned);
-            if (plannedHours) plannedWeeklyHours += plannedHours;
+            if (plannedHours) plannedTotalHours += plannedHours;
 
             const referenceDateTime = dateKey === this.dataManager.getDateKey(new Date())
                 ? formatLocalDateTime(new Date())
                 : null;
-            const attendanceRecord = this.dataManager.getAttendanceRecord(employee.id, current);
-            const attendanceSummary = this.dataManager.getAttendanceSummary(employee.id, current, { referenceDateTime });
-            recordedWeeklyMinutes += attendanceSummary.workedMinutes || 0;
+            const attendanceRecord = this.dataManager.getAttendanceRecord(employee.id, currentDate);
+            const attendanceSummary = this.dataManager.getAttendanceSummary(employee.id, currentDate, { referenceDateTime });
+            recordedTotalMinutes += attendanceSummary.workedMinutes || 0;
 
             const recordedHours = (attendanceSummary.workedMinutes || 0) / 60;
             const manualExtraHours = Number(employee.extraHours?.[dateKey] || 0);
@@ -2004,7 +2225,7 @@ export class UIManager {
             const extraHoursValue = manualExtraHours > 0 ? manualExtraHours : calculatedExtraHours;
 
             days.push({
-                dateLabel: current.toLocaleDateString('en-GB', {
+                dateLabel: this.formatLocaleDate(currentDate, {
                     weekday: 'short',
                     day: '2-digit',
                     month: '2-digit',
@@ -2018,21 +2239,29 @@ export class UIManager {
                 recordedHours: this.formatMinutesAsDuration(attendanceSummary.workedMinutes || 0),
                 extraHours: extraHoursValue > 0 ? this.formatDurationHours(extraHoursValue) : '',
                 notes: this.getAttendanceNotesText(attendanceRecord, attendanceSummary),
-                proof: attendanceRecord?.punches?.length ? 'Digital log' : ''
+                proof: attendanceRecord?.punches?.length ? t('timeClock.print.digitalLog') : ''
             });
         }
+
+        const summaryTitleKey = this.currentTimesheetMode === 'month'
+            ? 'timeClock.print.monthlySummary'
+            : 'timeClock.print.weeklySummary';
+        const periodTitleKey = this.currentTimesheetMode === 'month'
+            ? 'timeClock.print.periodMonthLabel'
+            : 'timeClock.print.periodWeekLabel';
+        const periodLabel = this.getAttendancePrintLabel(startDate, this.currentTimesheetMode);
 
         container.innerHTML = `
             <section class="timesheet-page max-w-7xl mx-auto mb-10 border border-gray-300 rounded-xl overflow-hidden">
                 <div class="px-8 py-6 border-b bg-gray-50">
                     <div class="flex items-start justify-between gap-6">
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-900">Registo de tempos de trabalho</h2>
-                            <p class="text-sm text-gray-600 mt-1">Artigo 202 do Codigo do Trabalho: inicio, termo, interrupcoes/intervalos, horas por dia e por semana, com visto/assinatura quando aplicavel.</p>
+                            <h2 class="text-2xl font-bold text-gray-900">${t('timeClock.print.documentTitle')}</h2>
+                            <p class="text-sm text-gray-600 mt-1">${t('timeClock.print.instructions')}</p>
                         </div>
                         <div class="text-right text-sm text-gray-600">
-                            <div>Semana</div>
-                            <div class="font-semibold text-gray-900">${this.formatWeekLabel(monday, sunday)}</div>
+                            <div>${t(periodTitleKey)}</div>
+                            <div class="font-semibold text-gray-900">${periodLabel}</div>
                         </div>
                     </div>
                 </div>
@@ -2040,40 +2269,40 @@ export class UIManager {
                 <div class="px-8 py-6 space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div class="border rounded-lg p-3">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Empregador / estabelecimento</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.employerLabel')}</div>
                             <div class="h-6 border-b border-dashed border-gray-400"></div>
                         </div>
                         <div class="border rounded-lg p-3">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Atividade / local de trabalho</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.locationLabel')}</div>
                             <div class="h-6 border-b border-dashed border-gray-400"></div>
                         </div>
                         <div class="border rounded-lg p-3">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Trabalhador</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.workerLabel')}</div>
                             <div class="font-semibold text-gray-900">${employee.name}</div>
                         </div>
                         <div class="border rounded-lg p-3">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Numero / horario base previsto</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.numberAndBaseLabel')}</div>
                             <div class="font-semibold text-gray-900">${employee.staffNumber ? employee.staffNumber : '-'} / ${employee.shifts?.default || '9:00-18:00'}</div>
                         </div>
                     </div>
 
                     <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                        Preencher com as horas reais de entrada, intervalos nao incluidos e saida. Para trabalho no exterior, recolher o visto/assinatura e manter o registo visado no prazo legal.
+                        ${t('timeClock.print.instructionsDetail')}
                     </div>
 
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm border-collapse border border-gray-300">
                             <thead>
                                 <tr class="bg-gray-100">
-                                    <th class="border border-gray-300 p-2 text-left">Data</th>
-                                    <th class="border border-gray-300 p-2 text-left">Planeado</th>
-                                    <th class="border border-gray-300 p-2 text-left">Entrada</th>
-                                    <th class="border border-gray-300 p-2 text-left">Intervalos nao incluidos</th>
-                                    <th class="border border-gray-300 p-2 text-left">Saida</th>
-                                    <th class="border border-gray-300 p-2 text-left">Total diario</th>
-                                    <th class="border border-gray-300 p-2 text-left">Trabalho suplementar</th>
-                                    <th class="border border-gray-300 p-2 text-left">Fundamento / observacoes</th>
-                                    <th class="border border-gray-300 p-2 text-left">Assinatura / visto</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.date')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.planned')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.start')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.breaks')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.end')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.dailyTotal')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.overtime')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.notes')}</th>
+                                    <th class="border border-gray-300 p-2 text-left">${t('timeClock.print.proof')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2082,7 +2311,7 @@ export class UIManager {
                                         <td class="border border-gray-300 p-2 font-medium">${day.dateLabel}</td>
                                         <td class="border border-gray-300 p-2">
                                             <div>${day.planned}</div>
-                                            ${day.dailyHours ? `<div class="text-xs text-gray-500 mt-1">Previsto: ${day.dailyHours}</div>` : ''}
+                                            ${day.dailyHours ? `<div class="text-xs text-gray-500 mt-1">${t('timeClock.print.plannedHours', { duration: day.dailyHours })}</div>` : ''}
                                         </td>
                                         <td class="border border-gray-300 p-2 h-12">${day.startTime !== '--:--' ? day.startTime : ''}</td>
                                         <td class="border border-gray-300 p-2 h-12">${day.breakWindows}</td>
@@ -2099,29 +2328,37 @@ export class UIManager {
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="border rounded-lg p-4">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Resumo semanal</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">${t(summaryTitleKey)}</div>
                             <div class="flex justify-between text-sm">
-                                <span>Total semanal previsto</span>
-                                <span class="font-semibold">${this.formatDurationHours(plannedWeeklyHours)}</span>
+                                <span>${t(this.getAttendancePrintSummaryKey(this.currentTimesheetMode, 'planned'))}</span>
+                                <span class="font-semibold">${this.formatDurationHours(plannedTotalHours)}</span>
                             </div>
                             <div class="flex justify-between text-sm mt-2">
-                                <span>Total semanal registado</span>
-                                <span class="font-semibold">${this.formatMinutesAsDuration(recordedWeeklyMinutes)}</span>
+                                <span>${t(this.getAttendancePrintSummaryKey(this.currentTimesheetMode, 'recorded'))}</span>
+                                <span class="font-semibold">${this.formatMinutesAsDuration(recordedTotalMinutes)}</span>
                             </div>
                         </div>
                         <div class="border rounded-lg p-4">
-                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Assinaturas</div>
-                            <div class="text-sm mb-4">Trabalhador (quando aplicavel): ____________________</div>
-                            <div class="text-sm">Conferido por: __________________________________</div>
+                            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">${t('timeClock.print.signatures')}</div>
+                            <div class="text-sm mb-4">${t('timeClock.print.workerSignature')}</div>
+                            <div class="text-sm">${t('timeClock.print.checkedBy')}</div>
                         </div>
                     </div>
 
                     <div class="text-xs text-gray-500">
-                        Conservar este registo durante 5 anos. Se houver trabalho suplementar, o respetivo fundamento deve ficar identificado no registo.
+                        ${t('timeClock.print.retentionNote')}
                     </div>
                 </div>
             </section>
         `;
+    }
+
+    renderWeeklyTimesheet(startDate) {
+        this.renderAttendanceTimesheet(startDate, 'week');
+    }
+
+    renderMonthlyTimesheet(startDate) {
+        this.renderAttendanceTimesheet(startDate, 'month');
     }
 
     renderStats() {

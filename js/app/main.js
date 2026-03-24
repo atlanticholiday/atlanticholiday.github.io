@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPe
 import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { Config } from '../core/config.js';
-import { i18n } from '../core/i18n.js';
+import { i18n, t } from '../core/i18n.js';
 import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
@@ -212,12 +212,12 @@ function syncAccessModeUi() {
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
     const scheduleButtonDescription = document.getElementById('go-to-schedule-description');
     if (scheduleButtonTitle) {
-        scheduleButtonTitle.textContent = boardOnlyMode ? 'Vacation Board' : 'Work Schedule';
+        scheduleButtonTitle.textContent = boardOnlyMode ? t('schedule.views.vacationBoard') : t('apps.workSchedule');
     }
     if (scheduleButtonDescription) {
         scheduleButtonDescription.textContent = boardOnlyMode
-            ? 'Check team vacations in a read-only board.'
-            : 'Plan staff schedules and holidays.';
+            ? t('timeClock.landing.vacationBoardDescription')
+            : t('apps.workScheduleDesc');
     }
     if (scheduleButton) {
         scheduleButton.dataset.accessMode = boardOnlyMode ? 'vacation-board' : 'full';
@@ -236,17 +236,17 @@ function syncAccessModeUi() {
     const heroSubtitle = document.getElementById('landing-hero-subtitle') || document.querySelector('#landing-page .hero-subtitle');
     if (heroTitle) {
         heroTitle.textContent = stationMode
-            ? 'Shared time clock station'
+            ? t('timeClock.landing.stationTitle')
             : clockOnlyMode
-            ? (employee ? `${employee.name}, clock in for your shift` : 'Clock in and out for your shift')
-            : 'Welcome to your operations hub';
+            ? (employee ? t('timeClock.landing.clockOnlyNamedTitle', { name: employee.name }) : t('timeClock.landing.clockOnlyFallbackTitle'))
+            : t('landing.welcome');
     }
     if (heroSubtitle) {
         heroSubtitle.textContent = stationMode
-            ? 'Use the shared tablet picker to select any colleague and record shifts, breaks, and clock-out times.'
+            ? t('timeClock.landing.stationSubtitle')
             : clockOnlyMode
-            ? 'Use the digital time clock to record shifts, breaks, and check the team vacation board before planning leave.'
-            : 'Manage properties, schedules, safety and more, all in one beautiful place.';
+            ? t('timeClock.landing.clockOnlySubtitle')
+            : t('landing.subtitle');
     }
 
     const timeClockBackButton = document.getElementById('back-to-landing-from-time-clock-btn');
@@ -257,7 +257,7 @@ function syncAccessModeUi() {
     const scheduleBackButton = document.getElementById('back-to-landing-from-schedule-btn');
     if (scheduleBackButton) {
         scheduleBackButton.dataset.targetPage = boardOnlyMode ? 'timeClock' : 'landing';
-        scheduleBackButton.title = boardOnlyMode ? 'Back to time clock' : 'Back to landing';
+        scheduleBackButton.title = boardOnlyMode ? t('timeClock.landing.backToTimeClock') : t('timeClock.landing.backToLanding');
     }
 
     if (limitedTimeClockMode && navigationManager && !timeClockAutoOpenedForUser) {
@@ -479,6 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (uiManager && typeof uiManager.updateView === 'function') {
                     uiManager.updateView();
                 }
+                syncAccessModeUi();
             } catch (e) { console.warn('Language change refresh failed:', e); }
         });
 

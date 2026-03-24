@@ -1,6 +1,8 @@
 import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { setDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { Config } from '../../core/config.js';
+import { t } from '../../core/i18n.js';
+import { shiftAttendancePrintReferenceDate } from './attendance-print-period.js';
 
 export class EventManager {
     constructor(auth, dataManager, uiManager) {
@@ -49,8 +51,8 @@ export class EventManager {
                 modal.classList.toggle('active-print', id === modalId);
             });
         };
-        const openWeeklyTimesheet = (date = new Date()) => {
-            this.uiManager.renderWeeklyTimesheet(date);
+        const openAttendancePrint = (date = new Date(), mode = this.uiManager.currentTimesheetMode || 'week') => {
+            this.uiManager.renderAttendanceTimesheet(date, mode);
             activatePrintModal('timesheet-modal');
             document.getElementById('timesheet-modal').classList.remove('hidden');
         };
@@ -158,6 +160,10 @@ export class EventManager {
         const timeClockContent = document.getElementById('time-clock-page-content');
         if (timeClockContent) {
             timeClockContent.addEventListener('click', async (e) => {
+                if (this.uiManager.isTimeClockStationMode()) {
+                    this.uiManager.registerTimeClockStationActivity();
+                }
+
                 const modeButton = e.target.closest('[data-time-clock-mode]');
                 if (modeButton) {
                     this.uiManager.setTimeClockMode(modeButton.dataset.timeClockMode);
@@ -199,14 +205,17 @@ export class EventManager {
                             await this.dataManager.recordCurrentUserAttendance(actionButton.dataset.timeClockAction);
                             const refreshedFeedback = document.getElementById('time-clock-feedback');
                             if (refreshedFeedback) {
-                                refreshedFeedback.textContent = `${actionButton.textContent.trim()} saved.`;
+                                const syncState = this.dataManager.getAttendanceSyncState();
+                                refreshedFeedback.textContent = syncState.online
+                                    ? t('timeClock.feedback.saved', { action: actionButton.textContent.trim() })
+                                    : t('timeClock.feedback.savedOffline', { action: actionButton.textContent.trim() });
                             }
                         }
                     } catch (error) {
                         if (actionButton.dataset.timeClockEmployeeId) {
-                            this.uiManager.setTimeClockStationFeedback(error.message || 'Failed to save attendance.', 'error');
+                            this.uiManager.setTimeClockStationFeedback(error.message || t('timeClock.feedback.saveFailed'), 'error');
                         } else if (feedback) {
-                            feedback.textContent = error.message || 'Failed to save attendance.';
+                            feedback.textContent = error.message || t('timeClock.feedback.saveFailed');
                         }
                     }
                     return;
@@ -220,13 +229,13 @@ export class EventManager {
                             reviewButton.dataset.attendanceReviewDateKey,
                             {
                                 status: 'reviewed',
-                                note: 'Reviewed in the attendance panel.'
+                                note: t('timeClock.feedback.reviewedNote')
                             }
                         );
                     } catch (error) {
                         const adjustmentFeedback = document.getElementById('attendance-adjustment-feedback');
                         if (adjustmentFeedback) {
-                            adjustmentFeedback.textContent = error.message || 'Failed to mark the record as reviewed.';
+                            adjustmentFeedback.textContent = error.message || t('timeClock.feedback.reviewFailed');
                         }
                     }
                     return;
@@ -235,6 +244,10 @@ export class EventManager {
             });
 
             timeClockContent.addEventListener('input', (e) => {
+                if (this.uiManager.isTimeClockStationMode()) {
+                    this.uiManager.registerTimeClockStationActivity();
+                }
+
                 if (e.target.id === 'time-clock-station-search') {
                     this.uiManager.setTimeClockStationSearch(e.target.value);
                 }
@@ -243,6 +256,10 @@ export class EventManager {
             timeClockContent.addEventListener('submit', async (e) => {
                 if (e.target.id !== 'attendance-adjustment-form') return;
                 e.preventDefault();
+
+                if (this.uiManager.isTimeClockStationMode()) {
+                    this.uiManager.registerTimeClockStationActivity();
+                }
 
                 const employeeId = document.getElementById('attendance-adjustment-employee')?.value;
                 const dateKey = document.getElementById('attendance-adjustment-date')?.value;
@@ -256,13 +273,13 @@ export class EventManager {
                     await this.dataManager.addManualAttendanceEvent(employeeId, dateKey, type, time, note);
                     const refreshedFeedback = document.getElementById('attendance-adjustment-feedback');
                     if (refreshedFeedback) {
-                        refreshedFeedback.textContent = 'Manual event saved and flagged for review.';
+                        refreshedFeedback.textContent = t('timeClock.feedback.manualSaved');
                     }
                     const noteInput = document.getElementById('attendance-adjustment-note');
                     if (noteInput) noteInput.value = '';
                 } catch (error) {
                     if (feedback) {
-                        feedback.textContent = error.message || 'Failed to save the manual event.';
+                        feedback.textContent = error.message || t('timeClock.feedback.manualSaveFailed');
                     }
                 }
             });
@@ -270,7 +287,7 @@ export class EventManager {
 
         document.addEventListener('click', (e) => {
             if (e.target.closest('#open-attendance-print-from-clock-btn')) {
-                openWeeklyTimesheet(new Date());
+                openAttendancePrint(new Date(), this.uiManager.currentTimesheetMode || 'week');
             }
         });
 
@@ -382,7 +399,7 @@ export class EventManager {
         const printTimesheetBtn = document.getElementById('print-timesheet-btn');
         if (printTimesheetBtn) {
             printTimesheetBtn.addEventListener('click', () => {
-                openWeeklyTimesheet(new Date());
+                openAttendancePrint(new Date(), this.uiManager.currentTimesheetMode || 'week');
             });
         }
 
@@ -402,25 +419,39 @@ export class EventManager {
             });
         }
 
-        const prevTimesheetWeekBtn = document.getElementById('timesheet-prev-week');
-        if (prevTimesheetWeekBtn) {
-            prevTimesheetWeekBtn.addEventListener('click', () => {
+        const prevTimesheetPeriodBtn = document.getElementById('timesheet-prev-week');
+        if (prevTimesheetPeriodBtn) {
+            prevTimesheetPeriodBtn.addEventListener('click', () => {
                 if (this.uiManager.currentTimesheetDate) {
-                    const d = new Date(this.uiManager.currentTimesheetDate);
-                    d.setDate(d.getDate() - 7);
-                    this.uiManager.renderWeeklyTimesheet(d);
+                    const d = shiftAttendancePrintReferenceDate(
+                        this.uiManager.currentTimesheetDate,
+                        this.uiManager.currentTimesheetMode,
+                        -1
+                    );
+                    this.uiManager.renderAttendanceTimesheet(d, this.uiManager.currentTimesheetMode);
                 }
             });
         }
 
-        const nextTimesheetWeekBtn = document.getElementById('timesheet-next-week');
-        if (nextTimesheetWeekBtn) {
-            nextTimesheetWeekBtn.addEventListener('click', () => {
+        const nextTimesheetPeriodBtn = document.getElementById('timesheet-next-week');
+        if (nextTimesheetPeriodBtn) {
+            nextTimesheetPeriodBtn.addEventListener('click', () => {
                 if (this.uiManager.currentTimesheetDate) {
-                    const d = new Date(this.uiManager.currentTimesheetDate);
-                    d.setDate(d.getDate() + 7);
-                    this.uiManager.renderWeeklyTimesheet(d);
+                    const d = shiftAttendancePrintReferenceDate(
+                        this.uiManager.currentTimesheetDate,
+                        this.uiManager.currentTimesheetMode,
+                        1
+                    );
+                    this.uiManager.renderAttendanceTimesheet(d, this.uiManager.currentTimesheetMode);
                 }
+            });
+        }
+
+        const timesheetPeriodMode = document.getElementById('timesheet-period-mode');
+        if (timesheetPeriodMode) {
+            timesheetPeriodMode.addEventListener('change', (e) => {
+                const mode = e.target.value || 'week';
+                this.uiManager.renderAttendanceTimesheet(this.uiManager.currentTimesheetDate || new Date(), mode);
             });
         }
 
@@ -428,7 +459,10 @@ export class EventManager {
         if (timesheetEmployeeSelect) {
             timesheetEmployeeSelect.addEventListener('change', (e) => {
                 this.uiManager.currentTimesheetEmployeeId = e.target.value || null;
-                this.uiManager.renderWeeklyTimesheet(this.uiManager.currentTimesheetDate || new Date());
+                this.uiManager.renderAttendanceTimesheet(
+                    this.uiManager.currentTimesheetDate || new Date(),
+                    this.uiManager.currentTimesheetMode
+                );
             });
         }
 
