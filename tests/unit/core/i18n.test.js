@@ -51,6 +51,7 @@ describe("i18n", () => {
     assert.equal(document.getElementById("search").placeholder, "Search reservations");
     assert.equal(document.getElementById("cta").getAttribute("aria-label"), "Copy breakdown");
     assert.equal(document.getElementById("tip").title, "Helpful tip");
+    assert.equal(document.documentElement.lang, "en");
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
@@ -86,8 +87,10 @@ describe("i18n", () => {
     });
 
     resetDom(`
-      <button id="lang-en"></button>
-      <button id="lang-pt"></button>
+      <button id="lang-en" data-lang-option="en"></button>
+      <button id="lang-pt" data-lang-option="pt"></button>
+      <button id="landing-lang-en" data-lang-option="en"></button>
+      <button id="landing-lang-pt" data-lang-option="pt"></button>
       <div data-i18n="nav.title"></div>
     `);
 
@@ -100,6 +103,9 @@ describe("i18n", () => {
     assert.equal(i18n.getCurrentLanguage(), "pt");
     assert.equal(document.querySelector("[data-i18n]").textContent, "Agenda");
     assert.ok(document.getElementById("lang-pt").classList.contains("active"), "Portuguese switcher should be active");
+    assert.ok(document.getElementById("landing-lang-pt").classList.contains("active"), "Secondary Portuguese switcher should be active");
+    assert.equal(document.getElementById("lang-pt").getAttribute("aria-pressed"), "true");
+    assert.equal(document.getElementById("lang-en").getAttribute("aria-pressed"), "false");
 
     restoreFetch();
     restoreLanguage();
@@ -116,8 +122,10 @@ describe("i18n", () => {
     const restoreStorage = installGlobalProperty("localStorage", createStorageMock());
 
     resetDom(`
-      <button id="lang-en"></button>
-      <button id="lang-pt"></button>
+      <button id="lang-en" data-lang-option="en"></button>
+      <button id="lang-pt" data-lang-option="pt"></button>
+      <button id="time-clock-lang-en" data-lang-option="en"></button>
+      <button id="time-clock-lang-pt" data-lang-option="pt"></button>
       <div data-i18n="nav.title"></div>
     `);
 
@@ -138,6 +146,8 @@ describe("i18n", () => {
     assert.equal(localStorage.getItem("atlantic-holiday-lang"), "pt");
     assert.equal(document.querySelector("[data-i18n]").textContent, "Agenda");
     assert.equal(eventLanguage, "pt");
+    assert.ok(document.getElementById("time-clock-lang-pt").classList.contains("active"));
+    assert.equal(document.documentElement.lang, "pt");
 
     restoreStorage();
     i18n.translations = previousTranslations;

@@ -56,24 +56,30 @@
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg modal-content">
             <div class="text-center">
+                <div class="mb-6 flex justify-end">
+                    <div class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
+                </div>
                 <h1 class="text-center text-4xl font-extrabold text-gradient mb-2">Atlantic Holiday</h1>
                 <div class="w-16 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-4"></div>
-                <h2 class="text-center text-2xl font-bold text-gray-900">Sign in to your account</h2>
+                <h2 class="text-center text-2xl font-bold text-gray-900" data-i18n="login.title">Sign in to your account</h2>
             </div>
             <div class="mt-8 space-y-6">
                 <input type="hidden" name="remember" value="true">
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div>
-                        <label for="email-address" class="sr-only">Email address</label>
+                        <label for="email-address" class="sr-only" data-i18n="login.email">Email address</label>
                         <input id="email-address" name="email" type="email" autocomplete="email" required
                             class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm focus-ring"
-                            placeholder="Email address">
+                            placeholder="Email address" data-i18n="login.email">
                     </div>
                     <div>
-                        <label for="password" class="sr-only">Password</label>
+                        <label for="password" class="sr-only" data-i18n="login.password">Password</label>
                         <input id="password" name="password" type="password" autocomplete="current-password" required
                             class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-brand focus:border-brand focus:z-10 sm:text-sm focus-ring"
-                            placeholder="Password">
+                            placeholder="Password" data-i18n="login.password">
                     </div>
                 </div>
                 <p id="login-error" class="text-red-500 text-sm text-center h-5"></p>
@@ -87,7 +93,7 @@
                                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </span>
-                        Sign in
+                        <span data-i18n="login.signIn">Sign in</span>
                     </button>
                 </div>
             </div>
@@ -98,10 +104,16 @@
         class="hidden min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-xl w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center modal-content">
             <div>
-                <h1 class="text-center text-4xl font-extrabold text-gradient mb-2">Welcome to the Schedule Calculator!
+                <div class="mb-6 flex justify-end">
+                    <div class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
+                </div>
+                <h1 class="text-center text-4xl font-extrabold text-gradient mb-2" data-i18n="setup.welcome">Welcome to the Schedule Calculator!
                 </h1>
                 <div class="w-16 h-1 bg-gradient-to-r from-brand to-brand-dark mx-auto rounded-full mb-4"></div>
-                <p class="mt-4 text-center text-md text-gray-600">Your schedule is currently empty. How would you like
+                <p class="mt-4 text-center text-md text-gray-600" data-i18n="setup.emptySchedule">Your schedule is currently empty. How would you like
                     to get started?</p>
             </div>
             <div class="mt-8 space-y-4">
@@ -112,9 +124,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        Start With a Blank Schedule
+                        <span data-i18n="setup.startBlank">Start With a Blank Schedule</span>
                     </button>
-                    <p class="text-xs text-gray-500 mt-1">You can add your own colleagues manually.</p>
+                    <p class="text-xs text-gray-500 mt-1" data-i18n="setup.startBlankDesc">You can add your own colleagues manually.</p>
                 </div>
             </div>
         </div>
@@ -135,14 +147,18 @@
                         <div class="header-title brand-red">Atlantic Holiday</div>
                     </div>
                 </div>
-                <div class="header-right">
+                <div class="header-right flex items-center gap-3">
+                    <div class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
                     <button id="landing-sign-out-btn"
                         class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                         <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                         </svg>
-                        Sign Out
+                        <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
             </div>
@@ -153,7 +169,7 @@
                 <div class="hero-inner">
                     <div class="hero-copy">
                         <h2 id="landing-hero-title" class="hero-title">Welcome to your operations hub</h2>
-                        <p class="hero-subtitle">Manage properties, schedules, safety and more — all in one beautiful
+                        <p id="landing-hero-subtitle" class="hero-subtitle" data-i18n="landing.subtitle">Manage properties, schedules, safety and more — all in one beautiful
                             place.</p>
                     </div>
                 </div>
@@ -164,7 +180,7 @@
             <!-- Primary apps -->
             <!-- Primary apps -->
             <!-- Primary apps -->
-            <h2 class="text-xl font-semibold text-gray-800 mb-4 px-2">Main Apps</h2>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 px-2" data-i18n="landing.mainApps">Main Apps</h2>
             <div class="dashboard-grid mb-12">
                 <button id="go-to-time-clock-btn" class="dashboard-card">
                     <div class="card-icon bg-slate-900/10 text-slate-700">
@@ -246,13 +262,13 @@
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
-                    <span id="more-tools-text">Show More Tools</span>
+                    <span id="more-tools-text" data-i18n="landing.showMoreTools">Show More Tools</span>
                 </button>
             </div>
 
             <!-- More Tools Section (Hidden by default) -->
             <div id="more-tools-section" class="hidden">
-                <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2">Other Tools</h2>
+                <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2" data-i18n="landing.otherTools">Other Tools</h2>
                 <div id="other-tools-grid" class="dashboard-grid opacity-80 mb-12">
 
 
@@ -349,21 +365,34 @@
             </div>
 
             <script>
+                function updateMoreToolsToggleLabel() {
+                    const section = document.getElementById('more-tools-section');
+                    const text = document.getElementById('more-tools-text');
+                    if (!section || !text || !window.i18n) {
+                        return;
+                    }
+
+                    text.textContent = section.classList.contains('hidden')
+                        ? window.i18n.t('landing.showMoreTools')
+                        : window.i18n.t('landing.hideMoreTools');
+                }
+
                 document.getElementById('toggle-more-tools-btn').addEventListener('click', function () {
                     const section = document.getElementById('more-tools-section');
                     const icon = document.getElementById('more-tools-icon');
-                    const text = document.getElementById('more-tools-text');
 
                     if (section.classList.contains('hidden')) {
                         section.classList.remove('hidden');
                         icon.classList.add('rotate-180');
-                        text.textContent = 'Hide More Tools';
                     } else {
                         section.classList.add('hidden');
                         icon.classList.remove('rotate-180');
-                        text.textContent = 'Show More Tools';
                     }
+
+                    updateMoreToolsToggleLabel();
                 });
+
+                window.addEventListener('languageChanged', updateMoreToolsToggleLabel);
             </script>
         </div>
     </div>
@@ -388,7 +417,11 @@
                         <div class="header-sub" data-i18n="timeClock.pageSubtitle">Attendance, breaks and weekly review</div>
                     </div>
                 </div>
-                <div class="header-right">
+                <div class="header-right flex items-center gap-3">
+                    <div class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
                     <button id="time-clock-sign-out-btn"
                         class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                         <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1036,12 +1069,12 @@ Mountain Villa, Sintra Hills, V4"
                     <!-- Language Switcher -->
                     <div
                         class="language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
-                        <button id="lang-en"
+                        <button id="lang-en" type="button" data-lang-option="en"
                             class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100 active"
-                            title="English">🇬🇧</button>
-                        <button id="lang-pt"
+                            title="English">EN</button>
+                        <button id="lang-pt" type="button" data-lang-option="pt"
                             class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
-                            title="Português">🇵🇹</button>
+                            title="Português">PT</button>
                     </div>
                     <button id="schedule-help-btn"
                         class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-medium"

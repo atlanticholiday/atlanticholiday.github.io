@@ -121,6 +121,8 @@ class I18n {
      * Update all elements with data-i18n attribute
      */
     updateUI() {
+        document.documentElement.lang = this.currentLang;
+
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const translation = this.t(key);
@@ -147,28 +149,43 @@ class I18n {
      * Update language switcher button states
      */
     updateLanguageSwitcher() {
-        const enBtn = document.getElementById('lang-en');
-        const ptBtn = document.getElementById('lang-pt');
-
-        if (enBtn && ptBtn) {
-            enBtn.classList.toggle('active', this.currentLang === 'en');
-            ptBtn.classList.toggle('active', this.currentLang === 'pt');
-        }
+        this.getLanguageSwitcherButtons().forEach(({ button, lang }) => {
+            const isActive = this.currentLang === lang;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
     }
 
     /**
      * Setup language switcher event listeners
      */
     setupLanguageSwitcher() {
-        const enBtn = document.getElementById('lang-en');
-        const ptBtn = document.getElementById('lang-pt');
+        this.getLanguageSwitcherButtons().forEach(({ button, lang }) => {
+            if (button.dataset.langSwitcherBound === 'true') {
+                return;
+            }
 
-        if (enBtn) {
-            enBtn.addEventListener('click', () => this.setLanguage('en'));
+            button.dataset.langSwitcherBound = 'true';
+            button.addEventListener('click', () => this.setLanguage(lang));
+        });
+    }
+
+    getLanguageSwitcherButtons() {
+        const buttons = Array.from(document.querySelectorAll('[data-lang-option]'))
+            .map((button) => ({
+                button,
+                lang: button.getAttribute('data-lang-option')
+            }))
+            .filter(({ lang }) => ['en', 'pt'].includes(lang));
+
+        if (buttons.length) {
+            return buttons;
         }
-        if (ptBtn) {
-            ptBtn.addEventListener('click', () => this.setLanguage('pt'));
-        }
+
+        return [
+            { button: document.getElementById('lang-en'), lang: 'en' },
+            { button: document.getElementById('lang-pt'), lang: 'pt' }
+        ].filter(({ button }) => button);
     }
 }
 
