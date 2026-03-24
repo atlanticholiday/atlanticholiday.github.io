@@ -159,6 +159,7 @@ export class StaffManager {
     render() {
         const listContainer = document.getElementById('staff-list-container');
         const historyContainer = document.getElementById('history-list-container');
+        if (!listContainer || !historyContainer) return;
 
         if (this.isHistoryView) {
             listContainer.classList.add('hidden');
@@ -171,13 +172,31 @@ export class StaffManager {
         }
     }
 
+    renderStateMessage(container, message, tone = 'muted') {
+        const toneClass = tone === 'error'
+            ? 'text-red-700 bg-red-50 border border-red-200'
+            : 'text-gray-500 italic';
+        container.innerHTML = `<p class="${toneClass} text-center p-4 rounded-lg">${message}</p>`;
+    }
+
     renderActiveList() {
         const container = document.getElementById('staff-list-container');
         if (!container) return;
 
+        const loadError = this.dataManager.getEmployeeLoadError?.();
+        if (loadError) {
+            this.renderStateMessage(container, 'Staff could not be loaded for this account. Check your access and try again.', 'error');
+            return;
+        }
+
+        if (!this.dataManager.hasLoadedEmployeeDirectory?.()) {
+            this.renderStateMessage(container, 'Loading colleagues...');
+            return;
+        }
+
         const activeEmployees = this.dataManager.getActiveEmployees();
         if (activeEmployees.length === 0) {
-            container.innerHTML = `<p class="text-gray-500 italic text-center p-4">No active colleagues found.</p>`;
+            this.renderStateMessage(container, 'No active colleagues found.');
             return;
         }
 
@@ -216,9 +235,20 @@ export class StaffManager {
         const container = document.getElementById('history-list-container');
         if (!container) return;
 
+        const loadError = this.dataManager.getEmployeeLoadError?.();
+        if (loadError) {
+            this.renderStateMessage(container, 'Staff history could not be loaded for this account.', 'error');
+            return;
+        }
+
+        if (!this.dataManager.hasLoadedEmployeeDirectory?.()) {
+            this.renderStateMessage(container, 'Loading archived colleagues...');
+            return;
+        }
+
         const archivedEmployees = this.dataManager.getArchivedEmployees();
         if (archivedEmployees.length === 0) {
-            container.innerHTML = `<p class="text-gray-500 italic text-center p-4">No archived colleagues.</p>`;
+            this.renderStateMessage(container, 'No archived colleagues.');
             return;
         }
 

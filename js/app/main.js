@@ -679,26 +679,6 @@ function setupGlobalEventListeners() {
         });
     }
 
-    const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
-    if (goToWelcomePacksBtn) {
-        goToWelcomePacksBtn.addEventListener('click', () => {
-            // Manual navigation for new welcome pack app
-            document.getElementById('landing-page').classList.add('hidden');
-            document.getElementById('welcome-packs-page').classList.remove('hidden');
-            if (welcomePackManager) {
-                welcomePackManager.init();
-            }
-        });
-    }
-
-    const backToLandingFromWelcomeBtn = document.getElementById('back-to-landing-from-welcome-btn');
-    if (backToLandingFromWelcomeBtn) {
-        backToLandingFromWelcomeBtn.addEventListener('click', () => {
-            document.getElementById('welcome-packs-page').classList.add('hidden');
-            navigationManager.showLandingPage();
-        });
-    }
-
     if (goToScheduleBtn) {
         goToScheduleBtn.addEventListener('click', () => {
             navigationManager.showSchedulePage();
@@ -802,6 +782,14 @@ function setupGlobalEventListeners() {
         if (reservationsManager) {
             console.log('Reservations page opened, initializing...');
             reservationsManager.initializeEventListeners();
+        }
+    });
+
+    document.addEventListener('welcomePacksPageOpened', () => {
+        try {
+            welcomePackManager?.init();
+        } catch (error) {
+            console.error('Failed to initialize WelcomePackManager:', error);
         }
     });
 

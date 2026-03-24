@@ -77,7 +77,7 @@ export class WelcomePackManager {
         `;
 
         this.attachNavListeners();
-        this.renderCurrentView();
+        void this.renderCurrentView();
     }
 
     attachNavListeners() {
@@ -89,13 +89,56 @@ export class WelcomePackManager {
         document.getElementById('wp-help-btn').onclick = () => { this.showHelpModal(); };
     }
 
-    renderCurrentView() {
+    renderLoadingState(container) {
+        if (!container) return;
+        container.innerHTML = `
+            <div class="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-500">
+                Loading Welcome Packs...
+            </div>
+        `;
+    }
+
+    describeLoadError(error) {
+        const code = typeof error?.code === 'string' ? error.code.toLowerCase() : '';
+        const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+
+        if (code.includes('permission-denied') || message.includes('insufficient permissions')) {
+            return 'Welcome Packs is not available for this account. Check your access level and try again.';
+        }
+
+        if (code.includes('unauthenticated') || message.includes('requires authentication')) {
+            return 'Sign in again to load Welcome Packs.';
+        }
+
+        return 'Welcome Packs could not be loaded right now. Please try again.';
+    }
+
+    renderErrorState(container, error) {
+        if (!container) return;
+        container.innerHTML = `
+            <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+                <h3 class="text-lg font-semibold text-red-800">Welcome Packs Unavailable</h3>
+                <p class="mt-2 text-sm text-red-700">${this.describeLoadError(error)}</p>
+            </div>
+        `;
+    }
+
+    async renderCurrentView() {
         const container = document.getElementById('wp-view-container');
-        if (this.currentView === 'dashboard') this.renderDashboard(container);
-        else if (this.currentView === 'reservations') this.renderReservations(container);
-        else if (this.currentView === 'inventory') this.renderInventory(container);
-        else if (this.currentView === 'presets') this.renderPresets(container);
-        else if (this.currentView === 'log') this.renderLogForm(container);
+        if (!container) return;
+
+        this.renderLoadingState(container);
+
+        try {
+            if (this.currentView === 'dashboard') await this.renderDashboard(container);
+            else if (this.currentView === 'reservations') await this.renderReservations(container);
+            else if (this.currentView === 'inventory') await this.renderInventory(container);
+            else if (this.currentView === 'presets') await this.renderPresets(container);
+            else if (this.currentView === 'log') await this.renderLogForm(container);
+        } catch (error) {
+            console.error('Failed to render Welcome Packs view:', error);
+            this.renderErrorState(container, error);
+        }
     }
 
 

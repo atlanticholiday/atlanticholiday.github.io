@@ -17,6 +17,7 @@ import "./unit/features/properties/properties-dashboard-controller.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
 import "./unit/features/scheduling/holiday-calculator.test.js";
+import "./unit/features/scheduling/navigation-manager.test.js";
 import "./unit/features/scheduling/time-clock-station.test.js";
 import "./unit/features/scheduling/vacation-board-view-model.test.js";
 import "./unit/features/scheduling/vacation-records.test.js";

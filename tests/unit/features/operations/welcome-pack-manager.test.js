@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import { WelcomePackManager } from "../../../../js/features/operations/welcome-pack-manager.js";
+import { resetDom } from "../../../test-utils.js";
 
 describe("WelcomePackManager", () => {
   test("calculates VAT from a net amount", () => {
@@ -50,5 +51,33 @@ describe("WelcomePackManager", () => {
     assert.equal(manager.cache.logs, null);
     assert.equal(manager.cache.items, null);
     assert.equal(manager.cache.presets, null);
+  });
+
+  test("renders an inline error when the dashboard cannot be loaded", async () => {
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const originalConsoleError = console.error;
+    console.error = () => {};
+
+    try {
+      const manager = new WelcomePackManager({
+        async getWelcomePackLogs() {
+          const error = new Error("Missing or insufficient permissions.");
+          error.code = "permission-denied";
+          throw error;
+        },
+        async getWelcomePackItems() {
+          return [];
+        }
+      });
+
+      manager.init();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const text = document.getElementById("wp-view-container").textContent;
+      assert.includes(text, "Welcome Packs Unavailable");
+      assert.includes(text, "not available for this account");
+    } finally {
+      console.error = originalConsoleError;
+    }
   });
 });

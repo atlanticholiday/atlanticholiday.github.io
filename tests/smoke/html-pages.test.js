@@ -17,6 +17,12 @@ describe("HTML smoke", () => {
       page.markers.forEach((marker) => {
         assert.includes(html, marker, `${page.path} is missing marker ${marker}`);
       });
+
+      if (page.path === "../index.html") {
+        const documentRef = new DOMParser().parseFromString(html, "text/html");
+        assert.equal(documentRef.getElementById("welcome-packs-page")?.parentElement?.tagName, "BODY", "welcome-packs-page should be a top-level page");
+        assert.equal(documentRef.getElementById("staff-page")?.parentElement?.tagName, "BODY", "staff-page should be a top-level page");
+      }
     }
   });
 });

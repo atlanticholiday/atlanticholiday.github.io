@@ -5,6 +5,7 @@ export class NavigationManager {
             landing: 'landing-page',
             properties: 'properties-page',
             operations: 'operations-page',
+            welcomePacks: 'welcome-packs-page',
             schedule: 'app-content',
             reservations: 'reservations-page',
             login: 'login-screen',
@@ -51,6 +52,12 @@ export class NavigationManager {
 
     showOperationsPage() {
         this.showPage('operations');
+    }
+
+    showWelcomePacksPage() {
+        this.showPage('welcomePacks');
+        const event = new CustomEvent('welcomePacksPageOpened');
+        document.dispatchEvent(event);
     }
 
     showSchedulePage() {
@@ -136,6 +143,7 @@ export class NavigationManager {
         // Landing page navigation
         const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
+        const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
@@ -161,6 +169,12 @@ export class NavigationManager {
                 // Trigger operations page initialization if needed
                 const event = new CustomEvent('operationsPageOpened');
                 document.dispatchEvent(event);
+            });
+        }
+
+        if (goToWelcomePacksBtn) {
+            goToWelcomePacksBtn.addEventListener('click', () => {
+                this.showWelcomePacksPage();
             });
         }
 
@@ -286,6 +300,7 @@ export class NavigationManager {
 
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
+        const backToLandingFromWelcomeBtn = document.getElementById('back-to-landing-from-welcome-btn');
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
@@ -305,6 +320,12 @@ export class NavigationManager {
 
         if (backToLandingBtn) {
             backToLandingBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromWelcomeBtn) {
+            backToLandingFromWelcomeBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }

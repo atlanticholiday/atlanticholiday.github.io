@@ -44,6 +44,8 @@ export class DataManager {
         this.rawArchivedEmployees = [];
         this.activeEmployees = [];
         this.archivedEmployees = [];
+        this.hasLoadedEmployees = false;
+        this.employeeLoadError = null;
         this.vacationRecords = [];
         this.holidayCalculator = holidayCalculator;
         this.changeNotifier = new ChangeNotifier();
@@ -104,6 +106,8 @@ export class DataManager {
         this.rawArchivedEmployees = [];
         this.activeEmployees = [];
         this.archivedEmployees = [];
+        this.hasLoadedEmployees = false;
+        this.employeeLoadError = null;
         this.vacationRecords = [];
         this.attendanceRecords = {};
         this.dailyNotes = {};
@@ -148,6 +152,7 @@ export class DataManager {
     }
 
     listenForEmployeeChanges() {
+        this.employeeLoadError = null;
         this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), (snapshot) => {
             const readCount = snapshot.docs.length || 1;
             console.log(`👥 [FIRESTORE READ] Employee listener triggered - ${readCount} reads from employees collection`);
@@ -164,6 +169,9 @@ export class DataManager {
 
             console.log(`👥 [FIRESTORE READ] Processed ${allEmployees.length} employees (filtered out metadata doc)`);
 
+            this.hasLoadedEmployees = true;
+            this.employeeLoadError = null;
+
             if (allEmployees.length === 0 && snapshot.docs.length <= 1) {
                 // Dispatch event instead of directly showing setup screen
                 const event = new CustomEvent('noEmployeesFound');
@@ -176,7 +184,12 @@ export class DataManager {
             this.rawArchivedEmployees = archivedEmployees;
             this.rebuildEmployeesFromSources();
             this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
-        }, (error) => console.error("Error listening:", error));
+        }, (error) => {
+            this.hasLoadedEmployees = false;
+            this.employeeLoadError = error;
+            this.notifyDataChange();
+            console.error("Error listening:", error);
+        });
     }
 
     listenForVacationRecordChanges() {
@@ -634,6 +647,14 @@ export class DataManager {
 
     getCurrentUserRoles() {
         return this.currentUserContext.roles || [];
+    }
+
+    getEmployeeLoadError() {
+        return this.employeeLoadError;
+    }
+
+    hasLoadedEmployeeDirectory() {
+        return this.hasLoadedEmployees;
     }
 
     hasPrivilegedRole() {
