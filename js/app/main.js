@@ -8,6 +8,7 @@ import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
+import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
 import { CleaningBillsManager } from '../features/operations/cleaning-bills-manager.js';
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
@@ -43,7 +44,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, scheduleManager, staffManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, scheduleManager, staffManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -195,7 +196,8 @@ function syncAccessModeUi() {
         'go-to-safety-btn',
         'go-to-reservations-btn',
         'go-to-user-management-btn',
-        'go-to-inventory-btn'
+        'go-to-inventory-btn',
+        'go-to-cleaning-ah-btn'
     ];
 
     dashboardButtons.forEach((buttonId) => {
@@ -203,10 +205,14 @@ function syncAccessModeUi() {
         if (button) {
             const shouldHide = buttonId === 'go-to-schedule-btn'
                 ? (stationMode || (!canAccessVacationBoard && limitedTimeClockMode))
+                : buttonId === 'go-to-cleaning-ah-btn'
+                ? (limitedTimeClockMode || !dataManager.hasPrivilegedRole())
                 : limitedTimeClockMode;
             button.classList.toggle('hidden', shouldHide);
         }
     });
+
+    cleaningAhManager?.syncAccessVisibility?.();
 
     const scheduleButton = document.getElementById('go-to-schedule-btn');
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
@@ -402,6 +408,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         visitsManager = new VisitsManager(db, userId); // Reverted to original
         window.visitsManager = visitsManager;
         try { visitsManager.ensureDomScaffold?.(); } catch { }
+        // Initialize Cleaning AH manager early to inject its page and landing button before nav listeners are wired
+        cleaningAhManager = new CleaningAhManager(db, {
+            getDataManager: () => dataManager,
+            getProperties: () => propertiesManager?.properties || []
+        });
+        window.cleaningAhManager = cleaningAhManager;
+        try { cleaningAhManager.ensureDomScaffold?.(); } catch { }
         // Initialize Cleaning Bills manager early to inject page and landing button before nav listeners are wired
         cleaningBillsManager = new CleaningBillsManager(); // Reverted to original
         window.cleaningBillsManager = cleaningBillsManager;
@@ -466,6 +479,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Visits page render is also handled inside VisitsManager on event; keep a light touch hook
         document.addEventListener('visitsPageOpened', () => {
             try { visitsManager?.render(); } catch (e) { console.warn('Visits render failed:', e); }
+        });
+        // Cleaning AH page render
+        document.addEventListener('cleaningAhPageOpened', () => {
+            try { cleaningAhManager?.render(); } catch (e) { console.warn('Cleaning AH render failed:', e); }
         });
         // Cleaning Bills page render
         document.addEventListener('cleaningBillsPageOpened', () => {
@@ -626,6 +643,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (visitsManager) {
                     try { visitsManager.stopListening(); visitsManager.setUser(null); } catch { }
+                }
+                if (cleaningAhManager) {
+                    try { cleaningAhManager.stopListening(); } catch { }
                 }
             }
         });

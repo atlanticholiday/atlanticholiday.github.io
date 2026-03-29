@@ -43,29 +43,38 @@ export class CommissionCalculatorManager {
     }
 
     // Landing button card
-    if (!document.getElementById('go-to-commission-calculator-btn')) {
+    const otherToolsGrid = document.getElementById('other-tools-grid');
+    let parent = otherToolsGrid;
+
+    // Fallback: try to find an existing dashboard grid by locating the properties button
+    if (!parent) {
       const propsBtn = document.getElementById('go-to-properties-btn');
       if (propsBtn && propsBtn.parentElement) {
-        const parent = propsBtn.parentElement;
-        const card = document.createElement('button');
-        card.id = 'go-to-commission-calculator-btn';
-        card.className = propsBtn.className || 'dashboard-card';
-        card.innerHTML = propsBtn.innerHTML || '<span class="text-base">Commission Calculator</span>';
-        try {
-          const textNode = card.querySelector('h3, span, .title');
-          if (textNode) textNode.textContent = 'Commission Calculator';
-          else card.textContent = 'Commission Calculator';
-        } catch {}
-        parent.appendChild(card);
-      } else {
-        const landing = document.getElementById('landing-page');
-        if (landing) {
-          const fallback = document.createElement('button');
-          fallback.id = 'go-to-commission-calculator-btn';
-          fallback.className = 'dashboard-card px-4 py-3 border rounded bg-white hover:shadow';
-          fallback.textContent = 'Commission Calculator';
-          landing.appendChild(fallback);
-        }
+        parent = propsBtn.parentElement;
+      }
+    }
+
+    let landingButton = document.getElementById('go-to-commission-calculator-btn');
+    if (!landingButton && parent) {
+      landingButton = document.createElement('button');
+      landingButton.id = 'go-to-commission-calculator-btn';
+      landingButton.innerHTML = `
+        <div class="card-icon bg-amber-500/10 text-amber-600">
+          <span class="text-2xl">%</span>
+        </div>
+        <div class="card-body">
+          <h3>Commission Calculator</h3>
+          <p>Check platform fee, VAT, and net amount quickly.</p>
+        </div>
+      `;
+    }
+
+    if (landingButton && parent) {
+      const sibling = parent.querySelector('.dashboard-card');
+      landingButton.className = sibling?.className || 'dashboard-card';
+
+      if (landingButton.parentElement !== parent) {
+        parent.appendChild(landingButton);
       }
     }
   }

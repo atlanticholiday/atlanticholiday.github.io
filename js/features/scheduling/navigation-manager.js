@@ -20,6 +20,7 @@ export class NavigationManager {
             owners: 'owners-page',
             visits: 'visits-page',
             visits: 'visits-page',
+            cleaningAh: 'cleaning-ah-page',
             cleaningBills: 'cleaning-bills-page',
             staff: 'staff-page',
         };
@@ -116,6 +117,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showCleaningAhPage() {
+        this.showPage('cleaningAh');
+        const event = new CustomEvent('cleaningAhPageOpened');
+        document.dispatchEvent(event);
+    }
+
     showCleaningBillsPage() {
         this.showPage('cleaningBills');
         const event = new CustomEvent('cleaningBillsPageOpened');
@@ -149,6 +156,7 @@ export class NavigationManager {
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
         const goToOwnersBtn = document.getElementById('go-to-owners-btn');
         const goToVisitsBtn = document.getElementById('go-to-visits-btn');
+        const goToCleaningAhBtn = document.getElementById('go-to-cleaning-ah-btn');
         const goToCleaningBillsBtn = document.getElementById('go-to-cleaning-bills-btn');
         const goToCommissionCalculatorBtn = document.getElementById('go-to-commission-calculator-btn');
         const goToStaffBtn = document.getElementById('go-to-staff-btn');
@@ -215,6 +223,14 @@ export class NavigationManager {
             goToVisitsBtn.addEventListener('click', () => {
                 this.showVisitsPage();
                 const event = new CustomEvent('visitsPageOpened');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (goToCleaningAhBtn) {
+            goToCleaningAhBtn.addEventListener('click', () => {
+                this.showCleaningAhPage();
+                const event = new CustomEvent('cleaningAhPageOpened');
                 document.dispatchEvent(event);
             });
         }
@@ -308,6 +324,7 @@ export class NavigationManager {
         const backToLandingFromVehiclesBtn = document.getElementById('back-to-landing-from-vehicles-btn');
         const backToLandingFromOwnersBtn = document.getElementById('back-to-landing-from-owners-btn');
         const backToLandingFromVisitsBtn = document.getElementById('back-to-landing-from-visits-btn');
+        const backToLandingFromCleaningAhBtn = document.getElementById('back-to-landing-from-cleaning-ah-btn');
         const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
         const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
         const backToLandingFromTimeClockBtn = document.getElementById('back-to-landing-from-time-clock-btn');
@@ -374,6 +391,12 @@ export class NavigationManager {
             });
         }
 
+        if (backToLandingFromCleaningAhBtn) {
+            backToLandingFromCleaningAhBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         if (backToLandingFromCleaningBillsBtn) {
             backToLandingFromCleaningBillsBtn.addEventListener('click', () => {
                 this.showLandingPage();
@@ -434,6 +457,7 @@ export class NavigationManager {
         const vehiclesSignOutBtn = document.getElementById('vehicles-sign-out-btn');
         const ownersSignOutBtn = document.getElementById('owners-sign-out-btn');
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
+        const cleaningAhSignOutBtn = document.getElementById('cleaning-ah-sign-out-btn');
         const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
         const commissionCalculatorSignOutBtn = document.getElementById('commission-calculator-sign-out-btn');
         const staffSignOutBtn = document.getElementById('staff-sign-out-btn');
@@ -498,6 +522,12 @@ export class NavigationManager {
         }
         if (visitsSignOutBtn) {
             visitsSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (cleaningAhSignOutBtn) {
+            cleaningAhSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });
