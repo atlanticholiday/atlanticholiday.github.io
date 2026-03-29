@@ -131,6 +131,7 @@ export class CleaningAhManager {
             linkedCleaningId: "",
             propertyName: "",
             kg: "",
+            laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: ""
         };
     }
@@ -640,13 +641,17 @@ export class CleaningAhManager {
             <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.35fr)]">
                 <div class="space-y-6">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Quick entry</div>
                                 <h3 class="mt-1 text-xl font-semibold text-slate-900">${this.editingCleaningId ? "Edit cleaning" : "Add cleaning"}</h3>
                                 <p class="mt-2 text-sm text-slate-600">Save the checkout first. Laundry can be linked later from the Laundry tab when the kilograms arrive.</p>
                             </div>
-                            ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="text-sm text-slate-500 hover:text-slate-900">Cancel edit</button>` : ""}
+                            <div class="flex flex-wrap gap-3 xl:justify-end">
+                                ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">Cancel edit</button>` : ""}
+                                <button type="submit" form="cleaning-ah-cleaning-form" class="view-btn active">${this.editingCleaningId ? "Save changes" : "Save cleaning"}</button>
+                                <button type="button" id="cleaning-ah-reset-cleaning-form" class="view-btn">Reset</button>
+                            </div>
                         </div>
                         <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -681,10 +686,6 @@ export class CleaningAhManager {
                             <div id="cleaning-ah-cleaning-preview">
                                 ${this.renderCleaningPreview(previewRecord)}
                             </div>
-                            <div class="flex flex-wrap gap-3">
-                                <button type="submit" class="view-btn active">${this.editingCleaningId ? "Save changes" : "Save cleaning"}</button>
-                                <button type="button" id="cleaning-ah-reset-cleaning-form" class="view-btn">Reset</button>
-                            </div>
                         </form>
                     </section>
                     ${this.renderImportBlock()}
@@ -714,6 +715,7 @@ export class CleaningAhManager {
             propertyName: linkedCleaning?.propertyName || draft.propertyName,
             linkedCleaningId: draft.linkedCleaningId,
             kg: toOptionalNumber(draft.kg) || 0,
+            laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: draft.notes
         });
         const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId)
@@ -724,21 +726,25 @@ export class CleaningAhManager {
             <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.35fr)]">
                 <div class="space-y-6">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Standalone laundry</div>
                                 <h3 class="mt-1 text-xl font-semibold text-slate-900">${this.editingLaundryId ? "Edit laundry record" : "Add laundry record"}</h3>
-                                <p class="mt-2 text-sm text-slate-600">Use this when laundry needs to be tracked separately from a checkout cleaning. Amount is calculated automatically as kilograms multiplied by 2.10 EUR.</p>
+                                <p class="mt-2 text-sm text-slate-600">Use this when laundry needs to be tracked separately from a checkout cleaning. Amount is calculated automatically as kilograms multiplied by the rate you set below.</p>
                             </div>
-                            ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="text-sm text-slate-500 hover:text-slate-900">Cancel edit</button>` : ""}
+                            <div class="flex flex-wrap gap-3 xl:justify-end">
+                                ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="view-btn">Cancel edit</button>` : ""}
+                                <button type="submit" form="cleaning-ah-laundry-form" class="view-btn active">${this.editingLaundryId ? "Save changes" : "Save laundry"}</button>
+                                <button type="button" id="cleaning-ah-reset-laundry-form" class="view-btn">Reset</button>
+                            </div>
                         </div>
                         <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <label class="block">
                                     <span class="text-sm text-slate-600">Date</span>
                                     <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                                 </label>
-                                <label class="block md:col-span-2">
+                                <label class="block md:col-span-2 lg:col-span-3">
                                     <span class="text-sm text-slate-600">Linked cleaning</span>
                                     <select name="linkedCleaningId" id="cleaning-ah-linked-cleaning" class="mt-1 w-full">
                                         <option value="">No linked cleaning</option>
@@ -754,6 +760,10 @@ export class CleaningAhManager {
                                     <span class="text-sm text-slate-600">Kg</span>
                                     <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
                                 </label>
+                                <label class="block">
+                                    <span class="text-sm text-slate-600">Rate / kg</span>
+                                    <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
+                                </label>
                             </div>
                             <label class="block">
                                 <span class="text-sm text-slate-600">Notes</span>
@@ -761,10 +771,6 @@ export class CleaningAhManager {
                             </label>
                             <div id="cleaning-ah-laundry-preview">
                                 ${this.renderLaundryPreview(preview)}
-                            </div>
-                            <div class="flex flex-wrap gap-3">
-                                <button type="submit" class="view-btn active">${this.editingLaundryId ? "Save changes" : "Save laundry"}</button>
-                                <button type="button" id="cleaning-ah-reset-laundry-form" class="view-btn">Reset</button>
                             </div>
                         </form>
                     </section>
@@ -809,7 +815,7 @@ export class CleaningAhManager {
                 <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Preview</div>
                 <div class="mt-3 grid grid-cols-1 gap-3">
                     ${this.renderPreviewMetricCard("Kg", this.formatNumber(previewRecord.kg))}
-                    ${this.renderPreviewMetricCard("Rate", this.formatCurrency(CLEANING_AH_DEFAULTS.laundryRatePerKg))}
+                    ${this.renderPreviewMetricCard("Rate / kg", this.formatCurrency(previewRecord.laundryRatePerKg))}
                     ${this.renderPreviewMetricCard("Amount", this.formatCurrency(previewRecord.amount), "emphasis")}
                 </div>
             </div>
@@ -1181,6 +1187,7 @@ export class CleaningAhManager {
             linkedCleaningId: String(formData.get("linkedCleaningId") || "").trim(),
             propertyName: normalizeLabel(formData.get("propertyName")),
             kg: String(formData.get("kg") || "").trim(),
+            laundryRatePerKg: String(formData.get("laundryRatePerKg") || "").trim(),
             notes: String(formData.get("notes") || "").trim()
         };
     }
@@ -1208,6 +1215,7 @@ export class CleaningAhManager {
             date: this.laundryDraft.date,
             propertyName: this.laundryDraft.propertyName,
             kg: toOptionalNumber(this.laundryDraft.kg) || 0,
+            laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: this.laundryDraft.notes
         });
         container.innerHTML = this.renderLaundryPreview(record);
@@ -1281,6 +1289,7 @@ export class CleaningAhManager {
             propertyName,
             propertyId: property?.id || "",
             kg: toOptionalNumber(this.laundryDraft.kg) || 0,
+            laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: this.laundryDraft.notes,
             source: existingLaundry?.source || "standalone"
         });
@@ -1418,6 +1427,7 @@ export class CleaningAhManager {
             linkedCleaningId: record.linkedCleaningId || "",
             propertyName: record.propertyName || "",
             kg: toInputNumber(record.kg),
+            laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: record.notes || ""
         };
         this.render();
@@ -1432,13 +1442,30 @@ export class CleaningAhManager {
     }
 
     async deleteCleaning(recordId) {
-        if (!recordId || !window.confirm("Delete this cleaning record?")) {
+        const linkedLaundryRecords = this.laundryRecords.filter((entry) => entry.linkedCleaningId === recordId);
+        const confirmationMessage = linkedLaundryRecords.length
+            ? `Delete this cleaning record? ${linkedLaundryRecords.length} linked laundry row(s) will be kept and unlinked.`
+            : "Delete this cleaning record?";
+        if (!recordId || !window.confirm(confirmationMessage)) {
             return;
         }
 
         try {
-            await deleteDoc(doc(this.db, "cleaningAhRecords", recordId));
-            this.setStatus("Cleaning record deleted.", "success");
+            const batch = writeBatch(this.db);
+            batch.delete(doc(this.db, "cleaningAhRecords", recordId));
+            linkedLaundryRecords.forEach((entry) => {
+                batch.update(doc(this.db, "cleaningAhLaundryRecords", entry.id), {
+                    linkedCleaningId: "",
+                    updatedAt: new Date()
+                });
+            });
+            await batch.commit();
+            this.setStatus(
+                linkedLaundryRecords.length
+                    ? `Cleaning record deleted. ${linkedLaundryRecords.length} linked laundry row(s) were unlinked.`
+                    : "Cleaning record deleted.",
+                "success"
+            );
             if (this.editingCleaningId === recordId) {
                 this.resetCleaningForm();
                 return;

@@ -107,6 +107,18 @@ describe("Cleaning AH utilities", () => {
         assert.equal(derived[0].effectiveTotalToAh, 54.56);
     });
 
+    test("creates standalone laundry records with a custom rate per kg", () => {
+        const record = createStandaloneLaundryRecord({
+            date: "2025-11-20",
+            propertyName: "Acqua Beach",
+            kg: 10,
+            laundryRatePerKg: 2.35
+        });
+
+        assert.equal(record.laundryRatePerKg, 2.35);
+        assert.equal(record.amount, 23.5);
+    });
+
     test("summarizes cleaning records by totals, month, property, and category", () => {
         const records = [
             createCleaningAhRecord({
@@ -170,17 +182,23 @@ describe("Cleaning AH utilities", () => {
             }
         ];
         const standaloneLaundry = [
-            createStandaloneLaundryRecord({
+            {
+                id: "standalone-laundry",
+                ...createStandaloneLaundryRecord({
                 date: "2025-11-12",
                 propertyName: "Calas Loft",
                 kg: 8
-            }),
-            createStandaloneLaundryRecord({
+                })
+            },
+            {
+                id: "linked-laundry",
+                ...createStandaloneLaundryRecord({
                 date: "2025-11-13",
                 propertyName: "",
                 kg: 6,
                 linkedCleaningId: "imported-cleaning"
-            })
+                })
+            }
         ];
 
         const summary = summarizeLaundryRecords(cleaningRecords, standaloneLaundry);
@@ -189,6 +207,8 @@ describe("Cleaning AH utilities", () => {
         assert.equal(summary.totals.amount, 54.6);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
         assert.equal(summary.entries[0].date, "2025-11-13");
+        assert.equal(summary.entries[0].id, "linked-laundry");
         assert.equal(summary.entries[0].propertyName, "Acqua Beach");
+        assert.equal(summary.entries[1].id, "standalone-laundry");
     });
 });

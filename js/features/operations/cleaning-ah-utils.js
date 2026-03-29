@@ -573,12 +573,14 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
         ...cleaningRecords
             .filter((record) => toFiniteNumber(record.laundryAmount, 0) > 0)
             .map((record) => ({
+                id: record.id || '',
                 date: record.date,
                 monthKey: record.monthKey || getMonthKey(record.date),
                 propertyName: record.propertyName,
                 propertyId: record.propertyId || '',
                 kg: resolveLaundryKg(record),
                 amount: roundCurrency(record.laundryAmount),
+                laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
                 source: 'cleaning',
                 category: record.category,
                 linkedCleaningId: record.id || '',
@@ -586,20 +588,25 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
                 linkedCleaningCategory: record.category || '',
                 notes: record.notes || ''
             })),
-        ...standaloneLaundryRecords.map((record) => ({
-            date: record.date,
-            monthKey: record.monthKey || getMonthKey(record.date),
-            propertyName: cleaningsById.get(record.linkedCleaningId)?.propertyName || record.propertyName,
-            propertyId: record.propertyId || '',
-            kg: resolveLaundryKg(record),
-            amount: roundCurrency(record.amount),
-            source: record.source || 'manual',
-            category: record.category || '',
-            linkedCleaningId: record.linkedCleaningId || '',
-            linkedCleaningDate: cleaningsById.get(record.linkedCleaningId)?.date || '',
-            linkedCleaningCategory: cleaningsById.get(record.linkedCleaningId)?.category || '',
-            notes: record.notes || ''
-        }))
+        ...standaloneLaundryRecords.map((record) => {
+            const linkedCleaning = cleaningsById.get(record.linkedCleaningId);
+            return {
+                id: record.id || '',
+                date: record.date,
+                monthKey: record.monthKey || getMonthKey(record.date),
+                propertyName: linkedCleaning?.propertyName || record.propertyName,
+                propertyId: record.propertyId || '',
+                kg: resolveLaundryKg(record),
+                amount: roundCurrency(record.amount),
+                laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
+                source: record.source || 'manual',
+                category: record.category || '',
+                linkedCleaningId: linkedCleaning ? (record.linkedCleaningId || '') : '',
+                linkedCleaningDate: linkedCleaning?.date || '',
+                linkedCleaningCategory: linkedCleaning?.category || '',
+                notes: record.notes || ''
+            };
+        })
     ].sort((left, right) => String(right.date).localeCompare(String(left.date)));
 
     const monthGroups = new Map();
