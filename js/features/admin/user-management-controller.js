@@ -12,10 +12,10 @@ const PRESET_ROLES = [
 
 const TEST_USER_PASSWORD = 'Test1234!';
 const TEST_USER_PRESETS = [
-    { key: 'admin', title: 'Administrator', email: 'test-admin@horario.test', employeeName: 'Test Admin' },
-    { key: 'manager', title: 'Manager', email: 'test-manager@horario.test', employeeName: 'Test Manager' },
-    { key: 'supervisor', title: 'Supervisor', email: 'test-supervisor@horario.test', employeeName: 'Test Supervisor' },
-    { key: 'employee', title: 'Employee', email: 'test-employee@horario.test', employeeName: 'Test Employee' }
+    { key: 'admin', title: 'Administrator', email: 'test-admin@horario.test' },
+    { key: 'manager', title: 'Manager', email: 'test-manager@horario.test' },
+    { key: 'supervisor', title: 'Supervisor', email: 'test-supervisor@horario.test' },
+    { key: 'employee', title: 'Employee', email: 'test-employee@horario.test' }
 ];
 
 export class UserManagementController {
@@ -353,11 +353,6 @@ export class UserManagementController {
 
             await this.accessManager.addEmail(preset.email);
             await this.accessManager.setRoles(preset.email, [preset.key]);
-            await this.ensureEmployeeForAccess({
-                name: preset.employeeName,
-                email: preset.email,
-                notes: `Auto-created test ${preset.key} account`
-            });
         }
 
         this.setText('test-user-feedback', `Test users ready. Shared password: ${TEST_USER_PASSWORD}`);

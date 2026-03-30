@@ -22,7 +22,7 @@ export function renderMonthlyCalendarView(uiManager) {
         grid.appendChild(heading);
     });
 
-    const firstDayIndex = new Date(year, month, 1).getDay();
+    const firstDayIndex = getWeekdayOffset(new Date(year, month, 1));
     for (let i = 0; i < firstDayIndex; i += 1) {
         grid.appendChild(document.createElement('div'));
     }
@@ -169,8 +169,12 @@ function buildMonthDaySummaries(dataManager, year, month, locale) {
 
 function getWeekdayLabels(locale) {
     return Array.from({ length: 7 }, (_, index) => {
-        return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 7 + index));
+        return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 1 + index));
     });
+}
+
+function getWeekdayOffset(date) {
+    return (date.getDay() + 6) % 7;
 }
 
 function getDayCellClassName(summary) {

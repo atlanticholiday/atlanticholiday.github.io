@@ -218,16 +218,6 @@
                     </div>
                 </button>
 
-                <button id="go-to-welcome-packs-btn" class="dashboard-card">
-                    <div class="card-icon bg-pink-500/10 text-pink-600">
-                        <i class="fas fa-gift"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Welcome Packs</h3>
-                        <p>Manage stocks and packs delivered.</p>
-                    </div>
-                </button>
-
                 <button id="go-to-staff-btn" class="dashboard-card">
                     <div class="card-icon bg-purple-500/10 text-purple-600">
                         <i class="fas fa-users"></i>
@@ -270,7 +260,15 @@
             <div id="more-tools-section" class="hidden">
                 <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2" data-i18n="landing.otherTools">Other Tools</h2>
                 <div id="other-tools-grid" class="dashboard-grid opacity-80 mb-12">
-
+                    <button id="go-to-welcome-packs-btn" class="dashboard-card">
+                        <div class="card-icon bg-pink-500/10 text-pink-600">
+                            <i class="fas fa-gift"></i>
+                        </div>
+                        <div class="card-body">
+                            <h3>Welcome Packs</h3>
+                            <p>Track pack inventory and guest deliveries.</p>
+                        </div>
+                    </button>
 
                     <button id="go-to-allinfo-btn" class="dashboard-card">
                         <div class="card-icon bg-rose-500/10 text-rose-600">
@@ -1046,8 +1044,8 @@ Mountain Villa, Sintra Hills, V4"
     </div>
 
     <div id="app-content" class="hidden min-h-screen bg-slate-50">
-        <header class="dashboard-header">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+        <header class="dashboard-header schedule-dashboard-header">
+            <div class="container schedule-page-container schedule-header-container mx-auto px-4 py-4 flex justify-between items-center">
                 <div class="header-left">
                     <button id="back-to-landing-from-schedule-btn"
                         class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
@@ -1098,67 +1096,75 @@ Mountain Villa, Sintra Hills, V4"
         </div>
 
         <div id="main-app" class="hidden fade-in-up">
-            <div class="container mx-auto max-w-7xl px-4 py-8 lg:py-10">
-                <div class="space-y-8">
+            <div class="container schedule-page-container mx-auto px-4 py-3 lg:py-4">
+                <div class="space-y-4 lg:space-y-5">
                     <div id="schedule-access-banner" class="hidden"></div>
-                    <section
-                        class="overflow-hidden rounded-[34px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1)_0%,rgba(248,250,252,1)_52%,rgba(238,242,255,1)_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-                        <div class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:px-8 lg:py-8">
-                            <div class="max-w-3xl">
-                                <div class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500"
-                                    data-i18n="schedule.workspace.heading">Planning workspace</div>
-                                <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 lg:text-4xl"
-                                    data-i18n="schedule.workspace.title">Keep coverage, leave, and staffing in one view.</h2>
-                                <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600"
-                                    data-i18n="schedule.workspace.lead">Use the planning views for day-to-day decisions and the reference views for yearly review and local holiday context.</p>
+                    <section id="schedule-workspace-dock"
+                        class="schedule-workspace-dock rounded-[24px] bg-transparent">
+                        <div class="schedule-workspace-dock__inner px-2 py-1 lg:px-1">
+                            <div class="schedule-workspace-dock__overview">
+                                <div class="schedule-workspace-dock__copy">
+                                    <div class="space-y-2">
+                                        <div id="view-header-kicker"
+                                            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"></div>
+                                        <h2 id="view-header"
+                                            class="text-2xl font-semibold tracking-tight text-slate-950 lg:text-3xl"></h2>
+                                        <p id="view-header-context"
+                                            class="max-w-2xl text-sm leading-6 text-slate-600"></p>
+                                    </div>
+                                </div>
+                                <div id="schedule-shell-summary" class="schedule-shell-summary"></div>
                             </div>
-                            <div id="schedule-shell-summary"
-                                class="rounded-[28px] border border-white/60 bg-white/70 p-5 shadow-sm backdrop-blur"></div>
+                            <div class="schedule-workspace-dock__nav">
+                                <div class="schedule-workspace-dock__nav-copy">
+                                    <p id="schedule-navigation-subtitle" class="text-sm text-slate-500"
+                                        data-i18n="schedule.navigation.subtitle">Choose a planning view or open a reference view.</p>
+                                </div>
+                                <div class="schedule-workspace-dock__nav-groups">
+                                    <div id="schedule-planning-group"
+                                        class="w-full rounded-[24px] border border-slate-200 bg-slate-50/85 p-2">
+                                        <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                            data-i18n="schedule.navigation.planning">Planning</div>
+                                        <div class="flex flex-wrap gap-1">
+                                            <button id="monthly-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
+                                                data-i18n="schedule.views.monthly">Monthly</button>
+                                            <button id="yearly-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                                data-i18n="schedule.views.yearly">Yearly</button>
+                                            <button id="vacation-board-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                                data-i18n="schedule.views.vacationBoard">Vacation Board</button>
+                                            <button id="vacation-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                                data-i18n="schedule.views.vacationPlanner">Vacation Planner</button>
+                                        </div>
+                                    </div>
+                                    <div id="schedule-reference-group"
+                                        class="w-full rounded-[24px] border border-slate-200 bg-slate-50/85 p-2">
+                                        <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                            data-i18n="schedule.navigation.reference">Reference</div>
+                                        <div class="flex flex-wrap gap-1">
+                                            <button id="stats-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                                data-i18n="schedule.views.stats">Stats</button>
+                                            <button id="madeira-holidays-view-btn"
+                                                class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
+                                                data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
-
-                    <div class="space-y-3">
-                        <p id="schedule-navigation-subtitle" class="text-center text-sm text-slate-500" data-i18n="schedule.navigation.subtitle">Choose a planning view or open a reference view.</p>
-                        <div class="flex flex-col items-center gap-3 xl:flex-row xl:justify-center xl:items-stretch">
-                            <div id="schedule-planning-group" class="w-full max-w-3xl rounded-[28px] border border-slate-200 bg-white/90 p-2 shadow-sm">
-                                <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                    data-i18n="schedule.navigation.planning">Planning</div>
-                                <div class="flex flex-wrap gap-1">
-                                    <button id="monthly-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
-                                        data-i18n="schedule.views.monthly">Monthly</button>
-                                    <button id="yearly-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                        data-i18n="schedule.views.yearly">Yearly</button>
-                                    <button id="vacation-board-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                        data-i18n="schedule.views.vacationBoard">Vacation Board</button>
-                                    <button id="vacation-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                        data-i18n="schedule.views.vacationPlanner">Vacation Planner</button>
-                                </div>
-                            </div>
-                            <div id="schedule-reference-group" class="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white/90 p-2 shadow-sm">
-                                <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                    data-i18n="schedule.navigation.reference">Reference</div>
-                                <div class="flex flex-wrap gap-1">
-                                    <button id="stats-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                        data-i18n="schedule.views.stats">Stats</button>
-                                    <button id="madeira-holidays-view-btn"
-                                        class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                        data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <section class="overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                     <div id="add-colleague-section" class="hidden">
                         <!-- Removed inline form, moved to modal -->
                     </div>
                     <div class="px-5 py-6 lg:px-6 lg:py-7">
-                        <div id="calendar-controls" class="relative mb-6 flex flex-wrap items-center justify-center gap-4 rounded-[28px] border border-slate-200 bg-slate-50/80 px-5 py-5">
+                        <div id="calendar-controls" class="relative mb-5 flex flex-col gap-4 rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
+                            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
                             <button id="prev-btn"
                                 class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
@@ -1167,26 +1173,20 @@ Mountain Villa, Sintra Hills, V4"
                                         d="M15 19l-7-7 7-7" />
                                 </svg>
                             </button>
-                            <div class="max-w-2xl text-center">
-                                <div id="view-header-kicker"
-                                    class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"></div>
-                                <h2 id="view-header" class="mt-2 text-3xl font-semibold tracking-tight text-slate-950"></h2>
-                                <p id="view-header-context" class="mt-2 text-sm leading-6 text-slate-500"></p>
-                                <div class="flex items-center justify-center gap-4 mt-2 text-sm">
-                                    <div class="flex items-center gap-2">
+                            <div class="schedule-legend-row flex flex-wrap items-center justify-center gap-3 text-sm">
+                                    <div class="schedule-legend-item flex items-center gap-2">
                                         <div class="w-3 h-3 bg-green-600 rounded-full"></div>
                                         <span data-i18n="schedule.legend.working">Working</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="schedule-legend-item flex items-center gap-2">
                                         <div class="w-3 h-3 bg-yellow-600 rounded-full"></div>
                                         <span data-i18n="schedule.legend.holiday">Holiday ★</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="schedule-legend-item flex items-center gap-2">
                                         <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
                                         <span data-i18n="schedule.legend.offWeekend">Off/Weekend</span>
                                     </div>
                                 </div>
-                            </div>
                             <button id="next-btn"
                                 class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
@@ -1195,6 +1195,8 @@ Mountain Villa, Sintra Hills, V4"
                                         d="M9 5l7 7-7 7" />
                                 </svg>
                             </button>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-end">
                             <button id="print-weekly-btn"
                                 class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900"
                                 title="Print Weekly Roster">
@@ -1222,6 +1224,7 @@ Mountain Villa, Sintra Hills, V4"
                                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
                             </button>
+                            </div>
 
                         </div>
                         <div id="calendar-grid" class="hidden md:grid grid-cols-7 gap-3"></div>

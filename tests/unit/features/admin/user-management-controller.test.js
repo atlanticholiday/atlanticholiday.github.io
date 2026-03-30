@@ -173,13 +173,14 @@ describe("UserManagementController", () => {
     assert.equal(keySelect.value, "supervisor");
   });
 
-  test("creates preset test users, assigns matching roles, and links employee records", async () => {
+  test("creates preset test users without linking employee records", async () => {
     createFixture();
 
     const createdAuthUsers = [];
     const addedEmails = [];
     const assignedRoles = [];
     const ensuredEmployees = [];
+    const syncEmployeeLinkCalls = [];
 
     const controller = new UserManagementController({
       accessManager: {
@@ -198,6 +199,9 @@ describe("UserManagementController", () => {
           if (!addedEmails.includes(email)) {
             addedEmails.push(email);
           }
+        },
+        async syncEmployeeLink(email, employee) {
+          syncEmployeeLinkCalls.push({ email, employee });
         }
       },
       roleManager: {
@@ -222,7 +226,9 @@ describe("UserManagementController", () => {
     assert.equal(createdAuthUsers.length, 4);
     assert.equal(addedEmails.length, 4);
     assert.equal(assignedRoles.length, 4);
-    assert.equal(ensuredEmployees.length, 4);
+    assert.equal(ensuredEmployees.length, 0);
+    assert.equal(syncEmployeeLinkCalls.length, 4);
+    assert.ok(syncEmployeeLinkCalls.every((entry) => entry.employee === null));
     assert.includes(document.getElementById("test-user-feedback").textContent, "Test users ready");
     assert.includes(document.getElementById("test-user-presets").textContent, "test-admin@horario.test");
     assert.equal(document.getElementById("test-user-password").textContent, "Test1234!");

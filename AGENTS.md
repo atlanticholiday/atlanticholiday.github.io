@@ -96,10 +96,15 @@ Pattern:
 - Fix: `summarizeAttendanceRecord()` must tolerate `null` records because first-time employee sessions render the time clock before any attendance document exists; regression coverage is in `tests/unit/features/scheduling/attendance-records.test.js`.
 - Fix: vacation booking/edit/delete now flows through `js/features/scheduling/schedule-manager.js` and the modal-based planner; avoid reintroducing legacy inline vacation handlers in `event-manager.js`.
 - Fix: the vacation planner now edits by stable vacation record id instead of employee vacation array index, so calendar/list clicks stay aligned once vacations come from the shared record layer.
+- Fix: preset `@horario.test` accounts are now access-only and excluded from employee partitions; keep test login setup in `js/features/admin/user-management-controller.js` from creating staff records, and keep headcount filtering in `js/features/scheduling/employee-records.js`.
 - Fix: Welcome Packs now renders an inline unavailable state when its Firestore reads fail, and `StaffManager` now distinguishes employee-directory loading/access errors from a genuinely empty staff list.
 - Gotcha: the new vacation board is read-only inside the schedule workspace only; clock-only users are still routed to `#time-clock-page`, so broader colleague access needs separate navigation/access work.
 - Gotcha: the schedule back button is wired in both `navigation-manager.js` and `js/app/main.js`; keep their `data-target-page="timeClock"` behavior aligned or board-only users will bounce back to landing.
-- Pattern: the schedule shell now relies on `#schedule-shell-summary`, `#view-header-kicker`, and `#view-header-context`; if the schedule layout changes, keep those IDs wired so `UIManager.updateView()` can refresh the current workspace summary and view copy.
+- Pattern: the schedule page now uses the wider `schedule-page-container` wrapper on both the schedule header and `#main-app`; if the schedule starts feeling cramped again, adjust that shared width instead of changing only one container.
+- Pattern: the schedule top bar is now schedule-specific via `schedule-dashboard-header` / `schedule-header-container`; keep that header compact and transparent because the dock below already carries the page context.
+- Pattern: the compact schedule workspace dock lives above the schedule content and relies on `#schedule-shell-summary`, `#schedule-navigation-subtitle`, `#view-header-kicker`, and `#view-header-context`; keep those IDs inside the dock if the shell layout changes so `UIManager.updateView()` can refresh the active view copy and summary without reworking the schedule renderer.
+- Pattern: the monthly schedule grid is Monday-first in `js/features/scheduling/views/monthly-schedule-view.js`; keep the weekday header order and leading-empty-cell offset math aligned when changing that view.
+- Pattern: the Welcome Packs launcher now lives inside the landing page `#more-tools-section`; keep using the existing `#go-to-welcome-packs-btn` id so `NavigationManager` and access-mode UI logic keep working.
 - Pattern: automatic lunch deduction is computed in `summarizeAttendanceRecord()` for closed single-block days with one `clockIn`, one `clockOut`, no break punches, and at least 6 worked hours; keep printouts and self-service history aligned with that shared summary output.
 
 Test:
@@ -117,7 +122,8 @@ Test:
 - Test: after staff or Welcome Packs navigation changes, sign in with `test-admin@horario.test` / `Test1234!`, open Staff from the landing page and confirm colleague cards render, then open Welcome Packs and confirm the dashboard shell loads instead of failing silently.
 - Test: for the shared tablet kiosk, sign in with a `time-clock-station` account or use the manager station-mode toggle on `#time-clock-page`, search/select a colleague, save clock-in/break/clock-out actions, and confirm the screen returns to the colleague picker after a successful punch.
 - Test: on `#app-content`, switch between the Planning and Reference schedule tab groups, open Vacation Planner, and confirm upcoming vacation cards open the booking modal for the correct colleague/date range.
-- Test: after schedule shell changes, verify Monthly shows the desktop grid plus mobile cards correctly, Yearly and Stats use the extracted views, and the Madeira reference tabs switch without duplicating click handlers.
+- Test: after schedule shell changes, verify the workspace dock stays visible near the top while scrolling, Monthly still shows the desktop grid plus mobile cards correctly, Yearly and Stats switch cleanly, and the Madeira reference tabs still swap without duplicating click handlers.
+- Test: after monthly calendar layout changes, confirm the desktop weekday headers run Monday through Sunday and that months starting on Sunday still align the 1st under Sunday instead of shifting the rest of the grid.
 
 ## Suggested Update Format
 

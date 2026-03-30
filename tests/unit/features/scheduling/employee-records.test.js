@@ -60,6 +60,18 @@ describe("Employee records", () => {
     assert.deepEqual(archivedEmployees.map(({ id }) => id), ["4", "3"]);
   });
 
+  test("excludes preset test accounts from employee partitions", () => {
+    const { activeEmployees, archivedEmployees } = partitionEmployeesByArchiveStatus([
+      { id: "1", name: "Ana", displayOrder: 1, isArchived: false, email: "ana@example.com" },
+      { id: "2", name: "Test Admin", displayOrder: 2, isArchived: false, email: "test-admin@horario.test" },
+      { id: "3", name: "Legacy Test", isArchived: true, notes: "Auto-created test employee account" },
+      { id: "4", name: "Bruno", isArchived: true, email: "bruno@example.com" }
+    ]);
+
+    assert.deepEqual(activeEmployees.map(({ id }) => id), ["1"]);
+    assert.deepEqual(archivedEmployees.map(({ id }) => id), ["4"]);
+  });
+
   test("derives employee status from vacation, overrides, holidays, and schedule", () => {
     const standardEmployee = {
       workDays: [1, 2, 3, 4, 5],

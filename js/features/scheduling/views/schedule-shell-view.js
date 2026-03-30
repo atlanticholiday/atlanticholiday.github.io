@@ -54,17 +54,12 @@ export function renderScheduleWorkspaceSummary(dataManager) {
     const colleaguesAwayToday = activeEmployees.filter((employee) => {
         return dataManager.isDateInVacation(new Date(), employee.vacations);
     }).length;
-    const viewMeta = getScheduleViewMeta(currentView);
     const periodLabel = formatViewPeriod(currentView, currentDate, locale);
     const coverageTarget = dataManager.minStaffThreshold > 0
         ? String(dataManager.minStaffThreshold)
         : t('schedule.workspace.notSet');
 
     const summaryItems = [
-        {
-            label: t('schedule.workspace.currentView'),
-            value: t(viewMeta.titleKey)
-        },
         {
             label: t('schedule.workspace.period'),
             value: periodLabel
@@ -91,16 +86,12 @@ export function renderScheduleWorkspaceSummary(dataManager) {
         }
     ];
 
-    container.innerHTML = `
-        <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
-            ${summaryItems.map((item) => `
-                <dl class="border-t border-slate-200/80 pt-3 first:border-t-0 first:pt-0 sm:first:border-t sm:first:pt-3">
-                    <dt class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">${item.label}</dt>
-                    <dd class="mt-2 text-lg font-semibold text-slate-950">${item.value}</dd>
-                </dl>
-            `).join('')}
-        </div>
-    `;
+    container.innerHTML = summaryItems.map((item) => `
+        <dl class="schedule-summary-pill">
+            <dt>${item.label}</dt>
+            <dd>${item.value}</dd>
+        </dl>
+    `).join('');
 }
 
 export function renderScheduleAccessBanner(dataManager) {

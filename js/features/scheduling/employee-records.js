@@ -1,4 +1,5 @@
 import { getDateKey } from './holiday-calculator.js';
+import { canonicalizeEmail } from '../../shared/email.js';
 
 const DEFAULT_SHIFT = '9:00-18:00';
 
@@ -42,6 +43,14 @@ function normalizeWorkDays(workDays) {
 
 function normalizeEmployeeName(name) {
     return typeof name === 'string' ? name : '';
+}
+
+function isTestEmployeeRecord(employee) {
+    const email = canonicalizeEmail(employee?.email);
+    const notes = typeof employee?.notes === 'string' ? employee.notes.trim().toLowerCase() : '';
+
+    return Boolean(email && email.endsWith('@horario.test'))
+        || notes.startsWith('auto-created test ');
 }
 
 export function createEmployeeRecord({ name, staffNumber = null, workDays = [], displayOrder = 0 }) {
@@ -95,6 +104,10 @@ export function partitionEmployeesByArchiveStatus(employees = []) {
     const archivedEmployees = [];
 
     for (const employee of employees) {
+        if (isTestEmployeeRecord(employee)) {
+            continue;
+        }
+
         if (employee?.isArchived) {
             archivedEmployees.push(employee);
         } else {

@@ -19,6 +19,7 @@ import "./unit/features/scheduling/attendance-print-period.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
 import "./unit/features/scheduling/holiday-calculator.test.js";
+import "./unit/features/scheduling/monthly-schedule-view.test.js";
 import "./unit/features/scheduling/navigation-manager.test.js";
 import "./unit/features/scheduling/time-clock-controls.test.js";
 import "./unit/features/scheduling/time-clock-station.test.js";
