@@ -6,6 +6,7 @@ export class NavigationManager {
             properties: 'properties-page',
             operations: 'operations-page',
             welcomePacks: 'welcome-packs-page',
+            airbnbReservationInvoices: 'airbnb-reservation-invoices-page',
             schedule: 'app-content',
             reservations: 'reservations-page',
             login: 'login-screen',
@@ -58,6 +59,12 @@ export class NavigationManager {
     showWelcomePacksPage() {
         this.showPage('welcomePacks');
         const event = new CustomEvent('welcomePacksPageOpened');
+        document.dispatchEvent(event);
+    }
+
+    showAirbnbReservationInvoicesPage() {
+        this.showPage('airbnbReservationInvoices');
+        const event = new CustomEvent('airbnbReservationInvoicesPageOpened');
         document.dispatchEvent(event);
     }
 
@@ -151,6 +158,7 @@ export class NavigationManager {
         const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
+        const goToAirbnbReservationInvoicesBtn = document.getElementById('go-to-airbnb-reservation-invoices-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
@@ -183,6 +191,12 @@ export class NavigationManager {
         if (goToWelcomePacksBtn) {
             goToWelcomePacksBtn.addEventListener('click', () => {
                 this.showWelcomePacksPage();
+            });
+        }
+
+        if (goToAirbnbReservationInvoicesBtn) {
+            goToAirbnbReservationInvoicesBtn.addEventListener('click', () => {
+                this.showAirbnbReservationInvoicesPage();
             });
         }
 
@@ -317,6 +331,7 @@ export class NavigationManager {
         // Back buttons
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
         const backToLandingFromWelcomeBtn = document.getElementById('back-to-landing-from-welcome-btn');
+        const backToLandingFromAirbnbReservationInvoicesBtn = document.getElementById('back-to-landing-from-airbnb-reservation-invoices-btn');
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
@@ -343,6 +358,12 @@ export class NavigationManager {
 
         if (backToLandingFromWelcomeBtn) {
             backToLandingFromWelcomeBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromAirbnbReservationInvoicesBtn) {
+            backToLandingFromAirbnbReservationInvoicesBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }

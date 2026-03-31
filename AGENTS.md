@@ -124,6 +124,11 @@ Test:
 - Test: on `#app-content`, switch between the Planning and Reference schedule tab groups, open Vacation Planner, and confirm upcoming vacation cards open the booking modal for the correct colleague/date range.
 - Test: after schedule shell changes, verify the workspace dock stays visible near the top while scrolling, Monthly still shows the desktop grid plus mobile cards correctly, Yearly and Stats switch cleanly, and the Madeira reference tabs still swap without duplicating click handlers.
 - Test: after monthly calendar layout changes, confirm the desktop weekday headers run Monday through Sunday and that months starting on Sunday still align the 1st under Sunday instead of shifting the rest of the grid.
+- Pattern: standalone browser automation utilities now live under `scripts/`; keep account/session artifacts out of the app runtime and ignore `.airbnb-playwright/` plus `downloads/airbnb-invoices/`.
+- Test: the Airbnb invoice downloader is a local Node utility at `scripts/airbnb/invoice-downloader.mjs`; verify with `npm run airbnb:download-invoices -- --help`, then do a one-month live check with `--limit 1` after logging into Airbnb manually.
+- Pattern: the Airbnb per-reservation VAT downloader lives at `scripts/airbnb/reservation-invoice-downloader.mjs`; keep the user-prepared Reservations list as the source of truth instead of hard-coding Airbnb filters into the script, note that it now exports with 10 parallel browser workers by default, saves into the Windows Downloads folder, and uses `--pages` when you need more than the first Airbnb results page.
+- Pattern: the landing page now exposes `#go-to-airbnb-reservation-invoices-btn` / `#airbnb-reservation-invoices-page` as a helper page for the local Airbnb VAT exporter; it can open Airbnb and copy terminal commands, but it cannot launch PowerShell directly from the browser.
+- Test: for individual Airbnb reservation invoices, first prepare the filtered Completed Reservations list in a real Airbnb host session, run `npm run airbnb:download-reservation-invoices -- --dry-run` to confirm the detected reservation codes, then repeat with `--limit 3` before a full run.
 
 ## Suggested Update Format
 

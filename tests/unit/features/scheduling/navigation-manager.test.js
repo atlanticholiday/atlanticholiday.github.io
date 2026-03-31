@@ -32,4 +32,34 @@ describe("NavigationManager", () => {
     assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
     assert.ok(document.getElementById("welcome-packs-page").classList.contains("hidden"));
   });
+
+  test("routes to Airbnb reservation invoices and back to landing", () => {
+    resetDom(`
+      <button id="go-to-airbnb-reservation-invoices-btn">Airbnb VAT Invoices</button>
+      <button id="back-to-landing-from-airbnb-reservation-invoices-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="airbnb-reservation-invoices-page" class="hidden"></div>
+    `);
+
+    const navigationManager = new NavigationManager();
+    navigationManager.setupNavigationListeners();
+
+    let pageEventCount = 0;
+    document.addEventListener("airbnbReservationInvoicesPageOpened", () => {
+      pageEventCount += 1;
+    }, { once: true });
+
+    document.getElementById("go-to-airbnb-reservation-invoices-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "airbnbReservationInvoices");
+    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(!document.getElementById("airbnb-reservation-invoices-page").classList.contains("hidden"));
+    assert.equal(pageEventCount, 1);
+
+    document.getElementById("back-to-landing-from-airbnb-reservation-invoices-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "landing");
+    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(document.getElementById("airbnb-reservation-invoices-page").classList.contains("hidden"));
+  });
 });

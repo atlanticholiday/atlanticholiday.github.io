@@ -10,6 +10,7 @@ import "./unit/shared/locations.test.js";
 import "./unit/features/admin/access-linking.test.js";
 import "./unit/features/admin/user-management-controller.test.js";
 import "./unit/features/operations/cleaning-ah-utils.test.js";
+import "./unit/features/operations/airbnb-reservation-invoices-manager.test.js";
 import "./unit/features/operations/cleaning-bills-manager.test.js";
 import "./unit/features/operations/commission-calculator-manager.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";

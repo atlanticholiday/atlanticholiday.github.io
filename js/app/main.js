@@ -7,6 +7,7 @@ import { i18n, t } from '../core/i18n.js';
 import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
+import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
 import { CleaningBillsManager } from '../features/operations/cleaning-bills-manager.js';
@@ -44,7 +45,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, scheduleManager, staffManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -187,6 +188,7 @@ function syncAccessModeUi() {
         'go-to-schedule-btn',
         'go-to-vehicles-btn',
         'go-to-welcome-packs-btn',
+        'go-to-airbnb-reservation-invoices-btn',
         'go-to-staff-btn',
         'go-to-properties-btn',
         'go-to-allinfo-btn',
@@ -394,6 +396,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Welcome Pack Manager (Correctly placed)
         welcomePackManager = new WelcomePackManager(dataManager);
         window.welcomePackManager = welcomePackManager;
+        airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();
+        window.airbnbReservationInvoicesManager = airbnbReservationInvoicesManager;
+        airbnbReservationInvoicesManager.init();
 
 
         scheduleManager = new ScheduleManager(dataManager, uiManager);

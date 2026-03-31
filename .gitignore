@@ -31,3 +31,8 @@ logs/
 # Temporary files
 *.tmp
 *.temp 
+
+# Local browser automation artifacts
+.airbnb-playwright/
+downloads/airbnb-invoices/
+downloads/airbnb-reservation-invoices/
