@@ -47,6 +47,7 @@ export class UIManager {
 
         window.addEventListener('languageChanged', () => {
             this.renderTimeClockPage();
+            this.populateDayCheckboxes();
 
             const timesheetModal = document.getElementById('timesheet-modal');
             const isTimesheetOpen = timesheetModal && !timesheetModal.classList.contains('hidden');
@@ -71,6 +72,31 @@ export class UIManager {
     formatLocaleTime(date, options = {}) {
         if (!date) return '';
         return new Intl.DateTimeFormat(this.getCurrentLocale(), options).format(date);
+    }
+
+    getWeekdayLabels(style = 'short') {
+        return Config.DAYS_OF_WEEK.map((fallback, index) => {
+            const translationKey = `days.${style}.${index}`;
+            const translated = t(translationKey);
+            return translated === translationKey ? fallback : translated;
+        });
+    }
+
+    renderWeekdayCheckboxes(container, selectedDays = []) {
+        if (!container) return;
+
+        const selected = Array.isArray(selectedDays)
+            ? selectedDays
+                .map((day) => Number.parseInt(day, 10))
+                .filter((day) => Number.isInteger(day))
+            : [];
+
+        container.innerHTML = this.getWeekdayLabels().map((day, index) => `
+            <label class="p-1 border rounded-md cursor-pointer">
+                <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${selected.includes(index) ? 'checked' : ''}>
+                <span class="block p-1">${day}</span>
+            </label>
+        `).join('');
     }
 
     startLiveClock() {
@@ -129,12 +155,11 @@ export class UIManager {
         const container = document.getElementById('work-day-checkboxes');
         if (!container) return;
 
-        container.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
-            <label class="p-1 border rounded-md cursor-pointer">
-                <input type="checkbox" value="${index}" class="sr-only work-day-checkbox">
-                <span class="block p-1">${day}</span>
-            </label>
-        `).join('');
+        const selectedDays = Array.from(container.querySelectorAll('input:checked'))
+            .map((checkbox) => Number.parseInt(checkbox.value, 10))
+            .filter((day) => Number.isInteger(day));
+
+        this.renderWeekdayCheckboxes(container, selectedDays);
     }
 
     // Removed showSetupScreen - navigation is now handled by NavigationManager
@@ -521,15 +546,13 @@ export class UIManager {
         const header = document.getElementById('edit-working-days-header');
         const container = document.getElementById('edit-work-day-checkboxes');
 
-        header.textContent = `Edit Working Days - ${emp.name}`;
+        const headerText = t('staff.editWorkingDaysTitle', { name: emp.name });
+        header.textContent = headerText === 'staff.editWorkingDaysTitle'
+            ? `Edit Working Days - ${emp.name}`
+            : headerText;
 
         // Populate checkboxes with current working days
-        container.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
-            <label class="p-1 border rounded-md cursor-pointer">
-                <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${emp.workDays.includes(index) ? 'checked' : ''}>
-                <span class="block p-1">${day}</span>
-            </label>
-        `).join('');
+        this.renderWeekdayCheckboxes(container, emp.workDays);
 
         // Store the employee ID for the save function
         modal.dataset.employeeId = employeeId;
@@ -543,7 +566,10 @@ export class UIManager {
         const modal = document.getElementById('edit-employee-modal');
         const header = document.getElementById('edit-employee-header');
 
-        header.textContent = `Edit Colleague Information - ${emp.name}`;
+        const headerText = t('staff.editEmployeeTitle', { name: emp.name });
+        header.textContent = headerText === 'staff.editEmployeeTitle'
+            ? `Edit Colleague Information - ${emp.name}`
+            : headerText;
 
         // Populate form fields with current employee data
         document.getElementById('edit-employee-name').value = emp.name || '';
@@ -564,12 +590,7 @@ export class UIManager {
 
         // Populate working days checkboxes
         const workDaysContainer = document.getElementById('edit-employee-work-days');
-        workDaysContainer.innerHTML = Config.DAYS_OF_WEEK.map((day, index) => `
-            <label class="p-1 border rounded-md cursor-pointer">
-                <input type="checkbox" value="${index}" class="sr-only work-day-checkbox" ${emp.workDays.includes(index) ? 'checked' : ''}>
-                <span class="block p-1">${day}</span>
-            </label>
-        `).join('');
+        this.renderWeekdayCheckboxes(workDaysContainer, emp.workDays);
 
         // Clear any previous error messages
         document.getElementById('edit-employee-error').textContent = '';

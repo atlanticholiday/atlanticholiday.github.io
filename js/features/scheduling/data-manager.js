@@ -360,12 +360,13 @@ export class DataManager {
 
     // Removed showSetupScreen - navigation is now handled by NavigationManager
 
-    async addEmployee(name, staffNumber, workDays) {
+    async addEmployee(name, staffNumber, workDays, { vacationAdjustment = 0 } = {}) {
         const newEmployeeData = createEmployeeRecord({
             name,
             staffNumber,
             workDays,
-            displayOrder: this.activeEmployees.length
+            displayOrder: this.activeEmployees.length,
+            vacationAdjustment
         });
 
         return await addDoc(this.getEmployeesCollectionRef(), newEmployeeData);

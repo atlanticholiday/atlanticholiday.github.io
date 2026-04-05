@@ -401,7 +401,9 @@
   "staff": {
     "title": "Staff Management",
     "subtitle": "Manage team members",
+    "workspaceEyebrow": "Directory",
     "teamMembers": "Team Members",
+    "description": "Keep colleague profiles, working days, and archive history aligned from one workspace.",
     "addColleague": "Add Colleague",
     "archiveHistory": "Archive/History",
     "editInfo": "Edit Info",
@@ -409,13 +411,61 @@
     "editDays": "Edit Days",
     "archive": "Archive",
     "restore": "Restore",
+    "defaultDays": "Default days",
+    "noDefaultDays": "No default days set",
+    "noMeta": "No extra profile details yet",
+    "archivedNote": "Archived record",
+    "archiveConfirm": "Are you sure you want to archive this colleague?",
+    "archiveFailed": "Failed to archive colleague.",
     "deleteConfirm": "Are you sure you want to delete this colleague?",
+    "deletePermanentConfirm": "Are you sure you want to permanently delete this colleague? This cannot be undone.",
+    "deleteFailed": "Failed to delete colleague.",
+    "restoreFailed": "Failed to restore colleague.",
     "department": "Department",
     "position": "Position",
     "hireDate": "Hire Date",
     "employmentType": "Employment Type",
     "staffNumber": "Staff Number",
-    "vacationAdjustment": "Vacation Adjustment"
+    "vacationAdjustment": "Vacation Adjustment",
+    "editEmployeeTitle": "Edit Colleague Information - {{name}}",
+    "editWorkingDaysTitle": "Edit Working Days - {{name}}",
+    "views": {
+      "active": "Active",
+      "archive": "Archive"
+    },
+    "stats": {
+      "active": "Active colleagues",
+      "archived": "Archived colleagues",
+      "total": "Total records"
+    },
+    "panels": {
+      "active": {
+        "eyebrow": "Live directory",
+        "title": "Active colleagues",
+        "description": "Review default schedules and update colleague profiles before changing the live roster."
+      },
+      "archive": {
+        "eyebrow": "Archived directory",
+        "title": "Archived colleagues",
+        "description": "Restore former colleagues or permanently remove records that should no longer stay in the archive."
+      }
+    },
+    "states": {
+      "loadErrorTitle": "Directory unavailable",
+      "activeLoadError": "Staff could not be loaded for this account. Check your access and try again.",
+      "archiveLoadError": "Staff history could not be loaded for this account.",
+      "activeLoading": "Loading colleagues...",
+      "archiveLoading": "Loading archived colleagues...",
+      "activeEmptyTitle": "No active colleagues",
+      "activeEmpty": "Add a colleague to start building the live staff directory.",
+      "archiveEmptyTitle": "No archived colleagues",
+      "archiveEmpty": "Archived records will appear here once a colleague is removed from the live directory."
+    },
+    "validation": {
+      "nameRequired": "Please enter a name.",
+      "workDaysRequired": "Please select at least one day.",
+      "addFailed": "Could not add colleague. Please try again."
+    }
   },
   "timeClock": {
     "cardTitle": "Time Clock",

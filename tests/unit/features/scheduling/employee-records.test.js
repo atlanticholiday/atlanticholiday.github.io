@@ -24,6 +24,16 @@ describe("Employee records", () => {
     assert.equal(employee.vacationAdjustment, 0);
   });
 
+  test("normalizes vacation adjustment when creating a new employee record", () => {
+    const employee = createEmployeeRecord({
+      name: "Bruno",
+      workDays: [1, 2, 3],
+      vacationAdjustment: "3"
+    });
+
+    assert.equal(employee.vacationAdjustment, 3);
+  });
+
   test("builds trimmed update payloads and keeps optional fields explicit", () => {
     const payload = buildEmployeeUpdatePayload({
       name: "  Ana  ",

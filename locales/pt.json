@@ -401,7 +401,9 @@
     "staff": {
         "title": "Gestão de Equipa",
         "subtitle": "Gerir membros da equipa",
+        "workspaceEyebrow": "Diretorio",
         "teamMembers": "Membros da Equipa",
+        "description": "Mantenha perfis, dias de trabalho e historico de arquivo alinhados a partir do mesmo espaco.",
         "addColleague": "Adicionar Colega",
         "archiveHistory": "Arquivo/Histórico",
         "editInfo": "Editar Info",
@@ -409,11 +411,59 @@
         "editDays": "Editar Dias",
         "archive": "Arquivar",
         "restore": "Restaurar",
+        "defaultDays": "Dias base",
+        "noDefaultDays": "Sem dias base definidos",
+        "noMeta": "Ainda sem detalhes extra no perfil",
+        "archivedNote": "Registo arquivado",
+        "archiveConfirm": "Tem a certeza que pretende arquivar este colega?",
+        "archiveFailed": "Nao foi possivel arquivar o colega.",
         "deleteConfirm": "Tem a certeza que pretende eliminar este colega?",
+        "deletePermanentConfirm": "Tem a certeza que pretende eliminar este colega de forma permanente? Esta acao nao pode ser desfeita.",
+        "deleteFailed": "Nao foi possivel eliminar o colega.",
+        "restoreFailed": "Nao foi possivel restaurar o colega.",
         "department": "Departamento",
         "position": "Cargo",
         "hireDate": "Data de Contratação",
         "employmentType": "Tipo de Contrato",
+        "editEmployeeTitle": "Editar informacao do colega - {{name}}",
+        "editWorkingDaysTitle": "Editar dias de trabalho - {{name}}",
+        "views": {
+            "active": "Ativos",
+            "archive": "Arquivo"
+        },
+        "stats": {
+            "active": "Colegas ativos",
+            "archived": "Colegas arquivados",
+            "total": "Total de registos"
+        },
+        "panels": {
+            "active": {
+                "eyebrow": "Diretorio ativo",
+                "title": "Colegas ativos",
+                "description": "Reveja dias de trabalho base e atualize perfis antes de alterar a escala em direto."
+            },
+            "archive": {
+                "eyebrow": "Diretorio arquivado",
+                "title": "Colegas arquivados",
+                "description": "Restaure antigos colegas ou elimine em definitivo registos que ja nao devem ficar no arquivo."
+            }
+        },
+        "states": {
+            "loadErrorTitle": "Diretorio indisponivel",
+            "activeLoadError": "Nao foi possivel carregar a equipa para esta conta. Verifique o acesso e tente novamente.",
+            "archiveLoadError": "Nao foi possivel carregar o historico da equipa para esta conta.",
+            "activeLoading": "A carregar colegas...",
+            "archiveLoading": "A carregar colegas arquivados...",
+            "activeEmptyTitle": "Sem colegas ativos",
+            "activeEmpty": "Adicione um colega para comecar a construir o diretorio ativo.",
+            "archiveEmptyTitle": "Sem colegas arquivados",
+            "archiveEmpty": "Os registos arquivados vao aparecer aqui quando um colega sair do diretorio ativo."
+        },
+        "validation": {
+            "nameRequired": "Introduza um nome.",
+            "workDaysRequired": "Selecione pelo menos um dia.",
+            "addFailed": "Nao foi possivel adicionar o colega. Tente novamente."
+        },
         "staffNumber": "Número de Funcionário",
         "vacationAdjustment": "Ajuste de Férias"
     },

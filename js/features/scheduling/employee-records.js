@@ -53,7 +53,7 @@ function isTestEmployeeRecord(employee) {
         || notes.startsWith('auto-created test ');
 }
 
-export function createEmployeeRecord({ name, staffNumber = null, workDays = [], displayOrder = 0 }) {
+export function createEmployeeRecord({ name, staffNumber = null, workDays = [], displayOrder = 0, vacationAdjustment = 0 }) {
     return {
         name: normalizeRequiredName(name),
         staffNumber: normalizeOptionalInteger(staffNumber, null),
@@ -72,7 +72,7 @@ export function createEmployeeRecord({ name, staffNumber = null, workDays = [], 
         hireDate: null,
         employmentType: null,
         notes: null,
-        vacationAdjustment: 0
+        vacationAdjustment: normalizeOptionalInteger(vacationAdjustment, 0)
     };
 }
 

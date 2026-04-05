@@ -1,305 +1,540 @@
-
 import { Config } from '../../core/config.js';
+import { t } from '../../core/i18n.js';
 
 export class StaffManager {
-    constructor(dataManager, uiManager) {
+    constructor(dataManager, uiManager, { documentRef = document, windowRef = window } = {}) {
         this.dataManager = dataManager;
-        this.uiManager = uiManager; // We might need UIManager for some shared modals or refactor further
+        this.uiManager = uiManager;
+        this.document = documentRef;
+        this.window = windowRef;
         this.isHistoryView = false;
+
+        this.handleLanguageChange = this.handleLanguageChange.bind(this);
+
         this.init();
     }
 
     init() {
         this.setupEventListeners();
+        this.ensureAddEmployeeFormReady();
+        this.updateChrome();
     }
 
     setupEventListeners() {
-        // Dashboard Button
-        const goToStaffBtn = document.getElementById('go-to-staff-btn');
-        if (goToStaffBtn) {
-            goToStaffBtn.addEventListener('click', () => {
-                // Navigation is handled by NavigationManager, but we can trigger render
-                this.render();
-            });
-        }
-
-        // Toggle History
-        const toggleHistoryBtn = document.getElementById('toggle-history-view-btn');
-        if (toggleHistoryBtn) {
-            toggleHistoryBtn.addEventListener('click', () => {
-                this.isHistoryView = !this.isHistoryView;
-                toggleHistoryBtn.textContent = this.isHistoryView ? 'View Active Staff' : 'Archive/History';
-                this.render();
-            });
-        }
-
-        // Sign Out
-        const signOutBtn = document.getElementById('staff-sign-out-btn');
-        if (signOutBtn) {
-            signOutBtn.addEventListener('click', () => {
-                const event = new CustomEvent('signOutRequested');
-                document.dispatchEvent(event);
-            });
-        }
-
-        this.dataManager.subscribeToDataChanges(() => {
-            const staffPage = document.getElementById('staff-page');
-            if (staffPage && !staffPage.classList.contains('hidden')) {
-                this.render();
+        this.document.querySelectorAll('[data-staff-view-target]').forEach((button) => {
+            if (button.dataset.staffViewBound === 'true') {
+                return;
             }
+
+            button.dataset.staffViewBound = 'true';
+            button.addEventListener('click', () => {
+                this.isHistoryView = button.dataset.staffViewTarget === 'history';
+                this.render();
+            });
         });
 
-        // Delegate Edit/Archive/Restore/Delete clicks
-        const container = document.getElementById('staff-page');
+        this.dataManager.subscribeToDataChanges(() => {
+            if (this.isPageVisible()) {
+                this.render();
+                return;
+            }
+
+            this.updateSummaryCounts();
+        });
+
+        this.window.addEventListener?.('languageChanged', this.handleLanguageChange);
+
+        const container = this.document.getElementById('staff-page');
         if (container) {
-            container.addEventListener('click', (e) => {
-                const target = e.target.closest('button');
+            container.addEventListener('click', (event) => {
+                const target = event.target.closest('button');
                 if (!target) return;
 
                 if (target.classList.contains('edit-employee-btn')) {
-                    const empId = target.dataset.employeeId;
-                    this.uiManager.showEditEmployeeModal(empId);
+                    this.uiManager?.showEditEmployeeModal?.(target.dataset.employeeId);
                 } else if (target.classList.contains('archive-btn')) {
-                    const empId = target.dataset.employeeId;
-                    this.handleArchive(empId);
+                    this.handleArchive(target.dataset.employeeId);
                 } else if (target.classList.contains('restore-btn')) {
-                    const empId = target.dataset.employeeId;
-                    this.handleRestore(empId);
+                    this.handleRestore(target.dataset.employeeId);
                 } else if (target.classList.contains('delete-btn')) {
-                    const empId = target.dataset.employeeId;
-                    this.handleDelete(empId);
+                    this.handleDelete(target.dataset.employeeId);
                 }
             });
         }
+
         this.setupAddEmployeeListeners();
     }
 
     setupAddEmployeeListeners() {
-        // Add Employee Modal Triggers
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('#open-add-employee-modal-btn')) {
-                const modal = document.getElementById('add-employee-modal');
+        const openBtn = this.document.getElementById('open-add-employee-modal-btn');
+        if (openBtn && openBtn.dataset.staffBound !== 'true') {
+            openBtn.dataset.staffBound = 'true';
+            openBtn.addEventListener('click', () => {
+                this.ensureAddEmployeeFormReady();
+
+                const modal = this.document.getElementById('add-employee-modal');
                 if (modal) {
                     modal.classList.remove('hidden');
-                    // Initialize shift dropdowns if needed
-                    if (this.uiManager && this.uiManager.populateShiftDropdowns) {
-                        this.uiManager.populateShiftDropdowns();
-                    }
                 }
-            }
-        });
+            });
+        }
 
-        // Add Employee Modal Close Handlers
-        const closeBtn = document.getElementById('add-employee-close-btn');
-        const cancelBtn = document.getElementById('add-employee-cancel-btn');
-        const modal = document.getElementById('add-employee-modal');
+        const closeBtn = this.document.getElementById('add-employee-close-btn');
+        const cancelBtn = this.document.getElementById('add-employee-cancel-btn');
 
-        const closeModal = () => {
-            if (modal) modal.classList.add('hidden');
-            // Clear inputs
-            const nameInput = document.getElementById('new-employee-name');
-            const staffNumInput = document.getElementById('new-employee-staff-number');
-            const errorP = document.getElementById('add-employee-error');
+        if (closeBtn && closeBtn.dataset.staffBound !== 'true') {
+            closeBtn.dataset.staffBound = 'true';
+            closeBtn.addEventListener('click', () => this.closeAddEmployeeModal());
+        }
 
-            if (nameInput) nameInput.value = '';
-            if (staffNumInput) staffNumInput.value = '';
-            if (errorP) errorP.textContent = '';
+        if (cancelBtn && cancelBtn.dataset.staffBound !== 'true') {
+            cancelBtn.dataset.staffBound = 'true';
+            cancelBtn.addEventListener('click', () => this.closeAddEmployeeModal());
+        }
 
-            document.querySelectorAll('#work-day-checkboxes input').forEach(cb => cb.checked = false);
-        };
-
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-        // Add Employee Action
-        const addBtn = document.getElementById('add-employee-btn');
-        if (addBtn) {
-            // Use a clean listener approach
-            addBtn.replaceWith(addBtn.cloneNode(true));
-            document.getElementById('add-employee-btn').addEventListener('click', () => this.addEmployee());
+        const addBtn = this.document.getElementById('add-employee-btn');
+        if (addBtn && addBtn.dataset.staffBound !== 'true') {
+            addBtn.dataset.staffBound = 'true';
+            addBtn.addEventListener('click', () => this.addEmployee());
         }
     }
 
-    async addEmployee() {
-        const nameInput = document.getElementById('new-employee-name');
-        const staffNumberInput = document.getElementById('new-employee-staff-number');
-        const errorP = document.getElementById('add-employee-error');
-        if (errorP) errorP.textContent = '';
+    handleLanguageChange() {
+        this.ensureAddEmployeeFormReady();
 
-        const name = nameInput.value.trim();
-        const staffNumber = staffNumberInput ? staffNumberInput.value.trim() : '';
+        if (this.isPageVisible()) {
+            this.render();
+        } else {
+            this.updateChrome();
+        }
+    }
+
+    isPageVisible() {
+        const staffPage = this.document.getElementById('staff-page');
+        return Boolean(staffPage && !staffPage.classList.contains('hidden'));
+    }
+
+    ensureAddEmployeeFormReady() {
+        this.uiManager?.populateDayCheckboxes?.();
+    }
+
+    resetAddEmployeeForm() {
+        const nameInput = this.document.getElementById('new-employee-name');
+        const staffNumInput = this.document.getElementById('new-employee-staff-number');
+        const vacationAdjustmentInput = this.document.getElementById('new-employee-vacation-adjustment');
+        const errorElement = this.document.getElementById('add-employee-error');
+
+        if (nameInput) nameInput.value = '';
+        if (staffNumInput) staffNumInput.value = '';
+        if (vacationAdjustmentInput) vacationAdjustmentInput.value = '0';
+        if (errorElement) errorElement.textContent = '';
+
+        this.document.querySelectorAll('#work-day-checkboxes input').forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+    }
+
+    closeAddEmployeeModal() {
+        const modal = this.document.getElementById('add-employee-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+
+        this.resetAddEmployeeForm();
+    }
+
+    async addEmployee() {
+        const nameInput = this.document.getElementById('new-employee-name');
+        const staffNumberInput = this.document.getElementById('new-employee-staff-number');
+        const vacationAdjustmentInput = this.document.getElementById('new-employee-vacation-adjustment');
+        const errorElement = this.document.getElementById('add-employee-error');
+
+        if (errorElement) errorElement.textContent = '';
+
+        const name = nameInput?.value.trim() || '';
+        const staffNumber = staffNumberInput?.value.trim() || '';
+        const vacationAdjustment = vacationAdjustmentInput?.value.trim() || '0';
 
         if (!name) {
-            if (errorP) errorP.textContent = "Please enter a name.";
+            if (errorElement) {
+                errorElement.textContent = this.translate('staff.validation.nameRequired', 'Please enter a name.');
+            }
             return;
         }
 
-        const workDays = Array.from(document.querySelectorAll('#work-day-checkboxes input:checked')).map(cb => parseInt(cb.value));
+        const workDays = Array.from(this.document.querySelectorAll('#work-day-checkboxes input:checked'))
+            .map((checkbox) => Number.parseInt(checkbox.value, 10))
+            .filter((day) => Number.isInteger(day));
+
         if (workDays.length === 0) {
-            if (errorP) errorP.textContent = "Please select at least one day.";
+            if (errorElement) {
+                errorElement.textContent = this.translate('staff.validation.workDaysRequired', 'Please select at least one day.');
+            }
             return;
         }
 
         try {
-            await this.dataManager.addEmployee(name, staffNumber, workDays);
-            // Close modal on success
-            const modal = document.getElementById('add-employee-modal');
-            if (modal) modal.classList.add('hidden');
-
-            nameInput.value = '';
-            if (staffNumberInput) staffNumberInput.value = '';
-            document.querySelectorAll('#work-day-checkboxes input').forEach(cb => cb.checked = false);
-            this.render(); // Explicit render update
-        } catch (e) {
-            console.error(e);
-            if (errorP) errorP.textContent = "Could not add colleague. Please try again.";
+            await this.dataManager.addEmployee(name, staffNumber, workDays, { vacationAdjustment });
+            this.closeAddEmployeeModal();
+            this.render();
+        } catch (error) {
+            console.error(error);
+            if (errorElement) {
+                errorElement.textContent = this.translate('staff.validation.addFailed', 'Could not add colleague. Please try again.');
+            }
         }
     }
 
     render() {
-        const listContainer = document.getElementById('staff-list-container');
-        const historyContainer = document.getElementById('history-list-container');
+        const listContainer = this.document.getElementById('staff-list-container');
+        const historyContainer = this.document.getElementById('history-list-container');
         if (!listContainer || !historyContainer) return;
+
+        this.ensureAddEmployeeFormReady();
+        this.updateChrome();
 
         if (this.isHistoryView) {
             listContainer.classList.add('hidden');
             historyContainer.classList.remove('hidden');
             this.renderHistoryList();
-        } else {
-            listContainer.classList.remove('hidden');
-            historyContainer.classList.add('hidden');
-            this.renderActiveList();
+            return;
+        }
+
+        listContainer.classList.remove('hidden');
+        historyContainer.classList.add('hidden');
+        this.renderActiveList();
+    }
+
+    updateChrome() {
+        this.updateSummaryCounts();
+        this.updateViewButtons();
+        this.updatePanelCopy();
+    }
+
+    updateSummaryCounts() {
+        const activeEmployees = this.dataManager.getActiveEmployees?.() || [];
+        const archivedEmployees = this.dataManager.getArchivedEmployees?.() || [];
+
+        const activeCount = this.document.getElementById('staff-active-count');
+        const archivedCount = this.document.getElementById('staff-archived-count');
+        const totalCount = this.document.getElementById('staff-total-count');
+
+        if (activeCount) activeCount.textContent = String(activeEmployees.length);
+        if (archivedCount) archivedCount.textContent = String(archivedEmployees.length);
+        if (totalCount) totalCount.textContent = String(activeEmployees.length + archivedEmployees.length);
+    }
+
+    updateViewButtons() {
+        const activeBtn = this.document.getElementById('staff-active-view-btn');
+        const historyBtn = this.document.getElementById('staff-history-view-btn');
+
+        const activeSelected = !this.isHistoryView;
+        const historySelected = this.isHistoryView;
+
+        if (activeBtn) {
+            activeBtn.classList.toggle('staff-view-tab-active', activeSelected);
+            activeBtn.setAttribute('aria-selected', activeSelected ? 'true' : 'false');
+        }
+
+        if (historyBtn) {
+            historyBtn.classList.toggle('staff-view-tab-active', historySelected);
+            historyBtn.setAttribute('aria-selected', historySelected ? 'true' : 'false');
         }
     }
 
-    renderStateMessage(container, message, tone = 'muted') {
-        const toneClass = tone === 'error'
-            ? 'text-red-700 bg-red-50 border border-red-200'
-            : 'text-gray-500 italic';
-        container.innerHTML = `<p class="${toneClass} text-center p-4 rounded-lg">${message}</p>`;
+    updatePanelCopy() {
+        const panelEyebrow = this.document.getElementById('staff-panel-eyebrow');
+        const panelTitle = this.document.getElementById('staff-panel-title');
+        const panelDescription = this.document.getElementById('staff-panel-description');
+        const panelChip = this.document.getElementById('staff-panel-chip');
+        const copy = this.getPanelCopy();
+
+        if (panelEyebrow) panelEyebrow.textContent = copy.eyebrow;
+        if (panelTitle) panelTitle.textContent = copy.title;
+        if (panelDescription) panelDescription.textContent = copy.description;
+        if (panelChip) {
+            panelChip.textContent = copy.chip;
+            panelChip.classList.toggle('staff-panel-chip--history', this.isHistoryView);
+        }
+    }
+
+    getPanelCopy() {
+        if (this.isHistoryView) {
+            return {
+                eyebrow: this.translate('staff.panels.archive.eyebrow', 'Archived directory'),
+                title: this.translate('staff.panels.archive.title', 'Archived colleagues'),
+                description: this.translate('staff.panels.archive.description', 'Restore former colleagues or permanently remove records that should no longer stay in the archive.'),
+                chip: this.translate('staff.views.archive', 'Archive')
+            };
+        }
+
+        return {
+            eyebrow: this.translate('staff.panels.active.eyebrow', 'Live directory'),
+            title: this.translate('staff.panels.active.title', 'Active colleagues'),
+            description: this.translate('staff.panels.active.description', 'Review default schedules and update colleague profiles before changing the live roster.'),
+            chip: this.translate('staff.views.active', 'Active')
+        };
+    }
+
+    translate(key, fallback, replacements = {}) {
+        const translated = t(key, replacements);
+        return translated === key ? fallback : translated;
+    }
+
+    escapeHtml(value = '') {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    getInitials(name = '') {
+        const parts = String(name)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2);
+
+        if (!parts.length) {
+            return '?';
+        }
+
+        return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+    }
+
+    getWeekdayLabel(index) {
+        return this.translate(`days.short.${index}`, Config.DAYS_OF_WEEK[index] || '');
+    }
+
+    formatWorkDays(workDays = []) {
+        const normalizedDays = Array.isArray(workDays)
+            ? workDays
+                .map((day) => Number.parseInt(day, 10))
+                .filter((day) => Number.isInteger(day))
+            : [];
+
+        if (!normalizedDays.length) {
+            return this.translate('staff.noDefaultDays', 'No default days set');
+        }
+
+        return normalizedDays.map((day) => this.getWeekdayLabel(day)).join(', ');
+    }
+
+    renderStateMessage(container, { title, message, tone = 'muted' }) {
+        const safeTitle = this.escapeHtml(title);
+        const safeMessage = this.escapeHtml(message);
+        const toneClass = tone === 'error' ? ' staff-state--error' : '';
+
+        container.innerHTML = `
+            <div class="staff-state${toneClass}">
+                <p class="staff-state__title">${safeTitle}</p>
+                <p class="staff-state__copy">${safeMessage}</p>
+            </div>
+        `;
     }
 
     renderActiveList() {
-        const container = document.getElementById('staff-list-container');
+        const container = this.document.getElementById('staff-list-container');
         if (!container) return;
 
         const loadError = this.dataManager.getEmployeeLoadError?.();
         if (loadError) {
-            this.renderStateMessage(container, 'Staff could not be loaded for this account. Check your access and try again.', 'error');
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.loadErrorTitle', 'Directory unavailable'),
+                message: this.translate('staff.states.activeLoadError', 'Staff could not be loaded for this account. Check your access and try again.'),
+                tone: 'error'
+            });
             return;
         }
 
         if (!this.dataManager.hasLoadedEmployeeDirectory?.()) {
-            this.renderStateMessage(container, 'Loading colleagues...');
+            this.renderStateMessage(container, {
+                title: this.translate('common.loading', 'Loading...'),
+                message: this.translate('staff.states.activeLoading', 'Loading colleagues...')
+            });
             return;
         }
 
         const activeEmployees = this.dataManager.getActiveEmployees();
         if (activeEmployees.length === 0) {
-            this.renderStateMessage(container, 'No active colleagues found.');
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.activeEmptyTitle', 'No active colleagues'),
+                message: this.translate('staff.states.activeEmpty', 'Add a colleague to start building the live staff directory.')
+            });
             return;
         }
 
-        container.innerHTML = activeEmployees.map(emp => `
-            <div class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                     <div class="bg-gray-100 rounded-full p-2 text-gray-500">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                     </div>
-                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">${emp.name}</h3>
-                        <p class="text-sm text-gray-600">
-                            ${emp.staffNumber ? `Staff #${emp.staffNumber}` : ''}
-                            ${emp.department ? `• ${emp.department}` : ''}
-                            ${emp.position ? `• ${emp.position}` : ''}
+        container.innerHTML = activeEmployees.map((employee) => this.renderActiveCard(employee)).join('');
+    }
+
+    renderActiveCard(employee) {
+        const name = this.escapeHtml(employee.name || '');
+        const pills = [];
+
+        if (employee.staffNumber) {
+            pills.push(`<span class="staff-meta-pill staff-meta-pill--accent">${this.escapeHtml(`${this.translate('staff.staffNumber', 'Staff Number')} #${employee.staffNumber}`)}</span>`);
+        }
+        if (employee.department) {
+            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.department)}</span>`);
+        }
+        if (employee.position) {
+            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.position)}</span>`);
+        }
+        if (employee.employmentType) {
+            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.employmentType)}</span>`);
+        }
+
+        if (!pills.length) {
+            pills.push(`<span class="staff-meta-pill staff-meta-pill--muted">${this.escapeHtml(this.translate('staff.noMeta', 'No extra profile details yet'))}</span>`);
+        }
+
+        const contacts = [];
+        if (employee.email) {
+            contacts.push(this.escapeHtml(employee.email));
+        }
+        if (employee.phone) {
+            contacts.push(this.escapeHtml(employee.phone));
+        }
+
+        const contactMarkup = contacts.length
+            ? `<p class="staff-contact">${contacts.map((item, index) => `${index ? '<span class="staff-contact-separator">/</span>' : ''}${item}`).join('')}</p>`
+            : '';
+
+        return `
+            <article class="staff-card">
+                <div class="staff-identity">
+                    <div class="staff-avatar">${this.escapeHtml(this.getInitials(employee.name))}</div>
+                    <div class="staff-copy">
+                        <div class="staff-name-row">
+                            <h3 class="staff-name">${name}</h3>
+                        </div>
+                        <div class="staff-meta-row">${pills.join('')}</div>
+                        ${contactMarkup}
+                        <p class="staff-secondary-meta">
+                            <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
+                            ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
                         </p>
-                         <p class="text-xs text-gray-500 mt-1">Default: ${emp.workDays.map(d => Config.DAYS_OF_WEEK[d]).join(', ')}</p>
-                     </div>
+                    </div>
                 </div>
-                <div class="flex gap-2">
-                    <button class="edit-employee-btn text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md transition-colors text-sm font-medium" data-employee-id="${emp.id}">
-                        Edit
+                <div class="staff-actions">
+                    <button class="staff-button staff-button--secondary edit-employee-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        ${this.escapeHtml(this.translate('common.edit', 'Edit'))}
                     </button>
-                    <button class="archive-btn text-yellow-600 hover:bg-yellow-50 px-3 py-2 rounded-md transition-colors text-sm font-medium" data-employee-id="${emp.id}">
-                        Archive
-                    </button>
-                    <button class="individual-pdf-btn text-gray-600 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors text-sm font-medium hidden" data-employee-id="${emp.id}">
-                         Report
+                    <button class="staff-button staff-button--warning archive-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        ${this.escapeHtml(this.translate('staff.archive', 'Archive'))}
                     </button>
                 </div>
-            </div>
-        `).join('');
+            </article>
+        `;
     }
 
     renderHistoryList() {
-        const container = document.getElementById('history-list-container');
+        const container = this.document.getElementById('history-list-container');
         if (!container) return;
 
         const loadError = this.dataManager.getEmployeeLoadError?.();
         if (loadError) {
-            this.renderStateMessage(container, 'Staff history could not be loaded for this account.', 'error');
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.loadErrorTitle', 'Directory unavailable'),
+                message: this.translate('staff.states.archiveLoadError', 'Staff history could not be loaded for this account.'),
+                tone: 'error'
+            });
             return;
         }
 
         if (!this.dataManager.hasLoadedEmployeeDirectory?.()) {
-            this.renderStateMessage(container, 'Loading archived colleagues...');
+            this.renderStateMessage(container, {
+                title: this.translate('common.loading', 'Loading...'),
+                message: this.translate('staff.states.archiveLoading', 'Loading archived colleagues...')
+            });
             return;
         }
 
         const archivedEmployees = this.dataManager.getArchivedEmployees();
         if (archivedEmployees.length === 0) {
-            this.renderStateMessage(container, 'No archived colleagues.');
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.archiveEmptyTitle', 'No archived colleagues'),
+                message: this.translate('staff.states.archiveEmpty', 'Archived records will appear here once a colleague is removed from the live directory.')
+            });
             return;
         }
 
-        container.innerHTML = archivedEmployees.map(emp => `
-            <div class="bg-gray-50 border rounded-lg p-4 opacity-75 hover:opacity-100 transition-opacity flex items-center justify-between">
-                <div>
-                     <h3 class="text-lg font-semibold text-gray-700">${emp.name}</h3>
-                     <p class="text-sm text-gray-500">Archived</p>
+        container.innerHTML = archivedEmployees.map((employee) => this.renderHistoryCard(employee)).join('');
+    }
+
+    renderHistoryCard(employee) {
+        const name = this.escapeHtml(employee.name || '');
+        const archivedNote = this.escapeHtml(this.translate('staff.archivedNote', 'Archived record'));
+
+        return `
+            <article class="staff-card staff-card--archived">
+                <div class="staff-identity">
+                    <div class="staff-avatar staff-avatar--archived">${this.escapeHtml(this.getInitials(employee.name))}</div>
+                    <div class="staff-copy">
+                        <div class="staff-name-row">
+                            <h3 class="staff-name">${name}</h3>
+                            <span class="staff-meta-pill staff-meta-pill--muted">${archivedNote}</span>
+                        </div>
+                        <p class="staff-secondary-meta">
+                            <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
+                            ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
+                        </p>
+                    </div>
                 </div>
-                 <div class="flex gap-2">
-                    <button class="restore-btn text-green-600 hover:bg-green-50 px-3 py-2 rounded-md transition-colors text-sm font-medium" data-employee-id="${emp.id}">
-                        Restore
+                <div class="staff-actions">
+                    <button class="staff-button staff-button--success restore-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        ${this.escapeHtml(this.translate('staff.restore', 'Restore'))}
                     </button>
-                    <button class="delete-btn text-red-600 hover:bg-red-50 px-3 py-2 rounded-md transition-colors text-sm font-medium" data-employee-id="${emp.id}">
-                        Delete
+                    <button class="staff-button staff-button--danger delete-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        ${this.escapeHtml(this.translate('common.delete', 'Delete'))}
                     </button>
                 </div>
-            </div>
-        `).join('');
+            </article>
+        `;
     }
 
     async handleArchive(id) {
-        if (confirm('Are you sure you want to archive this colleague?')) {
-            try {
-                await this.dataManager.archiveEmployee(id);
-            } catch (e) {
-                console.error(e);
-                alert('Failed to archive.');
-            }
+        const confirmed = this.window.confirm?.(
+            this.translate('staff.archiveConfirm', 'Are you sure you want to archive this colleague?')
+        );
+        if (confirmed === false) {
+            return;
+        }
+
+        try {
+            await this.dataManager.archiveEmployee(id);
+        } catch (error) {
+            console.error(error);
+            this.window.alert?.(this.translate('staff.archiveFailed', 'Failed to archive colleague.'));
         }
     }
 
     async handleRestore(id) {
         try {
             await this.dataManager.restoreEmployee(id);
-            this.render(); // Refresh immediately
-        } catch (e) {
-            console.error(e);
-            alert('Failed to restore.');
+            this.render();
+        } catch (error) {
+            console.error(error);
+            this.window.alert?.(this.translate('staff.restoreFailed', 'Failed to restore colleague.'));
         }
     }
 
     async handleDelete(id) {
-        if (confirm('Are you sure you want to PERMANENTLY delete this colleague? This cannot be undone.')) {
-            try {
-                await this.dataManager.deleteEmployee(id);
-                this.render();
-            } catch (e) {
-                console.error(e);
-                alert('Failed to delete.');
-            }
+        const confirmed = this.window.confirm?.(
+            this.translate('staff.deletePermanentConfirm', 'Are you sure you want to permanently delete this colleague? This cannot be undone.')
+        );
+        if (confirmed === false) {
+            return;
+        }
+
+        try {
+            await this.dataManager.deleteEmployee(id);
+            this.render();
+        } catch (error) {
+            console.error(error);
+            this.window.alert?.(this.translate('staff.deleteFailed', 'Failed to delete colleague.'));
         }
     }
 }

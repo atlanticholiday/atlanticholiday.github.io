@@ -1583,66 +1583,109 @@ Mountain Villa, Sintra Hills, V4"
     </div>
 
     <!-- Staff Page -->
-    <div id="staff-page" class="hidden min-h-screen bg-gray-50">
-        <header class="dashboard-header">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-                <div class="header-left">
+    <div id="staff-page" class="staff-page-shell hidden min-h-screen bg-slate-100">
+        <header class="dashboard-header staff-header">
+            <div
+                class="container staff-shell-container mx-auto flex flex-col gap-6 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
                     <button id="back-to-landing-from-staff-btn"
                         class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                </div>
-                <div class="header-brand">
                     <img src="assets/atlantic-holiday-logo.png"
                         onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
-                        class="dashboard-logo dashboard-logo--xl" />
+                        class="dashboard-logo" />
                     <div class="leading-tight">
-                        <div class="header-title brand-red">Staff Management</div>
-                        <div class="header-sub">Manage team members</div>
+                        <div class="brand-name brand-red" data-i18n="staff.title">Staff Management</div>
+                        <div class="page-mini" data-i18n="staff.subtitle">Manage team members</div>
                     </div>
                 </div>
-                <div class="header-right">
+                <div class="staff-header-actions">
+                    <div
+                        class="language-switcher staff-language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="en" title="English">EN</button>
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="pt" title="Portuguese">PT</button>
+                    </div>
                     <button id="staff-sign-out-btn"
-                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        class="staff-signout text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                         <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                         </svg>
-                        Sign Out
+                        <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <div class="container mx-auto px-4 py-8 max-w-7xl">
-            <div class="bg-white p-6 rounded-xl shadow-md modal-content h-[calc(100vh-150px)] flex flex-col">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gradient">Team Members</h2>
-                    <div class="flex gap-3">
-                        <button id="open-add-employee-modal-btn"
-                            class="btn-primary shadow flex items-center gap-2 hover-lift px-4 py-2 rounded-md">
+        <div class="container staff-shell-container mx-auto px-4 py-8">
+            <div class="staff-workspace">
+                <section class="staff-toolbar-panel modal-content">
+                    <div class="staff-toolbar-copy">
+                        <p class="staff-eyebrow" data-i18n="staff.workspaceEyebrow">Directory</p>
+                        <h2 class="text-3xl font-semibold text-slate-950" data-i18n="staff.teamMembers">Team Members</h2>
+                        <p class="staff-toolbar-description" data-i18n="staff.description">Keep colleague profiles,
+                            working days, and archive history aligned from one workspace.</p>
+                    </div>
+                    <div class="staff-toolbar-summary">
+                        <article class="staff-stat">
+                            <span class="staff-stat-label" data-i18n="staff.stats.active">Active colleagues</span>
+                            <strong id="staff-active-count" class="staff-stat-value">0</strong>
+                        </article>
+                        <article class="staff-stat">
+                            <span class="staff-stat-label" data-i18n="staff.stats.archived">Archived colleagues</span>
+                            <strong id="staff-archived-count" class="staff-stat-value">0</strong>
+                        </article>
+                        <article class="staff-stat">
+                            <span class="staff-stat-label" data-i18n="staff.stats.total">Total records</span>
+                            <strong id="staff-total-count" class="staff-stat-value">0</strong>
+                        </article>
+                    </div>
+                    <div class="staff-toolbar-actions">
+                        <div class="staff-view-toggle" role="tablist" aria-label="Staff list views">
+                            <button type="button" id="staff-active-view-btn"
+                                class="staff-view-tab staff-view-tab-active" data-staff-view-target="active"
+                                aria-selected="true" data-i18n="staff.views.active">Active</button>
+                            <button type="button" id="staff-history-view-btn" class="staff-view-tab"
+                                data-staff-view-target="history" aria-selected="false"
+                                data-i18n="staff.views.archive">Archive</button>
+                        </div>
+                        <button id="open-add-employee-modal-btn" type="button"
+                            class="btn-primary staff-add-button px-5 py-3 rounded-2xl transition-all hover-lift">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 4v16m8-8H4"></path>
                             </svg>
-                            Add Colleague
-                        </button>
-                        <button id="toggle-history-view-btn"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md transition-colors border border-gray-300">
-                            Archive/History
+                            <span data-i18n="staff.addColleague">Add Colleague</span>
                         </button>
                     </div>
-                </div>
+                </section>
 
-                <div id="staff-list-container" class="space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
-                    <!-- Staff list will be inserted here -->
-                </div>
-                <div id="history-list-container"
-                    class="hidden space-y-3 overflow-y-auto pr-2 flex-grow custom-scrollbar">
-                    <!-- History list will be inserted here -->
-                </div>
+                <section class="staff-panel modal-content">
+                    <div class="staff-panel-head">
+                        <div>
+                            <p id="staff-panel-eyebrow" class="staff-eyebrow">Live directory</p>
+                            <h3 id="staff-panel-title" class="text-2xl font-semibold text-slate-950">Active colleagues
+                            </h3>
+                            <p id="staff-panel-description" class="staff-panel-description">Review default schedules and
+                                update colleague profiles before changing the live roster.</p>
+                        </div>
+                        <div id="staff-panel-chip" class="staff-panel-chip">Active</div>
+                    </div>
+
+                    <div id="staff-list-container" class="staff-list staff-scroll-region">
+                        <!-- Staff list will be inserted here -->
+                    </div>
+                    <div id="history-list-container" class="staff-list staff-scroll-region hidden">
+                        <!-- History list will be inserted here -->
+                    </div>
+                </section>
             </div>
         </div>
     </div>
