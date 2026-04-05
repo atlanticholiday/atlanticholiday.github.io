@@ -1347,7 +1347,7 @@ export class UIManager {
         this.scheduleTimeClockStationReset();
     }
 
-    scheduleTimeClockStationReset(delayMs = 2500) {
+    scheduleTimeClockStationReset(delayMs = 1800) {
         this.clearTimeClockStationResetTimer();
         this.timeClockStationResetTimer = setTimeout(() => {
             this.resetTimeClockStationState({ clearSearch: true });
@@ -1446,21 +1446,20 @@ export class UIManager {
                         <button
                             type="button"
                             data-time-clock-station-employee-id="${employee.id}"
-                            class="group rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-400">
+                            class="time-clock-station-quick-tile group rounded-[28px] border border-slate-200 bg-slate-50/90 p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-400">
                             <div class="flex items-start justify-between gap-4">
-                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-lg font-semibold text-white">
+                                <div class="time-clock-station-quick-tile__avatar flex items-center justify-center rounded-2xl bg-slate-900 font-semibold text-white">
                                     ${getTimeClockStationEmployeeInitials(employee.name)}
                                 </div>
                                 <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusCopy.tone}">
                                     ${statusCopy.badge}
                                 </span>
                             </div>
-                            <div class="mt-8">
-                                <div class="text-2xl font-semibold tracking-tight text-slate-900">${employee.name}</div>
-                                <div class="mt-2 text-sm text-slate-500">${staffMeta || t('timeClock.station.activeColleague')}</div>
-                                <div class="mt-4 text-sm text-slate-600">${statusCopy.detail}</div>
+                            <div class="mt-6">
+                                <div class="time-clock-station-quick-tile__name font-semibold tracking-tight text-slate-900">${employee.name}</div>
+                                <div class="mt-2 text-base text-slate-500">${staffMeta || t('timeClock.station.activeColleague')}</div>
                             </div>
-                            <div class="mt-6 flex items-center justify-between text-xs uppercase tracking-[0.22em] text-slate-400">
+                            <div class="mt-6 flex items-center justify-between text-sm font-medium text-slate-600">
                                 <span>${this.formatAttendanceEventLabel(summary?.primaryAction || 'clockIn')}</span>
                                 <span>${this.formatMinutesAsDuration(summary?.workedMinutes || 0)}</span>
                             </div>
@@ -1544,7 +1543,7 @@ export class UIManager {
                                 </div>
                                 <div class="text-sm text-slate-500">${t('timeClock.station.shownCount', { count: filteredEmployees.length })}</div>
                             </div>
-                            <div class="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                            <div class="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
                                 ${employeeDirectoryMarkup}
                             </div>
                         </section>
@@ -1607,14 +1606,14 @@ export class UIManager {
                             <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                             <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
-                        <div class="mt-10 grid gap-3 sm:grid-cols-2">
+                        <div class="mt-10 grid gap-3 sm:grid-cols-[1.35fr_0.85fr]">
                             <button
                                 type="button"
                                 data-time-clock-action="${primaryAction}"
                                 data-time-clock-employee-id="${selectedEmployee.id}"
-                                class="rounded-[28px] bg-white px-6 py-5 text-left text-slate-900 transition-colors hover:bg-slate-100">
+                                class="time-clock-station-primary-action rounded-[28px] bg-white px-6 py-6 text-left text-slate-900 transition-colors hover:bg-slate-100">
                                 <div class="text-xs uppercase tracking-[0.24em] text-slate-500">${t('timeClock.station.primaryAction')}</div>
-                                <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(primaryAction)}</div>
+                                <div class="mt-2 text-3xl font-semibold">${this.formatAttendanceEventLabel(primaryAction)}</div>
                             </button>
                             ${secondaryAction ? `
                                 <button
@@ -1623,12 +1622,12 @@ export class UIManager {
                                     data-time-clock-employee-id="${selectedEmployee.id}"
                                     class="rounded-[28px] border border-white/20 bg-white/8 px-6 py-5 text-left text-white transition-colors hover:bg-white/12">
                                     <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.secondaryAction')}</div>
-                                    <div class="mt-2 text-2xl font-semibold">${this.formatAttendanceEventLabel(secondaryAction)}</div>
+                                    <div class="mt-2 text-xl font-semibold">${this.formatAttendanceEventLabel(secondaryAction)}</div>
                                 </button>
                             ` : `
                                 <div class="rounded-[28px] border border-white/12 bg-white/5 px-6 py-5 text-slate-300">
                                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.nextStep')}</div>
-                                    <div class="mt-2 text-2xl font-semibold">${t('timeClock.station.noSecondaryAction')}</div>
+                                    <div class="mt-2 text-xl font-semibold">${t('timeClock.station.noSecondaryAction')}</div>
                                     <div class="mt-2 text-sm text-slate-400">${t('timeClock.station.nextPunchHint')}</div>
                                 </div>
                             `}

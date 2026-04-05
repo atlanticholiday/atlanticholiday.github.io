@@ -179,6 +179,13 @@ function syncAccessModeUi() {
     const boardOnlyMode = dataManager.isVacationBoardOnlyUser();
     const canAccessVacationBoard = dataManager.canAccessVacationBoard();
     const limitedTimeClockMode = clockOnlyMode || stationMode;
+
+    if (stationMode && i18n.getCurrentLanguage() !== 'pt') {
+        i18n.setLanguage('pt').catch((error) => {
+            console.warn('Failed to switch shared tablet account to Portuguese:', error);
+        });
+    }
+
     const landingPage = document.getElementById('landing-page');
     if (landingPage) {
         landingPage.dataset.accessMode = stationMode ? 'station' : (clockOnlyMode ? 'clock-only' : 'manager');
