@@ -501,6 +501,23 @@
                     Password flow: create access with a temporary password, set the same email on the colleague record, then use <strong>Reset Password</strong> so the colleague chooses their own password by email.
                 </div>
             </div>
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6 modal-content">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Time Clock Go-Live Checklist</h2>
+                <p class="text-sm text-gray-600 mb-4">Use this before switching the team to the live clock.</p>
+                <ol class="list-decimal list-inside space-y-3 text-sm text-gray-700">
+                    <li>Create one dedicated tablet login and assign it the <strong>time-clock-station</strong> role.</li>
+                    <li>Keep each colleague on their own access login or linked employee record. The tablet account is shared only for the station picker.</li>
+                    <li>Sign in on the tablet with the station account and confirm it opens the shared colleague picker and defaults to Portuguese.</li>
+                    <li>Test one full attendance cycle on the tablet: clock in, start break, end break, and clock out.</li>
+                    <li>Confirm the screen returns to the colleague list after a saved punch and that search still finds colleagues quickly.</li>
+                    <li>As a manager, verify the attendance print view, weekly/monthly switching, and one manual correction with a valid reason.</li>
+                    <li>Toggle the browser offline and online once to confirm the sync banner changes and punches recover correctly after reconnecting.</li>
+                    <li>Do a live pilot with one or two trusted colleagues before the full rollout.</li>
+                </ol>
+                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    Important: the tablet account should stay signed in on the shared device. Colleagues should only pick their name and save punches there; they should not sign in and out with personal passwords on the tablet.
+                </div>
+            </div>
             <div class="bg-white rounded-xl shadow-md p-6 modal-content">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Add New Access</h2>
                 <div class="mb-4">
