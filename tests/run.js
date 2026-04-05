@@ -9,6 +9,7 @@ import "./unit/shared/enums.test.js";
 import "./unit/shared/locations.test.js";
 import "./unit/features/admin/access-linking.test.js";
 import "./unit/features/admin/user-management-controller.test.js";
+import "./unit/features/operations/cleaning-ah-manager.test.js";
 import "./unit/features/operations/cleaning-ah-utils.test.js";
 import "./unit/features/operations/airbnb-reservation-invoices-manager.test.js";
 import "./unit/features/operations/cleaning-bills-manager.test.js";

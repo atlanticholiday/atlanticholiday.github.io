@@ -100,7 +100,211 @@
         "staff": "Equipa",
         "staffDesc": "Gerir membros da equipa.",
         "properties": "Propriedades",
-        "propertiesDesc": "Gerir alojamentos e inventário."
+        "propertiesDesc": "Gerir alojamentos e inventário.",
+        "cleaningAh": "Cleaning AH",
+        "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
+    },
+    "cleaningAh": {
+        "header": {
+            "kicker": "Financeiro",
+            "title": "Cleaning AH",
+            "subtitle": "Acompanhe a receita de check-out, os custos de lavandaria e metricas rapidas num unico sitio.",
+            "restrictedKicker": "Restrito",
+            "restrictedTitle": "O Cleaning AH e apenas para gestores.",
+            "restrictedBody": "Esta pagina guarda dados de receita da empresa, por isso so esta visivel para admins e gestores."
+        },
+        "landing": {
+            "description": "Receita de check-out, lavandaria e estatisticas importaveis."
+        },
+        "formula": {
+            "kicker": "Formula",
+            "title": "Registo rapido com uma unica regra de receita.",
+            "body": "As reservas de plataforma usam 15,5% de comissao e 22% de IVA extraido. As reservas diretas definem a comissao da plataforma como zero. A lavandaria continua a ser associada mais tarde a 2,10 EUR por kg."
+        },
+        "tabs": {
+            "dashboard": "Painel",
+            "cleanings": "Limpezas",
+            "laundry": "Lavandaria",
+            "ariaLabel": "Separadores do Cleaning AH"
+        },
+        "filters": {
+            "search": "Pesquisar",
+            "searchPlaceholder": "Propriedade, categoria, notas",
+            "month": "Mes",
+            "allMonths": "Todos os meses",
+            "property": "Propriedade",
+            "allProperties": "Todas as propriedades",
+            "category": "Categoria",
+            "allCategories": "Todas as categorias"
+        },
+        "metrics": {
+            "checkOuts": "Check-outs",
+            "guestTotal": "Total hospede",
+            "platformFees": "Comissoes da plataforma",
+            "vat": "IVA",
+            "laundry": "Lavandaria",
+            "netToAh": "Liquido para a AH",
+            "ahBeforeLaundry": "AH antes da lavandaria",
+            "avgNetPerCleaning": "Media liquida / limpeza",
+            "kg": "Kg",
+            "amount": "Valor",
+            "rows": "Linhas",
+            "type": "Tipo",
+            "commission": "Comissao",
+            "beforeLaundry": "Antes da lavandaria",
+            "laundryPending": "Lavandaria pendente",
+            "currentNet": "Liquido atual",
+            "ratePerKg": "Preco / kg"
+        },
+        "dashboard": {
+            "overviewKicker": "Resumo",
+            "overviewTitle": "Resumo da receita",
+            "byMonth": "Por mes",
+            "topProperties": "Principais propriedades",
+            "categories": "Categorias",
+            "laundryKicker": "Lavandaria",
+            "laundryTitle": "Totais da lavandaria",
+            "laundryByMonth": "Lavandaria por mes",
+            "laundryByProperty": "Lavandaria por propriedade"
+        },
+        "cleanings": {
+            "entryKicker": "Registo rapido",
+            "editTitle": "Editar limpeza",
+            "addTitle": "Adicionar limpeza",
+            "description": "Guarde primeiro o check-out. A lavandaria pode ser associada depois no separador Lavandaria quando os quilos chegarem.",
+            "storedKicker": "Dados guardados",
+            "storedTitle": "Limpezas",
+            "empty": "Nenhum registo de limpeza corresponde aos filtros atuais."
+        },
+        "laundryTab": {
+            "entryKicker": "Lavandaria avulsa",
+            "editTitle": "Editar registo de lavandaria",
+            "addTitle": "Adicionar registo de lavandaria",
+            "description": "Use isto quando a lavandaria precisa de ser controlada separadamente de uma limpeza de check-out. O valor e calculado automaticamente como quilos multiplicados pelo preco definido abaixo.",
+            "activityKicker": "Atividade de lavandaria",
+            "activityTitle": "Registo combinado de lavandaria",
+            "empty": "Nenhum registo de lavandaria corresponde aos filtros atuais."
+        },
+        "forms": {
+            "date": "Data",
+            "property": "Propriedade",
+            "propertyPlaceholder": "Escreva ou escolha uma propriedade",
+            "category": "Categoria",
+            "reservationSource": "Origem da reserva",
+            "guestAmount": "Valor hospede",
+            "notesPlaceholder": "Nota opcional",
+            "linkedCleaning": "Limpeza associada",
+            "noLinkedCleaning": "Sem limpeza associada",
+            "linkedCleaningHint": "Associe a lavandaria a uma limpeza anterior para atualizar a receita liquida final quando os kg chegarem.",
+            "kg": "Kg",
+            "ratePerKg": "Preco / kg",
+            "csvFile": "Ficheiro CSV"
+        },
+        "preview": {
+            "title": "Pre-visualizacao"
+        },
+        "import": {
+            "kicker": "Importar",
+            "title": "Importar CSV historico",
+            "description": "Importe a folha de check-out existente, ignore duplicados por fingerprint e reveja divergencias antes de guardar.",
+            "clearPreview": "Limpar pre-visualizacao",
+            "empty": "Selecione um ficheiro CSV para pre-visualizar quantas linhas vao ser importadas e quantas serao ignoradas como duplicadas.",
+            "previewKicker": "Pre-visualizacao da importacao",
+            "summary": "{{parsed}} analisadas, {{newRows}} novas, {{duplicates}} duplicadas ignoradas, {{warnings}} avisos.",
+            "mismatchWarning": "{{count}} linhas tem divergencias de formula. Serao importadas na mesma com os valores da folha preservados.",
+            "noNewRows": "Nao existem novas linhas para importar."
+        },
+        "tables": {
+            "date": "Data",
+            "property": "Propriedade",
+            "category": "Categoria",
+            "reservation": "Reserva",
+            "guest": "Hospede",
+            "laundry": "Lavandaria",
+            "net": "Liquido",
+            "source": "Origem",
+            "actions": "Acoes",
+            "linkedCleaning": "Limpeza associada",
+            "kg": "Kg",
+            "amount": "Valor",
+            "month": "Mes",
+            "count": "Contagem",
+            "rows": "Linhas",
+            "noData": "Nao existem dados para os filtros atuais."
+        },
+        "reservationSources": {
+            "platform": "Plataforma",
+            "direct": "Direta"
+        },
+        "recordSources": {
+            "manual": "Manual",
+            "import": "Importacao",
+            "standalone": "Avulso",
+            "cleaning": "Limpeza"
+        },
+        "laundryState": {
+            "linkedAmount": "Associado: {{amount}}",
+            "waiting": "A aguardar lavandaria",
+            "notLinked": "Nao associado"
+        },
+        "actions": {
+            "cancelEdit": "Cancelar edicao",
+            "saveChanges": "Guardar alteracoes",
+            "saveCleaning": "Guardar limpeza",
+            "saveLaundry": "Guardar lavandaria",
+            "reset": "Repor",
+            "openCleaning": "Abrir limpeza"
+        },
+        "counts": {
+            "rows": {
+                "one": "1 linha",
+                "other": "{{count}} linhas"
+            },
+            "records": {
+                "one": "1 registo",
+                "other": "{{count}} registos"
+            },
+            "warnings": {
+                "one": "1 aviso",
+                "other": "{{count}} avisos"
+            },
+            "linkedRows": {
+                "one": "1 linha associada",
+                "other": "{{count}} linhas associadas"
+            },
+            "importRows": {
+                "one": "Importar 1 linha",
+                "other": "Importar {{count}} linhas"
+            }
+        },
+        "status": {
+            "cleaningValidationError": "A data e a propriedade sao obrigatorias para um registo de limpeza.",
+            "cleaningUpdated": "Registo de limpeza atualizado.",
+            "cleaningSaved": "Registo de limpeza guardado.",
+            "cleaningSaveFailed": "Nao foi possivel guardar o registo de limpeza.",
+            "laundryValidationError": "A data e a propriedade sao obrigatorias para um registo de lavandaria.",
+            "laundryUpdated": "Registo de lavandaria atualizado.",
+            "laundrySaved": "Registo de lavandaria guardado.",
+            "laundrySaveFailed": "Nao foi possivel guardar o registo de lavandaria.",
+            "csvPreviewReady": "Foram analisadas {{count}} linhas do CSV. Reveja a pre-visualizacao antes de importar.",
+            "csvPreviewFailed": "A pre-visualizacao do CSV falhou. Verifique o formato do ficheiro e tente novamente.",
+            "noNewRowsToImport": "Nao existem novas linhas para importar.",
+            "csvImportCompleted": "Importacao do CSV concluida.",
+            "csvImportFailed": "A importacao do CSV falhou ao guardar no Firestore.",
+            "cleaningDeletedWithLinked": "Registo de limpeza eliminado. {{count}} linhas de lavandaria associadas ficaram desassociadas.",
+            "cleaningDeleted": "Registo de limpeza eliminado.",
+            "cleaningDeleteFailed": "Nao foi possivel eliminar o registo de limpeza.",
+            "laundryDeleted": "Registo de lavandaria eliminado.",
+            "laundryDeleteFailed": "Nao foi possivel eliminar o registo de lavandaria."
+        },
+        "confirm": {
+            "deleteCleaningWithLinked": "Eliminar este registo de limpeza? {{count}} linhas de lavandaria associadas vao ser mantidas e desassociadas.",
+            "deleteCleaning": "Eliminar este registo de limpeza?",
+            "deleteLaundry": "Eliminar este registo de lavandaria?"
+        },
+        "labels": {
+            "unknown": "Desconhecido"
+        }
     },
     "userManagement": {
         "header": {

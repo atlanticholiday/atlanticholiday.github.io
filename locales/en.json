@@ -100,7 +100,211 @@
     "staff": "Staff",
     "staffDesc": "Manage team members and details.",
     "properties": "Properties",
-    "propertiesDesc": "Manage short rentals and full inventory."
+    "propertiesDesc": "Manage short rentals and full inventory.",
+    "cleaningAh": "Cleaning AH",
+    "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
+  },
+  "cleaningAh": {
+    "header": {
+      "kicker": "Finance",
+      "title": "Cleaning AH",
+      "subtitle": "Track checkout revenue, laundry costs, and quick stats in one place.",
+      "restrictedKicker": "Restricted",
+      "restrictedTitle": "Cleaning AH is manager-only.",
+      "restrictedBody": "This page stores company revenue data, so it is only visible to admins and managers."
+    },
+    "landing": {
+      "description": "Checkout revenue, laundry, and importable stats."
+    },
+    "formula": {
+      "kicker": "Formula",
+      "title": "Fast entry with one revenue rule.",
+      "body": "Platform reservations use 15.5% commission and 22% extracted VAT. Direct reservations set platform commission to zero. Laundry still links later at 2.10 EUR per kg."
+    },
+    "tabs": {
+      "dashboard": "Dashboard",
+      "cleanings": "Cleanings",
+      "laundry": "Laundry",
+      "ariaLabel": "Cleaning AH tabs"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Property, category, notes",
+      "month": "Month",
+      "allMonths": "All months",
+      "property": "Property",
+      "allProperties": "All properties",
+      "category": "Category",
+      "allCategories": "All categories"
+    },
+    "metrics": {
+      "checkOuts": "Check-outs",
+      "guestTotal": "Guest total",
+      "platformFees": "Platform fees",
+      "vat": "VAT",
+      "laundry": "Laundry",
+      "netToAh": "Net to AH",
+      "ahBeforeLaundry": "AH before laundry",
+      "avgNetPerCleaning": "Avg net / cleaning",
+      "kg": "Kg",
+      "amount": "Amount",
+      "rows": "Rows",
+      "type": "Type",
+      "commission": "Commission",
+      "beforeLaundry": "Before laundry",
+      "laundryPending": "Laundry pending",
+      "currentNet": "Current net",
+      "ratePerKg": "Rate / kg"
+    },
+    "dashboard": {
+      "overviewKicker": "Overview",
+      "overviewTitle": "Revenue snapshot",
+      "byMonth": "By month",
+      "topProperties": "Top properties",
+      "categories": "Categories",
+      "laundryKicker": "Laundry",
+      "laundryTitle": "Laundry totals",
+      "laundryByMonth": "Laundry by month",
+      "laundryByProperty": "Laundry by property"
+    },
+    "cleanings": {
+      "entryKicker": "Quick entry",
+      "editTitle": "Edit cleaning",
+      "addTitle": "Add cleaning",
+      "description": "Save the checkout first. Laundry can be linked later from the Laundry tab when the kilograms arrive.",
+      "storedKicker": "Stored data",
+      "storedTitle": "Cleanings",
+      "empty": "No cleaning records match the current filters."
+    },
+    "laundryTab": {
+      "entryKicker": "Standalone laundry",
+      "editTitle": "Edit laundry record",
+      "addTitle": "Add laundry record",
+      "description": "Use this when laundry needs to be tracked separately from a checkout cleaning. Amount is calculated automatically as kilograms multiplied by the rate you set below.",
+      "activityKicker": "Laundry activity",
+      "activityTitle": "Combined laundry register",
+      "empty": "No laundry records match the current filters."
+    },
+    "forms": {
+      "date": "Date",
+      "property": "Property",
+      "propertyPlaceholder": "Type or pick a property",
+      "category": "Category",
+      "reservationSource": "Reservation source",
+      "guestAmount": "Guest amount",
+      "notesPlaceholder": "Optional note",
+      "linkedCleaning": "Linked cleaning",
+      "noLinkedCleaning": "No linked cleaning",
+      "linkedCleaningHint": "Link the laundry to an earlier cleaning so the final net revenue updates when the kg arrives.",
+      "kg": "Kg",
+      "ratePerKg": "Rate / kg",
+      "csvFile": "CSV file"
+    },
+    "preview": {
+      "title": "Preview"
+    },
+    "import": {
+      "kicker": "Import",
+      "title": "Import historical CSV",
+      "description": "Import the existing checkout sheet, skip duplicates by fingerprint, and review mismatches before saving.",
+      "clearPreview": "Clear preview",
+      "empty": "Select a CSV file to preview how many rows will be imported and how many will be skipped as duplicates.",
+      "previewKicker": "Import preview",
+      "summary": "{{parsed}} parsed, {{newRows}} new, {{duplicates}} duplicates skipped, {{warnings}} warnings.",
+      "mismatchWarning": "{{count}} rows have formula mismatches. They will still be imported with the sheet values preserved.",
+      "noNewRows": "No new rows to import."
+    },
+    "tables": {
+      "date": "Date",
+      "property": "Property",
+      "category": "Category",
+      "reservation": "Reservation",
+      "guest": "Guest",
+      "laundry": "Laundry",
+      "net": "Net",
+      "source": "Source",
+      "actions": "Actions",
+      "linkedCleaning": "Linked cleaning",
+      "kg": "Kg",
+      "amount": "Amount",
+      "month": "Month",
+      "count": "Count",
+      "rows": "Rows",
+      "noData": "No data for the current filters."
+    },
+    "reservationSources": {
+      "platform": "Platform",
+      "direct": "Direct"
+    },
+    "recordSources": {
+      "manual": "Manual",
+      "import": "Import",
+      "standalone": "Standalone",
+      "cleaning": "Cleaning"
+    },
+    "laundryState": {
+      "linkedAmount": "Linked: {{amount}}",
+      "waiting": "Waiting for laundry",
+      "notLinked": "Not linked"
+    },
+    "actions": {
+      "cancelEdit": "Cancel edit",
+      "saveChanges": "Save changes",
+      "saveCleaning": "Save cleaning",
+      "saveLaundry": "Save laundry",
+      "reset": "Reset",
+      "openCleaning": "Open cleaning"
+    },
+    "counts": {
+      "rows": {
+        "one": "1 row",
+        "other": "{{count}} rows"
+      },
+      "records": {
+        "one": "1 record",
+        "other": "{{count}} records"
+      },
+      "warnings": {
+        "one": "1 warning",
+        "other": "{{count}} warnings"
+      },
+      "linkedRows": {
+        "one": "1 linked row",
+        "other": "{{count}} linked rows"
+      },
+      "importRows": {
+        "one": "Import 1 row",
+        "other": "Import {{count}} rows"
+      }
+    },
+    "status": {
+      "cleaningValidationError": "Date and property are required for a cleaning record.",
+      "cleaningUpdated": "Cleaning record updated.",
+      "cleaningSaved": "Cleaning record saved.",
+      "cleaningSaveFailed": "Cleaning record could not be saved.",
+      "laundryValidationError": "Date and property are required for a laundry record.",
+      "laundryUpdated": "Laundry record updated.",
+      "laundrySaved": "Laundry record saved.",
+      "laundrySaveFailed": "Laundry record could not be saved.",
+      "csvPreviewReady": "Parsed {{count}} CSV rows. Review the preview before importing.",
+      "csvPreviewFailed": "CSV preview failed. Check the file format and try again.",
+      "noNewRowsToImport": "There are no new rows to import.",
+      "csvImportCompleted": "CSV import completed.",
+      "csvImportFailed": "CSV import failed while saving to Firestore.",
+      "cleaningDeletedWithLinked": "Cleaning record deleted. {{count}} linked laundry rows were unlinked.",
+      "cleaningDeleted": "Cleaning record deleted.",
+      "cleaningDeleteFailed": "Cleaning record could not be deleted.",
+      "laundryDeleted": "Laundry record deleted.",
+      "laundryDeleteFailed": "Laundry record could not be deleted."
+    },
+    "confirm": {
+      "deleteCleaningWithLinked": "Delete this cleaning record? {{count}} linked laundry rows will be kept and unlinked.",
+      "deleteCleaning": "Delete this cleaning record?",
+      "deleteLaundry": "Delete this laundry record?"
+    },
+    "labels": {
+      "unknown": "Unknown"
+    }
   },
   "userManagement": {
     "header": {

@@ -19,6 +19,7 @@ import {
     summarizeCleaningAhRecords,
     summarizeLaundryRecords
 } from "./cleaning-ah-utils.js";
+import { i18n, t } from "../../core/i18n.js";
 
 const DEFAULT_CLEANING_CATEGORY = "Limpeza check-out";
 const DEFAULT_CATEGORY_OPTIONS = Object.freeze([
@@ -78,6 +79,7 @@ export class CleaningAhManager {
         this.db = db || null;
         this.getDataManager = typeof getDataManager === "function" ? getDataManager : () => null;
         this.readProperties = typeof getProperties === "function" ? getProperties : () => [];
+        this.handleLanguageChange = this.handleLanguageChange.bind(this);
 
         this.cleaningRecords = [];
         this.laundryRecords = [];
@@ -111,7 +113,67 @@ export class CleaningAhManager {
                     this.render();
                 }
             });
+            window.addEventListener("languageChanged", this.handleLanguageChange);
         }
+    }
+
+    tr(key, replacements = {}) {
+        return t(`cleaningAh.${key}`, replacements);
+    }
+
+    trCount(key, count, replacements = {}) {
+        return this.tr(`${key}.${count === 1 ? "one" : "other"}`, {
+            count,
+            ...replacements
+        });
+    }
+
+    getLocale() {
+        const activeLanguage = i18n?.getCurrentLanguage?.() || i18n?.currentLang || "en";
+        return activeLanguage === "pt" ? "pt-PT" : "en-US";
+    }
+
+    getRowsLabel(count) {
+        return this.trCount("counts.rows", count);
+    }
+
+    getRecordsLabel(count) {
+        return this.trCount("counts.records", count);
+    }
+
+    getWarningsLabel(count) {
+        return this.trCount("counts.warnings", count);
+    }
+
+    getLinkedRowsLabel(count) {
+        return this.trCount("counts.linkedRows", count);
+    }
+
+    getImportRowsLabel(count) {
+        return this.trCount("counts.importRows", count);
+    }
+
+    getReservationSourceLabel(value) {
+        return value === CLEANING_AH_RESERVATION_SOURCES.direct
+            ? this.tr("reservationSources.direct")
+            : this.tr("reservationSources.platform");
+    }
+
+    getRecordSourceLabel(value) {
+        const sourceKeyByValue = {
+            manual: "recordSources.manual",
+            import: "recordSources.import",
+            standalone: "recordSources.standalone",
+            cleaning: "recordSources.cleaning"
+        };
+        const translationKey = sourceKeyByValue[value];
+
+        return translationKey ? this.tr(translationKey) : String(value || this.tr("recordSources.manual"));
+    }
+
+    handleLanguageChange() {
+        this.ensureDomScaffold();
+        this.render();
     }
 
     createDefaultCleaningDraft() {
@@ -156,6 +218,43 @@ export class CleaningAhManager {
         }
     }
 
+    updateStaticCopy() {
+        const backLabel = document.getElementById("cleaning-ah-back-label");
+        if (backLabel) {
+            backLabel.textContent = t("common.back");
+        }
+
+        const headerKicker = document.getElementById("cleaning-ah-header-kicker");
+        if (headerKicker) {
+            headerKicker.textContent = this.tr("header.kicker");
+        }
+
+        const headerTitle = document.getElementById("cleaning-ah-header-title");
+        if (headerTitle) {
+            headerTitle.textContent = this.tr("header.title");
+        }
+
+        const headerSubtitle = document.getElementById("cleaning-ah-header-subtitle");
+        if (headerSubtitle) {
+            headerSubtitle.textContent = this.tr("header.subtitle");
+        }
+
+        const signOutButton = document.getElementById("cleaning-ah-sign-out-btn");
+        if (signOutButton) {
+            signOutButton.textContent = t("common.signOut");
+        }
+
+        const landingCardTitle = document.getElementById("cleaning-ah-card-title");
+        if (landingCardTitle) {
+            landingCardTitle.textContent = this.tr("header.title");
+        }
+
+        const landingCardDescription = document.getElementById("cleaning-ah-card-description");
+        if (landingCardDescription) {
+            landingCardDescription.textContent = this.tr("landing.description");
+        }
+    }
+
     ensureDomScaffold() {
         if (!document.getElementById("cleaning-ah-page")) {
             const page = document.createElement("div");
@@ -167,15 +266,21 @@ export class CleaningAhManager {
                         <div class="flex items-center gap-3">
                             <button id="back-to-landing-from-cleaning-ah-btn" class="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                                Back
+                                <span id="cleaning-ah-back-label"></span>
                             </button>
                             <div>
-                                <div class="text-xs uppercase tracking-[0.28em] text-sky-600 font-semibold">Finance</div>
-                                <h1 class="text-2xl font-semibold text-slate-900">Cleaning AH</h1>
-                                <p class="text-sm text-slate-600 mt-1">Track checkout revenue, laundry costs, and quick stats in one place.</p>
+                                <div id="cleaning-ah-header-kicker" class="text-xs uppercase tracking-[0.28em] text-sky-600 font-semibold"></div>
+                                <h1 id="cleaning-ah-header-title" class="text-2xl font-semibold text-slate-900"></h1>
+                                <p id="cleaning-ah-header-subtitle" class="text-sm text-slate-600 mt-1"></p>
                             </div>
                         </div>
-                        <button id="cleaning-ah-sign-out-btn" class="text-sm text-red-600 hover:underline">Sign out</button>
+                        <div class="flex items-center gap-3 self-start md:self-auto">
+                            <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
+                                <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                                <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                            </div>
+                            <button id="cleaning-ah-sign-out-btn" class="text-sm text-red-600 hover:underline"></button>
+                        </div>
                     </div>
                     <div id="cleaning-ah-root" class="space-y-6"></div>
                 </div>
@@ -207,14 +312,17 @@ export class CleaningAhManager {
                         <span class="text-2xl">AH</span>
                     </div>
                     <div class="card-body">
-                        <h3>Cleaning AH</h3>
-                        <p>Checkout revenue, laundry, and importable stats.</p>
+                        <h3 id="cleaning-ah-card-title"></h3>
+                        <p id="cleaning-ah-card-description"></p>
                     </div>
                 `;
                 parent.appendChild(card);
             }
         }
 
+        this.updateStaticCopy();
+        i18n.setupLanguageSwitcher?.();
+        i18n.updateLanguageSwitcher?.();
         this.syncAccessVisibility();
     }
 
@@ -354,7 +462,7 @@ export class CleaningAhManager {
     }
 
     getCleaningLinkLabel(record) {
-        return `${this.formatDate(record.date)} · ${record.propertyName || "Unknown"} · ${record.category || DEFAULT_CLEANING_CATEGORY}`;
+        return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${record.category || DEFAULT_CLEANING_CATEGORY}`;
     }
 
     getFilteredCleaningRecords() {
@@ -415,9 +523,9 @@ export class CleaningAhManager {
             root.innerHTML = `
                 <section class="rounded-3xl border border-rose-200 bg-white p-8 shadow-sm">
                     <div class="max-w-2xl">
-                        <div class="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600">Restricted</div>
-                        <h2 class="mt-3 text-2xl font-semibold text-slate-900">Cleaning AH is manager-only.</h2>
-                        <p class="mt-3 text-sm leading-6 text-slate-600">This page stores company revenue data, so it is only visible to admins and managers.</p>
+                        <div class="text-xs font-semibold uppercase tracking-[0.28em] text-rose-600">${escapeHtml(this.tr("header.restrictedKicker"))}</div>
+                        <h2 class="mt-3 text-2xl font-semibold text-slate-900">${escapeHtml(this.tr("header.restrictedTitle"))}</h2>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("header.restrictedBody"))}</p>
                     </div>
                 </section>
             `;
@@ -434,17 +542,17 @@ export class CleaningAhManager {
             ${this.renderStatusMessage()}
             <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="max-w-2xl">
-                    <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">Formula</div>
-                    <h2 class="mt-2 text-xl font-semibold text-slate-900">Fast entry with one revenue rule.</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Platform reservations use 15.5% commission and 22% extracted VAT. Direct reservations set platform commission to zero. Laundry still links later at 2.10 EUR per kg.</p>
+                    <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${escapeHtml(this.tr("formula.kicker"))}</div>
+                    <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("formula.title"))}</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
                 </div>
                 <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                    ${this.renderMetricCard("Check-outs", String(cleaningSummary.totals.count))}
-                    ${this.renderMetricCard("Guest total", this.formatCurrency(cleaningSummary.totals.guestAmount))}
-                    ${this.renderMetricCard("Platform fees", this.formatCurrency(cleaningSummary.totals.platformCommission))}
-                    ${this.renderMetricCard("VAT", this.formatCurrency(cleaningSummary.totals.vatAmount))}
-                    ${this.renderMetricCard("Laundry", this.formatCurrency(cleaningSummary.totals.laundryAmount))}
-                    ${this.renderMetricCard("Net to AH", this.formatCurrency(cleaningSummary.totals.totalToAh))}
+                    ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count))}
+                    ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount))}
+                    ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
+                    ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
+                    ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(cleaningSummary.totals.laundryAmount))}
+                    ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh))}
                 </div>
             </section>
 
@@ -520,27 +628,27 @@ export class CleaningAhManager {
             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Search</span>
-                        <input id="cleaning-ah-search" type="search" class="mt-2 w-full" value="${escapeHtml(this.searchQuery)}" placeholder="Property, category, notes">
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.search"))}</span>
+                        <input id="cleaning-ah-search" type="search" class="mt-2 w-full" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Month</span>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.month"))}</span>
                         <select id="cleaning-ah-month-filter" class="mt-2 w-full">
-                            <option value="">All months</option>
+                            <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
                             ${monthOptions}
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Property</span>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.property"))}</span>
                         <select id="cleaning-ah-property-filter" class="mt-2 w-full">
-                            <option value="">All properties</option>
+                            <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
                             ${propertyOptions}
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Category</span>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.category"))}</span>
                         <select id="cleaning-ah-category-filter" class="mt-2 w-full">
-                            <option value="">All categories</option>
+                            <option value="">${escapeHtml(this.tr("filters.allCategories"))}</option>
                             ${categoryOptions}
                         </select>
                     </label>
@@ -551,13 +659,13 @@ export class CleaningAhManager {
 
     renderTabBar() {
         const tabs = [
-            ["dashboard", "Dashboard"],
-            ["cleanings", "Cleanings"],
-            ["laundry", "Laundry"]
+            ["dashboard", this.tr("tabs.dashboard")],
+            ["cleanings", this.tr("tabs.cleanings")],
+            ["laundry", this.tr("tabs.laundry")]
         ];
 
         return `
-            <nav class="flex flex-wrap gap-2" aria-label="Cleaning AH tabs">
+            <nav class="flex flex-wrap gap-2" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
                 ${tabs.map(([key, label]) => `
                     <button
                         type="button"
@@ -588,37 +696,37 @@ export class CleaningAhManager {
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Overview</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">Revenue snapshot</h3>
+                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.overviewKicker"))}</div>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.overviewTitle"))}</h3>
                             </div>
-                            <div class="text-sm text-slate-500">${cleaningSummary.totals.count} records</div>
+                            <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
                         </div>
                         <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            ${this.renderMetricCard("Platform fees", this.formatCurrency(cleaningSummary.totals.platformCommission))}
-                            ${this.renderMetricCard("VAT", this.formatCurrency(cleaningSummary.totals.vatAmount))}
-                            ${this.renderMetricCard("AH before laundry", this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
-                            ${this.renderMetricCard("Avg net / cleaning", this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
+                            ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
+                            ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
+                            ${this.renderMetricCard(this.tr("metrics.ahBeforeLaundry"), this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
+                            ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
                         </div>
                     </section>
-                    ${this.renderFinancialSummaryTable("By month", cleaningSummary.byMonth, [
-                        ["Month", (entry) => this.formatMonthKey(entry.label)],
-                        ["Count", (entry) => String(entry.count)],
-                        ["Guest", (entry) => this.formatCurrency(entry.guestAmount)],
-                        ["Laundry", (entry) => this.formatCurrency(entry.laundryAmount)],
-                        ["Net", (entry) => this.formatCurrency(entry.totalToAh)]
+                    ${this.renderFinancialSummaryTable(this.tr("dashboard.byMonth"), cleaningSummary.byMonth, [
+                        [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
+                        [this.tr("tables.count"), (entry) => String(entry.count)],
+                        [this.tr("tables.guest"), (entry) => this.formatCurrency(entry.guestAmount)],
+                        [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
+                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
-                    ${this.renderFinancialSummaryTable("Top properties", cleaningSummary.byProperty.slice(0, 8), [
-                        ["Property", (entry) => entry.label],
-                        ["Count", (entry) => String(entry.count)],
-                        ["Guest", (entry) => this.formatCurrency(entry.guestAmount)],
-                        ["Net", (entry) => this.formatCurrency(entry.totalToAh)]
+                    ${this.renderFinancialSummaryTable(this.tr("dashboard.topProperties"), cleaningSummary.byProperty.slice(0, 8), [
+                        [this.tr("tables.property"), (entry) => entry.label],
+                        [this.tr("tables.count"), (entry) => String(entry.count)],
+                        [this.tr("tables.guest"), (entry) => this.formatCurrency(entry.guestAmount)],
+                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
                 </div>
                 <div class="space-y-6">
-                    ${this.renderFinancialSummaryTable("Categories", cleaningSummary.byCategory.slice(0, 8), [
-                        ["Category", (entry) => entry.label],
-                        ["Count", (entry) => String(entry.count)],
-                        ["Net", (entry) => this.formatCurrency(entry.totalToAh)]
+                    ${this.renderFinancialSummaryTable(this.tr("dashboard.categories"), cleaningSummary.byCategory.slice(0, 8), [
+                        [this.tr("tables.category"), (entry) => entry.label],
+                        [this.tr("tables.count"), (entry) => String(entry.count)],
+                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
                     ${this.renderLaundrySummaryBlock(laundrySummary)}
                 </div>
@@ -643,45 +751,45 @@ export class CleaningAhManager {
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Quick entry</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${this.editingCleaningId ? "Edit cleaning" : "Add cleaning"}</h3>
-                                <p class="mt-2 text-sm text-slate-600">Save the checkout first. Laundry can be linked later from the Laundry tab when the kilograms arrive.</p>
+                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("cleanings.entryKicker"))}</div>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingCleaningId ? this.tr("cleanings.editTitle") : this.tr("cleanings.addTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.description"))}</p>
                             </div>
                             <div class="flex flex-wrap gap-3 xl:justify-end">
-                                ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">Cancel edit</button>` : ""}
-                                <button type="submit" form="cleaning-ah-cleaning-form" class="view-btn active">${this.editingCleaningId ? "Save changes" : "Save cleaning"}</button>
-                                <button type="button" id="cleaning-ah-reset-cleaning-form" class="view-btn">Reset</button>
+                                ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
+                                <button type="submit" form="cleaning-ah-cleaning-form" class="view-btn active">${escapeHtml(this.editingCleaningId ? this.tr("actions.saveChanges") : this.tr("actions.saveCleaning"))}</button>
+                                <button type="button" id="cleaning-ah-reset-cleaning-form" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
                             </div>
                         </div>
                         <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Date</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
                                     <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Property</span>
-                                    <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="Type or pick a property" required>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
+                                    <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Category</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.category"))}</span>
                                     <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(draft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Reservation source</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
                                     <select name="reservationSource" class="mt-1 w-full">
-                                        <option value="platform" ${draft.reservationSource !== CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>Platform</option>
-                                        <option value="direct" ${draft.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>Direct</option>
+                                        <option value="platform" ${draft.reservationSource !== CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.platform"))}</option>
+                                        <option value="direct" ${draft.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.direct"))}</option>
                                     </select>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Guest amount</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
                                     <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.guestAmount))}" required>
                                 </label>
                             </div>
                             <label class="block">
-                                <span class="text-sm text-slate-600">Notes</span>
-                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="Optional note">${escapeHtml(draft.notes)}</textarea>
+                                <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
+                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
                             </label>
                             <div id="cleaning-ah-cleaning-preview">
                                 ${this.renderCleaningPreview(previewRecord)}
@@ -694,10 +802,10 @@ export class CleaningAhManager {
                 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stored data</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">Cleanings</h3>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("cleanings.storedKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("cleanings.storedTitle"))}</h3>
                         </div>
-                        <div class="text-sm text-slate-500">${filteredCleanings.length} rows</div>
+                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(filteredCleanings.length))}</div>
                     </div>
                     <div class="mt-5 overflow-x-auto">
                         ${this.renderCleaningsTable(filteredCleanings)}
@@ -728,46 +836,46 @@ export class CleaningAhManager {
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Standalone laundry</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${this.editingLaundryId ? "Edit laundry record" : "Add laundry record"}</h3>
-                                <p class="mt-2 text-sm text-slate-600">Use this when laundry needs to be tracked separately from a checkout cleaning. Amount is calculated automatically as kilograms multiplied by the rate you set below.</p>
+                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("laundryTab.entryKicker"))}</div>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingLaundryId ? this.tr("laundryTab.editTitle") : this.tr("laundryTab.addTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.description"))}</p>
                             </div>
                             <div class="flex flex-wrap gap-3 xl:justify-end">
-                                ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="view-btn">Cancel edit</button>` : ""}
-                                <button type="submit" form="cleaning-ah-laundry-form" class="view-btn active">${this.editingLaundryId ? "Save changes" : "Save laundry"}</button>
-                                <button type="button" id="cleaning-ah-reset-laundry-form" class="view-btn">Reset</button>
+                                ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
+                                <button type="submit" form="cleaning-ah-laundry-form" class="view-btn active">${escapeHtml(this.editingLaundryId ? this.tr("actions.saveChanges") : this.tr("actions.saveLaundry"))}</button>
+                                <button type="button" id="cleaning-ah-reset-laundry-form" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
                             </div>
                         </div>
                         <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Date</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
                                     <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                                 </label>
                                 <label class="block md:col-span-2 lg:col-span-3">
-                                    <span class="text-sm text-slate-600">Linked cleaning</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.linkedCleaning"))}</span>
                                     <select name="linkedCleaningId" id="cleaning-ah-linked-cleaning" class="mt-1 w-full">
-                                        <option value="">No linked cleaning</option>
+                                        <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
                                         ${linkOptions}
                                     </select>
-                                    <div class="mt-1 text-xs text-slate-500">Link the laundry to an earlier cleaning so the final net revenue updates when the kg arrives.</div>
+                                    <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.linkedCleaningHint"))}</div>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Property</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
                                     <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(linkedCleaning?.propertyName || draft.propertyName)}" list="cleaning-ah-property-options" ${linkedCleaning ? "readonly" : ""} required>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Kg</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
                                     <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm text-slate-600">Rate / kg</span>
+                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
                                     <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
                                 </label>
                             </div>
                             <label class="block">
-                                <span class="text-sm text-slate-600">Notes</span>
-                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="Optional note">${escapeHtml(draft.notes)}</textarea>
+                                <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
+                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
                             </label>
                             <div id="cleaning-ah-laundry-preview">
                                 ${this.renderLaundryPreview(preview)}
@@ -780,10 +888,10 @@ export class CleaningAhManager {
                 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Laundry activity</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">Combined laundry register</h3>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("laundryTab.activityKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("laundryTab.activityTitle"))}</h3>
                         </div>
-                        <div class="text-sm text-slate-500">${laundrySummary.entries.length} rows</div>
+                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.entries.length))}</div>
                     </div>
                     <div class="mt-5 overflow-x-auto">
                         ${this.renderLaundryTable(laundrySummary.entries, filteredStandaloneLaundry)}
@@ -796,14 +904,14 @@ export class CleaningAhManager {
     renderCleaningPreview(previewRecord) {
         return `
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Preview</div>
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
                 <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard("Type", previewRecord.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "Direct" : "Platform")}
-                    ${this.renderPreviewMetricCard("Commission", this.formatCurrency(previewRecord.platformCommission))}
-                    ${this.renderPreviewMetricCard("VAT", this.formatCurrency(previewRecord.vatAmount))}
-                    ${this.renderPreviewMetricCard("Before laundry", this.formatCurrency(previewRecord.totalToAhWithoutLaundry))}
-                    ${this.renderPreviewMetricCard("Laundry pending", this.formatCurrency(0))}
-                    ${this.renderPreviewMetricCard("Current net", this.formatCurrency(previewRecord.totalToAhWithoutLaundry), "emphasis")}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.type"), this.getReservationSourceLabel(previewRecord.reservationSource))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.commission"), this.formatCurrency(previewRecord.platformCommission))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.vat"), this.formatCurrency(previewRecord.vatAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.beforeLaundry"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.laundryPending"), this.formatCurrency(0))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry), "emphasis")}
                 </div>
             </div>
         `;
@@ -812,11 +920,11 @@ export class CleaningAhManager {
     renderLaundryPreview(previewRecord) {
         return `
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Preview</div>
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
                 <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard("Kg", this.formatNumber(previewRecord.kg))}
-                    ${this.renderPreviewMetricCard("Rate / kg", this.formatCurrency(previewRecord.laundryRatePerKg))}
-                    ${this.renderPreviewMetricCard("Amount", this.formatCurrency(previewRecord.amount), "emphasis")}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(previewRecord.kg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.ratePerKg"), this.formatCurrency(previewRecord.laundryRatePerKg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(previewRecord.amount), "emphasis")}
                 </div>
             </div>
         `;
@@ -827,15 +935,15 @@ export class CleaningAhManager {
             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">Import</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">Import historical CSV</h3>
-                        <p class="mt-2 text-sm text-slate-600">Import the existing checkout sheet, skip duplicates by fingerprint, and review mismatches before saving.</p>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">${escapeHtml(this.tr("import.kicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("import.title"))}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("import.description"))}</p>
                     </div>
-                    ${this.importPreview ? `<button type="button" id="cleaning-ah-clear-import" class="text-sm text-slate-500 hover:text-slate-900">Clear preview</button>` : ""}
+                    ${this.importPreview ? `<button type="button" id="cleaning-ah-clear-import" class="text-sm text-slate-500 hover:text-slate-900">${escapeHtml(this.tr("import.clearPreview"))}</button>` : ""}
                 </div>
                 <div class="mt-4 flex flex-col gap-4">
                     <label class="block">
-                        <span class="text-sm text-slate-600">CSV file</span>
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.csvFile"))}</span>
                         <input id="cleaning-ah-import-file" type="file" accept=".csv,text/csv" class="mt-1 block w-full text-sm text-slate-600">
                     </label>
                     ${this.renderImportPreview()}
@@ -848,7 +956,7 @@ export class CleaningAhManager {
         if (!this.importPreview) {
             return `
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-                    Select a CSV file to preview how many rows will be imported and how many will be skipped as duplicates.
+                    ${escapeHtml(this.tr("import.empty"))}
                 </div>
             `;
         }
@@ -869,30 +977,35 @@ export class CleaningAhManager {
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Import preview</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("import.previewKicker"))}</div>
                         <h4 class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(this.importPreview.fileName)}</h4>
-                        <p class="mt-1 text-sm text-slate-600">${this.importPreview.parsedCount} parsed, ${this.importPreview.newRecords.length} new, ${this.importPreview.duplicateCount} duplicates skipped, ${this.importPreview.warningCount} warnings.</p>
+                        <p class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("import.summary", {
+                            parsed: this.importPreview.parsedCount,
+                            newRows: this.importPreview.newRecords.length,
+                            duplicates: this.importPreview.duplicateCount,
+                            warnings: this.importPreview.warningCount
+                        }))}</p>
                     </div>
-                    <button type="button" id="cleaning-ah-confirm-import" class="view-btn active" ${this.importPreview.newRecords.length ? "" : "disabled"}>Import ${this.importPreview.newRecords.length} rows</button>
+                    <button type="button" id="cleaning-ah-confirm-import" class="view-btn active" ${this.importPreview.newRecords.length ? "" : "disabled"}>${escapeHtml(this.getImportRowsLabel(this.importPreview.newRecords.length))}</button>
                 </div>
                 ${this.importPreview.warningCount ? `
                     <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        ${this.importPreview.warningCount} rows have formula mismatches. They will still be imported with the sheet values preserved.
+                        ${escapeHtml(this.tr("import.mismatchWarning", { count: this.importPreview.warningCount }))}
                     </div>
                 ` : ""}
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left">
                         <thead>
                             <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                                <th class="px-3 py-2">Date</th>
-                                <th class="px-3 py-2">Property</th>
-                                <th class="px-3 py-2">Category</th>
-                                <th class="px-3 py-2">Guest</th>
-                                <th class="px-3 py-2">Net</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${previewRows || `<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-500">No new rows to import.</td></tr>`}
+                            ${previewRows || `<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-500">${escapeHtml(this.tr("import.noNewRows"))}</td></tr>`}
                         </tbody>
                     </table>
                 </div>
@@ -902,22 +1015,22 @@ export class CleaningAhManager {
 
     renderCleaningsTable(records) {
         if (!records.length) {
-            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">No cleaning records match the current filters.</div>`;
+            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.empty"))}</div>`;
         }
 
         return `
             <table class="min-w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">Date</th>
-                        <th class="px-3 py-2">Property</th>
-                        <th class="px-3 py-2">Category</th>
-                        <th class="px-3 py-2">Reservation</th>
-                        <th class="px-3 py-2">Guest</th>
-                        <th class="px-3 py-2">Laundry</th>
-                        <th class="px-3 py-2">Net</th>
-                        <th class="px-3 py-2">Source</th>
-                        <th class="px-3 py-2 text-right">Actions</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.source"))}</th>
+                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -931,25 +1044,25 @@ export class CleaningAhManager {
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.category)}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 <span class="inline-flex rounded-full px-2 py-1 text-xs font-medium ${record.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}">
-                                    ${escapeHtml(record.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "Direct" : "Platform")}
+                                    ${escapeHtml(this.getReservationSourceLabel(record.reservationSource))}
                                 </span>
                             </td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 ${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}
-                                ${record.linkedLaundryAmount ? `<div class="text-xs text-slate-400">linked: ${escapeHtml(this.formatCurrency(record.linkedLaundryAmount))}</div>` : ""}
-                                ${record.linkedLaundryCount ? `<div class="text-xs text-slate-400">${escapeHtml(String(record.linkedLaundryCount))} linked row(s)</div>` : ""}
-                                ${!record.effectiveLaundryAmount ? `<div class="text-xs text-slate-400">waiting for laundry</div>` : ""}
+                                ${record.linkedLaundryAmount ? `<div class="text-xs text-slate-400">${escapeHtml(this.tr("laundryState.linkedAmount", { amount: this.formatCurrency(record.linkedLaundryAmount) }))}</div>` : ""}
+                                ${record.linkedLaundryCount ? `<div class="text-xs text-slate-400">${escapeHtml(this.getLinkedRowsLabel(record.linkedLaundryCount))}</div>` : ""}
+                                ${!record.effectiveLaundryAmount ? `<div class="text-xs text-slate-400">${escapeHtml(this.tr("laundryState.waiting"))}</div>` : ""}
                             </td>
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
-                                <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">${escapeHtml(record.source || "manual")}</span>
-                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${record.importWarnings.length} warning(s)</div>` : ""}
+                                <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">${escapeHtml(this.getRecordSourceLabel(record.source || "manual"))}</span>
+                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
                             </td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
-                                    <button type="button" data-action="edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">Edit</button>
-                                    <button type="button" data-action="delete-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">Delete</button>
+                                    <button type="button" data-action="edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(t("common.edit"))}</button>
+                                    <button type="button" data-action="delete-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(t("common.delete"))}</button>
                                 </div>
                             </td>
                         </tr>
@@ -961,20 +1074,20 @@ export class CleaningAhManager {
 
     renderLaundryTable(entries) {
         if (!entries.length) {
-            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">No laundry records match the current filters.</div>`;
+            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.empty"))}</div>`;
         }
 
         return `
             <table class="min-w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">Date</th>
-                        <th class="px-3 py-2">Property</th>
-                        <th class="px-3 py-2">Linked cleaning</th>
-                        <th class="px-3 py-2">Source</th>
-                        <th class="px-3 py-2">Kg</th>
-                        <th class="px-3 py-2">Amount</th>
-                        <th class="px-3 py-2 text-right">Actions</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.linkedCleaning"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.source"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
+                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -988,16 +1101,16 @@ export class CleaningAhManager {
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 ${entry.linkedCleaningId
                                     ? `${escapeHtml(this.formatDate(entry.linkedCleaningDate || ""))}${entry.linkedCleaningCategory ? `<div class="text-xs text-slate-400">${escapeHtml(entry.linkedCleaningCategory)}</div>` : ""}`
-                                    : `<span class="text-slate-400">Not linked</span>`}
+                                    : `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.notLinked"))}</span>`}
                             </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(entry.source)}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getRecordSourceLabel(entry.source))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.kg))}</td>
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${entry.linkedCleaningId ? `<button type="button" data-action="open-cleaning-from-laundry" data-id="${escapeHtml(entry.linkedCleaningId || "")}" class="text-sm text-sky-600 hover:text-sky-800">Open cleaning</button>` : ""}
-                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="edit-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">Edit</button>` : ""}
-                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="delete-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">Delete</button>` : ""}
+                                    ${entry.linkedCleaningId ? `<button type="button" data-action="open-cleaning-from-laundry" data-id="${escapeHtml(entry.linkedCleaningId || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(this.tr("actions.openCleaning"))}</button>` : ""}
+                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="edit-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(t("common.edit"))}</button>` : ""}
+                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="delete-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(t("common.delete"))}</button>` : ""}
                                 </div>
                             </td>
                         </tr>
@@ -1012,27 +1125,27 @@ export class CleaningAhManager {
             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Laundry</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">Laundry totals</h3>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.laundryKicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.laundryTitle"))}</h3>
                     </div>
-                    <div class="text-sm text-slate-500">${laundrySummary.totals.count} rows</div>
+                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.totals.count))}</div>
                 </div>
                 <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-                    ${this.renderMetricCard("Kg", this.formatNumber(laundrySummary.totals.kg))}
-                    ${this.renderMetricCard("Amount", this.formatCurrency(laundrySummary.totals.amount))}
-                    ${this.renderMetricCard("Rows", String(laundrySummary.totals.count))}
+                    ${this.renderMetricCard(this.tr("metrics.kg"), this.formatNumber(laundrySummary.totals.kg))}
+                    ${this.renderMetricCard(this.tr("metrics.amount"), this.formatCurrency(laundrySummary.totals.amount))}
+                    ${this.renderMetricCard(this.tr("metrics.rows"), String(laundrySummary.totals.count))}
                 </div>
-                ${this.renderFinancialSummaryTable("Laundry by month", laundrySummary.byMonth, [
-                    ["Month", (entry) => this.formatMonthKey(entry.label)],
-                    ["Rows", (entry) => String(entry.count)],
-                    ["Kg", (entry) => this.formatNumber(entry.kg)],
-                    ["Amount", (entry) => this.formatCurrency(entry.amount)]
+                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByMonth"), laundrySummary.byMonth, [
+                    [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
+                    [this.tr("tables.rows"), (entry) => String(entry.count)],
+                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
                 ])}
-                ${this.renderFinancialSummaryTable("Laundry by property", laundrySummary.byProperty.slice(0, 8), [
-                    ["Property", (entry) => entry.label],
-                    ["Rows", (entry) => String(entry.count)],
-                    ["Kg", (entry) => this.formatNumber(entry.kg)],
-                    ["Amount", (entry) => this.formatCurrency(entry.amount)]
+                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByProperty"), laundrySummary.byProperty.slice(0, 8), [
+                    [this.tr("tables.property"), (entry) => entry.label],
+                    [this.tr("tables.rows"), (entry) => String(entry.count)],
+                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
                 ])}
             </section>
         `;
@@ -1043,7 +1156,7 @@ export class CleaningAhManager {
             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
                     <h3 class="text-lg font-semibold text-slate-900">${escapeHtml(title)}</h3>
-                    <div class="text-sm text-slate-500">${entries.length} rows</div>
+                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(entries.length))}</div>
                 </div>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left">
@@ -1059,7 +1172,7 @@ export class CleaningAhManager {
                                         ${columns.map(([, render]) => `<td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(render(entry))}</td>`).join("")}
                                     </tr>
                                 `).join("")
-                                : `<tr><td colspan="${columns.length}" class="px-3 py-4 text-sm text-slate-500">No data for the current filters.</td></tr>`}
+                                : `<tr><td colspan="${columns.length}" class="px-3 py-4 text-sm text-slate-500">${escapeHtml(this.tr("tables.noData"))}</td></tr>`}
                         </tbody>
                     </table>
                 </div>
@@ -1224,7 +1337,7 @@ export class CleaningAhManager {
     async saveCleaningRecord() {
         this.cleaningDraft = this.readCleaningDraftFromDom();
         if (!this.cleaningDraft.date || !this.cleaningDraft.propertyName) {
-            this.setStatus("Date and property are required for a cleaning record.", "error");
+            this.setStatus(this.tr("status.cleaningValidationError"), "error");
             this.render();
             return;
         }
@@ -1254,18 +1367,18 @@ export class CleaningAhManager {
         try {
             if (this.editingCleaningId) {
                 await updateDoc(doc(this.db, "cleaningAhRecords", this.editingCleaningId), payload);
-                this.setStatus("Cleaning record updated.", "success");
+                this.setStatus(this.tr("status.cleaningUpdated"), "success");
             } else {
                 await addDoc(this.getCleaningsCollectionRef(), {
                     ...payload,
                     createdAt: new Date()
                 });
-                this.setStatus("Cleaning record saved.", "success");
+                this.setStatus(this.tr("status.cleaningSaved"), "success");
             }
             this.resetCleaningForm();
         } catch (error) {
             console.error("[Cleaning AH] failed to save cleaning:", error);
-            this.setStatus("Cleaning record could not be saved.", "error");
+            this.setStatus(this.tr("status.cleaningSaveFailed"), "error");
             this.render();
         }
     }
@@ -1278,7 +1391,7 @@ export class CleaningAhManager {
         const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === this.laundryDraft.linkedCleaningId) || null;
         const propertyName = linkedCleaning?.propertyName || this.laundryDraft.propertyName;
         if (!this.laundryDraft.date || !propertyName) {
-            this.setStatus("Date and property are required for a laundry record.", "error");
+            this.setStatus(this.tr("status.laundryValidationError"), "error");
             this.render();
             return;
         }
@@ -1303,18 +1416,18 @@ export class CleaningAhManager {
         try {
             if (this.editingLaundryId) {
                 await updateDoc(doc(this.db, "cleaningAhLaundryRecords", this.editingLaundryId), payload);
-                this.setStatus("Laundry record updated.", "success");
+                this.setStatus(this.tr("status.laundryUpdated"), "success");
             } else {
                 await addDoc(this.getLaundryCollectionRef(), {
                     ...payload,
                     createdAt: new Date()
                 });
-                this.setStatus("Laundry record saved.", "success");
+                this.setStatus(this.tr("status.laundrySaved"), "success");
             }
             this.resetLaundryForm();
         } catch (error) {
             console.error("[Cleaning AH] failed to save laundry:", error);
-            this.setStatus("Laundry record could not be saved.", "error");
+            this.setStatus(this.tr("status.laundrySaveFailed"), "error");
             this.render();
         }
     }
@@ -1349,18 +1462,18 @@ export class CleaningAhManager {
                 newRecords
             };
 
-            this.setStatus(`${parsed.records.length} CSV rows parsed. Review the preview before importing.`, "info");
+            this.setStatus(this.tr("status.csvPreviewReady", { count: parsed.records.length }), "info");
             this.render();
         } catch (error) {
             console.error("[Cleaning AH] failed to preview CSV:", error);
-            this.setStatus("CSV preview failed. Check the file format and try again.", "error");
+            this.setStatus(this.tr("status.csvPreviewFailed"), "error");
             this.render();
         }
     }
 
     async commitImportPreview() {
         if (!this.importPreview?.newRecords?.length) {
-            this.setStatus("There are no new rows to import.", "info");
+            this.setStatus(this.tr("status.noNewRowsToImport"), "info");
             this.render();
             return;
         }
@@ -1386,11 +1499,11 @@ export class CleaningAhManager {
             }
 
             this.importPreview = null;
-            this.setStatus("CSV import completed.", "success");
+            this.setStatus(this.tr("status.csvImportCompleted"), "success");
             this.render();
         } catch (error) {
             console.error("[Cleaning AH] failed to import CSV:", error);
-            this.setStatus("CSV import failed while saving to Firestore.", "error");
+            this.setStatus(this.tr("status.csvImportFailed"), "error");
             this.render();
         }
     }
@@ -1444,8 +1557,8 @@ export class CleaningAhManager {
     async deleteCleaning(recordId) {
         const linkedLaundryRecords = this.laundryRecords.filter((entry) => entry.linkedCleaningId === recordId);
         const confirmationMessage = linkedLaundryRecords.length
-            ? `Delete this cleaning record? ${linkedLaundryRecords.length} linked laundry row(s) will be kept and unlinked.`
-            : "Delete this cleaning record?";
+            ? this.tr("confirm.deleteCleaningWithLinked", { count: linkedLaundryRecords.length })
+            : this.tr("confirm.deleteCleaning");
         if (!recordId || !window.confirm(confirmationMessage)) {
             return;
         }
@@ -1462,8 +1575,8 @@ export class CleaningAhManager {
             await batch.commit();
             this.setStatus(
                 linkedLaundryRecords.length
-                    ? `Cleaning record deleted. ${linkedLaundryRecords.length} linked laundry row(s) were unlinked.`
-                    : "Cleaning record deleted.",
+                    ? this.tr("status.cleaningDeletedWithLinked", { count: linkedLaundryRecords.length })
+                    : this.tr("status.cleaningDeleted"),
                 "success"
             );
             if (this.editingCleaningId === recordId) {
@@ -1473,19 +1586,19 @@ export class CleaningAhManager {
             this.render();
         } catch (error) {
             console.error("[Cleaning AH] failed to delete cleaning:", error);
-            this.setStatus("Cleaning record could not be deleted.", "error");
+            this.setStatus(this.tr("status.cleaningDeleteFailed"), "error");
             this.render();
         }
     }
 
     async deleteLaundry(recordId) {
-        if (!recordId || !window.confirm("Delete this laundry record?")) {
+        if (!recordId || !window.confirm(this.tr("confirm.deleteLaundry"))) {
             return;
         }
 
         try {
             await deleteDoc(doc(this.db, "cleaningAhLaundryRecords", recordId));
-            this.setStatus("Laundry record deleted.", "success");
+            this.setStatus(this.tr("status.laundryDeleted"), "success");
             if (this.editingLaundryId === recordId) {
                 this.resetLaundryForm();
                 return;
@@ -1493,7 +1606,7 @@ export class CleaningAhManager {
             this.render();
         } catch (error) {
             console.error("[Cleaning AH] failed to delete laundry:", error);
-            this.setStatus("Laundry record could not be deleted.", "error");
+            this.setStatus(this.tr("status.laundryDeleteFailed"), "error");
             this.render();
         }
     }
@@ -1517,7 +1630,7 @@ export class CleaningAhManager {
 
     formatCurrency(value) {
         try {
-            return new Intl.NumberFormat(undefined, {
+            return new Intl.NumberFormat(this.getLocale(), {
                 style: "currency",
                 currency: "EUR"
             }).format(roundCurrency(value || 0));
@@ -1531,7 +1644,16 @@ export class CleaningAhManager {
         if (!numeric) {
             return "0";
         }
-        return numeric.toFixed(numeric % 1 === 0 ? 0 : 2);
+        const fractionDigits = numeric % 1 === 0 ? 0 : 2;
+
+        try {
+            return new Intl.NumberFormat(this.getLocale(), {
+                minimumFractionDigits: fractionDigits,
+                maximumFractionDigits: 2
+            }).format(numeric);
+        } catch {
+            return numeric.toFixed(fractionDigits);
+        }
     }
 
     formatDate(dateValue) {
@@ -1542,7 +1664,7 @@ export class CleaningAhManager {
 
         const candidate = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
         try {
-            return new Intl.DateTimeFormat(undefined, {
+            return new Intl.DateTimeFormat(this.getLocale(), {
                 year: "numeric",
                 month: "short",
                 day: "numeric"
@@ -1560,7 +1682,7 @@ export class CleaningAhManager {
 
         const candidate = new Date(Number(match[1]), Number(match[2]) - 1, 1);
         try {
-            return new Intl.DateTimeFormat(undefined, {
+            return new Intl.DateTimeFormat(this.getLocale(), {
                 year: "numeric",
                 month: "long"
             }).format(candidate);
