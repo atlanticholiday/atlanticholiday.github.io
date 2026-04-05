@@ -102,6 +102,128 @@
         "properties": "Propriedades",
         "propertiesDesc": "Gerir alojamentos e inventário."
     },
+    "userManagement": {
+        "header": {
+            "title": "Gestão de Utilizadores",
+            "subtitle": "Listar e adicionar utilizadores da aplicação"
+        },
+        "workspace": {
+            "menuEyebrow": "Menu Rápido",
+            "menuRolesMeta": "Significado dos perfis e configuração",
+            "menuLinksMeta": "Diagnóstico de emails e logins",
+            "menuTestUsersMeta": "Logins de teste seguros",
+            "menuRolloutMeta": "Checklist do tablet"
+        },
+        "mainTabs": {
+            "accounts": "Utilizadores",
+            "colleagues": "Colegas"
+        },
+        "nav": {
+            "menu": "Menu",
+            "roles": "Perfis",
+            "links": "Ligações",
+            "testUsers": "Teste",
+            "rollout": "Arranque"
+        },
+        "users": {
+            "eyebrow": "Diretório",
+            "title": "Utilizadores Existentes",
+            "description": "Gerir acessos, atribuir perfis e manter permissões coerentes entre administração, autoatendimento e tablet partilhado.",
+            "countLabel": "Total de acessos",
+            "empty": "Ainda não existem contas de acesso.",
+            "resetPassword": "Repor Password"
+        },
+        "create": {
+            "eyebrow": "Criar Acesso",
+            "title": "Adicionar Novo Acesso",
+            "description": "Crie um novo login com password temporária, ligue o mesmo email ao registo do colega e depois envie o email de reposição.",
+            "emailLabel": "Endereço de email",
+            "emailPlaceholder": "Endereço de email",
+            "passwordLabel": "Password temporária",
+            "passwordPlaceholder": "Password",
+            "button": "Adicionar Acesso",
+            "help": "Use uma password temporária forte. O utilizador deve passar para a password dele através do email de reposição."
+        },
+        "testUsers": {
+            "eyebrow": "Presets",
+            "title": "Utilizadores de Teste",
+            "description": "Crie um login seguro de teste para cada perfil predefinido. Servem para verificar o que cada nível de acesso consegue ver na aplicação.",
+            "passwordLabel": "Password partilhada:",
+            "createButton": "Criar Utilizadores de Teste"
+        },
+        "accessOverview": {
+            "eyebrow": "Ligação",
+            "title": "Ligações de Acesso dos Colegas",
+            "description": "Mostra se cada ficha de colaborador está ligada a um login e se esse login é só relógio, estação partilhada ou privilegiado.",
+            "passwordFlow": "Fluxo de password: crie o acesso com uma password temporária, defina o mesmo email no registo do colega e depois use Repor Password para que o colega escolha a sua password por email.",
+            "empty": "Ainda não existem colegas.",
+            "noStaffEmail": "Sem email na ficha do colaborador",
+            "rolesLabel": "Perfis",
+            "noRoles": "nenhum",
+            "status": {
+                "missingEmail": "Falta email na ficha",
+                "missingAccess": "Sem acesso à app",
+                "clockOnly": "Colaborador só relógio",
+                "station": "Estação partilhada",
+                "privileged": "Acesso privilegiado",
+                "unknown": "Estado desconhecido"
+            },
+            "help": {
+                "missingEmail": "Adicione o mesmo email que o colega vai usar para iniciar sessão.",
+                "missingAccess": "Crie acesso para este email na Gestão de Utilizadores.",
+                "clockOnly": "Este utilizador abre o relógio de ponto e vê apenas o seu próprio horário e assiduidade.",
+                "station": "Este login abre o seletor do tablet partilhado para que qualquer colega possa registar entradas e saídas.",
+                "privileged": "Este utilizador abre o espaço completo de gestão, incluindo horários e ferramentas de administração.",
+                "unknown": "Reveja o registo deste colega e o acesso atribuído."
+            }
+        },
+        "goLive": {
+            "eyebrow": "Arranque",
+            "title": "Checklist de Entrada em Produção do Relógio",
+            "description": "Use isto antes de passar a equipa para o relógio real.",
+            "important": "Importante: a conta do tablet deve ficar iniciada na sessão do dispositivo partilhado. Os colegas devem apenas escolher o nome e guardar os registos; não devem entrar e sair com passwords pessoais no tablet.",
+            "items": {
+                "1": "Crie um login dedicado para o tablet e atribua-lhe o perfil time-clock-station.",
+                "2": "Mantenha cada colega no seu próprio login ou registo de colaborador ligado. A conta do tablet é apenas para o seletor partilhado.",
+                "3": "Entre no tablet com a conta de estação e confirme que abre o seletor partilhado e fica em português por defeito.",
+                "4": "Teste um ciclo completo de assiduidade no tablet: entrada, início de pausa, fim de pausa e saída.",
+                "5": "Confirme que o ecrã volta à lista de colegas após guardar o registo e que a pesquisa continua rápida.",
+                "6": "Como gestor, confirme a vista de impressão de assiduidade, a troca semanal/mensal e uma correção manual com motivo válido.",
+                "7": "Desligue e ligue a internet uma vez para confirmar que o aviso de sincronização muda e que os registos recuperam ao voltar online.",
+                "8": "Faça um piloto real com um ou dois colegas de confiança antes do arranque total."
+            }
+        },
+        "roles": {
+            "eyebrow": "Permissões",
+            "title": "Perfis",
+            "empty": "Ainda não existem perfis. Escolha um preset nos campos abaixo para adicionar um.",
+            "selectKey": "Escolher chave do perfil",
+            "selectTitle": "Escolher título do perfil",
+            "addButton": "Adicionar Perfil",
+            "noteTitle": "Modelo atual de permissões",
+            "noteBody": "Admin, Manager e Supervisor abrem atualmente o mesmo espaço privilegiado na aplicação. Mantenha nomes diferentes apenas se a operação precisar dessa distinção.",
+            "admin": {
+                "title": "Administrador",
+                "description": "Acesso ao espaço privilegiado. Use para quem precisa de toda a superfície de gestão e configuração."
+            },
+            "manager": {
+                "title": "Manager",
+                "description": "Acesso ao espaço privilegiado. O nome é operacional, mas neste momento tem o mesmo acesso de Admin e Supervisor."
+            },
+            "supervisor": {
+                "title": "Supervisor",
+                "description": "Acesso ao espaço privilegiado. Adequado para chefias, mas atualmente abre a mesma área privilegiada que Admin e Manager."
+            },
+            "employee": {
+                "title": "Colaborador",
+                "description": "Acesso apenas de autoatendimento. Abre o relógio de ponto e a vista pessoal de assiduidade."
+            },
+            "timeClockStation": {
+                "title": "Estação de Relógio",
+                "description": "Login partilhado do tablet. Abre o seletor de colegas num dispositivo comum em vez de uma conta pessoal."
+            }
+        }
+    },
     "schedule": {
         "title": "Horário de Trabalho",
         "subtitle": "Calendário da equipa, escala e planeamento de férias",

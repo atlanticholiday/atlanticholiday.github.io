@@ -1,6 +1,7 @@
 import { buildEmployeeAccessOverview } from './access-linking.js';
 import { canonicalizeEmail } from '../../shared/email.js';
 import { TIME_CLOCK_STATION_ROLE } from '../../shared/access-roles.js';
+import { t } from '../../core/i18n.js';
 
 const PRESET_ROLES = [
     { key: 'admin', title: 'Administrator' },
@@ -17,6 +18,34 @@ const TEST_USER_PRESETS = [
     { key: 'supervisor', title: 'Supervisor', email: 'test-supervisor@horario.test' },
     { key: 'employee', title: 'Employee', email: 'test-employee@horario.test' }
 ];
+
+const ROLE_UI_META = Object.freeze({
+    admin: {
+        tone: 'privileged',
+        titleKey: 'userManagement.roles.admin.title',
+        descriptionKey: 'userManagement.roles.admin.description'
+    },
+    manager: {
+        tone: 'privileged',
+        titleKey: 'userManagement.roles.manager.title',
+        descriptionKey: 'userManagement.roles.manager.description'
+    },
+    supervisor: {
+        tone: 'privileged',
+        titleKey: 'userManagement.roles.supervisor.title',
+        descriptionKey: 'userManagement.roles.supervisor.description'
+    },
+    employee: {
+        tone: 'employee',
+        titleKey: 'userManagement.roles.employee.title',
+        descriptionKey: 'userManagement.roles.employee.description'
+    },
+    [TIME_CLOCK_STATION_ROLE]: {
+        tone: 'station',
+        titleKey: 'userManagement.roles.timeClockStation.title',
+        descriptionKey: 'userManagement.roles.timeClockStation.description'
+    }
+});
 
 export class UserManagementController {
     constructor({
@@ -40,14 +69,29 @@ export class UserManagementController {
     }
 
     init() {
+        this.currentMainView = 'accounts';
+        this.currentSideView = 'roles';
+        this.isDrawerOpen = false;
         this.setupRolePresetInputs();
+        this.setupMainViewNavigation();
+        this.setupSideViewNavigation();
+        this.setupDrawerControls();
         this.renderTestUserPresets();
 
         this.document.addEventListener('userManagementPageOpened', () => {
+            this.setActiveMainView(this.currentMainView);
+            this.setActiveSideView(this.currentSideView);
             this.refreshUserList().catch((error) => {
                 console.error('Failed to refresh user management list:', error);
             });
         });
+
+        if (typeof this.window?.addEventListener === 'function') {
+            this.window.addEventListener('languageChanged', () => {
+                this.renderStaticUserManagementCopy();
+                this.renderFromCachedState();
+            });
+        }
 
         const createUserButton = this.document.getElementById('create-user-btn');
         if (createUserButton) {
@@ -75,6 +119,11 @@ export class UserManagementController {
                 });
             });
         }
+
+        this.renderStaticUserManagementCopy();
+        this.setActiveMainView(this.currentMainView);
+        this.setActiveSideView(this.currentSideView);
+        this.setDrawerOpen(false);
     }
 
     setupRolePresetInputs() {
@@ -95,6 +144,150 @@ export class UserManagementController {
                 keyInput.value = selectedPreset.key;
             }
         });
+    }
+
+    setupSideViewNavigation() {
+        const buttons = Array.from(this.document.querySelectorAll('[data-user-management-side-view-target]'));
+        if (!buttons.length) {
+            return;
+        }
+
+        buttons.forEach((button) => {
+            if (button.dataset.userManagementSideViewBound === 'true') {
+                return;
+            }
+
+            button.dataset.userManagementSideViewBound = 'true';
+            button.addEventListener('click', () => {
+                this.setActiveSideView(button.dataset.userManagementSideViewTarget || 'roles');
+                this.revealActiveSideView();
+            });
+        });
+    }
+
+    setupMainViewNavigation() {
+        const buttons = Array.from(this.document.querySelectorAll('[data-user-management-main-view-target]'));
+        if (!buttons.length) {
+            return;
+        }
+
+        buttons.forEach((button) => {
+            if (button.dataset.userManagementMainViewBound === 'true') {
+                return;
+            }
+
+            button.dataset.userManagementMainViewBound = 'true';
+            button.addEventListener('click', () => {
+                this.setActiveMainView(button.dataset.userManagementMainViewTarget || 'accounts');
+            });
+        });
+    }
+
+    setupDrawerControls() {
+        const toggleButton = this.document.getElementById('user-management-menu-toggle-btn');
+        const closeButton = this.document.getElementById('user-management-menu-close-btn');
+        const backdrop = this.document.getElementById('user-management-drawer-backdrop');
+
+        toggleButton?.addEventListener('click', () => {
+            this.setDrawerOpen(!this.isDrawerOpen);
+        });
+
+        closeButton?.addEventListener('click', () => {
+            this.setDrawerOpen(false);
+        });
+
+        backdrop?.addEventListener('click', () => {
+            this.setDrawerOpen(false);
+        });
+
+        if (typeof this.window?.addEventListener === 'function') {
+            this.window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && this.isDrawerOpen) {
+                    this.setDrawerOpen(false);
+                }
+            });
+        }
+    }
+
+    setActiveSideView(view) {
+        const panels = Array.from(this.document.querySelectorAll('[data-user-management-side-view]'));
+        const nextView = panels.some((panel) => panel.dataset.userManagementSideView === view) ? view : 'roles';
+        this.currentSideView = nextView;
+
+        panels.forEach((panel) => {
+            const isActive = panel.dataset.userManagementSideView === this.currentSideView;
+            panel.classList.toggle('user-management-side-view-active', isActive);
+            panel.hidden = !isActive;
+        });
+
+        this.document.querySelectorAll('[data-user-management-side-view-target]').forEach((button) => {
+            const isActive = button.dataset.userManagementSideViewTarget === this.currentSideView;
+            button.classList.toggle('user-management-menu-button-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    setActiveMainView(view) {
+        const panels = Array.from(this.document.querySelectorAll('[data-user-management-main-view]'));
+        if (!panels.length) {
+            return;
+        }
+
+        const nextView = panels.some((panel) => panel.dataset.userManagementMainView === view) ? view : 'accounts';
+        this.currentMainView = nextView;
+
+        panels.forEach((panel) => {
+            const isActive = panel.dataset.userManagementMainView === this.currentMainView;
+            panel.classList.toggle('user-management-main-view-active', isActive);
+            panel.hidden = !isActive;
+        });
+
+        this.document.querySelectorAll('[data-user-management-main-view-target]').forEach((button) => {
+            const isActive = button.dataset.userManagementMainViewTarget === this.currentMainView;
+            button.classList.toggle('user-management-main-tab-active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+    }
+
+    setDrawerOpen(isOpen) {
+        this.isDrawerOpen = Boolean(isOpen);
+
+        const page = this.document.getElementById('user-management-page');
+        const drawer = this.document.getElementById('user-management-drawer');
+        const toggleButton = this.document.getElementById('user-management-menu-toggle-btn');
+        const backdrop = this.document.getElementById('user-management-drawer-backdrop');
+
+        page?.classList.toggle('user-management-drawer-open', this.isDrawerOpen);
+        if (drawer) {
+            drawer.setAttribute('aria-hidden', this.isDrawerOpen ? 'false' : 'true');
+        }
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', this.isDrawerOpen ? 'true' : 'false');
+        }
+        if (backdrop) {
+            backdrop.hidden = !this.isDrawerOpen;
+        }
+        if (this.isDrawerOpen) {
+            this.revealActiveSideView({ behavior: 'auto' });
+        }
+    }
+
+    revealActiveSideView({ behavior = 'smooth' } = {}) {
+        const activePanel = this.document.querySelector('[data-user-management-side-view].user-management-side-view-active');
+        if (!activePanel) {
+            return;
+        }
+
+        if (typeof activePanel.scrollIntoView === 'function') {
+            activePanel.scrollIntoView({ behavior, block: 'start' });
+            return;
+        }
+
+        const drawerInner = this.document.querySelector('.user-management-drawer-inner');
+        if (drawerInner) {
+            drawerInner.scrollTop = 0;
+        }
     }
 
     async refreshUserList() {
@@ -126,20 +319,49 @@ export class UserManagementController {
             ))
         );
 
-        this.renderUserList(users, roles);
+        this.lastUsers = users;
+        this.lastRoles = roles;
+        this.lastEmployees = employees;
+        this.lastEmployeesByEmail = employeesByEmail;
+
+        this.renderUserList(users, roles, employeesByEmail);
         this.renderRolesList(roles);
         this.renderAccessOverview(buildEmployeeAccessOverview(employees, users));
     }
 
-    renderUserList(users, roles) {
+    renderFromCachedState() {
+        if (!this.lastUsers || !this.lastRoles || !this.lastEmployeesByEmail || !this.lastEmployees) {
+            return;
+        }
+
+        this.renderUserList(this.lastUsers, this.lastRoles, this.lastEmployeesByEmail);
+        this.renderRolesList(this.lastRoles);
+        this.renderAccessOverview(buildEmployeeAccessOverview(this.lastEmployees, this.lastUsers));
+    }
+
+    renderUserList(users, roles, employeesByEmail = new Map()) {
         const listElement = this.document.getElementById('user-list');
         if (!listElement) return;
 
         listElement.innerHTML = '';
 
-        users.forEach((user) => {
-            listElement.appendChild(this.createUserListItem(user, roles));
-        });
+        const countElement = this.document.getElementById('user-count');
+        if (countElement) {
+            countElement.textContent = String(users.length);
+        }
+
+        if (!users.length) {
+            listElement.innerHTML = `<li class="user-management-empty-state">${this.translate('userManagement.users.empty', 'No access accounts created yet.')}</li>`;
+            return;
+        }
+
+        users
+            .slice()
+            .sort((left, right) => left.email.localeCompare(right.email))
+            .forEach((user) => {
+                const linkedEmployee = employeesByEmail.get(canonicalizeEmail(user.email)) || null;
+                listElement.appendChild(this.createUserListItem(user, roles, linkedEmployee));
+            });
     }
 
     renderRolesList(roles) {
@@ -147,11 +369,26 @@ export class UserManagementController {
         if (!listElement) return;
 
         if (!roles.length) {
-            listElement.innerHTML = '<li>No roles created yet. Choose a preset from the dropdowns below to add one.</li>';
+            listElement.innerHTML = `<li class="user-management-role-definition">${this.translate('userManagement.roles.empty', 'No roles created yet. Choose a preset from the dropdowns below to add one.')}</li>`;
             return;
         }
 
-        listElement.innerHTML = roles.map((role) => `<li><strong>${role.key}</strong> - ${role.title}</li>`).join('');
+        const noteHtml = `
+            <li class="user-management-role-note">
+                <strong>${this.translate('userManagement.roles.noteTitle', 'Current permission model')}</strong>
+                <span>${this.translate('userManagement.roles.noteBody', 'Admin, Manager, and Supervisor currently open the same privileged workspace in the app. Keep different names only if your team needs them operationally.')}</span>
+            </li>
+        `;
+
+        listElement.innerHTML = noteHtml + roles.map((role) => `
+            <li class="user-management-role-definition">
+                <div>
+                    <strong>${this.getRoleDisplayTitle(role)}</strong>
+                    <p>${this.getRoleDescription(role)}</p>
+                </div>
+                <span class="user-management-role-key user-management-role-key-${this.getRoleTone(role)}">${role.key}</span>
+            </li>
+        `).join('');
     }
 
     renderAccessOverview(rows) {
@@ -159,31 +396,31 @@ export class UserManagementController {
         if (!container) return;
 
         if (!rows.length) {
-            container.innerHTML = '<div class="text-sm text-gray-500">No colleagues found yet.</div>';
+            container.innerHTML = `<div class="text-sm text-gray-500">${this.translate('userManagement.accessOverview.empty', 'No colleagues found yet.')}</div>`;
             return;
         }
 
         const statusStyles = {
-            'missing-email': 'bg-amber-100 text-amber-800',
-            'missing-access': 'bg-rose-100 text-rose-800',
-            'clock-only': 'bg-sky-100 text-sky-800',
-            'station': 'bg-violet-100 text-violet-800',
-            'privileged': 'bg-emerald-100 text-emerald-800'
+            'missing-email': 'user-management-status-pill-warning',
+            'missing-access': 'user-management-status-pill-danger',
+            'clock-only': 'user-management-status-pill-info',
+            'station': 'user-management-status-pill-station',
+            'privileged': 'user-management-status-pill-success'
         };
 
         container.innerHTML = rows.map((row) => `
-            <article class="border border-gray-200 rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <div class="font-semibold text-gray-900">${row.employeeName}</div>
-                    <div class="text-sm text-gray-600">${row.displayEmail || row.email || 'No email on staff record'}</div>
-                    <div class="text-sm text-gray-500 mt-1">${row.helpText}</div>
-                </div>
-                <div class="sm:text-right">
-                    <div class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[row.status] || 'bg-gray-100 text-gray-700'}">
-                        ${row.label}
+            <article class="user-management-overview-card">
+                <div class="user-management-overview-header">
+                    <div class="user-management-overview-main">
+                        <div class="font-semibold text-gray-900">${row.employeeName}</div>
+                        <div class="user-management-overview-email">${row.displayEmail || row.email || this.translate('userManagement.accessOverview.noStaffEmail', 'No email on staff record')}</div>
                     </div>
-                    <div class="text-xs text-gray-500 mt-2">${row.roles.length ? `Roles: ${row.roles.join(', ')}` : 'Roles: none'}</div>
+                    <div class="user-management-status-pill ${statusStyles[row.status] || ''}">
+                        ${this.getAccessOverviewLabel(row)}
+                    </div>
                 </div>
+                <div class="text-sm text-gray-500">${this.getAccessOverviewHelpText(row)}</div>
+                <div class="text-xs text-gray-500">${row.roles.length ? `${this.translate('userManagement.accessOverview.rolesLabel', 'Roles')}: ${row.roles.map((role) => this.getRoleDisplayTitle({ key: role, title: role })).join(', ')}` : `${this.translate('userManagement.accessOverview.rolesLabel', 'Roles')}: ${this.translate('userManagement.accessOverview.noRoles', 'none')}`}</div>
             </article>
         `).join('');
     }
@@ -192,7 +429,10 @@ export class UserManagementController {
         const listElement = this.document.getElementById('test-user-presets');
         if (listElement) {
             listElement.innerHTML = TEST_USER_PRESETS.map((preset) => `
-                <li><strong>${preset.title}</strong> - ${preset.email}</li>
+                <li class="user-management-test-user-item">
+                    <strong>${this.getRoleDisplayTitle(preset)}</strong>
+                    <span>${preset.email}</span>
+                </li>
             `).join('');
         }
 
@@ -202,24 +442,47 @@ export class UserManagementController {
         }
     }
 
-    createUserListItem(user, roles) {
+    createUserListItem(user, roles, linkedEmployee = null) {
         const listItem = this.document.createElement('li');
-        listItem.className = 'flex justify-between items-center mb-2';
+        listItem.className = 'user-management-user-card';
 
-        const emailLabel = this.document.createElement('span');
+        const identity = this.document.createElement('div');
+        identity.className = 'user-management-identity';
+
+        const title = this.document.createElement('div');
+        title.className = 'user-management-user-title';
+        title.textContent = linkedEmployee?.name || this.formatEmailLabel(user.email);
+
+        const emailLabel = this.document.createElement('div');
+        emailLabel.className = 'user-management-user-email';
         emailLabel.textContent = user.email;
 
-        const rolesContainer = this.document.createElement('span');
-        rolesContainer.className = 'mx-4';
+        const meta = this.document.createElement('div');
+        meta.className = 'user-management-user-meta';
+        meta.appendChild(this.createMetaPill(linkedEmployee ? 'Linked colleague' : 'Standalone access', linkedEmployee ? 'neutral' : 'warning'));
+        if (user.email.endsWith('@horario.test')) {
+            meta.appendChild(this.createMetaPill('Test account', 'accent'));
+        }
+        if (user.roles.includes(TIME_CLOCK_STATION_ROLE)) {
+            meta.appendChild(this.createMetaPill('Shared station', 'info'));
+        }
+
+        identity.appendChild(title);
+        identity.appendChild(emailLabel);
+        identity.appendChild(meta);
+
+        const rolesContainer = this.document.createElement('div');
+        rolesContainer.className = 'user-management-role-grid';
         roles.forEach((role) => {
             rolesContainer.appendChild(this.createRoleCheckbox(user.email, role, user.roles, rolesContainer));
         });
 
-        const buttonGroup = this.document.createElement('span');
+        const buttonGroup = this.document.createElement('div');
+        buttonGroup.className = 'user-management-action-group';
         buttonGroup.appendChild(this.createResetPasswordButton(user.email));
         buttonGroup.appendChild(this.createDeleteAccessButton(user.email));
 
-        listItem.appendChild(emailLabel);
+        listItem.appendChild(identity);
         listItem.appendChild(rolesContainer);
         listItem.appendChild(buttonGroup);
 
@@ -227,14 +490,15 @@ export class UserManagementController {
     }
 
     createRoleCheckbox(email, role, selectedRoles, rolesContainer) {
-        const wrapper = this.document.createElement('span');
-        wrapper.className = 'inline-flex items-center mr-2';
+        const wrapper = this.document.createElement('div');
+        wrapper.className = 'user-management-role-option';
 
         const checkbox = this.document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = `role-${email}-${role.key}`;
         checkbox.value = role.key;
         checkbox.checked = selectedRoles.includes(role.key);
+        checkbox.className = 'user-management-role-checkbox';
         checkbox.addEventListener('change', async () => {
             const nextRoles = Array.from(
                 rolesContainer.querySelectorAll('input[type=checkbox]:checked')
@@ -245,7 +509,8 @@ export class UserManagementController {
 
         const label = this.document.createElement('label');
         label.htmlFor = checkbox.id;
-        label.textContent = role.key;
+        label.className = 'user-management-role-label';
+        label.textContent = this.getRoleDisplayTitle(role);
 
         wrapper.appendChild(checkbox);
         wrapper.appendChild(label);
@@ -255,8 +520,8 @@ export class UserManagementController {
 
     createResetPasswordButton(email) {
         const button = this.document.createElement('button');
-        button.textContent = 'Reset Password';
-        button.className = 'text-sm text-blue-600 mr-2 hover:underline';
+        button.textContent = this.translate('userManagement.users.resetPassword', 'Reset Password');
+        button.className = 'user-management-button user-management-button-secondary';
         button.addEventListener('click', async () => {
             try {
                 await this.sendPasswordReset(email);
@@ -272,8 +537,8 @@ export class UserManagementController {
 
     createDeleteAccessButton(email) {
         const button = this.document.createElement('button');
-        button.textContent = 'Delete';
-        button.className = 'text-sm text-red-600 hover:underline';
+        button.textContent = this.translate('common.delete', 'Delete');
+        button.className = 'user-management-button user-management-button-danger';
         button.addEventListener('click', async () => {
             if (!this.window.confirm(`Remove access for ${email}?`)) return;
 
@@ -287,6 +552,72 @@ export class UserManagementController {
         });
 
         return button;
+    }
+
+    renderStaticUserManagementCopy() {
+        this.setText('create-test-users-btn', this.translate('userManagement.testUsers.createButton', 'Create Test Users'));
+    }
+
+    createMetaPill(text, tone = 'neutral') {
+        const pill = this.document.createElement('span');
+        pill.className = `user-management-meta-pill user-management-meta-pill-${tone}`;
+        pill.textContent = text;
+        return pill;
+    }
+
+    formatEmailLabel(email) {
+        const [localPart = 'User'] = String(email || '').split('@');
+        return localPart
+            .split(/[._-]+/)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ') || email;
+    }
+
+    getRoleDisplayTitle(role) {
+        const roleKey = role?.key || '';
+        const meta = ROLE_UI_META[roleKey];
+        return meta ? this.translate(meta.titleKey, role?.title || roleKey) : (role?.title || roleKey);
+    }
+
+    getRoleDescription(role) {
+        const roleKey = role?.key || '';
+        const meta = ROLE_UI_META[roleKey];
+        return meta ? this.translate(meta.descriptionKey, role?.title || roleKey) : role?.title || roleKey;
+    }
+
+    getRoleTone(role) {
+        const roleKey = role?.key || '';
+        return ROLE_UI_META[roleKey]?.tone || 'neutral';
+    }
+
+    getAccessOverviewLabel(row) {
+        const keyByStatus = {
+            'missing-email': 'userManagement.accessOverview.status.missingEmail',
+            'missing-access': 'userManagement.accessOverview.status.missingAccess',
+            'clock-only': 'userManagement.accessOverview.status.clockOnly',
+            'station': 'userManagement.accessOverview.status.station',
+            'privileged': 'userManagement.accessOverview.status.privileged'
+        };
+
+        return this.translate(keyByStatus[row.status] || 'userManagement.accessOverview.status.unknown', row.label || 'Unknown status');
+    }
+
+    getAccessOverviewHelpText(row) {
+        const keyByStatus = {
+            'missing-email': 'userManagement.accessOverview.help.missingEmail',
+            'missing-access': 'userManagement.accessOverview.help.missingAccess',
+            'clock-only': 'userManagement.accessOverview.help.clockOnly',
+            'station': 'userManagement.accessOverview.help.station',
+            'privileged': 'userManagement.accessOverview.help.privileged'
+        };
+
+        return this.translate(keyByStatus[row.status] || 'userManagement.accessOverview.help.unknown', row.helpText || 'Review this colleague record and assigned access.');
+    }
+
+    translate(key, fallback, replacements = {}) {
+        const translated = t(key, replacements);
+        return translated === key ? fallback : translated;
     }
 
     async handleCreateUser() {

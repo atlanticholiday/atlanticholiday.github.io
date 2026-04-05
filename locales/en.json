@@ -102,6 +102,128 @@
     "properties": "Properties",
     "propertiesDesc": "Manage short rentals and full inventory."
   },
+  "userManagement": {
+    "header": {
+      "title": "User Management",
+      "subtitle": "List and add application users"
+    },
+    "workspace": {
+      "menuEyebrow": "Quick Menu",
+      "menuRolesMeta": "Role meaning and setup",
+      "menuLinksMeta": "Email and login diagnostics",
+      "menuTestUsersMeta": "Safe preset logins",
+      "menuRolloutMeta": "Tablet rollout checklist"
+    },
+    "mainTabs": {
+      "accounts": "Users",
+      "colleagues": "Colleagues"
+    },
+    "nav": {
+      "menu": "Menu",
+      "roles": "Profiles",
+      "links": "Colleague Links",
+      "testUsers": "Test Users",
+      "rollout": "Go Live"
+    },
+    "users": {
+      "eyebrow": "Directory",
+      "title": "Existing Users",
+      "description": "Manage login access, assign roles, and keep colleague permissions consistent across admin, self-service, and shared-tablet flows.",
+      "countLabel": "Total access accounts",
+      "empty": "No access accounts created yet.",
+      "resetPassword": "Reset Password"
+    },
+    "create": {
+      "eyebrow": "Create Access",
+      "title": "Add New Access",
+      "description": "Create a new login with a temporary password, then link the same email to the colleague profile and trigger a reset email.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Temporary password",
+      "passwordPlaceholder": "Password",
+      "button": "Add Access",
+      "help": "Use a strong temporary password. The user should switch to their own password through email reset."
+    },
+    "testUsers": {
+      "eyebrow": "Presets",
+      "title": "Test Users",
+      "description": "Create one safe test login for each preset role. These are meant for checking what each access level sees in the app.",
+      "passwordLabel": "Shared password:",
+      "createButton": "Create Test Users"
+    },
+    "accessOverview": {
+      "eyebrow": "Linking",
+      "title": "Colleague Access Links",
+      "description": "This shows whether each staff profile is linked to a login, and whether that login is clock-only, shared-station, or privileged.",
+      "passwordFlow": "Password flow: create access with a temporary password, set the same email on the colleague record, then use Reset Password so the colleague chooses their own password by email.",
+      "empty": "No colleagues found yet.",
+      "noStaffEmail": "No email on staff record",
+      "rolesLabel": "Roles",
+      "noRoles": "none",
+      "status": {
+        "missingEmail": "Missing staff email",
+        "missingAccess": "No app access",
+        "clockOnly": "Clock-only employee",
+        "station": "Shared station",
+        "privileged": "Privileged access",
+        "unknown": "Unknown status"
+      },
+      "help": {
+        "missingEmail": "Add the same email the colleague will use to sign in.",
+        "missingAccess": "Create access for this email in User Management.",
+        "clockOnly": "This user goes to the time clock and sees only their own schedule and attendance.",
+        "station": "This login opens the shared tablet picker so any colleague can clock in or out.",
+        "privileged": "This user opens the full manager workspace, including scheduling and admin tools.",
+        "unknown": "Review this colleague record and assigned access."
+      }
+    },
+    "goLive": {
+      "eyebrow": "Rollout",
+      "title": "Time Clock Go-Live Checklist",
+      "description": "Use this before switching the team to the live clock.",
+      "important": "Important: the tablet account should stay signed in on the shared device. Colleagues should only pick their name and save punches there; they should not sign in and out with personal passwords on the tablet.",
+      "items": {
+        "1": "Create one dedicated tablet login and assign it the time-clock-station role.",
+        "2": "Keep each colleague on their own access login or linked employee record. The tablet account is shared only for the station picker.",
+        "3": "Sign in on the tablet with the station account and confirm it opens the shared colleague picker and defaults to Portuguese.",
+        "4": "Test one full attendance cycle on the tablet: clock in, start break, end break, and clock out.",
+        "5": "Confirm the screen returns to the colleague list after a saved punch and that search still finds colleagues quickly.",
+        "6": "As a manager, verify the attendance print view, weekly and monthly switching, and one manual correction with a valid reason.",
+        "7": "Toggle the browser offline and online once to confirm the sync banner changes and punches recover correctly after reconnecting.",
+        "8": "Do a live pilot with one or two trusted colleagues before the full rollout."
+      }
+    },
+    "roles": {
+      "eyebrow": "Permissions",
+      "title": "Roles",
+      "empty": "No roles created yet. Choose a preset from the dropdowns below to add one.",
+      "selectKey": "Choose role key",
+      "selectTitle": "Choose role title",
+      "addButton": "Add Role",
+      "noteTitle": "Current permission model",
+      "noteBody": "Admin, Manager, and Supervisor currently open the same privileged workspace in the app. Keep different names only if your team needs them operationally.",
+      "admin": {
+        "title": "Administrator",
+        "description": "Privileged workspace access. Use for people who need the full management and setup surface."
+      },
+      "manager": {
+        "title": "Manager",
+        "description": "Privileged workspace access. Operationally labeled for managers, but currently has the same app access as admin and supervisor."
+      },
+      "supervisor": {
+        "title": "Supervisor",
+        "description": "Privileged workspace access. Good for lead staff, but currently opens the same privileged area as admin and manager."
+      },
+      "employee": {
+        "title": "Employee",
+        "description": "Self-service access only. Opens the employee time clock and personal attendance view."
+      },
+      "timeClockStation": {
+        "title": "Time Clock Station",
+        "description": "Shared tablet login. Opens the colleague picker for a common device instead of a personal account."
+      }
+    }
+  },
   "schedule": {
     "title": "Work Schedule",
     "subtitle": "Team calendar, staffing and vacation planning",

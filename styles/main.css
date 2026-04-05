@@ -1505,3 +1505,753 @@ header h1, header h2, header h3 {
         font-size: 1.65rem;
     }
 }
+
+.user-management-page-shell {
+    background:
+        radial-gradient(circle at top left, rgba(248, 113, 113, 0.12), transparent 28%),
+        linear-gradient(180deg, #fff8f8 0%, #f8fafc 22%, #eef2f7 100%);
+}
+
+.user-management-shell-container {
+    width: min(1680px, calc(100vw - 28px));
+    max-width: none;
+}
+
+.user-management-header {
+    background: rgba(255, 252, 252, 0.84);
+    border-bottom-color: rgba(226, 232, 240, 0.7);
+}
+
+.user-management-header .container {
+    display: flex;
+    align-items: center;
+}
+
+.user-management-signout {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.8rem 1rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.user-management-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.user-management-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    padding: 0.78rem 1rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.user-management-language-switcher {
+    background: rgba(255, 255, 255, 0.82);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.user-management-layout {
+    display: block;
+}
+
+.user-management-main-column {
+    display: grid;
+    gap: 1rem;
+}
+
+.user-management-main-nav-panel {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 20px 44px rgba(15, 23, 42, 0.07);
+    padding: 0.35rem;
+}
+
+.user-management-main-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.user-management-main-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    padding: 0.78rem 1.1rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 700;
+    transition: 160ms ease;
+}
+
+.user-management-main-tab:hover {
+    color: #0f172a;
+    background: rgba(248, 250, 252, 0.95);
+}
+
+.user-management-main-tab-active {
+    border-color: rgba(248, 113, 113, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(254, 242, 242, 0.98) 100%);
+    color: #0f172a;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.user-management-main-view {
+    display: grid;
+    gap: 1rem;
+}
+
+.user-management-main-view-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.user-management-panel {
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    padding: 1.25rem;
+}
+
+.user-management-menu-panel {
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 41, 59, 0.96) 100%);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+    padding: 1rem;
+}
+
+.user-management-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 70;
+    width: min(440px, calc(100vw - 12px));
+    height: 100svh;
+    padding: 0.7rem;
+    transform: translateX(105%);
+    transition: transform 220ms ease;
+    pointer-events: none;
+}
+
+.user-management-page-shell.user-management-drawer-open .user-management-drawer {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.user-management-drawer-inner {
+    display: grid;
+    gap: 1rem;
+    height: 100%;
+    overflow: auto;
+    border-radius: 30px 0 0 30px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+    box-shadow: -24px 0 70px rgba(15, 23, 42, 0.24);
+    padding: 1rem;
+}
+
+.user-management-drawer-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0.15rem 0;
+}
+
+.user-management-menu-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+}
+
+.user-management-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(15, 23, 42, 0.36);
+    backdrop-filter: blur(3px);
+}
+
+.user-management-menu-panel .user-management-eyebrow {
+    color: rgba(255, 255, 255, 0.76);
+}
+
+.user-management-rail-menu {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.user-management-menu-button {
+    display: grid;
+    gap: 0.3rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.95rem 1rem;
+    text-align: left;
+    color: #e2e8f0;
+    transition: 160ms ease;
+}
+
+.user-management-menu-button:hover {
+    border-color: rgba(248, 250, 252, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.user-management-menu-button-active {
+    border-color: rgba(248, 113, 113, 0.28);
+    background: linear-gradient(180deg, rgba(248, 113, 113, 0.18) 0%, rgba(244, 63, 94, 0.14) 100%);
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.2);
+}
+
+.user-management-menu-button__label {
+    font-size: 0.94rem;
+    font-weight: 700;
+}
+
+.user-management-menu-button__meta {
+    color: rgba(226, 232, 240, 0.72);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.user-management-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.user-management-section-head-compact {
+    margin-bottom: 1rem;
+}
+
+.user-management-eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #e94b5a;
+}
+
+.user-management-stat {
+    min-width: 180px;
+    align-self: start;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 24px;
+    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    padding: 1rem 1.1rem;
+}
+
+.user-management-stat-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.user-management-stat-value {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 2rem;
+    line-height: 1;
+    color: #0f172a;
+}
+
+.user-management-user-list {
+    display: grid;
+    gap: 0.85rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.user-management-user-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+    gap: 1rem 1.25rem;
+    align-items: start;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+    padding: 1.25rem;
+}
+
+.user-management-identity {
+    min-width: 0;
+}
+
+.user-management-user-title {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.user-management-user-email {
+    margin-top: 0.32rem;
+    color: #475569;
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+}
+
+.user-management-user-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.9rem;
+}
+
+.user-management-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.user-management-meta-pill-neutral {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.user-management-meta-pill-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.user-management-meta-pill-accent {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.user-management-meta-pill-info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.user-management-role-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-content: start;
+}
+
+.user-management-role-option {
+    position: relative;
+}
+
+.user-management-role-checkbox {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+}
+
+.user-management-role-label {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    border-radius: 999px;
+    background: #fff;
+    padding: 0.55rem 0.95rem;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 160ms ease;
+}
+
+.user-management-role-checkbox:checked + .user-management-role-label {
+    border-color: rgba(233, 75, 90, 0.28);
+    background: rgba(233, 75, 90, 0.08);
+    color: #be123c;
+    box-shadow: 0 0 0 4px rgba(233, 75, 90, 0.09);
+}
+
+.user-management-role-checkbox:focus-visible + .user-management-role-label {
+    outline: 2px solid rgba(233, 75, 90, 0.35);
+    outline-offset: 2px;
+}
+
+.user-management-action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    min-width: 150px;
+}
+
+.user-management-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    border-radius: 999px;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: 160ms ease;
+}
+
+.user-management-button-secondary {
+    border: 1px solid rgba(147, 197, 253, 0.9);
+    background: rgba(239, 246, 255, 0.95);
+    color: #1d4ed8;
+}
+
+.user-management-button-secondary:hover {
+    background: #dbeafe;
+}
+
+.user-management-button-danger {
+    border: 1px solid rgba(254, 202, 202, 0.95);
+    background: rgba(254, 242, 242, 0.98);
+    color: #dc2626;
+}
+
+.user-management-button-danger:hover {
+    background: #fee2e2;
+}
+
+.user-management-empty-state,
+.user-management-role-definition,
+.user-management-test-user-item,
+.user-management-overview-card {
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 24px;
+    background: rgba(248, 250, 252, 0.95);
+    padding: 1rem 1.1rem;
+}
+
+.user-management-empty-state {
+    color: #64748b;
+}
+
+.user-management-role-definition {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.user-management-role-definition strong {
+    display: block;
+    color: #0f172a;
+}
+
+.user-management-role-definition p {
+    margin: 0.4rem 0 0;
+    max-width: 32rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.user-management-role-definition span,
+.user-management-role-note span {
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.8rem;
+}
+
+.user-management-role-note {
+    display: grid;
+    gap: 0.4rem;
+    border-style: dashed;
+}
+
+.user-management-role-note strong {
+    color: #0f172a;
+}
+
+.user-management-role-key {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.72rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.user-management-role-key-privileged {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.user-management-role-key-employee {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.user-management-role-key-station {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.user-management-role-key-neutral {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.user-management-test-user-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.user-management-test-user-item span {
+    color: #64748b;
+}
+
+.user-management-overview-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.user-management-overview-grid {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.user-management-overview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.user-management-overview-main {
+    min-width: 0;
+}
+
+.user-management-overview-email {
+    margin-top: 0.3rem;
+    color: #475569;
+    font-size: 0.94rem;
+    overflow-wrap: anywhere;
+}
+
+.user-management-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    min-width: 0;
+    max-width: min(100%, 14rem);
+    border-radius: 999px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+
+.user-management-status-pill-warning {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.user-management-status-pill-danger {
+    background: #ffe4e6;
+    color: #be123c;
+}
+
+.user-management-status-pill-info {
+    background: #dbeafe;
+    color: #0369a1;
+}
+
+.user-management-status-pill-station {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.user-management-status-pill-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.user-management-field-label {
+    display: block;
+    margin-bottom: 0.55rem;
+    color: #334155;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.user-management-form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.user-management-scroll-region {
+    max-height: calc(100svh - 280px);
+    overflow: auto;
+    padding-right: 0.35rem;
+}
+
+.user-management-scroll-region-wide {
+    max-height: calc(100svh - 355px);
+}
+
+.user-management-side-scroll-region {
+    max-height: min(40svh, 440px);
+    overflow: auto;
+    padding-right: 0.2rem;
+}
+
+.user-management-scroll-region::-webkit-scrollbar,
+.user-management-side-scroll-region::-webkit-scrollbar {
+    width: 10px;
+}
+
+.user-management-scroll-region::-webkit-scrollbar-thumb,
+.user-management-side-scroll-region::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 999px;
+}
+
+@media (min-width: 1024px) {
+    .user-management-main-view-grid {
+        grid-template-columns: minmax(0, 1.95fr) minmax(360px, 0.95fr);
+    }
+
+    .user-management-panel-accounts {
+        min-height: calc(100svh - 230px);
+    }
+
+    .user-management-panel-create {
+        align-self: start;
+        position: sticky;
+        top: 1rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .user-management-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1023px) {
+    .user-management-header .container {
+        align-items: flex-start;
+    }
+
+    .user-management-header-actions {
+        justify-content: flex-start;
+    }
+
+    .user-management-signout {
+        align-self: flex-start;
+    }
+
+    .user-management-menu-panel {
+        padding: 0.9rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .user-management-shell-container {
+        width: min(100vw - 18px, 100%);
+    }
+
+    .user-management-panel {
+        border-radius: 24px;
+        padding: 1.15rem;
+    }
+
+    .user-management-main-nav-panel {
+        width: 100%;
+    }
+
+    .user-management-main-tabs {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .user-management-user-card {
+        grid-template-columns: 1fr;
+    }
+
+    .user-management-action-group {
+        min-width: 0;
+    }
+
+    .user-management-button {
+        width: 100%;
+    }
+
+    .user-management-role-definition {
+        flex-direction: column;
+    }
+
+    .user-management-role-key {
+        align-self: flex-start;
+    }
+
+    .user-management-scroll-region,
+    .user-management-side-scroll-region {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    .user-management-scroll-region-wide {
+        max-height: none;
+    }
+
+    .user-management-overview-header {
+        flex-direction: column;
+    }
+
+    .user-management-drawer {
+        width: calc(100vw - 10px);
+        padding: 0.3rem;
+    }
+
+    .user-management-drawer-inner {
+        border-radius: 24px 0 0 24px;
+    }
+}

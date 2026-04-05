@@ -4,6 +4,23 @@ import { UserManagementController } from "../../../../js/features/admin/user-man
 
 function createFixture() {
   resetDom(`
+    <div id="user-management-page"></div>
+    <button id="user-management-menu-toggle-btn">Menu</button>
+    <button id="user-management-menu-close-btn">Close</button>
+    <button id="user-management-drawer-backdrop" hidden></button>
+    <aside id="user-management-drawer" aria-hidden="true">
+      <div class="user-management-drawer-inner"></div>
+    </aside>
+    <button data-user-management-main-view-target="accounts">Users</button>
+    <button data-user-management-main-view-target="colleagues">Colleagues</button>
+    <section data-user-management-main-view="accounts"></section>
+    <section data-user-management-main-view="colleagues" hidden></section>
+    <button data-user-management-side-view-target="roles">Roles</button>
+    <button data-user-management-side-view-target="test-users">Tests</button>
+    <button data-user-management-side-view-target="rollout">Rollout</button>
+    <section data-user-management-side-view="roles"></section>
+    <section data-user-management-side-view="test-users" hidden></section>
+    <section data-user-management-side-view="rollout" hidden></section>
     <ul id="user-list"></ul>
     <ul id="test-user-presets"></ul>
     <strong id="test-user-password"></strong>
@@ -171,6 +188,42 @@ describe("UserManagementController", () => {
     titleSelect.value = "Supervisor";
     titleSelect.dispatchEvent(new Event("change"));
     assert.equal(keySelect.value, "supervisor");
+  });
+
+  test("switches the main workspace tabs and keeps drawer tool panels visible when selected", () => {
+    createFixture();
+
+    const controller = new UserManagementController({
+      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async setRoles() {}, async removeEmail() {}, async addEmail() {} },
+      roleManager: { async listRoles() { return []; }, async addRole() {} },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      windowRef: { alert() {}, confirm() { return true; }, addEventListener() {} }
+    });
+
+    controller.init();
+
+    const accountsPanel = document.querySelector('[data-user-management-main-view="accounts"]');
+    const colleaguesPanel = document.querySelector('[data-user-management-main-view="colleagues"]');
+    const colleaguesTab = document.querySelector('[data-user-management-main-view-target="colleagues"]');
+
+    assert.equal(accountsPanel.hidden, false);
+    assert.equal(colleaguesPanel.hidden, true);
+
+    colleaguesTab.click();
+
+    assert.equal(accountsPanel.hidden, true);
+    assert.equal(colleaguesPanel.hidden, false);
+    assert.equal(colleaguesTab.getAttribute("aria-selected"), "true");
+
+    document.getElementById("user-management-menu-toggle-btn").click();
+    assert.equal(document.getElementById("user-management-drawer").getAttribute("aria-hidden"), "false");
+
+    document.querySelector('[data-user-management-side-view-target="test-users"]').click();
+
+    assert.equal(document.getElementById("user-management-drawer").getAttribute("aria-hidden"), "false");
+    assert.equal(document.querySelector('[data-user-management-side-view="roles"]').hidden, true);
+    assert.equal(document.querySelector('[data-user-management-side-view="test-users"]').hidden, false);
   });
 
   test("creates preset test users without linking employee records", async () => {
