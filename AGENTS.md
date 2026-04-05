@@ -139,6 +139,8 @@ Test:
 - Pattern: the Airbnb per-reservation VAT downloader lives at `scripts/airbnb/reservation-invoice-downloader.mjs`; keep the user-prepared Reservations list as the source of truth instead of hard-coding Airbnb filters into the script, note that it now exports with 10 parallel browser workers by default, saves into the Windows Downloads folder, and uses `--pages` when you need more than the first Airbnb results page.
 - Pattern: the landing page now exposes `#go-to-airbnb-reservation-invoices-btn` / `#airbnb-reservation-invoices-page` as a helper page for the local Airbnb VAT exporter; it can open Airbnb and copy terminal commands, but it cannot launch PowerShell directly from the browser.
 - Test: for individual Airbnb reservation invoices, first prepare the filtered Completed Reservations list in a real Airbnb host session, run `npm run airbnb:download-reservation-invoices -- --dry-run` to confirm the detected reservation codes, then repeat with `--limit 3` before a full run.
+- Pattern: the landing page phone header now uses `landing-dashboard-header`, `landing-header-actions`, `landing-language-switcher`, and `landing-sign-out-btn`; keep the compact mobile overrides in `styles/main.css` so the `EN`/`PT` switcher stays visible on narrow browsers.
+- Test: on a roughly 390px-wide mobile browser, open the landing page in both English and Portuguese and confirm the header keeps the brand, language switcher, and sign-out control on one line without clipping.
 
 ## Suggested Update Format
 
