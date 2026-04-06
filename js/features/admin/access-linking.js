@@ -81,8 +81,8 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                 displayEmail,
                 roles,
                 status: 'clock-only',
-                label: 'Clock-only employee',
-                helpText: 'This user goes to the time clock and sees only their own schedule/attendance.'
+                label: 'Self-service employee',
+                helpText: 'This user opens only the time clock and the read-only work schedule.'
             };
         })
         .sort((left, right) => left.employeeName.localeCompare(right.employeeName));

@@ -49,7 +49,7 @@ export function renderScheduleWorkspaceSummary(dataManager) {
     const locale = getScheduleLocale();
     const activeEmployees = dataManager.getActiveEmployees();
     const upcomingVacations = getUpcomingVacationEntries(dataManager);
-    const isVacationBoardOnlyUser = dataManager.isVacationBoardOnlyUser?.() || false;
+    const isScheduleOnlyUser = dataManager.isScheduleOnlyUser?.() || false;
     const currentUserEmployee = dataManager.getCurrentUserEmployee?.() || null;
     const colleaguesAwayToday = activeEmployees.filter((employee) => {
         return dataManager.isDateInVacation(new Date(), employee.vacations);
@@ -77,10 +77,10 @@ export function renderScheduleWorkspaceSummary(dataManager) {
             value: String(colleaguesAwayToday)
         },
         {
-            label: isVacationBoardOnlyUser
+            label: isScheduleOnlyUser
                 ? t('schedule.board.summaryYourDepartment')
                 : t('schedule.workspace.coverageTarget'),
-            value: isVacationBoardOnlyUser
+            value: isScheduleOnlyUser
                 ? (currentUserEmployee?.department || t('schedule.board.unassignedDepartment'))
                 : coverageTarget
         }
@@ -100,8 +100,8 @@ export function renderScheduleAccessBanner(dataManager) {
         return;
     }
 
-    const isVacationBoardOnlyUser = dataManager.isVacationBoardOnlyUser?.() || false;
-    if (!isVacationBoardOnlyUser) {
+    const isScheduleOnlyUser = dataManager.isScheduleOnlyUser?.() || false;
+    if (!isScheduleOnlyUser) {
         container.innerHTML = '';
         container.classList.add('hidden');
         return;
@@ -115,9 +115,9 @@ export function renderScheduleAccessBanner(dataManager) {
         <section class="overflow-hidden rounded-[30px] border border-sky-200 bg-[linear-gradient(135deg,rgba(240,249,255,1)_0%,rgba(224,242,254,1)_46%,rgba(239,246,255,1)_100%)] px-5 py-5 shadow-sm lg:px-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="max-w-3xl">
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">${t('schedule.board.accessBannerKicker')}</div>
-                    <h3 class="mt-2 text-xl font-semibold tracking-tight text-slate-950">${t('schedule.board.accessBannerTitle')}</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">${t('schedule.board.accessBannerBody')}</p>
+                    <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">${t('schedule.selfService.accessBannerKicker')}</div>
+                    <h3 class="mt-2 text-xl font-semibold tracking-tight text-slate-950">${t('schedule.selfService.accessBannerTitle')}</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">${t('schedule.selfService.accessBannerBody')}</p>
                 </div>
                 <div class="rounded-[24px] border border-white/70 bg-white/80 px-4 py-4 shadow-sm">
                     <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">${t('schedule.board.colleagueColumn')}</div>

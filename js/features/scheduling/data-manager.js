@@ -30,8 +30,11 @@ import {
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
 import { canonicalizeEmail } from '../../shared/email.js';
 import {
+    canAccessSelfServiceSchedule,
     canAccessSharedVacationBoard,
     hasPrivilegedRole,
+    isSelfServiceEmployeeUser,
+    SELF_SERVICE_SCHEDULE_VIEWS,
     hasTimeClockStationRole,
     isSharedVacationBoardOnlyUser
 } from '../../shared/access-roles.js';
@@ -790,9 +793,25 @@ export class DataManager {
     }
 
     isClockOnlyUser() {
-        return !this.isTimeClockStationUser()
-            && Boolean(this.getCurrentUserEmployee())
-            && !this.hasPrivilegedRole();
+        return isSelfServiceEmployeeUser(this.getCurrentUserRoles(), {
+            hasEmployeeLink: Boolean(this.getCurrentUserEmployee())
+        });
+    }
+
+    canAccessWorkSchedule() {
+        return canAccessSelfServiceSchedule(this.getCurrentUserRoles(), {
+            hasEmployeeLink: Boolean(this.getCurrentUserEmployee())
+        });
+    }
+
+    isScheduleOnlyUser() {
+        return this.isClockOnlyUser();
+    }
+
+    getAllowedScheduleViews() {
+        return this.isScheduleOnlyUser()
+            ? [...SELF_SERVICE_SCHEDULE_VIEWS]
+            : [];
     }
 
     canAccessVacationBoard() {

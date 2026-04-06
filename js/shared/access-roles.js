@@ -1,5 +1,7 @@
 export const PRIVILEGED_ROLE_KEYS = Object.freeze(['admin', 'manager', 'supervisor']);
+export const EMPLOYEE_SELF_SERVICE_ROLE = 'employee';
 export const TIME_CLOCK_STATION_ROLE = 'time-clock-station';
+export const SELF_SERVICE_SCHEDULE_VIEWS = Object.freeze(['monthly']);
 
 function normalizeRoleKey(role) {
     return typeof role === 'string' ? role.trim().toLowerCase() : '';
@@ -31,17 +33,29 @@ export function hasPrivilegedRole(roles = []) {
     return hasAnyRole(roles, PRIVILEGED_ROLE_KEYS);
 }
 
+export function hasEmployeeSelfServiceRole(roles = []) {
+    return hasRole(roles, EMPLOYEE_SELF_SERVICE_ROLE);
+}
+
 export function hasTimeClockStationRole(roles = []) {
     return hasRole(roles, TIME_CLOCK_STATION_ROLE);
 }
 
-export function canAccessSharedVacationBoard(roles = [], { hasEmployeeLink = false } = {}) {
+export function isSelfServiceEmployeeUser(roles = [], { hasEmployeeLink = false } = {}) {
+    return !hasPrivilegedRole(roles)
+        && !hasTimeClockStationRole(roles)
+        && (hasEmployeeSelfServiceRole(roles) || Boolean(hasEmployeeLink));
+}
+
+export function canAccessSelfServiceSchedule(roles = [], { hasEmployeeLink = false } = {}) {
     return hasPrivilegedRole(roles)
-        || (!hasTimeClockStationRole(roles) && Boolean(hasEmployeeLink));
+        || isSelfServiceEmployeeUser(roles, { hasEmployeeLink });
+}
+
+export function canAccessSharedVacationBoard(roles = [], { hasEmployeeLink = false } = {}) {
+    return hasPrivilegedRole(roles);
 }
 
 export function isSharedVacationBoardOnlyUser(roles = [], { hasEmployeeLink = false } = {}) {
-    return !hasPrivilegedRole(roles)
-        && !hasTimeClockStationRole(roles)
-        && Boolean(hasEmployeeLink);
+    return false;
 }

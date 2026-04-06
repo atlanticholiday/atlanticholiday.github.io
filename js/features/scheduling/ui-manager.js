@@ -408,6 +408,7 @@ export class UIManager {
         const modal = document.getElementById('day-details-modal');
         const [year, month, day] = dateKey.split('-').map(Number);
         const date = new Date(year, month - 1, day);
+        const readOnlyScheduleMode = this.isScheduleOnlyMode();
         document.getElementById('modal-date-header').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         // Add Daily Note Section
@@ -423,16 +424,23 @@ export class UIManager {
         }
 
         const currentNote = this.dataManager.getDailyNote(dateKey);
-        noteSection.innerHTML = `
-            <label class="block text-sm font-medium text-yellow-800 mb-1">Daily Note (Visible to everyone)</label>
-            <textarea id="daily-note-input" rows="2" class="w-full p-2 border border-yellow-300 rounded-md text-sm focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="Add a note for this day (e.g. 'Bank Holiday', 'VIP Arrival')...">${currentNote}</textarea>
+        noteSection.innerHTML = readOnlyScheduleMode ? `
+            <div class="mb-3 rounded-lg border border-sky-200 bg-white/80 px-3 py-3 text-sm text-sky-800">
+                ${t('schedule.selfService.readOnlyDayNotice')}
+            </div>
+            <label class="block text-sm font-medium text-yellow-800 mb-1">${t('schedule.modals.dailyNote')}</label>
+            <textarea rows="2" class="w-full p-2 border border-yellow-300 rounded-md text-sm bg-white text-slate-600" readonly disabled>${currentNote}</textarea>
+        ` : `
+            <label class="block text-sm font-medium text-yellow-800 mb-1">${t('schedule.modals.dailyNote')}</label>
+            <textarea id="daily-note-input" rows="2" class="w-full p-2 border border-yellow-300 rounded-md text-sm focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="${t('schedule.modals.dailyNotePlaceholder')}">${currentNote}</textarea>
         `;
 
-        // Save note on change
-        const noteInput = document.getElementById('daily-note-input');
-        noteInput.addEventListener('change', () => {
-            this.dataManager.saveDailyNote(dateKey, noteInput.value);
-        });
+        if (!readOnlyScheduleMode) {
+            const noteInput = document.getElementById('daily-note-input');
+            noteInput?.addEventListener('change', () => {
+                this.dataManager.saveDailyNote(dateKey, noteInput.value);
+            });
+        }
 
         const listContainer = document.getElementById('modal-employee-list');
         listContainer.innerHTML = this.dataManager.getActiveEmployees().map(emp => {
@@ -450,9 +458,9 @@ export class UIManager {
                 <div>
                     <input type="radio" name="status-${emp.id}" id="status-${emp.id}-${status}" value="${status}" class="sr-only status-radio" 
                            ${status === effectiveStatus ? 'checked' : ''} 
-                           ${onVacation ? 'disabled' : ''}
+                           ${(onVacation || readOnlyScheduleMode) ? 'disabled' : ''}
                            data-employee-id="${emp.id}" data-date-key="${dateKey}">
-                    <label for="status-${emp.id}-${status}" class="inline-block px-3 py-1 border rounded-full text-sm cursor-pointer transition-colors ${onVacation ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}">
+                    <label for="status-${emp.id}-${status}" class="inline-block px-3 py-1 border rounded-full text-sm transition-colors ${(onVacation || readOnlyScheduleMode) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'cursor-pointer'}">
                         ${status}
                     </label>
                 </div>`).join('');
@@ -474,6 +482,7 @@ export class UIManager {
                             <input type="number" min="0" step="0.5"
                                    class="extra-hours-input mt-1 w-full p-2 border rounded-md focus:ring-1 focus:ring-brand"
                                    value="${extraHours}"
+                                   ${readOnlyScheduleMode ? 'readonly disabled' : ''}
                                    data-employee-id="${emp.id}" data-date-key="${dateKey}">
                         </div>
                         <div class="md:col-span-2">
@@ -481,6 +490,7 @@ export class UIManager {
                             <input type="text" placeholder="Reason for extra hours..."
                                    class="extra-hours-note-input mt-1 w-full p-2 border rounded-md focus:ring-1 focus:ring-brand"
                                    value="${extraHoursNote}"
+                                   ${readOnlyScheduleMode ? 'readonly disabled' : ''}
                                    data-employee-id="${emp.id}" data-date-key="${dateKey}">
                         </div>
                     </div>
@@ -765,8 +775,9 @@ export class UIManager {
     }
 
     switchView(view) {
-        if (this.isVacationBoardOnlyMode()) {
-            view = 'vacation-board';
+        const allowedViews = this.getAllowedScheduleViews();
+        if (this.isScheduleOnlyMode()) {
+            view = allowedViews[0] || 'monthly';
         }
 
         const currentView = this.dataManager.getCurrentView();
@@ -1743,7 +1754,7 @@ export class UIManager {
         const reviewQueue = this.dataManager.getAttendanceReviewQueue({ referenceDateTime }).slice(0, 6);
         const canManageAttendance = !this.dataManager.isClockOnlyUser();
         const isClockOnlyUser = this.dataManager.isClockOnlyUser();
-        const canOpenVacationBoard = this.dataManager.canAccessVacationBoard();
+        const canOpenWorkSchedule = this.dataManager.isScheduleOnlyUser();
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
         const secondaryAction = todaySummary?.secondaryAction || null;
         const shouldShowSecondaryAction = Boolean(
@@ -1946,12 +1957,12 @@ export class UIManager {
                             <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                             <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
-                        ${canOpenVacationBoard ? `
+                        ${canOpenWorkSchedule ? `
                             <div class="mt-8 flex flex-wrap items-center gap-3">
-                                <button type="button" data-open-shared-vacation-board class="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/16">
-                                    ${t('schedule.board.timeClockCta')}
+                                <button type="button" data-open-work-schedule class="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/16">
+                                    ${t('timeClock.selfService.openSchedule')}
                                 </button>
-                                <p class="text-sm text-slate-300">${t('schedule.board.timeClockHint')}</p>
+                                <p class="text-sm text-slate-300">${t('timeClock.selfService.scheduleHint')}</p>
                             </div>
                         ` : ''}
                         ${employee ? `
@@ -2480,12 +2491,18 @@ export class UIManager {
         renderVacationBoardView(this);
     }
 
-    isVacationBoardOnlyMode() {
-        return this.dataManager.isVacationBoardOnlyUser();
+    isScheduleOnlyMode() {
+        return this.dataManager.isScheduleOnlyUser();
+    }
+
+    getAllowedScheduleViews() {
+        const allowedViews = this.dataManager.getAllowedScheduleViews?.() || [];
+        return allowedViews.length ? allowedViews : SCHEDULE_VIEWS.map(({ view }) => view);
     }
 
     syncScheduleNavigationState(activeView) {
-        const limitedBoardMode = this.isVacationBoardOnlyMode();
+        const scheduleOnlyMode = this.isScheduleOnlyMode();
+        const allowedViews = new Set(this.getAllowedScheduleViews());
         const buttons = [
             ...SCHEDULE_VIEWS,
             { id: 'reorder-view-btn', view: 'reorder' },
@@ -2498,7 +2515,9 @@ export class UIManager {
                 return;
             }
 
-            const shouldHide = limitedBoardMode && buttonConfig.view !== 'vacation-board';
+            const shouldHide = scheduleOnlyMode
+                ? !allowedViews.has(buttonConfig.view)
+                : false;
             element.classList.toggle('hidden', shouldHide);
 
             if (buttonConfig.view === activeView) {
@@ -2511,28 +2530,36 @@ export class UIManager {
         });
 
         const referenceGroup = document.getElementById('schedule-reference-group');
-        referenceGroup?.classList.toggle('hidden', limitedBoardMode);
+        referenceGroup?.classList.toggle('hidden', scheduleOnlyMode);
 
         const navigationSubtitle = document.getElementById('schedule-navigation-subtitle');
         if (navigationSubtitle) {
-            navigationSubtitle.textContent = limitedBoardMode
-                ? t('schedule.board.navigationSubtitle')
+            navigationSubtitle.textContent = scheduleOnlyMode
+                ? t('schedule.selfService.navigationSubtitle')
                 : t('schedule.navigation.subtitle');
         }
 
         const helpButton = document.getElementById('schedule-help-btn');
-        helpButton?.classList.toggle('hidden', limitedBoardMode);
+        helpButton?.classList.toggle('hidden', scheduleOnlyMode);
+
+        const printWeeklyButton = document.getElementById('print-weekly-btn');
+        printWeeklyButton?.classList.toggle('hidden', scheduleOnlyMode);
+
+        const printTimesheetButton = document.getElementById('print-timesheet-btn');
+        printTimesheetButton?.classList.toggle('hidden', scheduleOnlyMode);
     }
 
     updateView() {
-        const limitedBoardMode = this.isVacationBoardOnlyMode();
-        const currentView = limitedBoardMode ? 'vacation-board' : this.dataManager.getCurrentView();
+        const scheduleOnlyMode = this.isScheduleOnlyMode();
+        const allowedViews = this.getAllowedScheduleViews();
+        const defaultView = allowedViews[0] || 'monthly';
+        const currentView = scheduleOnlyMode ? defaultView : this.dataManager.getCurrentView();
         const currentDate = this.dataManager.getCurrentDate();
         const displayLocale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
         const viewMeta = getScheduleViewMeta(currentView);
 
-        if (limitedBoardMode && this.dataManager.getCurrentView() !== 'vacation-board') {
-            this.dataManager.setCurrentView('vacation-board');
+        if (scheduleOnlyMode && this.dataManager.getCurrentView() !== defaultView) {
+            this.dataManager.setCurrentView(defaultView);
         }
 
         this.dataManager.ensureHolidaysForYear(currentDate.getFullYear());
@@ -2578,7 +2605,7 @@ export class UIManager {
 
         const showCalendarControls = ['monthly', 'yearly'].includes(currentView);
         calendarControls?.classList.toggle('hidden', !showCalendarControls);
-        pdfDownloadButton?.classList.toggle('hidden', currentView !== 'monthly');
+        pdfDownloadButton?.classList.toggle('hidden', currentView !== 'monthly' || scheduleOnlyMode);
 
         if (currentView === 'monthly') {
             if (viewHeader) {

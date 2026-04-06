@@ -176,8 +176,8 @@ function syncAccessModeUi() {
     const employee = dataManager.getCurrentUserEmployee();
     const clockOnlyMode = dataManager.isClockOnlyUser();
     const stationMode = dataManager.isTimeClockStationUser();
-    const boardOnlyMode = dataManager.isVacationBoardOnlyUser();
-    const canAccessVacationBoard = dataManager.canAccessVacationBoard();
+    const scheduleOnlyMode = dataManager.isScheduleOnlyUser();
+    const canAccessWorkSchedule = dataManager.canAccessWorkSchedule();
     const limitedTimeClockMode = clockOnlyMode || stationMode;
 
     if (stationMode && i18n.getCurrentLanguage() !== 'pt') {
@@ -213,7 +213,7 @@ function syncAccessModeUi() {
         const button = document.getElementById(buttonId);
         if (button) {
             const shouldHide = buttonId === 'go-to-schedule-btn'
-                ? (stationMode || (!canAccessVacationBoard && limitedTimeClockMode))
+                ? (stationMode || (!canAccessWorkSchedule && limitedTimeClockMode))
                 : buttonId === 'go-to-cleaning-ah-btn'
                 ? (limitedTimeClockMode || !dataManager.hasPrivilegedRole())
                 : limitedTimeClockMode;
@@ -227,15 +227,15 @@ function syncAccessModeUi() {
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
     const scheduleButtonDescription = document.getElementById('go-to-schedule-description');
     if (scheduleButtonTitle) {
-        scheduleButtonTitle.textContent = boardOnlyMode ? t('schedule.views.vacationBoard') : t('apps.workSchedule');
+        scheduleButtonTitle.textContent = t('apps.workSchedule');
     }
     if (scheduleButtonDescription) {
-        scheduleButtonDescription.textContent = boardOnlyMode
-            ? t('timeClock.landing.vacationBoardDescription')
+        scheduleButtonDescription.textContent = scheduleOnlyMode
+            ? t('timeClock.landing.scheduleDescription')
             : t('apps.workScheduleDesc');
     }
     if (scheduleButton) {
-        scheduleButton.dataset.accessMode = boardOnlyMode ? 'vacation-board' : 'full';
+        scheduleButton.dataset.accessMode = scheduleOnlyMode ? 'self-service' : 'full';
     }
 
     const moreToolsToggle = document.getElementById('toggle-more-tools-btn');
@@ -271,8 +271,8 @@ function syncAccessModeUi() {
 
     const scheduleBackButton = document.getElementById('back-to-landing-from-schedule-btn');
     if (scheduleBackButton) {
-        scheduleBackButton.dataset.targetPage = boardOnlyMode ? 'timeClock' : 'landing';
-        scheduleBackButton.title = boardOnlyMode ? t('timeClock.landing.backToTimeClock') : t('timeClock.landing.backToLanding');
+        scheduleBackButton.dataset.targetPage = scheduleOnlyMode ? 'timeClock' : 'landing';
+        scheduleBackButton.title = scheduleOnlyMode ? t('timeClock.landing.backToTimeClock') : t('timeClock.landing.backToLanding');
     }
 
     if (limitedTimeClockMode && navigationManager && !timeClockAutoOpenedForUser) {
@@ -760,8 +760,8 @@ function setupGlobalEventListeners() {
     document.addEventListener('schedulePageOpened', () => {
         console.log('Schedule page opened, initializing...');
         setTimeout(() => {
-            if (dataManager?.isVacationBoardOnlyUser?.()) {
-                dataManager.setCurrentView('vacation-board');
+            if (dataManager?.isScheduleOnlyUser?.()) {
+                dataManager.setCurrentView('monthly');
             }
             // OPTIMIZATION: Only initialize if we don't already have employee data
             console.log('📅 [SCHEDULE PAGE] Checking if initialization needed...');
@@ -801,12 +801,12 @@ function setupGlobalEventListeners() {
         }, 50);
     });
 
-    document.addEventListener('openSharedVacationBoardRequested', () => {
-        if (!dataManager?.canAccessVacationBoard?.()) {
+    document.addEventListener('openEmployeeScheduleRequested', () => {
+        if (!dataManager?.canAccessWorkSchedule?.()) {
             return;
         }
 
-        dataManager.setCurrentView('vacation-board');
+        dataManager.setCurrentView('monthly');
         navigationManager.showSchedulePage();
         document.dispatchEvent(new CustomEvent('schedulePageOpened'));
     });

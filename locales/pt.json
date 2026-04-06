@@ -358,7 +358,7 @@
         "accessOverview": {
             "eyebrow": "Ligação",
             "title": "Ligações de Acesso dos Colegas",
-            "description": "Mostra se cada ficha de colaborador está ligada a um login e se esse login é só relógio, estação partilhada ou privilegiado.",
+            "description": "Mostra se cada ficha de colaborador esta ligada a um login e se esse login e de autoatendimento, estacao partilhada ou privilegiado.",
             "passwordFlow": "Fluxo de password: crie o acesso com uma password temporária, defina o mesmo email no registo do colega e depois use Repor Password para que o colega escolha a sua password por email.",
             "empty": "Ainda não existem colegas.",
             "noStaffEmail": "Sem email na ficha do colaborador",
@@ -367,7 +367,7 @@
             "status": {
                 "missingEmail": "Falta email na ficha",
                 "missingAccess": "Sem acesso à app",
-                "clockOnly": "Colaborador só relógio",
+                "clockOnly": "Colaborador de autoatendimento",
                 "station": "Estação partilhada",
                 "privileged": "Acesso privilegiado",
                 "unknown": "Estado desconhecido"
@@ -375,7 +375,7 @@
             "help": {
                 "missingEmail": "Adicione o mesmo email que o colega vai usar para iniciar sessão.",
                 "missingAccess": "Crie acesso para este email na Gestão de Utilizadores.",
-                "clockOnly": "Este utilizador abre o relógio de ponto e vê apenas o seu próprio horário e assiduidade.",
+                "clockOnly": "Este utilizador abre apenas o relogio de ponto e o horario de trabalho em modo so de leitura.",
                 "station": "Este login abre o seletor do tablet partilhado para que qualquer colega possa registar entradas e saídas.",
                 "privileged": "Este utilizador abre o espaço completo de gestão, incluindo horários e ferramentas de administração.",
                 "unknown": "Reveja o registo deste colega e o acesso atribuído."
@@ -420,7 +420,7 @@
             },
             "employee": {
                 "title": "Colaborador",
-                "description": "Acesso apenas de autoatendimento. Abre o relógio de ponto e a vista pessoal de assiduidade."
+                "description": "Acesso apenas de autoatendimento. Abre o relogio de ponto e o horario de trabalho em modo so de leitura."
             },
             "timeClockStation": {
                 "title": "Estação de Relógio",
@@ -600,6 +600,13 @@
             "vacationUsed": "Férias usadas",
             "vacationBalance": "Saldo de férias",
             "balanceAlerts": "Alertas de saldo"
+        },
+        "selfService": {
+            "navigationSubtitle": "Este horario de trabalho e so de leitura para os colegas.",
+            "accessBannerKicker": "Acesso de autoatendimento",
+            "accessBannerTitle": "Esta a ver o horario de trabalho em modo so de leitura.",
+            "accessBannerBody": "Alteracoes ao horario, planeamento de ferias e exportacoes continuam reservados a gestores. Use esta vista para consultar a escala viva da equipa sem abrir ferramentas de gestao.",
+            "readOnlyDayNotice": "Este detalhe diario do horario e so de leitura para contas de colaborador."
         }
     },
     "staff": {
@@ -681,10 +688,11 @@
             "stationSubtitle": "Use o tablet partilhado para escolher qualquer colega e registar turnos, pausas e saidas.",
             "clockOnlyNamedTitle": "{{name}}, registe a entrada para o seu turno",
             "clockOnlyFallbackTitle": "Registe entrada e saida do seu turno",
-            "clockOnlySubtitle": "Use o relogio de ponto digital para registar turnos, pausas e consultar o painel de ferias antes de planear ausencias.",
+            "clockOnlySubtitle": "Use o relogio de ponto digital para registar turnos, pausas e abrir o horario de trabalho em modo so de leitura quando precisar.",
             "vacationBoardDescription": "Consulte as ferias da equipa num painel apenas de leitura.",
             "backToTimeClock": "Voltar ao relogio de ponto",
-            "backToLanding": "Voltar ao inicio"
+            "backToLanding": "Voltar ao inicio",
+            "scheduleDescription": "Abrir o horario de trabalho em modo so de leitura."
         },
         "modes": {
             "selfService": "Autoatendimento",
@@ -836,7 +844,9 @@
             "addManualEvent": "Adicionar evento manual",
             "addManualEventDescription": "Use isto apenas para registos em falta ou correcoes revistas. Cada entrada manual fica marcada para revisao.",
             "correctionReasonPlaceholder": "Motivo da correcao",
-            "correctionRequirement": "Motivo obrigatorio. Use pelo menos {{count}} caracteres para que o ajuste possa ser auditado."
+            "correctionRequirement": "Motivo obrigatorio. Use pelo menos {{count}} caracteres para que o ajuste possa ser auditado.",
+            "openSchedule": "Abrir horario de trabalho",
+            "scheduleHint": "Consulte o horario de trabalho em modo so de leitura."
         },
         "print": {
             "title": "Vista de impressao da assiduidade",

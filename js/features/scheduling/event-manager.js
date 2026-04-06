@@ -182,9 +182,9 @@ export class EventManager {
                     return;
                 }
 
-                const openSharedVacationBoardButton = e.target.closest('[data-open-shared-vacation-board]');
-                if (openSharedVacationBoardButton) {
-                    document.dispatchEvent(new CustomEvent('openSharedVacationBoardRequested'));
+                const openWorkScheduleButton = e.target.closest('[data-open-work-schedule]');
+                if (openWorkScheduleButton) {
+                    document.dispatchEvent(new CustomEvent('openEmployeeScheduleRequested'));
                     return;
                 }
 

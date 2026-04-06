@@ -358,7 +358,7 @@
     "accessOverview": {
       "eyebrow": "Linking",
       "title": "Colleague Access Links",
-      "description": "This shows whether each staff profile is linked to a login, and whether that login is clock-only, shared-station, or privileged.",
+      "description": "This shows whether each staff profile is linked to a login, and whether that login is self-service, shared-station, or privileged.",
       "passwordFlow": "Password flow: create access with a temporary password, set the same email on the colleague record, then use Reset Password so the colleague chooses their own password by email.",
       "empty": "No colleagues found yet.",
       "noStaffEmail": "No email on staff record",
@@ -367,7 +367,7 @@
       "status": {
         "missingEmail": "Missing staff email",
         "missingAccess": "No app access",
-        "clockOnly": "Clock-only employee",
+        "clockOnly": "Self-service employee",
         "station": "Shared station",
         "privileged": "Privileged access",
         "unknown": "Unknown status"
@@ -375,7 +375,7 @@
       "help": {
         "missingEmail": "Add the same email the colleague will use to sign in.",
         "missingAccess": "Create access for this email in User Management.",
-        "clockOnly": "This user goes to the time clock and sees only their own schedule and attendance.",
+        "clockOnly": "This user opens only the time clock and the read-only work schedule.",
         "station": "This login opens the shared tablet picker so any colleague can clock in or out.",
         "privileged": "This user opens the full manager workspace, including scheduling and admin tools.",
         "unknown": "Review this colleague record and assigned access."
@@ -420,7 +420,7 @@
       },
       "employee": {
         "title": "Employee",
-        "description": "Self-service access only. Opens the employee time clock and personal attendance view."
+        "description": "Self-service access only. Opens the employee time clock and the read-only work schedule."
       },
       "timeClockStation": {
         "title": "Time Clock Station",
@@ -449,6 +449,13 @@
       "coverageTarget": "Coverage target",
       "notSet": "Not set",
       "clearDay": "No conflicts"
+    },
+    "selfService": {
+      "navigationSubtitle": "This work schedule is read-only for colleagues.",
+      "accessBannerKicker": "Self-service access",
+      "accessBannerTitle": "You are viewing the read-only work schedule.",
+      "accessBannerBody": "Schedule edits, leave planning, and exports stay manager-only. Use this view to check the live team rota without opening any management tools.",
+      "readOnlyDayNotice": "This daily schedule is read-only for colleague accounts."
     },
     "views": {
       "monthly": "Monthly",
@@ -681,8 +688,8 @@
       "stationSubtitle": "Use the shared tablet picker to select any colleague and record shifts, breaks, and clock-out times.",
       "clockOnlyNamedTitle": "{{name}}, clock in for your shift",
       "clockOnlyFallbackTitle": "Clock in and out for your shift",
-      "clockOnlySubtitle": "Use the digital time clock to record shifts, breaks, and check the team vacation board before planning leave.",
-      "vacationBoardDescription": "Check team vacations in a read-only board.",
+      "clockOnlySubtitle": "Use the digital time clock to record shifts, breaks, and open the read-only work schedule when you need it.",
+      "scheduleDescription": "Open the read-only work schedule.",
       "backToTimeClock": "Back to time clock",
       "backToLanding": "Back to landing"
     },
@@ -808,6 +815,8 @@
       "breakTime": "Break time",
       "openSessions": "Open sessions",
       "registerHint": "The website stores clock-in, clock-out, breaks, and manual adjustments in a weekly register that managers can review or print when needed.",
+      "openSchedule": "Open work schedule",
+      "scheduleHint": "Check the live work schedule in read-only mode.",
       "plannedScheduleKicker": "This Week",
       "plannedScheduleTitle": "Your planned schedule",
       "noLinkedSchedule": "No linked colleague schedule available yet.",
