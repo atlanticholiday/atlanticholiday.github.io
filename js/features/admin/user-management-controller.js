@@ -665,7 +665,10 @@ export class UserManagementController {
         await this.refreshUserList();
 
         if (reusedExistingAuthUser) {
-            this.setText('create-user-error', 'This login already existed in Firebase Auth, so it was added back to User Management.');
+            this.setText(
+                'create-user-error',
+                'This login already existed in Firebase Auth, so it was added back to User Management. The password entered here was not changed. Use the old password or Reset Password.'
+            );
         }
     }
 

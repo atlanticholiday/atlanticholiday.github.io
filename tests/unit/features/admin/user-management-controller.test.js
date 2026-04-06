@@ -391,6 +391,10 @@ describe("UserManagementController", () => {
       document.getElementById("create-user-error").textContent,
       "already existed in Firebase Auth"
     );
+    assert.includes(
+      document.getElementById("create-user-error").textContent,
+      "password entered here was not changed"
+    );
 
     const renderedItems = document.querySelectorAll("#user-list li");
     assert.equal(renderedItems.length, 1);
