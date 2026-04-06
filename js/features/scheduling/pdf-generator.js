@@ -1,4 +1,5 @@
 import { Config } from '../../core/config.js';
+import { getPaidShiftHours } from './shift-hours.js';
 
 // Month names in European Portuguese
 const MONTHS_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -363,26 +364,10 @@ export class PDFGenerator {
 
     calculateHoursFromShift(shift) {
         if (!shift) return 8; // Default 8 hours if no shift specified
-        
+
         try {
-            const [startTime, endTime] = shift.split('-');
-            if (!startTime || !endTime) return 8;
-            
-            const [startHour, startMin = 0] = startTime.split(':').map(num => parseInt(num));
-            const [endHour, endMin = 0] = endTime.split(':').map(num => parseInt(num));
-            
-            if (isNaN(startHour) || isNaN(endHour)) return 8;
-            
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            
-            let totalMinutes = endMinutes - startMinutes;
-            if (totalMinutes < 0) totalMinutes += 24 * 60; // Handle overnight shifts
-            
-            const totalHours = totalMinutes / 60;
-            
-            // Subtract 1 hour for lunch break if shift is longer than 6 hours
-            return totalHours > 6 ? totalHours - 1 : totalHours;
+            const totalHours = getPaidShiftHours(shift);
+            return Number.isFinite(totalHours) ? totalHours : 8;
         } catch (error) {
             console.warn('Error calculating hours from shift:', shift, error);
             return 8; // Default fallback

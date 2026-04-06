@@ -3,6 +3,7 @@ import { i18n, t } from '../../core/i18n.js';
 import { formatLocalDateTime, formatTimeLabel } from './attendance-records.js';
 import { getAttendancePrintRange, normalizeAttendancePrintMode } from './attendance-print-period.js';
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
+import { getPaidShiftHours } from './shift-hours.js';
 import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './time-clock-controls.js';
 import { filterTimeClockStationEmployees, getTimeClockStationEmployeeInitials } from './time-clock-station.js';
 import { renderMadeiraReferenceView } from './views/madeira-reference-view.js';
@@ -1056,18 +1057,9 @@ export class UIManager {
         return `${this.formatLocaleDate(startDate, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${this.formatLocaleDate(endDate, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
     }
 
-    parseShiftHours(shiftText) {
-        if (!shiftText || typeof shiftText !== 'string') return null;
-
-        const match = shiftText.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
-        if (!match) return null;
-
-        const [, startHour, startMinute, endHour, endMinute] = match;
-        const start = (parseInt(startHour, 10) * 60) + parseInt(startMinute, 10);
-        let end = (parseInt(endHour, 10) * 60) + parseInt(endMinute, 10);
-        if (end < start) end += 24 * 60;
-
-        return (end - start) / 60;
+    parsePaidShiftHours(shiftText) {
+        // Keep planned attendance totals aligned with paid hours, not the raw span.
+        return getPaidShiftHours(shiftText);
     }
 
     formatDurationHours(hours) {
@@ -2240,7 +2232,7 @@ export class UIManager {
             const dateKey = this.dataManager.getDateKey(current);
 
             const planned = this.getPlannedTimesheetStatus(employee, currentDate);
-            const plannedHours = this.parseShiftHours(planned);
+            const plannedHours = this.parsePaidShiftHours(planned);
             if (plannedHours) plannedTotalHours += plannedHours;
 
             const referenceDateTime = dateKey === this.dataManager.getDateKey(new Date())
