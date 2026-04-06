@@ -396,4 +396,55 @@ describe("UserManagementController", () => {
     assert.equal(renderedItems.length, 1);
     assert.includes(renderedItems[0].textContent, "existing@example.com");
   });
+
+  test("requests a password reset without claiming delivery", async () => {
+    createFixture();
+
+    const resetRequests = [];
+    const alerts = [];
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["ana@example.com"];
+        },
+        async getRoles() {
+          return [];
+        },
+        async setRoles() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      sendPasswordReset: async (email) => {
+        resetRequests.push(email);
+      },
+      getEmployees: () => [],
+      windowRef: {
+        alert(message) {
+          alerts.push(message);
+        },
+        confirm() {
+          return true;
+        }
+      }
+    });
+
+    await controller.refreshUserList();
+
+    const resetButton = document.querySelector("#user-list li .user-management-button-secondary");
+    resetButton.click();
+    await flushAsyncWork();
+
+    assert.deepEqual(resetRequests, ["ana@example.com"]);
+    assert.equal(alerts.length, 1);
+    assert.includes(alerts[0], "Password reset requested for ana@example.com.");
+    assert.includes(alerts[0], "If nothing arrives, check spam/quarantine");
+    assert.ok(!alerts[0].includes("Password reset email sent"));
+  });
 });

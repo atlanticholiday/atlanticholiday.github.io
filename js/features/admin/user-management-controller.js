@@ -529,7 +529,11 @@ export class UserManagementController {
         button.addEventListener('click', async () => {
             try {
                 await this.sendPasswordReset(email);
-                this.window.alert(`Password reset email sent to ${email}`);
+                this.window.alert(
+                    `Password reset requested for ${email}. `
+                    + `If this address is a Firebase email/password login and delivery is working, the email should arrive soon. `
+                    + `If nothing arrives, check spam/quarantine and verify the account plus email templates in Firebase Authentication.`
+                );
             } catch (error) {
                 console.error(error);
                 this.window.alert(`Failed to send reset email: ${error.message}`);
