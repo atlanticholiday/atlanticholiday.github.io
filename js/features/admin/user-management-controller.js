@@ -47,6 +47,10 @@ const ROLE_UI_META = Object.freeze({
     }
 });
 
+function isEmailAlreadyInUseError(error) {
+    return error?.code === 'auth/email-already-in-use';
+}
+
 export class UserManagementController {
     constructor({
         accessManager,
@@ -625,6 +629,7 @@ export class UserManagementController {
         const passwordInput = this.document.getElementById('new-user-password');
         const email = emailInput?.value.trim();
         const password = passwordInput?.value;
+        let reusedExistingAuthUser = false;
 
         this.setText('create-user-error', '');
 
@@ -638,13 +643,26 @@ export class UserManagementController {
             return;
         }
 
-        await this.createAuthUser(email, password);
+        try {
+            await this.createAuthUser(email, password);
+        } catch (error) {
+            if (!isEmailAlreadyInUseError(error)) {
+                throw error;
+            }
+
+            reusedExistingAuthUser = true;
+        }
+
         await this.accessManager.addEmail(email);
 
         if (emailInput) emailInput.value = '';
         if (passwordInput) passwordInput.value = '';
 
         await this.refreshUserList();
+
+        if (reusedExistingAuthUser) {
+            this.setText('create-user-error', 'This login already existed in Firebase Auth, so it was added back to User Management.');
+        }
     }
 
     async handleAddRole() {
@@ -677,7 +695,7 @@ export class UserManagementController {
             try {
                 await this.createAuthUser(preset.email, TEST_USER_PASSWORD);
             } catch (error) {
-                if (error?.code !== 'auth/email-already-in-use') {
+                if (!isEmailAlreadyInUseError(error)) {
                     throw error;
                 }
             }

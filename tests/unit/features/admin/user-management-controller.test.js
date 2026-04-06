@@ -340,4 +340,60 @@ describe("UserManagementController", () => {
     assert.includes(renderedItems[0].textContent, "new@example.com");
     assert.includes(renderedItems[0].textContent, "Reset Password");
   });
+
+  test("re-adds access when the auth login already exists", async () => {
+    createFixture();
+
+    const allowedEmails = [];
+    const accessManager = {
+      async listEmails() {
+        return [...allowedEmails];
+      },
+      async getRoles() {
+        return [];
+      },
+      async addEmail(email) {
+        if (!allowedEmails.includes(email)) {
+          allowedEmails.push(email);
+        }
+      },
+      async setRoles() {},
+      async removeEmail() {}
+    };
+
+    const controller = new UserManagementController({
+      accessManager,
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {
+        const error = new Error("Email already in use");
+        error.code = "auth/email-already-in-use";
+        throw error;
+      },
+      sendPasswordReset: async () => {},
+      getEmployees: () => [],
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    document.getElementById("new-user-email").value = "existing@example.com";
+    document.getElementById("new-user-password").value = "secret";
+
+    await controller.handleCreateUser();
+
+    assert.deepEqual(allowedEmails, ["existing@example.com"]);
+    assert.equal(document.getElementById("new-user-email").value, "");
+    assert.equal(document.getElementById("new-user-password").value, "");
+    assert.includes(
+      document.getElementById("create-user-error").textContent,
+      "already existed in Firebase Auth"
+    );
+
+    const renderedItems = document.querySelectorAll("#user-list li");
+    assert.equal(renderedItems.length, 1);
+    assert.includes(renderedItems[0].textContent, "existing@example.com");
+  });
 });
