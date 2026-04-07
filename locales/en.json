@@ -181,8 +181,26 @@
         "single": "Single entry",
         "batch": "Batch entry"
       },
+      "registerFilterLabel": "Show",
+      "registerSortLabel": "Order by",
+      "registerFilters": {
+        "all": "All rows",
+        "withLaundry": "With laundry",
+        "waitingLaundry": "Waiting on laundry"
+      },
+      "registerSortOptions": {
+        "dateDesc": "Newest first",
+        "dateAsc": "Oldest first",
+        "propertyAsc": "Property A-Z",
+        "propertyDesc": "Property Z-A",
+        "guestDesc": "Highest guest amount",
+        "guestAsc": "Lowest guest amount",
+        "netDesc": "Highest net",
+        "netAsc": "Lowest net"
+      },
       "storedKicker": "Stored data",
       "storedTitle": "Cleanings",
+      "storedDescription": "Use Show and Order by to focus on rows that already have laundry linked or are still waiting on laundry.",
       "empty": "No cleaning records match the current filters."
     },
     "laundryTab": {

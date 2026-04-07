@@ -7,6 +7,7 @@ import {
     createCleaningAhRecord,
     createStandaloneLaundryRecord,
     deriveCleaningAhRecords,
+    filterCleaningRegisterEntries,
     filterLaundryRegisterEntries,
     parseCleaningAhCsv,
     summarizeCleaningAhRecords,
@@ -251,5 +252,46 @@ describe("Cleaning AH utilities", () => {
         assert.equal(propertySortedEntries[2].propertyName, "Calas");
         assert.equal(amountSortedEntries[0].id, "entry-2");
         assert.equal(amountSortedEntries[2].id, "entry-3");
+    });
+
+    test("filters and sorts cleaning register entries", () => {
+        const entries = [
+            {
+                id: "cleaning-1",
+                date: "2025-11-10",
+                propertyName: "Bravo",
+                guestAmount: 120,
+                effectiveLaundryAmount: 0,
+                effectiveTotalToAh: 82
+            },
+            {
+                id: "cleaning-2",
+                date: "2025-11-12",
+                propertyName: "Acqua",
+                guestAmount: 160,
+                effectiveLaundryAmount: 26,
+                linkedLaundryCount: 1,
+                effectiveTotalToAh: 99.7
+            },
+            {
+                id: "cleaning-3",
+                date: "2025-11-11",
+                propertyName: "Calas",
+                guestAmount: 90,
+                effectiveLaundryAmount: 0,
+                effectiveTotalToAh: 61.43
+            }
+        ];
+
+        const withLaundryEntries = filterCleaningRegisterEntries(entries, { filter: "with-laundry" });
+        const propertySortedEntries = filterCleaningRegisterEntries(entries, { sort: "property-asc" });
+        const netSortedEntries = filterCleaningRegisterEntries(entries, { sort: "net-desc" });
+
+        assert.equal(withLaundryEntries.length, 1);
+        assert.equal(withLaundryEntries[0].id, "cleaning-2");
+        assert.equal(propertySortedEntries[0].propertyName, "Acqua");
+        assert.equal(propertySortedEntries[2].propertyName, "Calas");
+        assert.equal(netSortedEntries[0].id, "cleaning-2");
+        assert.equal(netSortedEntries[2].id, "cleaning-3");
     });
 });

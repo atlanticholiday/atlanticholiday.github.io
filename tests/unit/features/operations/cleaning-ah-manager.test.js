@@ -287,4 +287,74 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("renders cleaning register controls and applies cleaning register filters", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          cleanings: {
+            registerFilterLabel: "Show",
+            registerSortLabel: "Order by",
+            storedKicker: "Stored data",
+            storedTitle: "Cleanings",
+            storedDescription: "Use Show and Order by to focus on rows that already have laundry linked or are still waiting on laundry.",
+            empty: "No cleaning records match the current filters.",
+            registerFilters: {
+              all: "All rows",
+              withLaundry: "With laundry",
+              waitingLaundry: "Waiting on laundry"
+            },
+            registerSortOptions: {
+              dateDesc: "Newest first",
+              dateAsc: "Oldest first",
+              propertyAsc: "Property A-Z",
+              propertyDesc: "Property Z-A",
+              guestDesc: "Highest guest amount",
+              guestAsc: "Lowest guest amount",
+              netDesc: "Highest net",
+              netAsc: "Lowest net"
+            }
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.cleaningRegisterFilter = "waiting-laundry";
+    manager.cleaningRegisterSort = "property-asc";
+
+    const visibleEntries = manager.getVisibleCleaningRegisterEntries([
+      {
+        id: "cleaning-with-laundry",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        effectiveLaundryAmount: 13,
+        effectiveTotalToAh: 86.7
+      },
+      {
+        id: "cleaning-waiting",
+        date: "2026-04-06",
+        propertyName: "Bravo",
+        effectiveLaundryAmount: 0,
+        effectiveTotalToAh: 99.7
+      }
+    ]);
+    const controlsHtml = manager.renderCleaningRegisterControls();
+    const tabHtml = manager.renderCleaningsTab(visibleEntries);
+
+    assert.equal(visibleEntries.length, 1);
+    assert.equal(visibleEntries[0].id, "cleaning-waiting");
+    assert.includes(controlsHtml, 'id="cleaning-ah-cleaning-register-filter"');
+    assert.includes(controlsHtml, 'id="cleaning-ah-cleaning-register-sort"');
+    assert.includes(controlsHtml, "Waiting on laundry");
+    assert.includes(tabHtml, "Use Show and Order by to focus on rows that already have laundry linked or are still waiting on laundry.");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
 });

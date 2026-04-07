@@ -14,6 +14,7 @@ import {
     createCleaningAhFingerprint,
     createCleaningAhRecord,
     createStandaloneLaundryRecord,
+    filterCleaningRegisterEntries,
     filterLaundryRegisterEntries,
     parseCleaningAhCsv,
     roundCurrency,
@@ -92,6 +93,8 @@ export class CleaningAhManager {
         this.selectedMonthKey = "";
         this.selectedPropertyName = "";
         this.selectedCategory = "";
+        this.cleaningRegisterFilter = "all";
+        this.cleaningRegisterSort = "date-desc";
         this.laundryRegisterFilter = "all";
         this.laundryRegisterSort = "date-desc";
         this.openLaundryLinkEditorId = "";
@@ -624,6 +627,34 @@ export class CleaningAhManager {
         });
     }
 
+    getVisibleCleaningRegisterEntries(entries = []) {
+        return filterCleaningRegisterEntries(entries, {
+            filter: this.cleaningRegisterFilter,
+            sort: this.cleaningRegisterSort
+        });
+    }
+
+    getCleaningRegisterFilterOptions() {
+        return [
+            ["all", this.tr("cleanings.registerFilters.all")],
+            ["with-laundry", this.tr("cleanings.registerFilters.withLaundry")],
+            ["waiting-laundry", this.tr("cleanings.registerFilters.waitingLaundry")]
+        ];
+    }
+
+    getCleaningRegisterSortOptions() {
+        return [
+            ["date-desc", this.tr("cleanings.registerSortOptions.dateDesc")],
+            ["date-asc", this.tr("cleanings.registerSortOptions.dateAsc")],
+            ["property-asc", this.tr("cleanings.registerSortOptions.propertyAsc")],
+            ["property-desc", this.tr("cleanings.registerSortOptions.propertyDesc")],
+            ["guest-desc", this.tr("cleanings.registerSortOptions.guestDesc")],
+            ["guest-asc", this.tr("cleanings.registerSortOptions.guestAsc")],
+            ["net-desc", this.tr("cleanings.registerSortOptions.netDesc")],
+            ["net-asc", this.tr("cleanings.registerSortOptions.netAsc")]
+        ];
+    }
+
     getLaundryRegisterFilterOptions() {
         return [
             ["all", this.tr("laundryTab.registerFilters.all")],
@@ -835,6 +866,7 @@ export class CleaningAhManager {
         const filteredStandaloneLaundry = this.getFilteredStandaloneLaundryRecords();
         const cleaningSummary = summarizeCleaningAhRecords(filteredCleanings, filteredStandaloneLaundry);
         const derivedCleanings = cleaningSummary.records;
+        const visibleCleaningRegisterEntries = this.getVisibleCleaningRegisterEntries(derivedCleanings);
         const laundrySummary = summarizeLaundryRecords(filteredCleanings, filteredStandaloneLaundry);
         const visibleLaundryRegisterEntries = this.getVisibleLaundryRegisterEntries(laundrySummary.entries);
 
@@ -858,7 +890,7 @@ export class CleaningAhManager {
 
             ${this.renderFilters()}
             ${this.renderTabBar()}
-            ${this.renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries)}
+            ${this.renderActiveTab(visibleCleaningRegisterEntries, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries)}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
             <datalist id="cleaning-ah-category-options">${this.getKnownCategories().map((category) => `<option value="${escapeHtml(category)}"></option>`).join("")}</datalist>
         `;
@@ -979,9 +1011,9 @@ export class CleaningAhManager {
         `;
     }
 
-    renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries) {
+    renderActiveTab(visibleCleaningRegisterEntries, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries) {
         if (this.activeTab === "cleanings") {
-            return this.renderCleaningsTab(derivedCleanings);
+            return this.renderCleaningsTab(visibleCleaningRegisterEntries);
         }
 
         if (this.activeTab === "laundry") {
@@ -1086,9 +1118,11 @@ export class CleaningAhManager {
                         <div>
                             <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("cleanings.storedKicker"))}</div>
                             <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("cleanings.storedTitle"))}</h3>
+                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.storedDescription"))}</p>
                         </div>
                         <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(filteredCleanings.length))}</div>
                     </div>
+                    ${this.renderCleaningRegisterControls()}
                     <div class="mt-5 overflow-x-auto">
                         ${this.renderCleaningsTable(filteredCleanings)}
                     </div>
@@ -1369,6 +1403,32 @@ export class CleaningAhManager {
                 <label class="block">
                     <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerSortLabel"))}</span>
                     <select id="cleaning-ah-laundry-register-sort" class="mt-2 w-full">
+                        ${sortOptions}
+                    </select>
+                </label>
+            </div>
+        `;
+    }
+
+    renderCleaningRegisterControls() {
+        const filterOptions = this.getCleaningRegisterFilterOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+        const sortOptions = this.getCleaningRegisterSortOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+
+        return `
+            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerFilterLabel"))}</span>
+                    <select id="cleaning-ah-cleaning-register-filter" class="mt-2 w-full">
+                        ${filterOptions}
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerSortLabel"))}</span>
+                    <select id="cleaning-ah-cleaning-register-sort" class="mt-2 w-full">
                         ${sortOptions}
                     </select>
                 </label>
@@ -1770,6 +1830,14 @@ export class CleaningAhManager {
         });
         document.getElementById("cleaning-ah-category-filter")?.addEventListener("change", (event) => {
             this.selectedCategory = event.target.value || "";
+            this.render();
+        });
+        document.getElementById("cleaning-ah-cleaning-register-filter")?.addEventListener("change", (event) => {
+            this.cleaningRegisterFilter = event.target.value || "all";
+            this.render();
+        });
+        document.getElementById("cleaning-ah-cleaning-register-sort")?.addEventListener("change", (event) => {
+            this.cleaningRegisterSort = event.target.value || "date-desc";
             this.render();
         });
         document.getElementById("cleaning-ah-laundry-register-filter")?.addEventListener("change", (event) => {

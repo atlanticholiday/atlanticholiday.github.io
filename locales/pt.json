@@ -181,8 +181,26 @@
                 "single": "Registo unico",
                 "batch": "Registo em lote"
             },
+            "registerFilterLabel": "Mostrar",
+            "registerSortLabel": "Ordenar por",
+            "registerFilters": {
+                "all": "Todas as linhas",
+                "withLaundry": "Com lavandaria",
+                "waitingLaundry": "A aguardar lavandaria"
+            },
+            "registerSortOptions": {
+                "dateDesc": "Mais recentes primeiro",
+                "dateAsc": "Mais antigas primeiro",
+                "propertyAsc": "Propriedade A-Z",
+                "propertyDesc": "Propriedade Z-A",
+                "guestDesc": "Maior valor hospede",
+                "guestAsc": "Menor valor hospede",
+                "netDesc": "Maior liquido",
+                "netAsc": "Menor liquido"
+            },
             "storedKicker": "Dados guardados",
             "storedTitle": "Limpezas",
+            "storedDescription": "Use Mostrar e Ordenar por para focar linhas que ja tem lavandaria associada ou que ainda estao a aguardar lavandaria.",
             "empty": "Nenhum registo de limpeza corresponde aos filtros atuais."
         },
         "laundryTab": {
