@@ -119,7 +119,7 @@
         "formula": {
             "kicker": "Formula",
             "title": "Registo rapido com uma unica regra de receita.",
-            "body": "As reservas de plataforma usam 15,5% de comissao e 22% de IVA extraido. As reservas diretas definem a comissao da plataforma como zero. A lavandaria continua a ser associada mais tarde a 2,10 EUR por kg."
+            "body": "As reservas de plataforma usam 15,5% de comissao e 22% de IVA extraido. As reservas diretas definem a comissao da plataforma como zero. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
         },
         "tabs": {
             "dashboard": "Painel",
@@ -181,9 +181,36 @@
             "editTitle": "Editar registo de lavandaria",
             "addTitle": "Adicionar registo de lavandaria",
             "description": "Use isto quando a lavandaria precisa de ser controlada separadamente de uma limpeza de check-out. O valor e calculado automaticamente como quilos multiplicados pelo preco definido abaixo.",
+            "vatNote": "Os precos e valores de lavandaria mostrados aqui nao incluem 22% de IVA.",
+            "batchTitle": "Adicionar varios registos de lavandaria",
+            "batchDescription": "Use uma data partilhada e um preco por kg partilhado para guardar varias linhas de lavandaria de uma vez. E mais rapido quando tem muitas propriedades no mesmo dia.",
+            "batchDate": "Data para todas as linhas",
+            "batchRatePerKg": "Preco / kg para todas as linhas",
+            "batchHint": "Use o registo em lote para lavandaria do mesmo dia em varias propriedades. Se for preciso, pode associar as linhas as limpezas mais tarde.",
             "activityKicker": "Atividade de lavandaria",
             "activityTitle": "Registo combinado de lavandaria",
-            "empty": "Nenhum registo de lavandaria corresponde aos filtros atuais."
+            "empty": "Nenhum registo de lavandaria corresponde aos filtros atuais.",
+            "entryModes": {
+                "single": "Registo unico",
+                "batch": "Registo em lote"
+            },
+            "registerFilterLabel": "Mostrar",
+            "registerSortLabel": "Ordenar por",
+            "registerFilters": {
+                "all": "Todas as linhas",
+                "linked": "Associadas a limpeza",
+                "unlinked": "Nao associadas"
+            },
+            "registerSortOptions": {
+                "dateDesc": "Mais recentes primeiro",
+                "dateAsc": "Mais antigas primeiro",
+                "propertyAsc": "Propriedade A-Z",
+                "propertyDesc": "Propriedade Z-A",
+                "kgDesc": "Maior kg",
+                "kgAsc": "Menor kg",
+                "amountDesc": "Maior valor",
+                "amountAsc": "Menor valor"
+            }
         },
         "forms": {
             "date": "Data",
@@ -226,6 +253,7 @@
             "actions": "Acoes",
             "linkedCleaning": "Limpeza associada",
             "kg": "Kg",
+            "ratePerKg": "Preco / kg",
             "amount": "Valor",
             "month": "Mes",
             "count": "Contagem",
@@ -252,8 +280,14 @@
             "saveChanges": "Guardar alteracoes",
             "saveCleaning": "Guardar limpeza",
             "saveLaundry": "Guardar lavandaria",
+            "saveLaundryBatch": "Guardar todas as linhas",
+            "saveLink": "Guardar associacao",
+            "linkCleaning": "Associar limpeza",
+            "changeLink": "Alterar associacao",
             "reset": "Repor",
-            "openCleaning": "Abrir limpeza"
+            "openCleaning": "Abrir limpeza",
+            "addRow": "Adicionar linha",
+            "removeRow": "Remover linha"
         },
         "counts": {
             "rows": {
@@ -286,6 +320,12 @@
             "laundryUpdated": "Registo de lavandaria atualizado.",
             "laundrySaved": "Registo de lavandaria guardado.",
             "laundrySaveFailed": "Nao foi possivel guardar o registo de lavandaria.",
+            "laundryBatchValidationError": "Introduza a data e complete a propriedade e os kg em cada linha de lavandaria que pretende guardar.",
+            "laundryBatchSaved": "Foram guardadas {{count}} linhas de lavandaria.",
+            "laundryBatchSaveFailed": "Nao foi possivel guardar as linhas de lavandaria.",
+            "laundryLinkSaved": "Associacao da lavandaria atualizada.",
+            "laundryLinkCleared": "Associacao da lavandaria removida.",
+            "laundryLinkSaveFailed": "Nao foi possivel atualizar a associacao da lavandaria.",
             "csvPreviewReady": "Foram analisadas {{count}} linhas do CSV. Reveja a pre-visualizacao antes de importar.",
             "csvPreviewFailed": "A pre-visualizacao do CSV falhou. Verifique o formato do ficheiro e tente novamente.",
             "noNewRowsToImport": "Nao existem novas linhas para importar.",

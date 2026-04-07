@@ -74,4 +74,120 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("builds a batch laundry preview with the shared default kg rate", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    manager.laundryBatchDraft = {
+      date: "2026-04-07",
+      laundryRatePerKg: "",
+      rows: [
+        manager.createLaundryBatchRow({ propertyName: "Acqua Beach", kg: "5", notes: "" }),
+        manager.createLaundryBatchRow({ propertyName: "", kg: "2", notes: "" })
+      ]
+    };
+
+    const preview = manager.getLaundryBatchPreview();
+
+    assert.equal(preview.count, 1);
+    assert.equal(preview.kg, 5);
+    assert.equal(preview.amount, 13);
+
+    resetDom();
+  });
+
+  test("renders quick link controls for standalone laundry rows in the register", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        common: {
+          cancel: "Cancel"
+        },
+        cleaningAh: {
+          actions: {
+            linkCleaning: "Link cleaning",
+            changeLink: "Change link",
+            saveLink: "Save link"
+          },
+          tables: {
+            linkedCleaning: "Linked cleaning"
+          },
+          forms: {
+            noLinkedCleaning: "No linked cleaning"
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-1",
+        date: "2026-04-06",
+        propertyName: "Acqua Beach",
+        category: "Limpeza check-out",
+        laundryAmount: 0
+      }
+    ];
+
+    const collapsedHtml = manager.renderLaundryTable([
+      {
+        id: "laundry-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        linkedCleaningId: "",
+        linkedCleaningDate: "",
+        linkedCleaningCategory: "",
+        kg: 5,
+        laundryRatePerKg: 2.6,
+        amount: 13,
+        notes: "",
+        source: "standalone"
+      }
+    ]);
+    manager.openLaundryLinkEditorId = "laundry-1";
+    const standaloneHtml = manager.renderLaundryTable([
+      {
+        id: "laundry-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        linkedCleaningId: "",
+        linkedCleaningDate: "",
+        linkedCleaningCategory: "",
+        kg: 5,
+        laundryRatePerKg: 2.6,
+        amount: 13,
+        notes: "",
+        source: "standalone"
+      }
+    ]);
+    const cleaningHtml = manager.renderLaundryTable([
+      {
+        id: "cleaning-embedded",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        linkedCleaningId: "cleaning-1",
+        linkedCleaningDate: "2026-04-06",
+        linkedCleaningCategory: "Limpeza check-out",
+        kg: 5,
+        laundryRatePerKg: 2.6,
+        amount: 13,
+        notes: "",
+        source: "cleaning"
+      }
+    ]);
+
+    assert.includes(collapsedHtml, 'data-action="toggle-laundry-link-editor"');
+    assert.includes(standaloneHtml, 'data-action="save-laundry-link"');
+    assert.includes(standaloneHtml, 'data-laundry-link-select');
+    assert.equal(cleaningHtml.includes('data-action="save-laundry-link"'), false);
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
 });

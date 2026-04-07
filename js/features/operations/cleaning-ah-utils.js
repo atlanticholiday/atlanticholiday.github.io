@@ -2,7 +2,7 @@ export const CLEANING_AH_DEFAULTS = Object.freeze({
     platformCommissionRate: 0.155,
     vatRate: 0.22,
     vatMode: 'extract',
-    laundryRatePerKg: 2.1,
+    laundryRatePerKg: 2.6,
     suppliesCost: 0
 });
 
@@ -660,4 +660,75 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
             return left.label.localeCompare(right.label);
         })
     };
+}
+
+function compareLaundryEntryDatesDescending(left, right) {
+    return String(right.date || '').localeCompare(String(left.date || ''));
+}
+
+function compareLaundryEntryProperties(left, right) {
+    return normalizeGroupingKey(left.propertyName).localeCompare(normalizeGroupingKey(right.propertyName));
+}
+
+function compareLaundryEntryNumbers(leftValue, rightValue) {
+    return leftValue - rightValue;
+}
+
+export function filterLaundryRegisterEntries(entries = [], options = {}) {
+    const filter = options.filter || 'all';
+    const sort = options.sort || 'date-desc';
+
+    const filteredEntries = entries.filter((entry) => {
+        const hasLinkedCleaning = normalizeLabel(entry.linkedCleaningId) !== '';
+
+        if (filter === 'linked') {
+            return hasLinkedCleaning;
+        }
+
+        if (filter === 'unlinked') {
+            return !hasLinkedCleaning;
+        }
+
+        return true;
+    });
+
+    return [...filteredEntries].sort((left, right) => {
+        if (sort === 'date-asc') {
+            return String(left.date || '').localeCompare(String(right.date || ''))
+                || compareLaundryEntryProperties(left, right);
+        }
+
+        if (sort === 'property-asc') {
+            return compareLaundryEntryProperties(left, right)
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'property-desc') {
+            return compareLaundryEntryProperties(right, left)
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'kg-desc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(right.kg, 0), toFiniteNumber(left.kg, 0))
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'kg-asc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(left.kg, 0), toFiniteNumber(right.kg, 0))
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'amount-desc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(right.amount, 0), toFiniteNumber(left.amount, 0))
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'amount-asc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(left.amount, 0), toFiniteNumber(right.amount, 0))
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        return compareLaundryEntryDatesDescending(left, right)
+            || compareLaundryEntryProperties(left, right);
+    });
 }

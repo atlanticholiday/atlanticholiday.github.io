@@ -119,7 +119,7 @@
     "formula": {
       "kicker": "Formula",
       "title": "Fast entry with one revenue rule.",
-      "body": "Platform reservations use 15.5% commission and 22% extracted VAT. Direct reservations set platform commission to zero. Laundry still links later at 2.10 EUR per kg."
+      "body": "Platform reservations use 15.5% commission and 22% extracted VAT. Direct reservations set platform commission to zero. Laundry still links later at 2.60 EUR per kg."
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -181,9 +181,36 @@
       "editTitle": "Edit laundry record",
       "addTitle": "Add laundry record",
       "description": "Use this when laundry needs to be tracked separately from a checkout cleaning. Amount is calculated automatically as kilograms multiplied by the rate you set below.",
+      "vatNote": "Laundry prices and amounts shown here do not include 22% VAT.",
+      "batchTitle": "Add multiple laundry records",
+      "batchDescription": "Use one shared date and one shared rate per kg to save several laundry rows at once. This is faster when you have many properties on the same day.",
+      "batchDate": "Date for all rows",
+      "batchRatePerKg": "Rate / kg for all rows",
+      "batchHint": "Use batch entry for same-day laundry across many properties. If needed, you can link rows to cleanings later.",
       "activityKicker": "Laundry activity",
       "activityTitle": "Combined laundry register",
-      "empty": "No laundry records match the current filters."
+      "empty": "No laundry records match the current filters.",
+      "entryModes": {
+        "single": "Single entry",
+        "batch": "Batch entry"
+      },
+      "registerFilterLabel": "Show",
+      "registerSortLabel": "Order by",
+      "registerFilters": {
+        "all": "All rows",
+        "linked": "Linked to cleaning",
+        "unlinked": "Not linked"
+      },
+      "registerSortOptions": {
+        "dateDesc": "Newest first",
+        "dateAsc": "Oldest first",
+        "propertyAsc": "Property A-Z",
+        "propertyDesc": "Property Z-A",
+        "kgDesc": "Highest kg",
+        "kgAsc": "Lowest kg",
+        "amountDesc": "Highest amount",
+        "amountAsc": "Lowest amount"
+      }
     },
     "forms": {
       "date": "Date",
@@ -226,6 +253,7 @@
       "actions": "Actions",
       "linkedCleaning": "Linked cleaning",
       "kg": "Kg",
+      "ratePerKg": "Rate / kg",
       "amount": "Amount",
       "month": "Month",
       "count": "Count",
@@ -252,8 +280,14 @@
       "saveChanges": "Save changes",
       "saveCleaning": "Save cleaning",
       "saveLaundry": "Save laundry",
+      "saveLaundryBatch": "Save all rows",
+      "saveLink": "Save link",
+      "linkCleaning": "Link cleaning",
+      "changeLink": "Change link",
       "reset": "Reset",
-      "openCleaning": "Open cleaning"
+      "openCleaning": "Open cleaning",
+      "addRow": "Add row",
+      "removeRow": "Remove row"
     },
     "counts": {
       "rows": {
@@ -286,6 +320,12 @@
       "laundryUpdated": "Laundry record updated.",
       "laundrySaved": "Laundry record saved.",
       "laundrySaveFailed": "Laundry record could not be saved.",
+      "laundryBatchValidationError": "Enter a date and complete property plus kg for each laundry row you want to save.",
+      "laundryBatchSaved": "Saved {{count}} laundry rows.",
+      "laundryBatchSaveFailed": "Laundry rows could not be saved.",
+      "laundryLinkSaved": "Laundry link updated.",
+      "laundryLinkCleared": "Laundry link cleared.",
+      "laundryLinkSaveFailed": "Laundry link could not be updated.",
       "csvPreviewReady": "Parsed {{count}} CSV rows. Review the preview before importing.",
       "csvPreviewFailed": "CSV preview failed. Check the file format and try again.",
       "noNewRowsToImport": "There are no new rows to import.",

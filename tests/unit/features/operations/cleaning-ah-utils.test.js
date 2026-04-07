@@ -7,6 +7,7 @@ import {
     createCleaningAhRecord,
     createStandaloneLaundryRecord,
     deriveCleaningAhRecords,
+    filterLaundryRegisterEntries,
     parseCleaningAhCsv,
     summarizeCleaningAhRecords,
     summarizeLaundryRecords
@@ -22,8 +23,8 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.platformCommission, 18.6);
         assert.equal(result.vatAmount, 21.64);
         assert.equal(result.totalToAhWithoutLaundry, 79.76);
-        assert.equal(result.laundryAmount, 21);
-        assert.equal(result.totalToAh, 58.76);
+        assert.equal(result.laundryAmount, 26);
+        assert.equal(result.totalToAh, 53.76);
     });
 
     test("sets platform commission to zero for direct reservations", () => {
@@ -102,9 +103,9 @@ describe("Cleaning AH utilities", () => {
 
         const derived = deriveCleaningAhRecords(records, standaloneLaundry);
 
-        assert.equal(derived[0].linkedLaundryAmount, 25.2);
-        assert.equal(derived[0].effectiveLaundryAmount, 25.2);
-        assert.equal(derived[0].effectiveTotalToAh, 54.56);
+        assert.equal(derived[0].linkedLaundryAmount, 31.2);
+        assert.equal(derived[0].effectiveLaundryAmount, 31.2);
+        assert.equal(derived[0].effectiveTotalToAh, 48.56);
     });
 
     test("creates standalone laundry records with a custom rate per kg", () => {
@@ -164,7 +165,7 @@ describe("Cleaning AH utilities", () => {
         assert.equal(summary.byMonth.length, 2);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
         assert.equal(summary.byCategory[0].label, "Limpeza check-out");
-        assert.equal(summary.records[1].effectiveLaundryAmount, 25.2);
+        assert.equal(summary.records[1].effectiveLaundryAmount, 31.2);
     });
 
     test("combines cleaning laundry with standalone laundry entries", () => {
@@ -204,11 +205,51 @@ describe("Cleaning AH utilities", () => {
         const summary = summarizeLaundryRecords(cleaningRecords, standaloneLaundry);
 
         assert.equal(summary.totals.count, 3);
-        assert.equal(summary.totals.amount, 54.6);
+        assert.equal(summary.totals.amount, 61.6);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
         assert.equal(summary.entries[0].date, "2025-11-13");
         assert.equal(summary.entries[0].id, "linked-laundry");
         assert.equal(summary.entries[0].propertyName, "Acqua Beach");
         assert.equal(summary.entries[1].id, "standalone-laundry");
+    });
+
+    test("filters and sorts combined laundry register entries", () => {
+        const entries = [
+            {
+                id: "entry-1",
+                date: "2025-11-10",
+                propertyName: "Bravo",
+                linkedCleaningId: "",
+                kg: 4,
+                amount: 10.4
+            },
+            {
+                id: "entry-2",
+                date: "2025-11-12",
+                propertyName: "Acqua",
+                linkedCleaningId: "cleaning-2",
+                kg: 7,
+                amount: 18.2
+            },
+            {
+                id: "entry-3",
+                date: "2025-11-11",
+                propertyName: "Calas",
+                linkedCleaningId: "",
+                kg: 3,
+                amount: 7.8
+            }
+        ];
+
+        const linkedEntries = filterLaundryRegisterEntries(entries, { filter: "linked" });
+        const propertySortedEntries = filterLaundryRegisterEntries(entries, { sort: "property-asc" });
+        const amountSortedEntries = filterLaundryRegisterEntries(entries, { sort: "amount-desc" });
+
+        assert.equal(linkedEntries.length, 1);
+        assert.equal(linkedEntries[0].id, "entry-2");
+        assert.equal(propertySortedEntries[0].propertyName, "Acqua");
+        assert.equal(propertySortedEntries[2].propertyName, "Calas");
+        assert.equal(amountSortedEntries[0].id, "entry-2");
+        assert.equal(amountSortedEntries[2].id, "entry-3");
     });
 });

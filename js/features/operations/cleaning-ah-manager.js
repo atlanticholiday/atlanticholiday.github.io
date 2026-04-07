@@ -14,6 +14,7 @@ import {
     createCleaningAhFingerprint,
     createCleaningAhRecord,
     createStandaloneLaundryRecord,
+    filterLaundryRegisterEntries,
     parseCleaningAhCsv,
     roundCurrency,
     summarizeCleaningAhRecords,
@@ -91,11 +92,17 @@ export class CleaningAhManager {
         this.selectedMonthKey = "";
         this.selectedPropertyName = "";
         this.selectedCategory = "";
+        this.laundryRegisterFilter = "all";
+        this.laundryRegisterSort = "date-desc";
+        this.openLaundryLinkEditorId = "";
 
         this.editingCleaningId = null;
         this.editingLaundryId = null;
+        this.laundryEntryMode = "single";
+        this.nextLaundryBatchRowId = 0;
         this.cleaningDraft = this.createDefaultCleaningDraft();
         this.laundryDraft = this.createDefaultLaundryDraft();
+        this.laundryBatchDraft = this.createDefaultLaundryBatchDraft();
 
         this.importPreview = null;
         this.statusMessage = "";
@@ -195,6 +202,24 @@ export class CleaningAhManager {
             kg: "",
             laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: ""
+        };
+    }
+
+    createLaundryBatchRow(overrides = {}) {
+        return {
+            rowId: `laundry-batch-row-${this.nextLaundryBatchRowId += 1}`,
+            propertyName: "",
+            kg: "",
+            notes: "",
+            ...overrides
+        };
+    }
+
+    createDefaultLaundryBatchDraft() {
+        return {
+            date: getTodayIsoDate(),
+            laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
+            rows: [this.createLaundryBatchRow()]
         };
     }
 
@@ -453,12 +478,22 @@ export class CleaningAhManager {
         return [...monthKeys].sort((left, right) => left.localeCompare(right));
     }
 
-    getLaundryLinkOptions(currentLinkedCleaningId = "") {
+    getLaundryLinkOptions(currentLinkedCleaningId = "", preferredPropertyName = "") {
+        const normalizedPreferredProperty = normalizeKey(preferredPropertyName);
         return [...this.cleaningRecords]
             .filter((record) => {
                 return record.id === currentLinkedCleaningId || roundCurrency(record.laundryAmount || 0) <= 0;
             })
-            .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+            .sort((left, right) => {
+                const leftMatchesProperty = normalizedPreferredProperty && normalizeKey(left.propertyName) === normalizedPreferredProperty;
+                const rightMatchesProperty = normalizedPreferredProperty && normalizeKey(right.propertyName) === normalizedPreferredProperty;
+
+                if (leftMatchesProperty !== rightMatchesProperty) {
+                    return leftMatchesProperty ? -1 : 1;
+                }
+
+                return String(right.date || "").localeCompare(String(left.date || ""));
+            });
     }
 
     getCleaningLinkLabel(record) {
@@ -515,6 +550,88 @@ export class CleaningAhManager {
         });
     }
 
+    getVisibleLaundryRegisterEntries(entries = []) {
+        return filterLaundryRegisterEntries(entries, {
+            filter: this.laundryRegisterFilter,
+            sort: this.laundryRegisterSort
+        });
+    }
+
+    getLaundryRegisterFilterOptions() {
+        return [
+            ["all", this.tr("laundryTab.registerFilters.all")],
+            ["linked", this.tr("laundryTab.registerFilters.linked")],
+            ["unlinked", this.tr("laundryTab.registerFilters.unlinked")]
+        ];
+    }
+
+    getLaundryRegisterSortOptions() {
+        return [
+            ["date-desc", this.tr("laundryTab.registerSortOptions.dateDesc")],
+            ["date-asc", this.tr("laundryTab.registerSortOptions.dateAsc")],
+            ["property-asc", this.tr("laundryTab.registerSortOptions.propertyAsc")],
+            ["property-desc", this.tr("laundryTab.registerSortOptions.propertyDesc")],
+            ["kg-desc", this.tr("laundryTab.registerSortOptions.kgDesc")],
+            ["kg-asc", this.tr("laundryTab.registerSortOptions.kgAsc")],
+            ["amount-desc", this.tr("laundryTab.registerSortOptions.amountDesc")],
+            ["amount-asc", this.tr("laundryTab.registerSortOptions.amountAsc")]
+        ];
+    }
+
+    getLaundryBatchPreview(draft = this.laundryBatchDraft) {
+        const laundryRatePerKg = toOptionalNumber(draft?.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+
+        return (draft?.rows || []).reduce((summary, row) => {
+            const propertyName = normalizeLabel(row?.propertyName);
+            const kg = toOptionalNumber(row?.kg);
+            if (!propertyName || kg === null || kg <= 0) {
+                return summary;
+            }
+
+            const record = createStandaloneLaundryRecord({
+                date: draft?.date,
+                propertyName,
+                kg,
+                laundryRatePerKg
+            });
+
+            return {
+                count: summary.count + 1,
+                kg: roundCurrency(summary.kg + record.kg),
+                amount: roundCurrency(summary.amount + record.amount),
+                laundryRatePerKg
+            };
+        }, {
+            count: 0,
+            kg: 0,
+            amount: 0,
+            laundryRatePerKg
+        });
+    }
+
+    renderLaundryEntryModeSwitcher() {
+        if (this.editingLaundryId) {
+            return "";
+        }
+
+        const modes = [
+            ["single", this.tr("laundryTab.entryModes.single")],
+            ["batch", this.tr("laundryTab.entryModes.batch")]
+        ];
+
+        return `
+            <div class="mt-4 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
+                ${modes.map(([mode, label]) => `
+                    <button
+                        type="button"
+                        data-laundry-entry-mode="${mode}"
+                        class="rounded-full px-3 py-1.5 text-sm font-medium transition ${this.laundryEntryMode === mode ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-white"}"
+                    >${escapeHtml(label)}</button>
+                `).join("")}
+            </div>
+        `;
+    }
+
     render() {
         const root = document.getElementById("cleaning-ah-root");
         if (!root) return;
@@ -537,6 +654,7 @@ export class CleaningAhManager {
         const cleaningSummary = summarizeCleaningAhRecords(filteredCleanings, filteredStandaloneLaundry);
         const derivedCleanings = cleaningSummary.records;
         const laundrySummary = summarizeLaundryRecords(filteredCleanings, filteredStandaloneLaundry);
+        const visibleLaundryRegisterEntries = this.getVisibleLaundryRegisterEntries(laundrySummary.entries);
 
         root.innerHTML = `
             ${this.renderStatusMessage()}
@@ -558,7 +676,7 @@ export class CleaningAhManager {
 
             ${this.renderFilters()}
             ${this.renderTabBar()}
-            ${this.renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary)}
+            ${this.renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries)}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
             <datalist id="cleaning-ah-category-options">${this.getKnownCategories().map((category) => `<option value="${escapeHtml(category)}"></option>`).join("")}</datalist>
         `;
@@ -566,6 +684,7 @@ export class CleaningAhManager {
         this.bindUiEvents();
         this.updateCleaningPreview();
         this.updateLaundryPreview();
+        this.updateLaundryBatchPreview();
     }
 
     renderStatusMessage() {
@@ -677,13 +796,13 @@ export class CleaningAhManager {
         `;
     }
 
-    renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary) {
+    renderActiveTab(derivedCleanings, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries) {
         if (this.activeTab === "cleanings") {
             return this.renderCleaningsTab(derivedCleanings);
         }
 
         if (this.activeTab === "laundry") {
-            return this.renderLaundryTab(filteredStandaloneLaundry, laundrySummary);
+            return this.renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries);
         }
 
         return this.renderDashboardTab(cleaningSummary, laundrySummary);
@@ -815,10 +934,11 @@ export class CleaningAhManager {
         `;
     }
 
-    renderLaundryTab(filteredStandaloneLaundry, laundrySummary) {
+    renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries) {
         const draft = this.laundryDraft;
+        const isBatchMode = !this.editingLaundryId && this.laundryEntryMode === "batch";
         const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === draft.linkedCleaningId) || null;
-        const preview = createStandaloneLaundryRecord({
+        const singlePreview = createStandaloneLaundryRecord({
             date: draft.date,
             propertyName: linkedCleaning?.propertyName || draft.propertyName,
             linkedCleaningId: draft.linkedCleaningId,
@@ -826,7 +946,8 @@ export class CleaningAhManager {
             laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: draft.notes
         });
-        const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId)
+        const batchPreview = this.getLaundryBatchPreview();
+        const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId, linkedCleaning?.propertyName || draft.propertyName)
             .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === draft.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkLabel(record))}</option>`)
             .join("");
 
@@ -837,50 +958,25 @@ export class CleaningAhManager {
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("laundryTab.entryKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingLaundryId ? this.tr("laundryTab.editTitle") : this.tr("laundryTab.addTitle"))}</h3>
-                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.description"))}</p>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingLaundryId ? this.tr("laundryTab.editTitle") : isBatchMode ? this.tr("laundryTab.batchTitle") : this.tr("laundryTab.addTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isBatchMode ? this.tr("laundryTab.batchDescription") : this.tr("laundryTab.description"))}</p>
+                                <p class="mt-1 text-xs font-medium text-amber-700">${escapeHtml(this.tr("laundryTab.vatNote"))}</p>
+                                ${this.renderLaundryEntryModeSwitcher()}
                             </div>
                             <div class="flex flex-wrap gap-3 xl:justify-end">
                                 ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
-                                <button type="submit" form="cleaning-ah-laundry-form" class="view-btn active">${escapeHtml(this.editingLaundryId ? this.tr("actions.saveChanges") : this.tr("actions.saveLaundry"))}</button>
-                                <button type="button" id="cleaning-ah-reset-laundry-form" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
+                                <button type="submit" form="${isBatchMode ? "cleaning-ah-laundry-batch-form" : "cleaning-ah-laundry-form"}" class="view-btn active">${escapeHtml(this.editingLaundryId ? this.tr("actions.saveChanges") : isBatchMode ? this.tr("actions.saveLaundryBatch") : this.tr("actions.saveLaundry"))}</button>
+                                <button type="button" id="${isBatchMode ? "cleaning-ah-reset-laundry-batch-form" : "cleaning-ah-reset-laundry-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
                             </div>
                         </div>
-                        <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
-                                    <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
-                                </label>
-                                <label class="block md:col-span-2 lg:col-span-3">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.linkedCleaning"))}</span>
-                                    <select name="linkedCleaningId" id="cleaning-ah-linked-cleaning" class="mt-1 w-full">
-                                        <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
-                                        ${linkOptions}
-                                    </select>
-                                    <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.linkedCleaningHint"))}</div>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
-                                    <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(linkedCleaning?.propertyName || draft.propertyName)}" list="cleaning-ah-property-options" ${linkedCleaning ? "readonly" : ""} required>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
-                                    <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
-                                    <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
-                                </label>
-                            </div>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
-                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
-                            </label>
-                            <div id="cleaning-ah-laundry-preview">
-                                ${this.renderLaundryPreview(preview)}
-                            </div>
-                        </form>
+                        ${isBatchMode
+                            ? this.renderLaundryBatchForm(batchPreview)
+                            : this.renderLaundrySingleForm({
+                                draft,
+                                linkedCleaning,
+                                linkOptions,
+                                preview: singlePreview
+                            })}
                     </section>
                     ${this.renderLaundrySummaryBlock(laundrySummary)}
                 </div>
@@ -891,13 +987,137 @@ export class CleaningAhManager {
                             <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("laundryTab.activityKicker"))}</div>
                             <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("laundryTab.activityTitle"))}</h3>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.entries.length))}</div>
+                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(visibleLaundryRegisterEntries.length))}</div>
                     </div>
+                    ${this.renderLaundryRegisterControls()}
                     <div class="mt-5 overflow-x-auto">
-                        ${this.renderLaundryTable(laundrySummary.entries, filteredStandaloneLaundry)}
+                        ${this.renderLaundryTable(visibleLaundryRegisterEntries)}
                     </div>
                 </section>
             </section>
+        `;
+    }
+
+    renderLaundrySingleForm({ draft, linkedCleaning, linkOptions, preview }) {
+        return `
+            <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
+                        <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
+                    </label>
+                    <label class="block md:col-span-2 lg:col-span-3">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.linkedCleaning"))}</span>
+                        <select name="linkedCleaningId" id="cleaning-ah-linked-cleaning" class="mt-1 w-full">
+                            <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
+                            ${linkOptions}
+                        </select>
+                        <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.linkedCleaningHint"))}</div>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
+                        <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(linkedCleaning?.propertyName || draft.propertyName)}" list="cleaning-ah-property-options" ${linkedCleaning ? "readonly" : ""} required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
+                        <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
+                        <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
+                    </label>
+                </div>
+                <label class="block">
+                    <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
+                    <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
+                </label>
+                <div id="cleaning-ah-laundry-preview">
+                    ${this.renderLaundryPreview(preview)}
+                </div>
+            </form>
+        `;
+    }
+
+    renderLaundryBatchForm(preview) {
+        const rows = this.laundryBatchDraft.rows.length
+            ? this.laundryBatchDraft.rows
+            : [this.createLaundryBatchRow()];
+
+        return `
+            <form id="cleaning-ah-laundry-batch-form" class="mt-5 space-y-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.batchDate"))}</span>
+                        <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(this.laundryBatchDraft.date)}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.batchRatePerKg"))}</span>
+                        <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(this.laundryBatchDraft.laundryRatePerKg))}" required>
+                    </label>
+                </div>
+                <div class="rounded-2xl border border-slate-200">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_120px_minmax(0,1fr)_auto] md:gap-3">
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
+                    </div>
+                    <div class="divide-y divide-slate-200">
+                        ${rows.map((row, index) => `
+                            <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_120px_minmax(0,1fr)_auto] md:items-start" data-laundry-batch-row="${escapeHtml(row.rowId)}">
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
+                                    <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
+                                    <input type="number" name="kg" class="w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(row.kg))}" placeholder="0">
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(t("common.notes"))}</span>
+                                    <input type="text" name="notes" class="w-full" value="${escapeHtml(row.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
+                                </label>
+                                <div class="flex items-center justify-end md:pt-0.5">
+                                    <button type="button" data-action="remove-laundry-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(this.tr("actions.removeRow"))}</button>
+                                </div>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-slate-500">${escapeHtml(this.tr("laundryTab.batchHint"))}</p>
+                    <button type="button" id="cleaning-ah-add-laundry-batch-row" class="view-btn">${escapeHtml(this.tr("actions.addRow"))}</button>
+                </div>
+                <div id="cleaning-ah-laundry-batch-preview">
+                    ${this.renderLaundryBatchPreview(preview)}
+                </div>
+            </form>
+        `;
+    }
+
+    renderLaundryRegisterControls() {
+        const filterOptions = this.getLaundryRegisterFilterOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+        const sortOptions = this.getLaundryRegisterSortOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+
+        return `
+            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerFilterLabel"))}</span>
+                    <select id="cleaning-ah-laundry-register-filter" class="mt-2 w-full">
+                        ${filterOptions}
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerSortLabel"))}</span>
+                    <select id="cleaning-ah-laundry-register-sort" class="mt-2 w-full">
+                        ${sortOptions}
+                    </select>
+                </label>
+            </div>
         `;
     }
 
@@ -925,6 +1145,58 @@ export class CleaningAhManager {
                     ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(previewRecord.kg))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.ratePerKg"), this.formatCurrency(previewRecord.laundryRatePerKg))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(previewRecord.amount), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderLaundryBatchPreview(preview) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(preview.kg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(preview.amount), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderLaundryQuickLinkControls(entry) {
+        if (entry.source === "cleaning") {
+            return "";
+        }
+
+        const isOpen = this.openLaundryLinkEditorId === entry.id;
+        const actionLabel = isOpen
+            ? t("common.cancel")
+            : (entry.linkedCleaningId ? this.tr("actions.changeLink") : this.tr("actions.linkCleaning"));
+
+        if (!isOpen) {
+            return `
+                <button type="button" data-action="toggle-laundry-link-editor" data-id="${escapeHtml(entry.id || "")}" class="mt-1 text-xs font-medium text-sky-600 hover:text-sky-800">
+                    ${escapeHtml(actionLabel)}
+                </button>
+            `;
+        }
+
+        const linkOptions = this.getLaundryLinkOptions(entry.linkedCleaningId, entry.propertyName)
+            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === entry.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkLabel(record))}</option>`)
+            .join("");
+
+        return `
+            <div class="mt-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2" data-laundry-link-controls>
+                <label class="block">
+                    <span class="sr-only">${escapeHtml(this.tr("tables.linkedCleaning"))}</span>
+                    <select class="w-full text-xs" data-laundry-link-select>
+                        <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
+                        ${linkOptions}
+                    </select>
+                </label>
+                <div class="mt-1.5 flex flex-wrap items-center justify-end gap-3">
+                    <button type="button" data-action="toggle-laundry-link-editor" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-slate-500 hover:text-slate-700">${escapeHtml(t("common.cancel"))}</button>
+                    <button type="button" data-action="save-laundry-link" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-sky-600 hover:text-sky-800">${escapeHtml(this.tr("actions.saveLink"))}</button>
                 </div>
             </div>
         `;
@@ -1084,8 +1356,8 @@ export class CleaningAhManager {
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.linkedCleaning"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.source"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.ratePerKg"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
                         <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                     </tr>
@@ -1102,9 +1374,10 @@ export class CleaningAhManager {
                                 ${entry.linkedCleaningId
                                     ? `${escapeHtml(this.formatDate(entry.linkedCleaningDate || ""))}${entry.linkedCleaningCategory ? `<div class="text-xs text-slate-400">${escapeHtml(entry.linkedCleaningCategory)}</div>` : ""}`
                                     : `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.notLinked"))}</span>`}
+                                ${this.renderLaundryQuickLinkControls(entry)}
                             </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getRecordSourceLabel(entry.source))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.kg))}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryRatePerKg))}</td>
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
@@ -1188,6 +1461,25 @@ export class CleaningAhManager {
             });
         });
 
+        document.querySelectorAll("[data-laundry-entry-mode]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const nextMode = button.dataset.laundryEntryMode === "batch" ? "batch" : "single";
+                if (nextMode === "single") {
+                    this.laundryEntryMode = "single";
+                    this.render();
+                    return;
+                }
+
+                this.editingLaundryId = null;
+                this.laundryDraft = this.createDefaultLaundryDraft();
+                this.laundryEntryMode = "batch";
+                if (!this.laundryBatchDraft.rows.length) {
+                    this.laundryBatchDraft = this.createDefaultLaundryBatchDraft();
+                }
+                this.render();
+            });
+        });
+
         document.getElementById("cleaning-ah-search")?.addEventListener("input", (event) => {
             this.searchQuery = event.target.value || "";
             this.render();
@@ -1202,6 +1494,14 @@ export class CleaningAhManager {
         });
         document.getElementById("cleaning-ah-category-filter")?.addEventListener("change", (event) => {
             this.selectedCategory = event.target.value || "";
+            this.render();
+        });
+        document.getElementById("cleaning-ah-laundry-register-filter")?.addEventListener("change", (event) => {
+            this.laundryRegisterFilter = event.target.value || "all";
+            this.render();
+        });
+        document.getElementById("cleaning-ah-laundry-register-sort")?.addEventListener("change", (event) => {
+            this.laundryRegisterSort = event.target.value || "date-desc";
             this.render();
         });
 
@@ -1240,6 +1540,36 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-reset-laundry-form")?.addEventListener("click", () => this.resetLaundryForm());
         document.getElementById("cleaning-ah-cancel-laundry-edit")?.addEventListener("click", () => this.resetLaundryForm());
 
+        const laundryBatchForm = document.getElementById("cleaning-ah-laundry-batch-form");
+        laundryBatchForm?.addEventListener("input", () => {
+            this.laundryBatchDraft = this.readLaundryBatchDraftFromDom();
+            this.updateLaundryBatchPreview();
+        });
+        laundryBatchForm?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.saveLaundryBatchRecords();
+        });
+        document.getElementById("cleaning-ah-add-laundry-batch-row")?.addEventListener("click", () => {
+            this.laundryBatchDraft = this.readLaundryBatchDraftFromDom();
+            this.laundryBatchDraft = {
+                ...this.laundryBatchDraft,
+                rows: [...this.laundryBatchDraft.rows, this.createLaundryBatchRow()]
+            };
+            this.render();
+        });
+        document.getElementById("cleaning-ah-reset-laundry-batch-form")?.addEventListener("click", () => this.resetLaundryBatchForm());
+        document.querySelectorAll("[data-action='remove-laundry-batch-row']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.laundryBatchDraft = this.readLaundryBatchDraftFromDom();
+                const remainingRows = this.laundryBatchDraft.rows.filter((row) => row.rowId !== (button.dataset.rowId || ""));
+                this.laundryBatchDraft = {
+                    ...this.laundryBatchDraft,
+                    rows: remainingRows.length ? remainingRows : [this.createLaundryBatchRow()]
+                };
+                this.render();
+            });
+        });
+
         document.getElementById("cleaning-ah-import-file")?.addEventListener("change", async (event) => {
             const file = event.target.files?.[0];
             if (!file) {
@@ -1265,6 +1595,20 @@ export class CleaningAhManager {
         });
         document.querySelectorAll("[data-action='delete-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.deleteLaundry(button.dataset.id || ""));
+        });
+        document.querySelectorAll("[data-action='toggle-laundry-link-editor']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const recordId = button.dataset.id || "";
+                this.openLaundryLinkEditorId = this.openLaundryLinkEditorId === recordId ? "" : recordId;
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='save-laundry-link']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const controls = button.closest("[data-laundry-link-controls]");
+                const select = controls?.querySelector("[data-laundry-link-select]");
+                this.saveLaundryLink(button.dataset.id || "", select?.value || "");
+            });
         });
         document.querySelectorAll("[data-action='open-cleaning-from-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.openCleaningFromLaundry(button.dataset.id || ""));
@@ -1305,6 +1649,31 @@ export class CleaningAhManager {
         };
     }
 
+    readLaundryBatchDraftFromDom() {
+        const form = document.getElementById("cleaning-ah-laundry-batch-form");
+        if (!form) {
+            return {
+                ...this.laundryBatchDraft,
+                rows: this.laundryBatchDraft.rows.map((row) => ({ ...row }))
+            };
+        }
+
+        const formData = new FormData(form);
+        const rows = [...form.querySelectorAll("[data-laundry-batch-row]")]
+            .map((rowElement) => ({
+                rowId: rowElement.dataset.laundryBatchRow || this.createLaundryBatchRow().rowId,
+                propertyName: normalizeLabel(rowElement.querySelector('[name="propertyName"]')?.value),
+                kg: String(rowElement.querySelector('[name="kg"]')?.value || "").trim(),
+                notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
+            }));
+
+        return {
+            date: String(formData.get("date") || "").trim(),
+            laundryRatePerKg: String(formData.get("laundryRatePerKg") || "").trim(),
+            rows: rows.length ? rows : [this.createLaundryBatchRow()]
+        };
+    }
+
     updateCleaningPreview() {
         const container = document.getElementById("cleaning-ah-cleaning-preview");
         if (!container) return;
@@ -1332,6 +1701,14 @@ export class CleaningAhManager {
             notes: this.laundryDraft.notes
         });
         container.innerHTML = this.renderLaundryPreview(record);
+    }
+
+    updateLaundryBatchPreview() {
+        const container = document.getElementById("cleaning-ah-laundry-batch-preview");
+        if (!container) return;
+
+        const preview = this.getLaundryBatchPreview(this.readLaundryBatchDraftFromDom());
+        container.innerHTML = this.renderLaundryBatchPreview(preview);
     }
 
     async saveCleaningRecord() {
@@ -1428,6 +1805,92 @@ export class CleaningAhManager {
         } catch (error) {
             console.error("[Cleaning AH] failed to save laundry:", error);
             this.setStatus(this.tr("status.laundrySaveFailed"), "error");
+            this.render();
+        }
+    }
+
+    async saveLaundryBatchRecords() {
+        this.laundryBatchDraft = this.readLaundryBatchDraftFromDom();
+        const meaningfulRows = this.laundryBatchDraft.rows.filter((row) => {
+            return row.propertyName || row.kg || row.notes;
+        });
+        const validRows = meaningfulRows.filter((row) => {
+            const kg = toOptionalNumber(row.kg);
+            return row.propertyName && kg !== null && kg > 0;
+        });
+
+        if (!this.laundryBatchDraft.date || !validRows.length || validRows.length !== meaningfulRows.length) {
+            this.setStatus(this.tr("status.laundryBatchValidationError"), "error");
+            this.render();
+            return;
+        }
+
+        try {
+            const collectionRef = this.getLaundryCollectionRef();
+            const batch = writeBatch(this.db);
+            const now = new Date();
+            const laundryRatePerKg = toOptionalNumber(this.laundryBatchDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+
+            validRows.forEach((row) => {
+                const property = this.findPropertyByName(row.propertyName);
+                const record = createStandaloneLaundryRecord({
+                    date: this.laundryBatchDraft.date,
+                    propertyName: row.propertyName,
+                    propertyId: property?.id || "",
+                    kg: toOptionalNumber(row.kg) || 0,
+                    laundryRatePerKg,
+                    notes: row.notes,
+                    source: "standalone"
+                });
+                const recordRef = doc(collectionRef);
+                batch.set(recordRef, {
+                    ...record,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            });
+
+            await batch.commit();
+            this.setStatus(this.tr("status.laundryBatchSaved", { count: validRows.length }), "success");
+            this.resetLaundryBatchForm();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to save laundry batch:", error);
+            this.setStatus(this.tr("status.laundryBatchSaveFailed"), "error");
+            this.render();
+        }
+    }
+
+    async saveLaundryLink(recordId, linkedCleaningId) {
+        const existingLaundry = this.laundryRecords.find((entry) => entry.id === recordId);
+        if (!recordId || !existingLaundry) {
+            return;
+        }
+
+        const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === linkedCleaningId) || null;
+        const payload = {
+            linkedCleaningId: linkedCleaning ? linkedCleaning.id : "",
+            updatedAt: new Date()
+        };
+
+        if (linkedCleaning) {
+            const property = this.findPropertyByName(linkedCleaning.propertyName);
+            payload.propertyName = linkedCleaning.propertyName || existingLaundry.propertyName || "";
+            payload.propertyId = property?.id || linkedCleaning.propertyId || existingLaundry.propertyId || "";
+        }
+
+        try {
+            await updateDoc(doc(this.db, "cleaningAhLaundryRecords", recordId), payload);
+            this.openLaundryLinkEditorId = "";
+            this.setStatus(
+                linkedCleaning
+                    ? this.tr("status.laundryLinkSaved")
+                    : this.tr("status.laundryLinkCleared"),
+                "success"
+            );
+            this.render();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to update laundry link:", error);
+            this.setStatus(this.tr("status.laundryLinkSaveFailed"), "error");
             this.render();
         }
     }
@@ -1534,6 +1997,7 @@ export class CleaningAhManager {
         }
 
         this.activeTab = "laundry";
+        this.laundryEntryMode = "single";
         this.editingLaundryId = record.id;
         this.laundryDraft = {
             date: record.date || getTodayIsoDate(),
@@ -1619,7 +2083,16 @@ export class CleaningAhManager {
 
     resetLaundryForm() {
         this.editingLaundryId = null;
+        this.laundryEntryMode = "single";
         this.laundryDraft = this.createDefaultLaundryDraft();
+        this.render();
+    }
+
+    resetLaundryBatchForm() {
+        this.editingLaundryId = null;
+        this.laundryEntryMode = "batch";
+        this.laundryDraft = this.createDefaultLaundryDraft();
+        this.laundryBatchDraft = this.createDefaultLaundryBatchDraft();
         this.render();
     }
 
