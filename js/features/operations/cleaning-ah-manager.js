@@ -98,9 +98,12 @@ export class CleaningAhManager {
 
         this.editingCleaningId = null;
         this.editingLaundryId = null;
+        this.cleaningEntryMode = "single";
         this.laundryEntryMode = "single";
+        this.nextCleaningBatchRowId = 0;
         this.nextLaundryBatchRowId = 0;
         this.cleaningDraft = this.createDefaultCleaningDraft();
+        this.cleaningBatchDraft = this.createDefaultCleaningBatchDraft();
         this.laundryDraft = this.createDefaultLaundryDraft();
         this.laundryBatchDraft = this.createDefaultLaundryBatchDraft();
 
@@ -191,6 +194,25 @@ export class CleaningAhManager {
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: "",
             notes: ""
+        };
+    }
+
+    createCleaningBatchRow(overrides = {}) {
+        return {
+            rowId: `cleaning-batch-row-${this.nextCleaningBatchRowId += 1}`,
+            propertyName: "",
+            guestAmount: "",
+            notes: "",
+            ...overrides
+        };
+    }
+
+    createDefaultCleaningBatchDraft() {
+        return {
+            date: getTodayIsoDate(),
+            category: DEFAULT_CLEANING_CATEGORY,
+            reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
+            rows: [this.createCleaningBatchRow()]
         };
     }
 
@@ -500,6 +522,51 @@ export class CleaningAhManager {
         return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${record.category || DEFAULT_CLEANING_CATEGORY}`;
     }
 
+    getSuggestedCleaningRecord(propertyName, { excludeRecordId = "" } = {}) {
+        const normalizedPropertyName = normalizeKey(propertyName);
+        if (!normalizedPropertyName) {
+            return null;
+        }
+
+        return this.cleaningRecords.find((record) => {
+            if (!record || (excludeRecordId && record.id === excludeRecordId)) {
+                return false;
+            }
+
+            if (normalizeKey(record.propertyName) !== normalizedPropertyName) {
+                return false;
+            }
+
+            return toOptionalNumber(record.guestAmount) !== null;
+        }) || null;
+    }
+
+    getSuggestedCleaningGuestAmount(propertyName, options = {}) {
+        const record = this.getSuggestedCleaningRecord(propertyName, options);
+        const guestAmount = toOptionalNumber(record?.guestAmount);
+        return guestAmount === null ? null : roundCurrency(guestAmount);
+    }
+
+    getSuggestedCleaningGuestAmountInput(propertyName, options = {}) {
+        const suggestion = this.getSuggestedCleaningGuestAmount(propertyName, options);
+        return suggestion === null ? "" : toInputNumber(suggestion);
+    }
+
+    getCleaningGuestAmountFieldState(draft = {}, options = {}) {
+        const explicitInputValue = String(draft?.guestAmount || "").trim();
+        const suggestedInputValue = options.enableSuggestion === false
+            ? ""
+            : this.getSuggestedCleaningGuestAmountInput(draft?.propertyName, options);
+        const inputValue = explicitInputValue || suggestedInputValue;
+
+        return {
+            explicitInputValue,
+            suggestedInputValue,
+            inputValue,
+            numericValue: toOptionalNumber(inputValue)
+        };
+    }
+
     getFilteredCleaningRecords() {
         const search = normalizeKey(this.searchQuery);
         return this.cleaningRecords.filter((record) => {
@@ -609,6 +676,121 @@ export class CleaningAhManager {
         });
     }
 
+    getCleaningBatchPreview(draft = this.cleaningBatchDraft) {
+        const category = normalizeLabel(draft?.category) || DEFAULT_CLEANING_CATEGORY;
+        const reservationSource = draft?.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform;
+
+        return (draft?.rows || []).reduce((summary, row) => {
+            const propertyName = normalizeLabel(row?.propertyName);
+            const guestAmountField = this.getCleaningGuestAmountFieldState(row);
+            if (!propertyName || guestAmountField.numericValue === null || guestAmountField.numericValue < 0) {
+                return summary;
+            }
+
+            const record = createCleaningAhRecord({
+                date: draft?.date,
+                propertyName,
+                category,
+                reservationSource,
+                guestAmount: guestAmountField.numericValue
+            });
+
+            return {
+                count: summary.count + 1,
+                guestAmount: roundCurrency(summary.guestAmount + record.guestAmount),
+                platformCommission: roundCurrency(summary.platformCommission + record.platformCommission),
+                vatAmount: roundCurrency(summary.vatAmount + record.vatAmount),
+                totalToAhWithoutLaundry: roundCurrency(summary.totalToAhWithoutLaundry + record.totalToAhWithoutLaundry),
+                totalToAh: roundCurrency(summary.totalToAh + record.totalToAh)
+            };
+        }, {
+            count: 0,
+            guestAmount: 0,
+            platformCommission: 0,
+            vatAmount: 0,
+            totalToAhWithoutLaundry: 0,
+            totalToAh: 0
+        });
+    }
+
+    applySuggestedGuestAmountToInput(input, suggestedAmount) {
+        if (!input) {
+            return;
+        }
+
+        const currentValue = String(input.value || "").trim();
+        const previousSuggestedValue = String(input.dataset.autoSuggestedValue || "").trim();
+        const currentNumeric = toOptionalNumber(currentValue);
+        const previousSuggestedNumeric = toOptionalNumber(previousSuggestedValue);
+        const matchesPreviousSuggestion = currentNumeric !== null
+            && previousSuggestedNumeric !== null
+            && roundCurrency(currentNumeric) === roundCurrency(previousSuggestedNumeric);
+
+        if (suggestedAmount === null) {
+            if (!currentValue || matchesPreviousSuggestion) {
+                input.value = "";
+            }
+            delete input.dataset.autoSuggestedValue;
+            return;
+        }
+
+        const suggestedValue = toInputNumber(roundCurrency(suggestedAmount));
+        if (!currentValue || matchesPreviousSuggestion) {
+            input.value = suggestedValue;
+        }
+        input.dataset.autoSuggestedValue = suggestedValue;
+    }
+
+    applyCleaningSuggestionToSingleForm() {
+        if (this.editingCleaningId) {
+            return;
+        }
+
+        const form = document.getElementById("cleaning-ah-cleaning-form");
+        const propertyInput = form?.querySelector('[name="propertyName"]');
+        const guestAmountInput = form?.querySelector('[name="guestAmount"]');
+        if (!propertyInput || !guestAmountInput) {
+            return;
+        }
+
+        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value);
+        this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
+    }
+
+    applyCleaningSuggestionToBatchRow(rowElement) {
+        const propertyInput = rowElement?.querySelector('[name="propertyName"]');
+        const guestAmountInput = rowElement?.querySelector('[name="guestAmount"]');
+        if (!propertyInput || !guestAmountInput) {
+            return;
+        }
+
+        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value);
+        this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
+    }
+
+    renderCleaningEntryModeSwitcher() {
+        if (this.editingCleaningId) {
+            return "";
+        }
+
+        const modes = [
+            ["single", this.tr("cleanings.entryModes.single")],
+            ["batch", this.tr("cleanings.entryModes.batch")]
+        ];
+
+        return `
+            <div class="mt-4 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
+                ${modes.map(([mode, label]) => `
+                    <button
+                        type="button"
+                        data-cleaning-entry-mode="${mode}"
+                        class="rounded-full px-3 py-1.5 text-sm font-medium transition ${this.cleaningEntryMode === mode ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-white"}"
+                    >${escapeHtml(label)}</button>
+                `).join("")}
+            </div>
+        `;
+    }
+
     renderLaundryEntryModeSwitcher() {
         if (this.editingLaundryId) {
             return "";
@@ -683,6 +865,7 @@ export class CleaningAhManager {
 
         this.bindUiEvents();
         this.updateCleaningPreview();
+        this.updateCleaningBatchPreview();
         this.updateLaundryPreview();
         this.updateLaundryBatchPreview();
     }
@@ -855,14 +1038,20 @@ export class CleaningAhManager {
 
     renderCleaningsTab(filteredCleanings) {
         const draft = this.cleaningDraft;
+        const isBatchMode = !this.editingCleaningId && this.cleaningEntryMode === "batch";
+        const guestAmountField = this.getCleaningGuestAmountFieldState(draft, {
+            enableSuggestion: !this.editingCleaningId,
+            excludeRecordId: this.editingCleaningId || ""
+        });
         const previewRecord = createCleaningAhRecord({
             date: draft.date,
             propertyName: draft.propertyName,
             category: draft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
-            guestAmount: toOptionalNumber(draft.guestAmount) || 0,
+            guestAmount: guestAmountField.numericValue || 0,
             notes: draft.notes
         });
+        const batchPreview = this.getCleaningBatchPreview();
 
         return `
             <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.35fr)]">
@@ -871,49 +1060,23 @@ export class CleaningAhManager {
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("cleanings.entryKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingCleaningId ? this.tr("cleanings.editTitle") : this.tr("cleanings.addTitle"))}</h3>
-                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.description"))}</p>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingCleaningId ? this.tr("cleanings.editTitle") : isBatchMode ? this.tr("cleanings.batchTitle") : this.tr("cleanings.addTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isBatchMode ? this.tr("cleanings.batchDescription") : this.tr("cleanings.description"))}</p>
+                                ${this.renderCleaningEntryModeSwitcher()}
                             </div>
                             <div class="flex flex-wrap gap-3 xl:justify-end">
                                 ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
-                                <button type="submit" form="cleaning-ah-cleaning-form" class="view-btn active">${escapeHtml(this.editingCleaningId ? this.tr("actions.saveChanges") : this.tr("actions.saveCleaning"))}</button>
-                                <button type="button" id="cleaning-ah-reset-cleaning-form" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
+                                <button type="submit" form="${isBatchMode ? "cleaning-ah-cleaning-batch-form" : "cleaning-ah-cleaning-form"}" class="view-btn active">${escapeHtml(this.editingCleaningId ? this.tr("actions.saveChanges") : isBatchMode ? this.tr("actions.saveCleaningBatch") : this.tr("actions.saveCleaning"))}</button>
+                                <button type="button" id="${isBatchMode ? "cleaning-ah-reset-cleaning-batch-form" : "cleaning-ah-reset-cleaning-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
                             </div>
                         </div>
-                        <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
-                                    <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
-                                    <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.category"))}</span>
-                                    <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(draft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
-                                    <select name="reservationSource" class="mt-1 w-full">
-                                        <option value="platform" ${draft.reservationSource !== CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.platform"))}</option>
-                                        <option value="direct" ${draft.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.direct"))}</option>
-                                    </select>
-                                </label>
-                                <label class="block">
-                                    <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
-                                    <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.guestAmount))}" required>
-                                </label>
-                            </div>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
-                                <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
-                            </label>
-                            <div id="cleaning-ah-cleaning-preview">
-                                ${this.renderCleaningPreview(previewRecord)}
-                            </div>
-                        </form>
+                        ${isBatchMode
+                            ? this.renderCleaningBatchForm(batchPreview)
+                            : this.renderCleaningSingleForm({
+                                draft,
+                                preview: previewRecord,
+                                guestAmountField
+                            })}
                     </section>
                     ${this.renderImportBlock()}
                 </div>
@@ -931,6 +1094,98 @@ export class CleaningAhManager {
                     </div>
                 </section>
             </section>
+        `;
+    }
+
+    renderCleaningSingleForm({ draft, preview, guestAmountField }) {
+        return `
+            <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
+                        <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
+                        <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.category"))}</span>
+                        <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(draft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
+                        <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" required>
+                    </label>
+                </div>
+                <label class="block">
+                    <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
+                    <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
+                </label>
+                <div id="cleaning-ah-cleaning-preview">
+                    ${this.renderCleaningPreview(preview)}
+                </div>
+            </form>
+        `;
+    }
+
+    renderCleaningBatchForm(preview) {
+        const rows = this.cleaningBatchDraft.rows.length
+            ? this.cleaningBatchDraft.rows
+            : [this.createCleaningBatchRow()];
+
+        return `
+            <form id="cleaning-ah-cleaning-batch-form" class="mt-5 space-y-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchDate"))}</span>
+                        <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.date)}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchCategory"))}</span>
+                        <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                    </label>
+                </div>
+                <div class="rounded-2xl border border-slate-200">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_140px_minmax(0,1fr)_auto] md:gap-3">
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.guestAmount"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
+                    </div>
+                    <div class="divide-y divide-slate-200">
+                        ${rows.map((row, index) => {
+                            const guestAmountField = this.getCleaningGuestAmountFieldState(row);
+                            return `
+                                <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_140px_minmax(0,1fr)_auto] md:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
+                                        <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.guestAmount"))}</span>
+                                        <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(t("common.notes"))}</span>
+                                        <input type="text" name="notes" class="w-full" value="${escapeHtml(row.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
+                                    </label>
+                                    <div class="flex items-center justify-end md:pt-0.5">
+                                        <button type="button" data-action="remove-cleaning-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(this.tr("actions.removeRow"))}</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-slate-500">${escapeHtml(this.tr("cleanings.batchHint"))}</p>
+                    <button type="button" id="cleaning-ah-add-cleaning-batch-row" class="view-btn">${escapeHtml(this.tr("actions.addRow"))}</button>
+                </div>
+                <div id="cleaning-ah-cleaning-batch-preview">
+                    ${this.renderCleaningBatchPreview(preview)}
+                </div>
+            </form>
         `;
     }
 
@@ -1126,12 +1381,24 @@ export class CleaningAhManager {
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
                 <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.type"), this.getReservationSourceLabel(previewRecord.reservationSource))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.commission"), this.formatCurrency(previewRecord.platformCommission))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.vat"), this.formatCurrency(previewRecord.vatAmount))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.beforeLaundry"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.laundryPending"), this.formatCurrency(0))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderCleaningBatchPreview(preview) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(preview.guestAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(preview.totalToAh), "emphasis")}
                 </div>
             </div>
         `;
@@ -1297,11 +1564,9 @@ export class CleaningAhManager {
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.source"))}</th>
                         <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                     </tr>
                 </thead>
@@ -1312,13 +1577,9 @@ export class CleaningAhManager {
                             <td class="px-3 py-3">
                                 <div class="text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</div>
                                 ${record.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
+                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
                             </td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.category)}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">
-                                <span class="inline-flex rounded-full px-2 py-1 text-xs font-medium ${record.reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}">
-                                    ${escapeHtml(this.getReservationSourceLabel(record.reservationSource))}
-                                </span>
-                            </td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 ${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}
@@ -1327,10 +1588,6 @@ export class CleaningAhManager {
                                 ${!record.effectiveLaundryAmount ? `<div class="text-xs text-slate-400">${escapeHtml(this.tr("laundryState.waiting"))}</div>` : ""}
                             </td>
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">
-                                <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">${escapeHtml(this.getRecordSourceLabel(record.source || "manual"))}</span>
-                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
-                            </td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
                                     <button type="button" data-action="edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(t("common.edit"))}</button>
@@ -1461,6 +1718,25 @@ export class CleaningAhManager {
             });
         });
 
+        document.querySelectorAll("[data-cleaning-entry-mode]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const nextMode = button.dataset.cleaningEntryMode === "batch" ? "batch" : "single";
+                if (nextMode === "single") {
+                    this.cleaningEntryMode = "single";
+                    this.render();
+                    return;
+                }
+
+                this.editingCleaningId = null;
+                this.cleaningDraft = this.createDefaultCleaningDraft();
+                this.cleaningEntryMode = "batch";
+                if (!this.cleaningBatchDraft.rows.length) {
+                    this.cleaningBatchDraft = this.createDefaultCleaningBatchDraft();
+                }
+                this.render();
+            });
+        });
+
         document.querySelectorAll("[data-laundry-entry-mode]").forEach((button) => {
             button.addEventListener("click", () => {
                 const nextMode = button.dataset.laundryEntryMode === "batch" ? "batch" : "single";
@@ -1506,7 +1782,10 @@ export class CleaningAhManager {
         });
 
         const cleaningForm = document.getElementById("cleaning-ah-cleaning-form");
-        cleaningForm?.addEventListener("input", () => {
+        cleaningForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "propertyName") {
+                this.applyCleaningSuggestionToSingleForm();
+            }
             this.cleaningDraft = this.readCleaningDraftFromDom();
             this.updateCleaningPreview();
         });
@@ -1516,6 +1795,39 @@ export class CleaningAhManager {
         });
         document.getElementById("cleaning-ah-reset-cleaning-form")?.addEventListener("click", () => this.resetCleaningForm());
         document.getElementById("cleaning-ah-cancel-cleaning-edit")?.addEventListener("click", () => this.resetCleaningForm());
+
+        const cleaningBatchForm = document.getElementById("cleaning-ah-cleaning-batch-form");
+        cleaningBatchForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "propertyName") {
+                this.applyCleaningSuggestionToBatchRow(event.target.closest("[data-cleaning-batch-row]"));
+            }
+            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+            this.updateCleaningBatchPreview();
+        });
+        cleaningBatchForm?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.saveCleaningBatchRecords();
+        });
+        document.getElementById("cleaning-ah-add-cleaning-batch-row")?.addEventListener("click", () => {
+            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+            this.cleaningBatchDraft = {
+                ...this.cleaningBatchDraft,
+                rows: [...this.cleaningBatchDraft.rows, this.createCleaningBatchRow()]
+            };
+            this.render();
+        });
+        document.getElementById("cleaning-ah-reset-cleaning-batch-form")?.addEventListener("click", () => this.resetCleaningBatchForm());
+        document.querySelectorAll("[data-action='remove-cleaning-batch-row']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                const remainingRows = this.cleaningBatchDraft.rows.filter((row) => row.rowId !== (button.dataset.rowId || ""));
+                this.cleaningBatchDraft = {
+                    ...this.cleaningBatchDraft,
+                    rows: remainingRows.length ? remainingRows : [this.createCleaningBatchRow()]
+                };
+                this.render();
+            });
+        });
 
         const laundryForm = document.getElementById("cleaning-ah-laundry-form");
         laundryForm?.addEventListener("input", () => {
@@ -1626,9 +1938,35 @@ export class CleaningAhManager {
             date: String(formData.get("date") || "").trim(),
             propertyName: normalizeLabel(formData.get("propertyName")),
             category: normalizeLabel(formData.get("category")) || DEFAULT_CLEANING_CATEGORY,
-            reservationSource: String(formData.get("reservationSource") || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
+            reservationSource: String(formData.get("reservationSource") || this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             guestAmount: String(formData.get("guestAmount") || "").trim(),
             notes: String(formData.get("notes") || "").trim()
+        };
+    }
+
+    readCleaningBatchDraftFromDom() {
+        const form = document.getElementById("cleaning-ah-cleaning-batch-form");
+        if (!form) {
+            return {
+                ...this.cleaningBatchDraft,
+                rows: this.cleaningBatchDraft.rows.map((row) => ({ ...row }))
+            };
+        }
+
+        const formData = new FormData(form);
+        const rows = [...form.querySelectorAll("[data-cleaning-batch-row]")]
+            .map((rowElement) => ({
+                rowId: rowElement.dataset.cleaningBatchRow || this.createCleaningBatchRow().rowId,
+                propertyName: normalizeLabel(rowElement.querySelector('[name="propertyName"]')?.value),
+                guestAmount: String(rowElement.querySelector('[name="guestAmount"]')?.value || "").trim(),
+                notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
+            }));
+
+        return {
+            date: String(formData.get("date") || "").trim(),
+            category: normalizeLabel(formData.get("category")) || DEFAULT_CLEANING_CATEGORY,
+            reservationSource: String(formData.get("reservationSource") || this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
+            rows: rows.length ? rows : [this.createCleaningBatchRow()]
         };
     }
 
@@ -1678,15 +2016,27 @@ export class CleaningAhManager {
         const container = document.getElementById("cleaning-ah-cleaning-preview");
         if (!container) return;
 
+        const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
+            enableSuggestion: !this.editingCleaningId,
+            excludeRecordId: this.editingCleaningId || ""
+        });
         const record = createCleaningAhRecord({
             date: this.cleaningDraft.date,
             propertyName: this.cleaningDraft.propertyName,
             category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
-            guestAmount: toOptionalNumber(this.cleaningDraft.guestAmount) || 0,
+            guestAmount: guestAmountField.numericValue || 0,
             notes: this.cleaningDraft.notes
         });
         container.innerHTML = this.renderCleaningPreview(record);
+    }
+
+    updateCleaningBatchPreview() {
+        const container = document.getElementById("cleaning-ah-cleaning-batch-preview");
+        if (!container) return;
+
+        const preview = this.getCleaningBatchPreview(this.readCleaningBatchDraftFromDom());
+        container.innerHTML = this.renderCleaningBatchPreview(preview);
     }
 
     updateLaundryPreview() {
@@ -1713,6 +2063,10 @@ export class CleaningAhManager {
 
     async saveCleaningRecord() {
         this.cleaningDraft = this.readCleaningDraftFromDom();
+        const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
+            enableSuggestion: !this.editingCleaningId,
+            excludeRecordId: this.editingCleaningId || ""
+        });
         if (!this.cleaningDraft.date || !this.cleaningDraft.propertyName) {
             this.setStatus(this.tr("status.cleaningValidationError"), "error");
             this.render();
@@ -1729,7 +2083,7 @@ export class CleaningAhManager {
             propertyId: property?.id || "",
             category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
-            guestAmount: toOptionalNumber(this.cleaningDraft.guestAmount) || 0,
+            guestAmount: guestAmountField.numericValue || 0,
             laundryAmount: existingCleaning?.laundryAmount ?? 0,
             notes: this.cleaningDraft.notes,
             source: existingCleaning?.source || "manual"
@@ -1756,6 +2110,58 @@ export class CleaningAhManager {
         } catch (error) {
             console.error("[Cleaning AH] failed to save cleaning:", error);
             this.setStatus(this.tr("status.cleaningSaveFailed"), "error");
+            this.render();
+        }
+    }
+
+    async saveCleaningBatchRecords() {
+        this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+        const meaningfulRows = this.cleaningBatchDraft.rows.filter((row) => {
+            return row.propertyName || row.guestAmount || row.notes;
+        });
+        const validRows = meaningfulRows.filter((row) => {
+            const guestAmount = this.getCleaningGuestAmountFieldState(row).numericValue;
+            return row.propertyName && guestAmount !== null && guestAmount >= 0;
+        });
+
+        if (!this.cleaningBatchDraft.date || !validRows.length || validRows.length !== meaningfulRows.length) {
+            this.setStatus(this.tr("status.cleaningBatchValidationError"), "error");
+            this.render();
+            return;
+        }
+
+        try {
+            const collectionRef = this.getCleaningsCollectionRef();
+            const batch = writeBatch(this.db);
+            const now = new Date();
+
+            validRows.forEach((row) => {
+                const property = this.findPropertyByName(row.propertyName);
+                const guestAmount = this.getCleaningGuestAmountFieldState(row).numericValue || 0;
+                const record = createCleaningAhRecord({
+                    date: this.cleaningBatchDraft.date,
+                    propertyName: row.propertyName,
+                    propertyId: property?.id || "",
+                    category: this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY,
+                    reservationSource: this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
+                    guestAmount,
+                    notes: row.notes,
+                    source: "manual"
+                });
+                const recordRef = doc(collectionRef);
+                batch.set(recordRef, {
+                    ...record,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            });
+
+            await batch.commit();
+            this.setStatus(this.tr("status.cleaningBatchSaved", { count: validRows.length }), "success");
+            this.resetCleaningBatchForm();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to save cleaning batch:", error);
+            this.setStatus(this.tr("status.cleaningBatchSaveFailed"), "error");
             this.render();
         }
     }
@@ -1978,6 +2384,7 @@ export class CleaningAhManager {
         }
 
         this.activeTab = "cleanings";
+        this.cleaningEntryMode = "single";
         this.editingCleaningId = record.id;
         this.cleaningDraft = {
             date: record.date || getTodayIsoDate(),
@@ -2077,7 +2484,16 @@ export class CleaningAhManager {
 
     resetCleaningForm() {
         this.editingCleaningId = null;
+        this.cleaningEntryMode = "single";
         this.cleaningDraft = this.createDefaultCleaningDraft();
+        this.render();
+    }
+
+    resetCleaningBatchForm() {
+        this.editingCleaningId = null;
+        this.cleaningEntryMode = "batch";
+        this.cleaningDraft = this.createDefaultCleaningDraft();
+        this.cleaningBatchDraft = this.createDefaultCleaningBatchDraft();
         this.render();
     }
 

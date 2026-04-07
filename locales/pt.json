@@ -119,7 +119,7 @@
         "formula": {
             "kicker": "Formula",
             "title": "Registo rapido com uma unica regra de receita.",
-            "body": "As reservas de plataforma usam 15,5% de comissao e 22% de IVA extraido. As reservas diretas definem a comissao da plataforma como zero. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
+            "body": "As limpezas usam a regra normal de 15,5% de comissao e 22% de IVA extraido. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
         },
         "tabs": {
             "dashboard": "Painel",
@@ -172,6 +172,15 @@
             "editTitle": "Editar limpeza",
             "addTitle": "Adicionar limpeza",
             "description": "Guarde primeiro o check-out. A lavandaria pode ser associada depois no separador Lavandaria quando os quilos chegarem.",
+            "batchTitle": "Adicionar varias limpezas",
+            "batchDescription": "Use uma data e categoria partilhadas para guardar varias linhas de check-out de uma vez. O valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
+            "batchDate": "Data para todas as linhas",
+            "batchCategory": "Categoria para todas as linhas",
+            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas e o valor hospede em cada linha antes de guardar.",
+            "entryModes": {
+                "single": "Registo unico",
+                "batch": "Registo em lote"
+            },
             "storedKicker": "Dados guardados",
             "storedTitle": "Limpezas",
             "empty": "Nenhum registo de limpeza corresponde aos filtros atuais."
@@ -217,7 +226,6 @@
             "property": "Propriedade",
             "propertyPlaceholder": "Escreva ou escolha uma propriedade",
             "category": "Categoria",
-            "reservationSource": "Origem da reserva",
             "guestAmount": "Valor hospede",
             "notesPlaceholder": "Nota opcional",
             "linkedCleaning": "Limpeza associada",
@@ -279,6 +287,7 @@
             "cancelEdit": "Cancelar edicao",
             "saveChanges": "Guardar alteracoes",
             "saveCleaning": "Guardar limpeza",
+            "saveCleaningBatch": "Guardar todas as linhas",
             "saveLaundry": "Guardar lavandaria",
             "saveLaundryBatch": "Guardar todas as linhas",
             "saveLink": "Guardar associacao",
@@ -316,6 +325,9 @@
             "cleaningUpdated": "Registo de limpeza atualizado.",
             "cleaningSaved": "Registo de limpeza guardado.",
             "cleaningSaveFailed": "Nao foi possivel guardar o registo de limpeza.",
+            "cleaningBatchValidationError": "Introduza uma data e complete a propriedade e o valor hospede em cada linha de limpeza que pretende guardar.",
+            "cleaningBatchSaved": "Foram guardadas {{count}} linhas de limpeza.",
+            "cleaningBatchSaveFailed": "Nao foi possivel guardar as linhas de limpeza.",
             "laundryValidationError": "A data e a propriedade sao obrigatorias para um registo de lavandaria.",
             "laundryUpdated": "Registo de lavandaria atualizado.",
             "laundrySaved": "Registo de lavandaria guardado.",

@@ -119,7 +119,7 @@
     "formula": {
       "kicker": "Formula",
       "title": "Fast entry with one revenue rule.",
-      "body": "Platform reservations use 15.5% commission and 22% extracted VAT. Direct reservations set platform commission to zero. Laundry still links later at 2.60 EUR per kg."
+      "body": "Cleanings use the standard 15.5% commission and 22% extracted VAT rule. Laundry still links later at 2.60 EUR per kg."
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -172,6 +172,15 @@
       "editTitle": "Edit cleaning",
       "addTitle": "Add cleaning",
       "description": "Save the checkout first. Laundry can be linked later from the Laundry tab when the kilograms arrive.",
+      "batchTitle": "Add multiple cleanings",
+      "batchDescription": "Use one shared date and category to save several checkout rows at once. Property pricing is suggested automatically from the latest saved cleaning for that property.",
+      "batchDate": "Date for all rows",
+      "batchCategory": "Category for all rows",
+      "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes and guest amount on each row before saving.",
+      "entryModes": {
+        "single": "Single entry",
+        "batch": "Batch entry"
+      },
       "storedKicker": "Stored data",
       "storedTitle": "Cleanings",
       "empty": "No cleaning records match the current filters."
@@ -217,7 +226,6 @@
       "property": "Property",
       "propertyPlaceholder": "Type or pick a property",
       "category": "Category",
-      "reservationSource": "Reservation source",
       "guestAmount": "Guest amount",
       "notesPlaceholder": "Optional note",
       "linkedCleaning": "Linked cleaning",
@@ -279,6 +287,7 @@
       "cancelEdit": "Cancel edit",
       "saveChanges": "Save changes",
       "saveCleaning": "Save cleaning",
+      "saveCleaningBatch": "Save all rows",
       "saveLaundry": "Save laundry",
       "saveLaundryBatch": "Save all rows",
       "saveLink": "Save link",
@@ -316,6 +325,9 @@
       "cleaningUpdated": "Cleaning record updated.",
       "cleaningSaved": "Cleaning record saved.",
       "cleaningSaveFailed": "Cleaning record could not be saved.",
+      "cleaningBatchValidationError": "Enter a date and complete property plus guest amount for each cleaning row you want to save.",
+      "cleaningBatchSaved": "Saved {{count}} cleaning rows.",
+      "cleaningBatchSaveFailed": "Cleaning rows could not be saved.",
       "laundryValidationError": "Date and property are required for a laundry record.",
       "laundryUpdated": "Laundry record updated.",
       "laundrySaved": "Laundry record saved.",

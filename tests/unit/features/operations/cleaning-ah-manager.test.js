@@ -97,6 +97,103 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("suggests the latest guest amount per property and reuses it in cleaning batch preview", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-latest",
+        date: "2026-04-06",
+        propertyName: "Acqua Beach",
+        guestAmount: 150
+      },
+      {
+        id: "cleaning-older",
+        date: "2026-04-03",
+        propertyName: "Acqua Beach",
+        guestAmount: 120
+      },
+      {
+        id: "cleaning-other",
+        date: "2026-04-05",
+        propertyName: "Villa Mar",
+        guestAmount: 200
+      }
+    ];
+    manager.cleaningBatchDraft = {
+      date: "2026-04-07",
+      category: "Limpeza check-out",
+      reservationSource: "platform",
+      rows: [
+        manager.createCleaningBatchRow({ propertyName: "Acqua Beach", guestAmount: "", notes: "" }),
+        manager.createCleaningBatchRow({ propertyName: "", guestAmount: "80", notes: "" })
+      ]
+    };
+
+    const suggestedAmount = manager.getSuggestedCleaningGuestAmount("Acqua Beach");
+    const fallbackAmount = manager.getSuggestedCleaningGuestAmount("Acqua Beach", { excludeRecordId: "cleaning-latest" });
+    const fieldState = manager.getCleaningGuestAmountFieldState({ propertyName: "Acqua Beach", guestAmount: "" });
+    const preview = manager.getCleaningBatchPreview();
+
+    assert.equal(suggestedAmount, 150);
+    assert.equal(fallbackAmount, 120);
+    assert.equal(fieldState.inputValue, "150");
+    assert.equal(fieldState.suggestedInputValue, "150");
+    assert.equal(preview.count, 1);
+    assert.equal(preview.guestAmount, 150);
+    assert.equal(preview.totalToAh, 99.7);
+
+    resetDom();
+  });
+
+  test("does not render source controls in the cleaning entry ui", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      category: "Limpeza check-out",
+      reservationSource: "platform",
+      guestAmount: "150",
+      notes: ""
+    };
+
+    const formHtml = manager.renderCleaningSingleForm({
+      draft: manager.cleaningDraft,
+      preview: {
+        reservationSource: "platform",
+        platformCommission: 23.25,
+        vatAmount: 27.05,
+        totalToAhWithoutLaundry: 99.7
+      },
+      guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
+        enableSuggestion: false
+      })
+    });
+
+    const tableHtml = manager.renderCleaningsTable([
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        category: "Limpeza check-out",
+        guestAmount: 150,
+        laundryAmount: 0,
+        totalToAh: 99.7,
+        notes: "",
+        source: "manual"
+      }
+    ]);
+
+    assert.equal(formHtml.includes('name="reservationSource"'), false);
+    assert.equal(tableHtml.includes('tables.source'), false);
+    assert.equal(tableHtml.includes('tables.reservation'), false);
+
+    resetDom();
+  });
+
   test("renders quick link controls for standalone laundry rows in the register", () => {
     resetDom();
 
