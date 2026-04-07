@@ -154,4 +154,29 @@ describe("i18n", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("loads locale files without reusing stale browser cache", async () => {
+    const previousTranslations = i18n.translations;
+    const fetchCalls = [];
+    const restoreFetch = installGlobalProperty("fetch", async (url, options) => {
+      fetchCalls.push({ url, options });
+      return {
+        ok: true,
+        async json() {
+          return { nav: { title: "Schedule" } };
+        }
+      };
+    });
+
+    i18n.translations = {};
+
+    await i18n.loadTranslations("en");
+
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(fetchCalls[0].url, "locales/en.json");
+    assert.equal(fetchCalls[0].options?.cache, "no-store");
+
+    restoreFetch();
+    i18n.translations = previousTranslations;
+  });
 });
