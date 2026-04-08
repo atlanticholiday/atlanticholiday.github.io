@@ -216,6 +216,7 @@ export class CleaningAhManager {
             category: DEFAULT_CLEANING_CATEGORY,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: "",
+            laundryKg: "",
             notes: ""
         };
     }
@@ -225,6 +226,7 @@ export class CleaningAhManager {
             rowId: `cleaning-batch-row-${this.nextCleaningBatchRowId += 1}`,
             propertyName: "",
             guestAmount: "",
+            laundryKg: "",
             notes: "",
             ...overrides
         };
@@ -777,7 +779,8 @@ export class CleaningAhManager {
                 propertyName,
                 category,
                 reservationSource,
-                guestAmount: guestAmountField.numericValue
+                guestAmount: guestAmountField.numericValue,
+                laundryKg: toOptionalNumber(row?.laundryKg) || 0
             });
 
             return {
@@ -786,6 +789,7 @@ export class CleaningAhManager {
                 platformCommission: roundCurrency(summary.platformCommission + record.platformCommission),
                 vatAmount: roundCurrency(summary.vatAmount + record.vatAmount),
                 totalToAhWithoutLaundry: roundCurrency(summary.totalToAhWithoutLaundry + record.totalToAhWithoutLaundry),
+                laundryAmount: roundCurrency(summary.laundryAmount + record.laundryAmount),
                 totalToAh: roundCurrency(summary.totalToAh + record.totalToAh)
             };
         }, {
@@ -794,6 +798,7 @@ export class CleaningAhManager {
             platformCommission: 0,
             vatAmount: 0,
             totalToAhWithoutLaundry: 0,
+            laundryAmount: 0,
             totalToAh: 0
         });
     }
@@ -1163,6 +1168,7 @@ export class CleaningAhManager {
             category: draft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: guestAmountField.numericValue || 0,
+            laundryKg: toOptionalNumber(draft.laundryKg) || 0,
             notes: draft.notes
         });
         const batchPreview = this.getCleaningBatchPreview();
@@ -1246,6 +1252,10 @@ export class CleaningAhManager {
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
                         <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" required>
                     </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
+                        <input type="number" name="laundryKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryKg))}" placeholder="0">
+                    </label>
                 </div>
                 <label class="block">
                     <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
@@ -1288,9 +1298,10 @@ export class CleaningAhManager {
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_140px_minmax(0,1fr)_auto] md:gap-3">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.guestAmount"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
                     </div>
@@ -1298,7 +1309,7 @@ export class CleaningAhManager {
                         ${rows.map((row, index) => {
                             const guestAmountField = this.getCleaningGuestAmountFieldState(row);
                             return `
-                                <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_140px_minmax(0,1fr)_auto] md:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
+                                <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
                                         <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
@@ -1306,6 +1317,10 @@ export class CleaningAhManager {
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.guestAmount"))}</span>
                                         <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
+                                        <input type="number" name="laundryKg" class="w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(row.laundryKg))}" placeholder="0">
                                     </label>
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(t("common.notes"))}</span>
@@ -1551,8 +1566,8 @@ export class CleaningAhManager {
                     ${this.renderPreviewMetricCard(this.tr("metrics.commission"), this.formatCurrency(previewRecord.platformCommission))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.vat"), this.formatCurrency(previewRecord.vatAmount))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.beforeLaundry"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.laundryPending"), this.formatCurrency(0))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry), "emphasis")}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.laundry"), this.formatCurrency(previewRecord.laundryAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAh), "emphasis")}
                 </div>
             </div>
         `;
@@ -1565,6 +1580,7 @@ export class CleaningAhManager {
                 <div class="mt-3 grid grid-cols-1 gap-3">
                     ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(preview.guestAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.laundry"), this.formatCurrency(preview.laundryAmount))}
                     ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(preview.totalToAh), "emphasis")}
                 </div>
             </div>
@@ -2238,6 +2254,7 @@ export class CleaningAhManager {
             category: normalizeLabel(formData.get("category")) || DEFAULT_CLEANING_CATEGORY,
             reservationSource: String(formData.get("reservationSource") || this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             guestAmount: String(formData.get("guestAmount") || "").trim(),
+            laundryKg: String(formData.get("laundryKg") || "").trim(),
             notes: String(formData.get("notes") || "").trim()
         };
     }
@@ -2257,6 +2274,7 @@ export class CleaningAhManager {
                 rowId: rowElement.dataset.cleaningBatchRow || this.createCleaningBatchRow().rowId,
                 propertyName: normalizeLabel(rowElement.querySelector('[name="propertyName"]')?.value),
                 guestAmount: String(rowElement.querySelector('[name="guestAmount"]')?.value || "").trim(),
+                laundryKg: String(rowElement.querySelector('[name="laundryKg"]')?.value || "").trim(),
                 notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
             }));
 
@@ -2324,6 +2342,7 @@ export class CleaningAhManager {
             category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: guestAmountField.numericValue || 0,
+            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
             notes: this.cleaningDraft.notes
         });
         container.innerHTML = this.renderCleaningPreview(record);
@@ -2382,7 +2401,7 @@ export class CleaningAhManager {
             category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: guestAmountField.numericValue || 0,
-            laundryAmount: existingCleaning?.laundryAmount ?? 0,
+            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
             notes: this.cleaningDraft.notes,
             source: existingCleaning?.source || "manual"
         });
@@ -2415,7 +2434,7 @@ export class CleaningAhManager {
     async saveCleaningBatchRecords() {
         this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
         const meaningfulRows = this.cleaningBatchDraft.rows.filter((row) => {
-            return row.propertyName || row.guestAmount || row.notes;
+            return row.propertyName || row.guestAmount || row.laundryKg || row.notes;
         });
         const validRows = meaningfulRows.filter((row) => {
             const guestAmount = this.getCleaningGuestAmountFieldState(row).numericValue;
@@ -2443,6 +2462,7 @@ export class CleaningAhManager {
                     category: this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY,
                     reservationSource: this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
                     guestAmount,
+                    laundryKg: toOptionalNumber(row.laundryKg) || 0,
                     notes: row.notes,
                     source: "manual"
                 });
@@ -2737,6 +2757,7 @@ export class CleaningAhManager {
             category: record.category || DEFAULT_CLEANING_CATEGORY,
             reservationSource: this.getCleaningReservationSource(record),
             guestAmount: toInputNumber(record.guestAmount),
+            laundryKg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
             notes: record.notes || ""
         };
         this.render();

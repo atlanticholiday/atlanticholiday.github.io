@@ -119,7 +119,7 @@
         "formula": {
             "kicker": "Formula",
             "title": "Registo rapido com suporte a plataforma e direta.",
-            "body": "As limpezas usam a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
+            "body": "As limpezas usam a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. A lavandaria usa 2,60 EUR por kg quer a introduza logo na limpeza quer a adicione depois."
         },
         "tabs": {
             "dashboard": "Painel",
@@ -171,12 +171,12 @@
             "entryKicker": "Registo rapido",
             "editTitle": "Editar limpeza",
             "addTitle": "Adicionar limpeza",
-            "description": "Escolha Plataforma ou Direta, guarde o check-out e adicione a lavandaria associada depois nos Dados guardados ou no separador Lavandaria quando os quilos chegarem.",
+            "description": "Escolha Plataforma ou Direta, guarde o check-out e, se quiser, introduza logo os kg da lavandaria. Continua a poder adicionar lavandaria associada depois nos Dados guardados ou no separador Lavandaria.",
             "batchTitle": "Adicionar varias limpezas",
-            "batchDescription": "Use uma data, categoria e origem da reserva partilhadas para guardar varias linhas de check-out de uma vez. O valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
+            "batchDescription": "Use uma data, categoria e origem da reserva partilhadas para guardar varias linhas de check-out de uma vez. Cada linha tambem pode incluir kg de lavandaria, e o valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
             "batchDate": "Data para todas as linhas",
             "batchCategory": "Categoria para todas as linhas",
-            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas e o valor hospede em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
+            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas, o valor hospede e os kg de lavandaria em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
             "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela tambem aparece no separador Lavandaria.",
             "entryModes": {
                 "single": "Registo unico",

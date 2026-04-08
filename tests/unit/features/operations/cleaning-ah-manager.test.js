@@ -147,6 +147,50 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("includes optional laundry kg in cleaning single and batch previews", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      category: "Limpeza check-out",
+      reservationSource: "platform",
+      guestAmount: "150",
+      laundryKg: "5",
+      notes: ""
+    };
+    manager.cleaningBatchDraft = {
+      date: "2026-04-07",
+      category: "Limpeza check-out",
+      reservationSource: "platform",
+      rows: [
+        manager.createCleaningBatchRow({ propertyName: "Acqua Beach", guestAmount: "150", laundryKg: "5", notes: "" })
+      ]
+    };
+
+    const previewRecord = manager.renderCleaningSingleForm({
+      draft: manager.cleaningDraft,
+      preview: {
+        platformCommission: 23.25,
+        vatAmount: 27.05,
+        totalToAhWithoutLaundry: 99.7,
+        laundryAmount: 13,
+        totalToAh: 86.7
+      },
+      guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
+        enableSuggestion: false
+      })
+    });
+    const batchPreview = manager.getCleaningBatchPreview();
+
+    assert.includes(previewRecord, 'name="laundryKg"');
+    assert.equal(batchPreview.laundryAmount, 13);
+    assert.equal(batchPreview.totalToAh, 86.7);
+
+    resetDom();
+  });
+
   test("renders reservation source controls in cleaning forms and stored rows", () => {
     resetDom();
 

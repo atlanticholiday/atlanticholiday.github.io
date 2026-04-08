@@ -119,7 +119,7 @@
     "formula": {
       "kicker": "Formula",
       "title": "Fast entry with platform and direct support.",
-      "body": "Cleanings use the standard 22% extracted VAT rule, with 15.5% commission only on platform reservations. Laundry can still be linked later at 2.60 EUR per kg."
+      "body": "Cleanings use the standard 22% extracted VAT rule, with 15.5% commission only on platform reservations. Laundry uses 2.60 EUR per kg whether you enter it on the cleaning or add it later."
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -171,12 +171,12 @@
       "entryKicker": "Quick entry",
       "editTitle": "Edit cleaning",
       "addTitle": "Add cleaning",
-      "description": "Choose Platform or Direct, save the checkout, and add linked laundry later from Stored data or the Laundry tab when the kilograms arrive.",
+      "description": "Choose Platform or Direct, save the checkout, and optionally enter laundry kg right away. You can still add linked laundry later from Stored data or the Laundry tab.",
       "batchTitle": "Add multiple cleanings",
-      "batchDescription": "Use one shared date, category, and reservation source to save several checkout rows at once. Property pricing is suggested automatically from the latest saved cleaning for that property.",
+      "batchDescription": "Use one shared date, category, and reservation source to save several checkout rows at once. Each row can also include laundry kg, and property pricing is suggested automatically from the latest saved cleaning for that property.",
       "batchDate": "Date for all rows",
       "batchCategory": "Category for all rows",
-      "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes and guest amount on each row before saving, while Platform or Direct applies to the whole batch.",
+      "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes, guest amount, and laundry kg on each row before saving, while Platform or Direct applies to the whole batch.",
       "quickLaundryHint": "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.",
       "entryModes": {
         "single": "Single entry",
