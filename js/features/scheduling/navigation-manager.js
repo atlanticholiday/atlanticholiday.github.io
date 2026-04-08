@@ -23,6 +23,7 @@ export class NavigationManager {
             visits: 'visits-page',
             cleaningAh: 'cleaning-ah-page',
             cleaningBills: 'cleaning-bills-page',
+            buildPlanner: 'build-planner-page',
             staff: 'staff-page',
         };
     }
@@ -149,6 +150,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showBuildPlannerPage() {
+        this.showPage('buildPlanner');
+        const event = new CustomEvent('buildPlannerPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -169,6 +176,7 @@ export class NavigationManager {
         const goToCommissionCalculatorBtn = document.getElementById('go-to-commission-calculator-btn');
         const goToStaffBtn = document.getElementById('go-to-staff-btn');
         const goToTimeClockBtn = document.getElementById('go-to-time-clock-btn');
+        const goToBuildPlannerBtn = document.getElementById('go-to-build-planner-btn');
 
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -279,6 +287,12 @@ export class NavigationManager {
             });
         }
 
+        if (goToBuildPlannerBtn) {
+            goToBuildPlannerBtn.addEventListener('click', () => {
+                this.showBuildPlannerPage();
+            });
+        }
+
         // All Info navigation
         const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
         if (goToAllInfoBtn) {
@@ -343,6 +357,7 @@ export class NavigationManager {
         const backToLandingFromCleaningBillsBtn = document.getElementById('back-to-landing-from-cleaning-bills-btn');
         const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
         const backToLandingFromTimeClockBtn = document.getElementById('back-to-landing-from-time-clock-btn');
+        const backToLandingFromBuildPlannerBtn = document.getElementById('back-to-landing-from-build-planner-btn');
 
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -436,6 +451,12 @@ export class NavigationManager {
             });
         }
 
+        if (backToLandingFromBuildPlannerBtn) {
+            backToLandingFromBuildPlannerBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         // Back from All Info
         const backToLandingFromAllInfoBtn = document.getElementById('back-to-landing-from-allinfo-btn');
         if (backToLandingFromAllInfoBtn) {
@@ -482,6 +503,7 @@ export class NavigationManager {
         const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
         const commissionCalculatorSignOutBtn = document.getElementById('commission-calculator-sign-out-btn');
         const staffSignOutBtn = document.getElementById('staff-sign-out-btn');
+        const buildPlannerSignOutBtn = document.getElementById('build-planner-sign-out-btn');
 
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -567,6 +589,13 @@ export class NavigationManager {
         }
         if (staffSignOutBtn) {
             staffSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (buildPlannerSignOutBtn) {
+            buildPlannerSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

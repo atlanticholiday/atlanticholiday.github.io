@@ -15,6 +15,7 @@ import "./unit/features/operations/airbnb-reservation-invoices-manager.test.js";
 import "./unit/features/operations/cleaning-bills-manager.test.js";
 import "./unit/features/operations/commission-calculator-manager.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";
+import "./unit/features/planning/build-planner-manager.test.js";
 import "./unit/features/properties/property-form-utils.test.js";
 import "./unit/features/properties/properties-dashboard-controller.test.js";
 import "./unit/features/scheduling/attendance-print-period.test.js";

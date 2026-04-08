@@ -62,4 +62,34 @@ describe("NavigationManager", () => {
     assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
     assert.ok(document.getElementById("airbnb-reservation-invoices-page").classList.contains("hidden"));
   });
+
+  test("routes to build planner and back to landing", () => {
+    resetDom(`
+      <button id="go-to-build-planner-btn">Build Planner</button>
+      <button id="back-to-landing-from-build-planner-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="build-planner-page" class="hidden"></div>
+    `);
+
+    const navigationManager = new NavigationManager();
+    navigationManager.setupNavigationListeners();
+
+    let pageEventCount = 0;
+    document.addEventListener("buildPlannerPageOpened", () => {
+      pageEventCount += 1;
+    }, { once: true });
+
+    document.getElementById("go-to-build-planner-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "buildPlanner");
+    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(!document.getElementById("build-planner-page").classList.contains("hidden"));
+    assert.equal(pageEventCount, 1);
+
+    document.getElementById("back-to-landing-from-build-planner-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "landing");
+    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(document.getElementById("build-planner-page").classList.contains("hidden"));
+  });
 });

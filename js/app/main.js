@@ -14,6 +14,7 @@ import { CleaningBillsManager } from '../features/operations/cleaning-bills-mana
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
+import { BuildPlannerManager } from '../features/planning/build-planner-manager.js';
 import { ReservationsManager } from '../features/operations/reservations-manager.js';
 import { RnalManager } from '../features/operations/rnal-manager.js';
 import { SafetyManager } from '../features/operations/safety-manager.js';
@@ -45,7 +46,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -206,7 +207,8 @@ function syncAccessModeUi() {
         'go-to-reservations-btn',
         'go-to-user-management-btn',
         'go-to-inventory-btn',
-        'go-to-cleaning-ah-btn'
+        'go-to-cleaning-ah-btn',
+        'go-to-build-planner-btn'
     ];
 
     dashboardButtons.forEach((buttonId) => {
@@ -390,6 +392,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         eventManager = new EventManager(auth, dataManager, uiManager);
         navigationManager = new NavigationManager();
+        buildPlannerManager = new BuildPlannerManager();
+        buildPlannerManager.init();
+        window.buildPlannerManager = buildPlannerManager;
         propertyDashboardController = new PropertiesDashboardController({
             getPropertiesManager: () => propertiesManager
         });

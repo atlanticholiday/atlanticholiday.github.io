@@ -359,6 +359,19 @@
                         </div>
                     </button>
 
+                    <button id="go-to-build-planner-btn" class="dashboard-card">
+                        <div class="card-icon bg-emerald-500/10 text-emerald-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2m0 18l6-3m-6 3V2m6 15l6 3m-6-3V5m6 15V8m0 12l-6-3m6-9l-6-3M9 2l6 3" />
+                            </svg>
+                        </div>
+                        <div class="card-body">
+                            <h3 id="build-planner-card-title">Build Planner</h3>
+                            <p id="build-planner-card-description">Future system ideas, recommended order, and copy-ready prompts for Codex.</p>
+                        </div>
+                    </button>
+
                     <button id="go-to-inventory-btn" class="dashboard-card"
                         onclick="window.location.href='inventory.html'">
                         <div class="card-icon bg-yellow-500/10 text-yellow-600">
@@ -1540,6 +1553,54 @@ Mountain Villa, Sintra Hills, V4"
 
                 <p id="airbnb-reservation-invoices-copy-feedback" class="hidden mt-4 text-sm font-medium"></p>
             </div>
+        </div>
+    </div>
+
+    <!-- Build Planner Page -->
+    <div id="build-planner-page" class="hidden min-h-screen bg-stone-100">
+        <header class="dashboard-header build-planner-page-header">
+            <div class="container build-planner-shell-container mx-auto flex flex-col gap-6 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="back-to-landing-from-build-planner-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span id="build-planner-back-label" class="sr-only" data-i18n="common.back">Back</span>
+                    </button>
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo" />
+                    <div class="leading-tight">
+                        <div id="build-planner-header-kicker" class="page-mini">Roadmap</div>
+                        <div id="build-planner-page-title" class="brand-name brand-red">Build Planner</div>
+                        <div id="build-planner-page-subtitle" class="page-mini">Keep future system upgrades inside the website.</div>
+                    </div>
+                </div>
+                <div class="build-planner-header-actions">
+                    <div
+                        class="language-switcher build-planner-language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="en" title="English">EN</button>
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="pt" title="Portuguese">PT</button>
+                    </div>
+                    <button id="build-planner-sign-out-btn"
+                        class="build-planner-signout text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        <span id="build-planner-sign-out-label" data-i18n="common.signOut">Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container build-planner-shell-container mx-auto px-4 py-8">
+            <div id="build-planner-root"></div>
         </div>
     </div>
 
