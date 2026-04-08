@@ -932,18 +932,18 @@ export class CleaningAhManager {
         root.innerHTML = `
             ${this.renderStatusMessage()}
             <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="max-w-2xl">
+                <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${escapeHtml(this.tr("formula.kicker"))}</div>
                     <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("formula.title"))}</h2>
                     <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
                 </div>
-                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                    ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count))}
-                    ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount))}
-                    ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
-                    ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
-                    ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(cleaningSummary.totals.laundryAmount))}
-                    ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh))}
+                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count), "compact")}
+                    ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount), "compact")}
+                    ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission), "compact")}
+                    ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount), "compact")}
+                    ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(cleaningSummary.totals.laundryAmount), "compact")}
+                    ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh), "compact")}
                 </div>
             </section>
 
@@ -979,12 +979,26 @@ export class CleaningAhManager {
         `;
     }
 
-    renderMetricCard(label, value) {
+    renderMetricCard(label, value, size = "default") {
+        const sizeClasses = {
+            default: {
+                article: "px-4 py-3 min-h-[72px]",
+                label: "text-sm leading-5",
+                value: "text-lg"
+            },
+            compact: {
+                article: "px-4 py-2.5 min-h-[60px]",
+                label: "text-sm leading-5",
+                value: "text-base sm:text-lg"
+            }
+        };
+        const selectedSize = sizeClasses[size] || sizeClasses.default;
+
         return `
-            <article class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 min-h-[72px]">
+            <article class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 ${selectedSize.article}">
                 <div class="grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                    <div class="min-w-0 text-sm font-medium leading-5 text-slate-500">${escapeHtml(label)}</div>
-                    <div class="text-right text-lg font-semibold leading-none text-slate-900 tabular-nums whitespace-nowrap">${escapeHtml(value)}</div>
+                    <div class="min-w-0 font-medium text-slate-500 ${selectedSize.label}">${escapeHtml(label)}</div>
+                    <div class="text-right font-semibold leading-none text-slate-900 tabular-nums whitespace-nowrap ${selectedSize.value}">${escapeHtml(value)}</div>
                 </div>
             </article>
         `;
