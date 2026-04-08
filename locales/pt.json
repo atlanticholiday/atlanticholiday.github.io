@@ -118,8 +118,8 @@
         },
         "formula": {
             "kicker": "Formula",
-            "title": "Registo rapido com uma unica regra de receita.",
-            "body": "As limpezas usam a regra normal de 15,5% de comissao e 22% de IVA extraido. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
+            "title": "Registo rapido com suporte a plataforma e direta.",
+            "body": "As limpezas usam a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. A lavandaria continua a ser associada mais tarde a 2,60 EUR por kg."
         },
         "tabs": {
             "dashboard": "Painel",
@@ -171,12 +171,13 @@
             "entryKicker": "Registo rapido",
             "editTitle": "Editar limpeza",
             "addTitle": "Adicionar limpeza",
-            "description": "Guarde primeiro o check-out. A lavandaria pode ser associada depois no separador Lavandaria quando os quilos chegarem.",
+            "description": "Escolha Plataforma ou Direta, guarde o check-out e adicione a lavandaria associada depois nos Dados guardados ou no separador Lavandaria quando os quilos chegarem.",
             "batchTitle": "Adicionar varias limpezas",
-            "batchDescription": "Use uma data e categoria partilhadas para guardar varias linhas de check-out de uma vez. O valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
+            "batchDescription": "Use uma data, categoria e origem da reserva partilhadas para guardar varias linhas de check-out de uma vez. O valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
             "batchDate": "Data para todas as linhas",
             "batchCategory": "Categoria para todas as linhas",
-            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas e o valor hospede em cada linha antes de guardar.",
+            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas e o valor hospede em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
+            "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela tambem aparece no separador Lavandaria.",
             "entryModes": {
                 "single": "Registo unico",
                 "batch": "Registo em lote"
@@ -244,6 +245,7 @@
             "property": "Propriedade",
             "propertyPlaceholder": "Escreva ou escolha uma propriedade",
             "category": "Categoria",
+            "reservationSource": "Reserva",
             "guestAmount": "Valor hospede",
             "notesPlaceholder": "Nota opcional",
             "linkedCleaning": "Limpeza associada",
@@ -276,7 +278,7 @@
             "laundry": "Lavandaria",
             "net": "Liquido",
             "source": "Origem",
-            "actions": "Acoes",
+            "actions": "Ações",
             "linkedCleaning": "Limpeza associada",
             "kg": "Kg",
             "ratePerKg": "Preco / kg",
@@ -308,6 +310,8 @@
             "saveCleaningBatch": "Guardar todas as linhas",
             "saveLaundry": "Guardar lavandaria",
             "saveLaundryBatch": "Guardar todas as linhas",
+            "addLaundry": "Adicionar lavandaria",
+            "addMoreLaundry": "Adicionar mais lavandaria",
             "saveLink": "Guardar associacao",
             "linkCleaning": "Associar limpeza",
             "changeLink": "Alterar associacao",
@@ -346,6 +350,7 @@
             "cleaningBatchValidationError": "Introduza uma data e complete a propriedade e o valor hospede em cada linha de limpeza que pretende guardar.",
             "cleaningBatchSaved": "Foram guardadas {{count}} linhas de limpeza.",
             "cleaningBatchSaveFailed": "Nao foi possivel guardar as linhas de limpeza.",
+            "linkedLaundryValidationError": "Introduza uma data e os kg para guardar a lavandaria associada.",
             "laundryValidationError": "A data e a propriedade sao obrigatorias para um registo de lavandaria.",
             "laundryUpdated": "Registo de lavandaria atualizado.",
             "laundrySaved": "Registo de lavandaria guardado.",

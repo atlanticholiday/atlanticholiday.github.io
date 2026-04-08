@@ -98,6 +98,8 @@ export class CleaningAhManager {
         this.laundryRegisterFilter = "all";
         this.laundryRegisterSort = "date-desc";
         this.openLaundryLinkEditorId = "";
+        this.openCleaningLaundryEntryId = "";
+        this.cleaningLaundryQuickDrafts = {};
 
         this.editingCleaningId = null;
         this.editingLaundryId = null;
@@ -170,6 +172,24 @@ export class CleaningAhManager {
         return value === CLEANING_AH_RESERVATION_SOURCES.direct
             ? this.tr("reservationSources.direct")
             : this.tr("reservationSources.platform");
+    }
+
+    getCleaningReservationSource(record = {}) {
+        return record.reservationSource
+            || (roundCurrency(record.platformCommission || 0) === 0
+                ? CLEANING_AH_RESERVATION_SOURCES.direct
+                : CLEANING_AH_RESERVATION_SOURCES.platform);
+    }
+
+    createCleaningQuickLaundryDraft(record = {}, overrides = {}) {
+        return {
+            date: getTodayIsoDate(),
+            kg: "",
+            laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
+            notes: "",
+            ...overrides,
+            linkedCleaningId: record.id || ""
+        };
     }
 
     getRecordSourceLabel(value) {
@@ -521,6 +541,40 @@ export class CleaningAhManager {
             });
     }
 
+    getLinkedLaundryRecordsForCleaning(recordId) {
+        if (!recordId) {
+            return [];
+        }
+
+        return this.laundryRecords.filter((record) => record.linkedCleaningId === recordId);
+    }
+
+    getCleaningQuickLaundryDraft(record) {
+        const existingDraft = this.cleaningLaundryQuickDrafts[record?.id || ""];
+        return existingDraft
+            ? { ...existingDraft }
+            : this.createCleaningQuickLaundryDraft(record);
+    }
+
+    readCleaningQuickLaundryDraftFromContainer(container, recordId) {
+        const record = this.cleaningRecords.find((entry) => entry.id === recordId) || { id: recordId };
+        return this.createCleaningQuickLaundryDraft(record, {
+            date: String(container?.querySelector('[name="date"]')?.value || "").trim(),
+            kg: String(container?.querySelector('[name="kg"]')?.value || "").trim(),
+            laundryRatePerKg: String(container?.querySelector('[name="laundryRatePerKg"]')?.value || "").trim(),
+            notes: String(container?.querySelector('[name="notes"]')?.value || "").trim()
+        });
+    }
+
+    getCleaningQuickLaundryActionLabel(record) {
+        const linkedLaundryCount = this.getLinkedLaundryRecordsForCleaning(record?.id || "").length;
+        if (linkedLaundryCount > 0 || roundCurrency(record?.effectiveLaundryAmount ?? record?.laundryAmount) > 0) {
+            return this.tr("actions.addMoreLaundry");
+        }
+
+        return this.tr("actions.addLaundry");
+    }
+
     getCleaningLinkLabel(record) {
         return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${record.category || DEFAULT_CLEANING_CATEGORY}`;
     }
@@ -590,7 +644,7 @@ export class CleaningAhManager {
                 record.date,
                 record.propertyName,
                 record.category,
-                record.reservationSource,
+                this.getCleaningReservationSource(record),
                 record.notes,
                 record.sourceMonthLabel
             ].map(normalizeKey).join(" ");
@@ -947,6 +1001,34 @@ export class CleaningAhManager {
         `;
     }
 
+    renderTableActionButton({
+        action,
+        id,
+        label,
+        iconClass,
+        tone = "default"
+    }) {
+        const toneClasses = {
+            default: "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900",
+            primary: "border-sky-200 bg-sky-50 text-sky-600 hover:border-sky-300 hover:bg-sky-100 hover:text-sky-800",
+            accent: "border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-300 hover:bg-indigo-100 hover:text-indigo-800",
+            danger: "border-rose-200 bg-rose-50 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-800"
+        };
+
+        return `
+            <button
+                type="button"
+                data-action="${escapeHtml(action)}"
+                data-id="${escapeHtml(id || "")}"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm transition ${toneClasses[tone] || toneClasses.default}"
+                aria-label="${escapeHtml(label)}"
+                title="${escapeHtml(label)}"
+            >
+                <i class="${escapeHtml(iconClass)}" aria-hidden="true"></i>
+            </button>
+        `;
+    }
+
     renderFilters() {
         const monthOptions = this.getMonthOptions()
             .map((monthKey) => `<option value="${monthKey}" ${monthKey === this.selectedMonthKey ? "selected" : ""}>${this.formatMonthKey(monthKey)}</option>`)
@@ -1132,6 +1214,11 @@ export class CleaningAhManager {
     }
 
     renderCleaningSingleForm({ draft, preview, guestAmountField }) {
+        const reservationSourceOptions = [
+            [CLEANING_AH_RESERVATION_SOURCES.platform, this.tr("reservationSources.platform")],
+            [CLEANING_AH_RESERVATION_SOURCES.direct, this.tr("reservationSources.direct")]
+        ];
+
         return `
             <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1146,6 +1233,14 @@ export class CleaningAhManager {
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.category"))}</span>
                         <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(draft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
+                        <select name="reservationSource" class="mt-1 w-full">
+                            ${reservationSourceOptions.map(([value, label]) => `
+                                <option value="${escapeHtml(value)}" ${draft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
+                            `).join("")}
+                        </select>
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
@@ -1167,10 +1262,14 @@ export class CleaningAhManager {
         const rows = this.cleaningBatchDraft.rows.length
             ? this.cleaningBatchDraft.rows
             : [this.createCleaningBatchRow()];
+        const reservationSourceOptions = [
+            [CLEANING_AH_RESERVATION_SOURCES.platform, this.tr("reservationSources.platform")],
+            [CLEANING_AH_RESERVATION_SOURCES.direct, this.tr("reservationSources.direct")]
+        ];
 
         return `
             <form id="cleaning-ah-cleaning-batch-form" class="mt-5 space-y-4">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchDate"))}</span>
                         <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.date)}" required>
@@ -1178,6 +1277,14 @@ export class CleaningAhManager {
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchCategory"))}</span>
                         <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
+                        <select name="reservationSource" class="mt-1 w-full">
+                            ${reservationSourceOptions.map(([value, label]) => `
+                                <option value="${escapeHtml(value)}" ${this.cleaningBatchDraft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
+                            `).join("")}
+                        </select>
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
@@ -1490,6 +1597,40 @@ export class CleaningAhManager {
         `;
     }
 
+    renderCleaningQuickLaundryEntry(record) {
+        const draft = this.getCleaningQuickLaundryDraft(record);
+
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-cleaning-laundry-entry="${escapeHtml(record.id || "")}">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_130px_140px_minmax(0,1fr)]">
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.date"))}</span>
+                            <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</span>
+                            <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
+                            <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</span>
+                            <input type="text" name="notes" class="mt-1 w-full" value="${escapeHtml(draft.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-end gap-3">
+                        <button type="button" data-action="toggle-cleaning-laundry-entry" data-id="${escapeHtml(record.id || "")}" class="text-sm text-slate-500 hover:text-slate-700">${escapeHtml(t("common.cancel"))}</button>
+                        <button type="button" data-action="save-cleaning-laundry" data-id="${escapeHtml(record.id || "")}" class="view-btn active">${escapeHtml(this.tr("actions.saveLaundry"))}</button>
+                    </div>
+                </div>
+                <p class="mt-3 text-xs text-slate-500">${escapeHtml(this.tr("cleanings.quickLaundryHint"))}</p>
+            </div>
+        `;
+    }
+
     renderLaundryQuickLinkControls(entry) {
         if (entry.source === "cleaning") {
             return "";
@@ -1624,6 +1765,7 @@ export class CleaningAhManager {
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
@@ -1631,7 +1773,9 @@ export class CleaningAhManager {
                     </tr>
                 </thead>
                 <tbody>
-                    ${records.map((record) => `
+                    ${records.map((record) => {
+                        const isQuickLaundryEntryOpen = this.openCleaningLaundryEntryId === record.id;
+                        return `
                         <tr class="border-b border-slate-100 align-top">
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
                             <td class="px-3 py-3">
@@ -1640,6 +1784,7 @@ export class CleaningAhManager {
                                 ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
                             </td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.category)}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 ${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}
@@ -1650,12 +1795,39 @@ export class CleaningAhManager {
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
-                                    <button type="button" data-action="edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(t("common.edit"))}</button>
-                                    <button type="button" data-action="delete-cleaning" data-id="${escapeHtml(record.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(t("common.delete"))}</button>
+                                    ${this.renderTableActionButton({
+                                        action: "toggle-cleaning-laundry-entry",
+                                        id: record.id,
+                                        label: isQuickLaundryEntryOpen ? t("common.cancel") : this.getCleaningQuickLaundryActionLabel(record),
+                                        iconClass: isQuickLaundryEntryOpen ? "fas fa-xmark" : "fas fa-plus",
+                                        tone: "accent"
+                                    })}
+                                    ${this.renderTableActionButton({
+                                        action: "edit-cleaning",
+                                        id: record.id,
+                                        label: t("common.edit"),
+                                        iconClass: "fas fa-pen",
+                                        tone: "primary"
+                                    })}
+                                    ${this.renderTableActionButton({
+                                        action: "delete-cleaning",
+                                        id: record.id,
+                                        label: t("common.delete"),
+                                        iconClass: "fas fa-trash",
+                                        tone: "danger"
+                                    })}
                                 </div>
                             </td>
                         </tr>
-                    `).join("")}
+                        ${isQuickLaundryEntryOpen ? `
+                            <tr class="border-b border-slate-100">
+                                <td colspan="8" class="px-3 pb-4 pt-0">
+                                    ${this.renderCleaningQuickLaundryEntry(record)}
+                                </td>
+                            </tr>
+                        ` : ""}
+                    `;
+                    }).join("")}
                 </tbody>
             </table>
         `;
@@ -1698,9 +1870,27 @@ export class CleaningAhManager {
                             <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
                             <td class="px-3 py-3 text-right">
                                 <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${entry.linkedCleaningId ? `<button type="button" data-action="open-cleaning-from-laundry" data-id="${escapeHtml(entry.linkedCleaningId || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(this.tr("actions.openCleaning"))}</button>` : ""}
-                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="edit-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-sky-600 hover:text-sky-800">${escapeHtml(t("common.edit"))}</button>` : ""}
-                                    ${entry.source !== "cleaning" ? `<button type="button" data-action="delete-laundry" data-id="${escapeHtml(entry.id || "")}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(t("common.delete"))}</button>` : ""}
+                                    ${entry.linkedCleaningId ? this.renderTableActionButton({
+                                        action: "open-cleaning-from-laundry",
+                                        id: entry.linkedCleaningId || "",
+                                        label: this.tr("actions.openCleaning"),
+                                        iconClass: "fas fa-arrow-up-right-from-square",
+                                        tone: "primary"
+                                    }) : ""}
+                                    ${entry.source !== "cleaning" ? this.renderTableActionButton({
+                                        action: "edit-laundry",
+                                        id: entry.id,
+                                        label: t("common.edit"),
+                                        iconClass: "fas fa-pen",
+                                        tone: "primary"
+                                    }) : ""}
+                                    ${entry.source !== "cleaning" ? this.renderTableActionButton({
+                                        action: "delete-laundry",
+                                        id: entry.id,
+                                        label: t("common.delete"),
+                                        iconClass: "fas fa-trash",
+                                        tone: "danger"
+                                    }) : ""}
                                 </div>
                             </td>
                         </tr>
@@ -1970,6 +2160,46 @@ export class CleaningAhManager {
         document.querySelectorAll("[data-action='delete-cleaning']").forEach((button) => {
             button.addEventListener("click", () => this.deleteCleaning(button.dataset.id || ""));
         });
+        document.querySelectorAll("[data-action='toggle-cleaning-laundry-entry']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const recordId = button.dataset.id || "";
+                if (!recordId) {
+                    return;
+                }
+
+                if (this.openCleaningLaundryEntryId === recordId) {
+                    this.openCleaningLaundryEntryId = "";
+                    delete this.cleaningLaundryQuickDrafts[recordId];
+                    this.render();
+                    return;
+                }
+
+                const record = this.cleaningRecords.find((entry) => entry.id === recordId);
+                if (!record) {
+                    return;
+                }
+
+                this.openCleaningLaundryEntryId = recordId;
+                this.cleaningLaundryQuickDrafts[recordId] = this.getCleaningQuickLaundryDraft(record);
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-cleaning-laundry-entry]").forEach((container) => {
+            container.addEventListener("input", () => {
+                const recordId = container.dataset.cleaningLaundryEntry || "";
+                if (!recordId) {
+                    return;
+                }
+
+                this.cleaningLaundryQuickDrafts[recordId] = this.readCleaningQuickLaundryDraftFromContainer(container, recordId);
+            });
+        });
+        document.querySelectorAll("[data-action='save-cleaning-laundry']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const container = button.closest("[data-cleaning-laundry-entry]");
+                this.saveCleaningLaundryRecord(button.dataset.id || "", container);
+            });
+        });
         document.querySelectorAll("[data-action='edit-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.startEditingLaundry(button.dataset.id || ""));
         });
@@ -2234,6 +2464,51 @@ export class CleaningAhManager {
         }
     }
 
+    async saveCleaningLaundryRecord(recordId, container) {
+        const cleaningRecord = this.cleaningRecords.find((entry) => entry.id === recordId);
+        if (!recordId || !cleaningRecord || !container) {
+            return;
+        }
+
+        const draft = this.readCleaningQuickLaundryDraftFromContainer(container, recordId);
+        this.cleaningLaundryQuickDrafts[recordId] = draft;
+
+        const kg = toOptionalNumber(draft.kg);
+        if (!draft.date || kg === null || kg <= 0) {
+            this.setStatus(this.tr("status.linkedLaundryValidationError"), "error");
+            this.render();
+            return;
+        }
+
+        const property = this.findPropertyByName(cleaningRecord.propertyName);
+        const record = createStandaloneLaundryRecord({
+            date: draft.date,
+            linkedCleaningId: cleaningRecord.id,
+            propertyName: cleaningRecord.propertyName,
+            propertyId: property?.id || cleaningRecord.propertyId || "",
+            kg,
+            laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
+            notes: draft.notes,
+            source: "standalone"
+        });
+
+        try {
+            await addDoc(this.getLaundryCollectionRef(), {
+                ...record,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            this.openCleaningLaundryEntryId = "";
+            delete this.cleaningLaundryQuickDrafts[recordId];
+            this.setStatus(this.tr("status.laundrySaved"), "success");
+            this.render();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to save cleaning-linked laundry:", error);
+            this.setStatus(this.tr("status.laundrySaveFailed"), "error");
+            this.render();
+        }
+    }
+
     async saveLaundryRecord() {
         this.laundryDraft = this.readLaundryDraftFromDom();
         const existingLaundry = this.editingLaundryId
@@ -2454,11 +2729,13 @@ export class CleaningAhManager {
         this.activeTab = "cleanings";
         this.cleaningEntryMode = "single";
         this.editingCleaningId = record.id;
+        this.openCleaningLaundryEntryId = "";
+        delete this.cleaningLaundryQuickDrafts[record.id];
         this.cleaningDraft = {
             date: record.date || getTodayIsoDate(),
             propertyName: record.propertyName || "",
             category: record.category || DEFAULT_CLEANING_CATEGORY,
-            reservationSource: record.reservationSource || (roundCurrency(record.platformCommission || 0) === 0 ? CLEANING_AH_RESERVATION_SOURCES.direct : CLEANING_AH_RESERVATION_SOURCES.platform),
+            reservationSource: this.getCleaningReservationSource(record),
             guestAmount: toInputNumber(record.guestAmount),
             notes: record.notes || ""
         };
@@ -2553,6 +2830,7 @@ export class CleaningAhManager {
     resetCleaningForm() {
         this.editingCleaningId = null;
         this.cleaningEntryMode = "single";
+        this.openCleaningLaundryEntryId = "";
         this.cleaningDraft = this.createDefaultCleaningDraft();
         this.render();
     }
@@ -2560,6 +2838,7 @@ export class CleaningAhManager {
     resetCleaningBatchForm() {
         this.editingCleaningId = null;
         this.cleaningEntryMode = "batch";
+        this.openCleaningLaundryEntryId = "";
         this.cleaningDraft = this.createDefaultCleaningDraft();
         this.cleaningBatchDraft = this.createDefaultCleaningBatchDraft();
         this.render();

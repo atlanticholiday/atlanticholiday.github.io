@@ -147,10 +147,51 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
-  test("does not render source controls in the cleaning entry ui", () => {
+  test("renders reservation source controls in cleaning forms and stored rows", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          actions: {
+            addLaundry: "Add laundry"
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          tables: {
+            date: "Date",
+            property: "Property",
+            category: "Category",
+            reservation: "Reservation",
+            guest: "Guest",
+            laundry: "Laundry",
+            net: "Net",
+            actions: "Actions"
+          },
+          laundryState: {
+            waiting: "Waiting for laundry"
+          }
+        },
+        common: {
+          notes: "Notes",
+          edit: "Edit",
+          delete: "Delete"
+        }
+      }
+    };
+    i18n.currentLang = "en";
     manager.cleaningDraft = {
       date: "2026-04-07",
       propertyName: "Acqua Beach",
@@ -172,6 +213,15 @@ describe("CleaningAhManager", () => {
         enableSuggestion: false
       })
     });
+    manager.cleaningBatchDraft = {
+      date: "2026-04-07",
+      category: "Limpeza check-out",
+      reservationSource: "direct",
+      rows: [
+        manager.createCleaningBatchRow({ propertyName: "Acqua Beach", guestAmount: "150", notes: "" })
+      ]
+    };
+    const batchHtml = manager.renderCleaningBatchForm(manager.getCleaningBatchPreview());
 
     const tableHtml = manager.renderCleaningsTable([
       {
@@ -179,18 +229,118 @@ describe("CleaningAhManager", () => {
         date: "2026-04-07",
         propertyName: "Acqua Beach",
         category: "Limpeza check-out",
+        reservationSource: "direct",
         guestAmount: 150,
         laundryAmount: 0,
+        effectiveLaundryAmount: 0,
         totalToAh: 99.7,
         notes: "",
         source: "manual"
       }
     ]);
 
-    assert.equal(formHtml.includes('name="reservationSource"'), false);
-    assert.equal(tableHtml.includes('tables.source'), false);
-    assert.equal(tableHtml.includes('tables.reservation'), false);
+    assert.includes(formHtml, 'name="reservationSource"');
+    assert.includes(batchHtml, 'name="reservationSource"');
+    assert.includes(tableHtml, "Reservation");
+    assert.includes(tableHtml, "Direct");
+    assert.includes(tableHtml, 'aria-label="Add laundry"');
+    assert.includes(tableHtml, 'aria-label="Edit"');
+    assert.includes(tableHtml, 'aria-label="Delete"');
+    assert.includes(tableHtml, 'fas fa-plus');
+    assert.includes(tableHtml, 'fas fa-pen');
+    assert.includes(tableHtml, 'fas fa-trash');
 
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+
+    resetDom();
+  });
+
+  test("renders quick linked-laundry controls in the cleanings register", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          cleanings: {
+            quickLaundryHint: "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab."
+          },
+          forms: {
+            date: "Date",
+            kg: "Kg",
+            ratePerKg: "Rate / kg",
+            notesPlaceholder: "Optional note"
+          },
+          actions: {
+            addLaundry: "Add laundry",
+            addMoreLaundry: "Add more laundry",
+            saveLaundry: "Save laundry"
+          },
+          tables: {
+            date: "Date",
+            property: "Property",
+            category: "Category",
+            reservation: "Reservation",
+            guest: "Guest",
+            laundry: "Laundry",
+            net: "Net",
+            actions: "Actions"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          laundryState: {
+            waiting: "Waiting for laundry"
+          }
+        },
+        common: {
+          cancel: "Cancel",
+          notes: "Notes",
+          edit: "Edit",
+          delete: "Delete"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    manager.openCleaningLaundryEntryId = "cleaning-1";
+    manager.cleaningLaundryQuickDrafts["cleaning-1"] = manager.createCleaningQuickLaundryDraft({ id: "cleaning-1" }, {
+      date: "2026-04-08",
+      kg: "5",
+      laundryRatePerKg: "2.6",
+      notes: ""
+    });
+
+    const tableHtml = manager.renderCleaningsTable([
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        category: "Limpeza check-out",
+        reservationSource: "platform",
+        guestAmount: 150,
+        laundryAmount: 0,
+        effectiveLaundryAmount: 0,
+        effectiveTotalToAh: 99.7,
+        notes: "",
+        source: "manual"
+      }
+    ]);
+
+    assert.includes(tableHtml, 'data-action="toggle-cleaning-laundry-entry"');
+    assert.includes(tableHtml, 'data-cleaning-laundry-entry="cleaning-1"');
+    assert.includes(tableHtml, 'data-action="save-cleaning-laundry"');
+    assert.includes(tableHtml, 'name="laundryRatePerKg"');
+    assert.includes(tableHtml, 'aria-label="Cancel"');
+    assert.includes(tableHtml, 'fas fa-xmark');
+    assert.includes(tableHtml, "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
     resetDom();
   });
 
@@ -203,13 +353,16 @@ describe("CleaningAhManager", () => {
     i18n.translations = {
       en: {
         common: {
-          cancel: "Cancel"
+          cancel: "Cancel",
+          edit: "Edit",
+          delete: "Delete"
         },
         cleaningAh: {
           actions: {
             linkCleaning: "Link cleaning",
             changeLink: "Change link",
-            saveLink: "Save link"
+            saveLink: "Save link",
+            openCleaning: "Open cleaning"
           },
           tables: {
             linkedCleaning: "Linked cleaning"
@@ -279,8 +432,14 @@ describe("CleaningAhManager", () => {
     ]);
 
     assert.includes(collapsedHtml, 'data-action="toggle-laundry-link-editor"');
+    assert.includes(collapsedHtml, 'aria-label="Edit"');
+    assert.includes(collapsedHtml, 'aria-label="Delete"');
+    assert.includes(collapsedHtml, 'fas fa-pen');
+    assert.includes(collapsedHtml, 'fas fa-trash');
     assert.includes(standaloneHtml, 'data-action="save-laundry-link"');
     assert.includes(standaloneHtml, 'data-laundry-link-select');
+    assert.includes(cleaningHtml, 'aria-label="Open cleaning"');
+    assert.includes(cleaningHtml, 'fa-arrow-up-right-from-square');
     assert.equal(cleaningHtml.includes('data-action="save-laundry-link"'), false);
 
     i18n.translations = previousTranslations;

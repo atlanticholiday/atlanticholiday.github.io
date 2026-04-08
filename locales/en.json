@@ -118,8 +118,8 @@
     },
     "formula": {
       "kicker": "Formula",
-      "title": "Fast entry with one revenue rule.",
-      "body": "Cleanings use the standard 15.5% commission and 22% extracted VAT rule. Laundry still links later at 2.60 EUR per kg."
+      "title": "Fast entry with platform and direct support.",
+      "body": "Cleanings use the standard 22% extracted VAT rule, with 15.5% commission only on platform reservations. Laundry can still be linked later at 2.60 EUR per kg."
     },
     "tabs": {
       "dashboard": "Dashboard",
@@ -171,12 +171,13 @@
       "entryKicker": "Quick entry",
       "editTitle": "Edit cleaning",
       "addTitle": "Add cleaning",
-      "description": "Save the checkout first. Laundry can be linked later from the Laundry tab when the kilograms arrive.",
+      "description": "Choose Platform or Direct, save the checkout, and add linked laundry later from Stored data or the Laundry tab when the kilograms arrive.",
       "batchTitle": "Add multiple cleanings",
-      "batchDescription": "Use one shared date and category to save several checkout rows at once. Property pricing is suggested automatically from the latest saved cleaning for that property.",
+      "batchDescription": "Use one shared date, category, and reservation source to save several checkout rows at once. Property pricing is suggested automatically from the latest saved cleaning for that property.",
       "batchDate": "Date for all rows",
       "batchCategory": "Category for all rows",
-      "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes and guest amount on each row before saving.",
+      "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes and guest amount on each row before saving, while Platform or Direct applies to the whole batch.",
+      "quickLaundryHint": "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.",
       "entryModes": {
         "single": "Single entry",
         "batch": "Batch entry"
@@ -244,6 +245,7 @@
       "property": "Property",
       "propertyPlaceholder": "Type or pick a property",
       "category": "Category",
+      "reservationSource": "Reservation",
       "guestAmount": "Guest amount",
       "notesPlaceholder": "Optional note",
       "linkedCleaning": "Linked cleaning",
@@ -308,6 +310,8 @@
       "saveCleaningBatch": "Save all rows",
       "saveLaundry": "Save laundry",
       "saveLaundryBatch": "Save all rows",
+      "addLaundry": "Add laundry",
+      "addMoreLaundry": "Add more laundry",
       "saveLink": "Save link",
       "linkCleaning": "Link cleaning",
       "changeLink": "Change link",
@@ -346,6 +350,7 @@
       "cleaningBatchValidationError": "Enter a date and complete property plus guest amount for each cleaning row you want to save.",
       "cleaningBatchSaved": "Saved {{count}} cleaning rows.",
       "cleaningBatchSaveFailed": "Cleaning rows could not be saved.",
+      "linkedLaundryValidationError": "Enter a date and kg to save linked laundry.",
       "laundryValidationError": "Date and property are required for a laundry record.",
       "laundryUpdated": "Laundry record updated.",
       "laundrySaved": "Laundry record saved.",
