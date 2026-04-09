@@ -1,19 +1,88 @@
+﻿import {
+    formatWelcomePackCurrency,
+    normalizeWelcomePackItem,
+    normalizeWelcomePackLog,
+    summarizeWelcomePackCart,
+    summarizeWelcomePackInventory,
+    summarizeWelcomePackLogs
+} from './welcome-pack-utils.js';
+import { i18n, t } from '../../core/i18n.js';
+
 export class WelcomePackManager {
     constructor(dataManager) {
         this.dataManager = dataManager;
-        this.currentView = 'dashboard'; // dashboard, inventory, log, presets
-        this.cart = []; // Array of items currently in the new pack
+        this.handleLanguageChange = this.handleLanguageChange.bind(this);
+        this.currentView = 'dashboard'; // dashboard, inventory, log, reservations, presets
+        this.cart = [];
         this.dashboardFilters = {
             startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], // Last 30 days default
             endDate: new Date().toISOString().split('T')[0]
         };
-        this.editingLogId = null; // Track if we are editing a log
+        this.editingLogId = null;
+        this.chargeAmountManuallyEdited = false;
         this.cache = {
             logs: null,
             items: null,
             presets: null,
             properties: null
         };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('languageChanged', this.handleLanguageChange);
+        }
+    }
+
+    tr(key, replacements = {}) {
+        return t(`welcomePack.${key}`, replacements);
+    }
+
+    pluralize(key, count, replacements = {}) {
+        return this.tr(`${key}.${count === 1 ? 'one' : 'other'}`, {
+            count,
+            ...replacements
+        });
+    }
+
+    getLocale() {
+        const activeLanguage = i18n?.getCurrentLanguage?.() || i18n?.currentLang || 'en';
+        return activeLanguage === 'pt' ? 'pt-PT' : 'en-US';
+    }
+
+    formatDisplayDate(dateValue) {
+        if (!dateValue) return '-';
+        const candidate = new Date(`${dateValue}T00:00:00`);
+        return Number.isNaN(candidate.getTime())
+            ? String(dateValue)
+            : candidate.toLocaleDateString(this.getLocale());
+    }
+
+    formatCompactDate(dateValue) {
+        if (!dateValue) return '-';
+        const candidate = dateValue instanceof Date ? dateValue : new Date(dateValue);
+        return Number.isNaN(candidate.getTime())
+            ? String(dateValue)
+            : candidate.toLocaleDateString(this.getLocale(), {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+    }
+
+    formatDisplayTime(dateValue) {
+        if (!dateValue) return '';
+        const candidate = dateValue instanceof Date ? dateValue : new Date(dateValue);
+        return Number.isNaN(candidate.getTime())
+            ? ''
+            : candidate.toLocaleTimeString(this.getLocale(), {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+    }
+
+    handleLanguageChange() {
+        if (document.getElementById('welcome-pack-content')) {
+            this.render();
+        }
     }
 
     async _fetchData(type) {
@@ -53,27 +122,158 @@ export class WelcomePackManager {
         // Navigation events handled by main app.js or index.html
     }
 
-    render() {
+    getPrimaryViews() {
+        return [
+            {
+                id: 'inventory',
+                label: this.tr('workflow.materialCosts.label'),
+                eyebrow: this.tr('workflow.materialCosts.step'),
+                description: this.tr('workflow.materialCosts.description'),
+                icon: 'fa-box-open'
+            },
+            {
+                id: 'log',
+                label: this.tr('workflow.propertyCharges.label'),
+                eyebrow: this.tr('workflow.propertyCharges.step'),
+                description: this.tr('workflow.propertyCharges.description'),
+                icon: 'fa-house-circle-check'
+            },
+            {
+                id: 'dashboard',
+                label: this.tr('workflow.calculations.label'),
+                eyebrow: this.tr('workflow.calculations.step'),
+                description: this.tr('workflow.calculations.description'),
+                icon: 'fa-chart-line'
+            }
+        ];
+    }
+
+    getSupportViews() {
+        return [
+            {
+                id: 'reservations',
+                label: this.tr('support.reservations'),
+                icon: 'fa-calendar-alt'
+            },
+            {
+                id: 'presets',
+                label: this.tr('support.presets'),
+                icon: 'fa-layer-group'
+            }
+        ];
+    }
+
+    setCurrentView(view, { resetEdit = false } = {}) {
+        if (resetEdit) {
+            this.editingLogId = null;
+        }
+        this.currentView = view;
+        this.render();
+    }
+
+    formatCurrency(value) {
+        return formatWelcomePackCurrency(value);
+    }
+
+    renderWorkspaceMetric(label, value) {
+        return `
+            <article class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 min-h-[72px]">
+                <div class="grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                    <div class="min-w-0 text-sm font-medium leading-5 text-slate-500">${label}</div>
+                    <div class="text-right text-lg font-semibold leading-none text-slate-900 tabular-nums whitespace-nowrap">${value}</div>
+                </div>
+            </article>
+        `;
+    }
+
+    async render() {
         const container = document.getElementById('welcome-pack-content');
         if (!container) return;
 
+        const primaryViews = this.getPrimaryViews();
+        const supportViews = this.getSupportViews();
+        let inventorySummary = summarizeWelcomePackInventory([]);
+        let logSummary = summarizeWelcomePackLogs([]);
+
+        try {
+            const [logs, items] = await Promise.all([
+                this._fetchData('logs'),
+                this._fetchData('items')
+            ]);
+            inventorySummary = summarizeWelcomePackInventory(items);
+            logSummary = summarizeWelcomePackLogs(logs);
+        } catch (error) {
+            console.warn('[WelcomePack] Failed to load workspace summary:', error);
+        }
+
         container.innerHTML = `
-            <div class="mb-6 flex justify-between items-center flex-wrap gap-3">
-                <h2 class="text-2xl font-bold text-gray-800">Welcome Packs</h2>
-                <div class="flex gap-2 flex-wrap">
-                    <button id="wp-dashboard-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'dashboard' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Dashboard</button>
-                    <button id="wp-reservations-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'reservations' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all flex items-center gap-1">
-                        <i class="fas fa-calendar-alt text-sm"></i> Reservations
-                    </button>
-                    <button id="wp-log-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'log' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Log Pack</button>
-                    <button id="wp-presets-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'presets' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Presets</button>
-                    <button id="wp-inventory-btn" class="px-4 py-2 rounded-lg ${this.currentView === 'inventory' ? 'bg-[#e94b5a] text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'} transition-all">Inventory</button>
-                    <button id="wp-help-btn" class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-medium" title="User Guide & Help">
-                        <i class="fas fa-question-circle mr-1"></i> Help
-                    </button>
-                </div>
+            <div class="welcome-pack-shell">
+                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                        <div class="w-full">
+                            <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${this.tr('hero.kicker')}</div>
+                            <h2 class="mt-2 text-2xl font-semibold text-slate-900">${this.tr('hero.title')}</h2>
+                            <p class="mt-2 w-full text-sm leading-6 text-slate-600">${this.tr('hero.body')}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
+                        ${primaryViews.map((view) => `
+                            <button
+                                type="button"
+                                class="text-left rounded-2xl border ${this.currentView === view.id ? 'border-sky-200 bg-sky-50/70' : 'border-slate-200 bg-slate-50'} px-4 py-4 transition hover:-translate-y-0.5 hover:border-slate-300"
+                                data-wp-view="${view.id}">
+                                <div class="flex items-start gap-3">
+                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${this.currentView === view.id ? 'bg-sky-100 text-sky-700' : 'bg-white text-slate-600'}">
+                                        <i class="fas ${view.icon}"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <div class="text-[11px] font-semibold uppercase tracking-[0.18em] ${this.currentView === view.id ? 'text-sky-700' : 'text-slate-500'}">${view.eyebrow}</div>
+                                        <h3 class="mt-1 text-base font-semibold text-slate-900">${view.label}</h3>
+                                        <p class="mt-1 text-sm leading-6 text-slate-600">${view.description}</p>
+                                    </div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        ${this.renderWorkspaceMetric(this.tr('inventory.metrics.tracked'), String(inventorySummary.totals.materialCount))}
+                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.loggedCharges'), String(logSummary.totals.count))}
+                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.amountCharged'), this.formatCurrency(logSummary.totals.revenue))}
+                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.profit'), this.formatCurrency(logSummary.totals.profit))}
+                    </div>
+                </section>
+
+                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <nav class="flex flex-wrap gap-2" aria-label="Welcome Pack views">
+                        ${primaryViews.map((view) => `
+                            <button
+                                type="button"
+                                id="wp-${view.id}-btn"
+                                class="view-btn ${this.currentView === view.id ? 'active' : ''}"
+                                data-wp-view="${view.id}">
+                                <i class="fas ${view.icon}"></i>
+                                <span>${view.label}</span>
+                            </button>
+                        `).join('')}
+                        </nav>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${this.tr('support.label')}</span>
+                            ${supportViews.map((view) => `
+                            <button
+                                type="button"
+                                id="wp-${view.id}-btn"
+                                class="view-btn ${this.currentView === view.id ? 'active' : ''}"
+                                data-wp-view="${view.id}">
+                                <i class="fas ${view.icon}"></i>
+                                <span>${view.label}</span>
+                            </button>
+                        `).join('')}
+                        </div>
+                    </div>
+                </section>
+                <div id="wp-view-container" class="space-y-6"></div>
             </div>
-            <div id="wp-view-container"></div>
         `;
 
         this.attachNavListeners();
@@ -81,19 +281,19 @@ export class WelcomePackManager {
     }
 
     attachNavListeners() {
-        document.getElementById('wp-dashboard-btn').onclick = () => { this.currentView = 'dashboard'; this.render(); };
-        document.getElementById('wp-reservations-btn').onclick = () => { this.currentView = 'reservations'; this.render(); };
-        document.getElementById('wp-log-btn').onclick = () => { this.editingLogId = null; this.currentView = 'log'; this.render(); };
-        document.getElementById('wp-presets-btn').onclick = () => { this.currentView = 'presets'; this.render(); };
-        document.getElementById('wp-inventory-btn').onclick = () => { this.currentView = 'inventory'; this.render(); };
-        document.getElementById('wp-help-btn').onclick = () => { this.showHelpModal(); };
+        document.querySelectorAll('[data-wp-view]').forEach((button) => {
+            button.onclick = () => {
+                const { wpView } = button.dataset;
+                this.setCurrentView(wpView, { resetEdit: wpView === 'log' });
+            };
+        });
     }
 
     renderLoadingState(container) {
         if (!container) return;
         container.innerHTML = `
-            <div class="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-500">
-                Loading Welcome Packs...
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+                ${this.tr('states.loading')}
             </div>
         `;
     }
@@ -103,22 +303,22 @@ export class WelcomePackManager {
         const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
 
         if (code.includes('permission-denied') || message.includes('insufficient permissions')) {
-            return 'Welcome Packs is not available for this account. Check your access level and try again.';
+            return this.tr('states.permissionDenied');
         }
 
         if (code.includes('unauthenticated') || message.includes('requires authentication')) {
-            return 'Sign in again to load Welcome Packs.';
+            return this.tr('states.unauthenticated');
         }
 
-        return 'Welcome Packs could not be loaded right now. Please try again.';
+        return this.tr('states.unavailable');
     }
 
     renderErrorState(container, error) {
         if (!container) return;
         container.innerHTML = `
-            <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-                <h3 class="text-lg font-semibold text-red-800">Welcome Packs Unavailable</h3>
-                <p class="mt-2 text-sm text-red-700">${this.describeLoadError(error)}</p>
+            <div class="rounded-3xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+                <h3 class="text-lg font-semibold text-rose-800">${this.tr('states.unavailableTitle')}</h3>
+                <p class="mt-2 text-sm text-rose-700">${this.describeLoadError(error)}</p>
             </div>
         `;
     }
@@ -145,41 +345,235 @@ export class WelcomePackManager {
     async renderDashboard(container) {
         const logs = await this._fetchData('logs');
         const items = await this._fetchData('items');
-
-        // Filter logs
-        const filteredLogs = logs.filter(log => {
-            const logDate = log.date; // already YYYY-MM-DD
-            return logDate >= this.dashboardFilters.startDate && logDate <= this.dashboardFilters.endDate;
-        });
-
-        // Calculate stats
-        const totalPacks = filteredLogs.length;
-        const totalRevenue = filteredLogs.reduce((sum, log) => sum + (log.totalSell || 0), 0);
-        const totalProfit = filteredLogs.reduce((sum, log) => sum + (log.profit || 0), 0);
-        const totalCost = totalRevenue - totalProfit;
-        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-        // Group by property
-        const propertyStats = {};
-        filteredLogs.forEach(log => {
-            if (!propertyStats[log.property]) propertyStats[log.property] = 0;
-            propertyStats[log.property]++;
-        });
-
-        // Check for low stock items
-        const lowStockItems = items.filter(item => (item.quantity || 0) < 5);
+        const logSummary = summarizeWelcomePackLogs(logs, this.dashboardFilters);
+        const inventorySummary = summarizeWelcomePackInventory(items);
+        const filteredLogs = logSummary.logs;
+        const lowStockItems = inventorySummary.lowStockItems;
 
         container.innerHTML = `
-            <!-- Low Stock Alert -->
             ${lowStockItems.length > 0 ? `
-            <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 flex items-start gap-4">
-                <div class="bg-amber-100 rounded-full p-2">
-                    <i class="fas fa-exclamation-triangle text-amber-600 text-xl"></i>
+            <section class="welcome-pack-inline-alert">
+                <div class="welcome-pack-inline-alert-icon">
+                    <i class="fas fa-triangle-exclamation"></i>
                 </div>
-                <div class="flex-1">
-                    <h3 class="font-bold text-amber-800 mb-1">Low Stock Alert</h3>
-                    <p class="text-sm text-amber-700 mb-2">${lowStockItems.length} item${lowStockItems.length > 1 ? 's are' : ' is'} running low on stock:</p>
-                    <div class="flex flex-wrap gap-2">
+                <div class="flex-1 min-w-0">
+                    <h3>${this.tr('dashboard.lowStockTitle')}</h3>
+                    <p>
+                        ${this.tr('dashboard.lowStockBody', {
+                            count: lowStockItems.length,
+                            items: lowStockItems.map((item) => `${item.name} (${item.quantity || 0})`).join(', ')
+                        })}
+                    </p>
+                </div>
+                <button type="button" id="wp-go-manage-stock-btn" class="welcome-pack-secondary-button">
+                    <i class="fas fa-box-open"></i>
+                    <span>${this.tr('dashboard.openMaterialCosts')}</span>
+                </button>
+            </section>
+            ` : ''}
+
+            <section class="welcome-pack-panel">
+                <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
+                    <div>
+                        <p class="welcome-pack-section-kicker">${this.tr('workflow.calculations.label')}</p>
+                        <h3>${this.tr('dashboard.title')}</h3>
+                        <p>${this.tr('dashboard.description')}</p>
+                    </div>
+                    <div class="welcome-pack-toolbar-actions">
+                        <label class="welcome-pack-field">
+                            <span>${this.tr('dashboard.from')}</span>
+                            <input type="date" id="wp-stats-start" value="${this.dashboardFilters.startDate}">
+                        </label>
+                        <label class="welcome-pack-field">
+                            <span>${this.tr('dashboard.to')}</span>
+                            <input type="date" id="wp-stats-end" value="${this.dashboardFilters.endDate}">
+                        </label>
+                        <button type="button" id="wp-apply-filters" class="welcome-pack-nav-button is-active">
+                            <i class="fas fa-filter"></i>
+                            <span>${this.tr('actions.apply')}</span>
+                        </button>
+                        <button type="button" id="wp-export-csv" class="welcome-pack-secondary-button">
+                            <i class="fas fa-file-csv"></i>
+                            <span>${this.tr('actions.exportCsv')}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="welcome-pack-metric-grid">
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.loggedCharges')}</span>
+                        <strong>${logSummary.totals.count}</strong>
+                        <small>${this.tr('dashboard.metrics.unitsUsed', { count: logSummary.totals.units })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.materialCost')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.cost)}</strong>
+                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageCost) })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.amountCharged')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.revenue)}</strong>
+                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageCharge) })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.profit')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.profit)}</strong>
+                        <small>${this.tr('dashboard.metrics.marginInPeriod', { margin: logSummary.totals.margin.toFixed(1) })}</small>
+                    </article>
+                </div>
+
+                <div class="welcome-pack-chip-row">
+                    <span class="welcome-pack-chip">${this.tr('dashboard.chips.currentStockValue', { amount: this.formatCurrency(inventorySummary.totals.stockCostValue) })}</span>
+                    <span class="welcome-pack-chip">${this.tr('dashboard.chips.materialsInStock', { count: inventorySummary.totals.stockUnits })}</span>
+                    <span class="welcome-pack-chip">${this.tr('dashboard.chips.lowStockMaterials', { count: inventorySummary.totals.lowStockCount })}</span>
+                </div>
+            </section>
+
+            <div class="welcome-pack-grid">
+                <section class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('dashboard.propertyPerformanceTitle')}</h3>
+                        <p>${this.tr('dashboard.propertyPerformanceDescription')}</p>
+                    </div>
+                    ${logSummary.byProperty.length > 0 ? `
+                    <div class="welcome-pack-table-wrap">
+                        <table class="welcome-pack-table">
+                            <thead>
+                                <tr>
+                                    <th>${this.tr('dashboard.table.property')}</th>
+                                    <th>${this.tr('dashboard.table.packs')}</th>
+                                    <th>${this.tr('dashboard.table.cost')}</th>
+                                    <th>${this.tr('dashboard.table.charged')}</th>
+                                    <th>${this.tr('dashboard.table.profit')}</th>
+                                    <th>${this.tr('dashboard.table.margin')}</th>
+                                    <th>${this.tr('dashboard.table.lastCharge')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${logSummary.byProperty.map((property) => `
+                                    <tr>
+                                        <td>
+                                            <strong>${property.label}</strong>
+                                            <span>${this.tr('dashboard.table.units', { count: property.units })}</span>
+                                        </td>
+                                        <td>${property.count}</td>
+                                        <td>${this.formatCurrency(property.cost)}</td>
+                                        <td>${this.formatCurrency(property.revenue)}</td>
+                                        <td>${this.formatCurrency(property.profit)}</td>
+                                        <td>${property.margin.toFixed(1)}%</td>
+                                        <td>${this.formatDisplayDate(property.lastDate)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ` : `
+                    <div class="welcome-pack-empty-state">
+                        <h4>${this.tr('dashboard.emptyTitle')}</h4>
+                        <p>${this.tr('dashboard.emptyDescription')}</p>
+                        <button type="button" id="wp-open-log-from-empty-btn" class="welcome-pack-nav-button is-active">
+                            <i class="fas fa-house-circle-check"></i>
+                            <span>${this.tr('dashboard.openPropertyCharges')}</span>
+                        </button>
+                    </div>
+                    `}
+                </section>
+
+                <section class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('dashboard.recentChargesTitle')}</h3>
+                        <p>${this.tr('dashboard.recentChargesDescription')}</p>
+                    </div>
+                    <div class="welcome-pack-activity-list">
+                        ${logSummary.recentLogs.slice(0, 10).map((log) => `
+                            <article class="welcome-pack-activity-item">
+                                <div>
+                                    <strong>${log.propertyName || log.property || this.tr('dashboard.unknownProperty')}</strong>
+                                    <span>${this.formatDisplayDate(log.date)}</span>
+                                </div>
+                                <div>
+                                    <strong>${this.formatCurrency(log.chargedAmount)}</strong>
+                                    <span>${this.tr('dashboard.recentCostProfit', {
+                                        cost: this.formatCurrency(log.totalCost),
+                                        profit: this.formatCurrency(log.profit)
+                                    })}</span>
+                                </div>
+                                <div class="welcome-pack-activity-actions">
+                                    <button type="button" class="welcome-pack-icon-button" onclick="welcomePackManager.editLog('${log.id}')" title="${this.tr('actions.editEntry')}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" onclick="welcomePackManager.deleteLog('${log.id}')" title="${this.tr('actions.deleteEntry')}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </article>
+                        `).join('') || `
+                            <div class="welcome-pack-empty-state">
+                                <h4>${this.tr('dashboard.noChargesTitle')}</h4>
+                                <p>${this.tr('dashboard.noChargesDescription')}</p>
+                            </div>
+                        `}
+                    </div>
+                </section>
+            </div>
+        `;
+
+        document.getElementById('wp-go-manage-stock-btn')?.addEventListener('click', () => {
+            this.setCurrentView('inventory');
+        });
+        document.getElementById('wp-open-log-from-empty-btn')?.addEventListener('click', () => {
+            this.setCurrentView('log', { resetEdit: true });
+        });
+        document.getElementById('wp-apply-filters').onclick = () => {
+            const start = document.getElementById('wp-stats-start').value;
+            const end = document.getElementById('wp-stats-end').value;
+            if (start && end) {
+                this.dashboardFilters = { startDate: start, endDate: end };
+                this.renderCurrentView();
+            }
+        };
+
+        document.getElementById('wp-export-csv').onclick = () => this.exportToCSV(filteredLogs);
+    }
+
+    /*
+    initDashboardCharts(logs, allItems) {
+        // Prepare Data
+
+        // 1. Trend Data (Group by Month or Day)
+        const dateGroups = {};
+        logs.forEach(log => {
+            const date = log.date;
+            if (!dateGroups[date]) dateGroups[date] = { count: 0, profit: 0 };
+            dateGroups[date].count++;
+            dateGroups[date].profit += (log.profit || 0);
+        });
+        const trendLabels = Object.keys(dateGroups).sort();
+        const trendCounts = trendLabels.map(date => dateGroups[date].count);
+        const trendProfits = trendLabels.map(date => dateGroups[date].profit);
+
+        // 2. Property Distribution Data
+        const propertyGroups = {};
+        logs.forEach(log => {
+            const propName = log.propertyName || log.property;
+            if (!propertyGroups[propName]) propertyGroups[propName] = 0;
+            propertyGroups[propName]++;
+        });
+        const distLabels = Object.keys(propertyGroups);
+        const distData = Object.values(propertyGroups);
+
+        // 3. Top Items Used Data
+        const itemCounts = {};
+        logs.forEach(log => {
+            log.items.forEach(item => {
+                const itemName = item.name;
+                if (!itemCounts[itemName]) itemCounts[itemName] = 0;
+                itemCounts[itemName] += (item.qty || 1); // Assuming qty property, otherwise 1
+            });
+        });
+        const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 10); // Top 10
+        const itemLabels = sortedItems.map(i => i[0]);
+        const itemData = sortedItems.map(i => i[1]);
                         ${lowStockItems.map(item => `
                             <span class="inline-flex items-center gap-1 bg-white border border-amber-200 rounded-full px-3 py-1 text-sm">
                                 <span class="font-medium text-amber-800">${item.name}</span>
@@ -190,7 +584,7 @@ export class WelcomePackManager {
                 </div>
                 <button onclick="welcomePackManager.currentView='inventory'; welcomePackManager.render();" 
                     class="text-amber-700 hover:text-amber-900 font-medium text-sm whitespace-nowrap">
-                    Manage Stock →
+                    Manage Stock â†’
                 </button>
             </div>
             ` : ''}
@@ -233,7 +627,7 @@ export class WelcomePackManager {
                                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Cost</h3>
                                 <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="The sum of the cost price for all items included in the delivered packs. This represents your expense."></i>
                             </div>
-                            <p class="text-3xl font-bold text-gray-800">€${totalCost.toFixed(2)}</p>
+                            <p class="text-3xl font-bold text-gray-800">â‚¬${totalCost.toFixed(2)}</p>
                         </div>
                          <div class="p-2 bg-gray-50 text-gray-500 rounded-lg">
                             <i class="fas fa-receipt"></i>
@@ -247,7 +641,7 @@ export class WelcomePackManager {
                                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Revenue</h3>
                                 <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="The total amount sold/charged for the welcome packs."></i>
                             </div>
-                            <p class="text-3xl font-bold text-gray-800">€${totalRevenue.toFixed(2)}</p>
+                            <p class="text-3xl font-bold text-gray-800">â‚¬${totalRevenue.toFixed(2)}</p>
                         </div>
                          <div class="p-2 bg-green-50 text-green-500 rounded-lg">
                             <i class="fas fa-euro-sign"></i>
@@ -261,7 +655,7 @@ export class WelcomePackManager {
                                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Profit (Margin)</h3>
                                 <i class="fas fa-info-circle text-gray-300 text-xs cursor-help outline-none" data-tippy-content="Net profit (Revenue - Cost) and the profit margin percentage.<br>A margin above 30% is generally considered healthy (Green arrow)."></i>
                              </div>
-                            <p class="text-3xl font-bold text-gray-800">€${totalProfit.toFixed(2)}</p>
+                            <p class="text-3xl font-bold text-gray-800">â‚¬${totalProfit.toFixed(2)}</p>
                             <p class="text-sm ${profitMargin >= 30 ? 'text-green-600' : 'text-amber-600'} font-medium mt-1">
                                 <i class="fas ${profitMargin >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> ${profitMargin.toFixed(1)}% Margin
                             </p>
@@ -319,7 +713,7 @@ export class WelcomePackManager {
                                 </div>
                                 <div class="text-right flex items-center gap-3">
                                     <div class="mr-2">
-                                        <p class="font-bold text-green-600">+€${(log.profit || 0).toFixed(2)}</p>
+                                        <p class="font-bold text-green-600">+â‚¬${(log.profit || 0).toFixed(2)}</p>
                                         <p class="text-xs text-gray-500">${log.items.length} items</p>
                                     </div>
                                     <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -421,7 +815,7 @@ export class WelcomePackManager {
                     labels: trendLabels,
                     datasets: [
                         {
-                            label: 'Profit (€)',
+                            label: 'Profit (â‚¬)',
                             data: trendProfits,
                             backgroundColor: 'rgba(34, 197, 94, 0.5)', // Green
                             borderColor: 'rgba(34, 197, 94, 1)',
@@ -448,7 +842,7 @@ export class WelcomePackManager {
                             type: 'linear',
                             display: true,
                             position: 'left',
-                            title: { display: true, text: 'Profit (€)' }
+                            title: { display: true, text: 'Profit (â‚¬)' }
                         },
                         y1: {
                             type: 'linear',
@@ -517,6 +911,8 @@ export class WelcomePackManager {
         }
     }
 
+    */
+
     /**
      * Show the Help/Guide Modal
      */
@@ -538,8 +934,8 @@ export class WelcomePackManager {
                 <!-- Header -->
                 <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6 flex justify-between items-center text-white">
                     <div>
-                        <h2 class="text-2xl font-bold">Welcome Pack Manager Guide</h2>
-                        <p class="text-blue-100 opacity-90 text-sm mt-1">Learn how to manage packs, reservations, and inventory.</p>
+                        <h2 class="text-2xl font-bold">${this.tr('help.title')}</h2>
+                        <p class="text-blue-100 opacity-90 text-sm mt-1">${this.tr('help.subtitle')}</p>
                     </div>
                     <button id="wp-help-close" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
                         <i class="fas fa-times text-xl"></i>
@@ -555,15 +951,15 @@ export class WelcomePackManager {
                         <div class="md:col-span-1 space-y-2 sticky top-0">
                             <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-blue-200 text-blue-700 font-bold flex items-center gap-3 transition-transform hover:translate-x-1" onclick="document.getElementById('help-section-workflow').scrollIntoView({behavior: 'smooth'})">
                                 <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                                Typical Workflow
+                                ${this.tr('help.nav.workflow')}
                             </button>
                             <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-blue-600" onclick="document.getElementById('help-section-dashboard').scrollIntoView({behavior: 'smooth'})">
                                 <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
-                                Understanding Stats
+                                ${this.tr('help.nav.stats')}
                             </button>
                              <button class="w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-blue-600" onclick="document.getElementById('help-section-inventory').scrollIntoView({behavior: 'smooth'})">
                                 <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                                Inventory & Presets
+                                ${this.tr('help.nav.inventory')}
                             </button>
                         </div>
 
@@ -573,7 +969,7 @@ export class WelcomePackManager {
                             <!-- SECTION 1: WORKFLOW -->
                             <div id="help-section-workflow" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-tasks text-blue-500"></i> Daily Workflow
+                                    <i class="fas fa-tasks text-blue-500"></i> ${this.tr('help.sections.workflow.title')}
                                 </h3>
                                 <div class="space-y-4">
                                     <div class="flex gap-4">
@@ -581,8 +977,8 @@ export class WelcomePackManager {
                                             <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">1</div>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-gray-800">Check Reservations</h4>
-                                            <p class="text-sm text-gray-600 mt-1">Go to the <strong>Reservations</strong> tab to see upcoming check-ins. This tells you which properties need a welcome pack soon.</p>
+                                            <h4 class="font-bold text-gray-800">${this.tr('help.sections.workflow.steps.checkReservations.title')}</h4>
+                                            <p class="text-sm text-gray-600 mt-1">${this.tr('help.sections.workflow.steps.checkReservations.body')}</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-4">
@@ -590,8 +986,8 @@ export class WelcomePackManager {
                                             <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">2</div>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-gray-800">Log a Pack</h4>
-                                            <p class="text-sm text-gray-600 mt-1">Click <strong>Log Pack</strong>. Select the property and date. Add items manually or click "Load Preset" to fill the pack with standard items instantly.</p>
+                                            <h4 class="font-bold text-gray-800">${this.tr('help.sections.workflow.steps.logPack.title')}</h4>
+                                            <p class="text-sm text-gray-600 mt-1">${this.tr('help.sections.workflow.steps.logPack.body')}</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-4">
@@ -599,8 +995,8 @@ export class WelcomePackManager {
                                             <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">3</div>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-gray-800">Save & Monitor</h4>
-                                            <p class="text-sm text-gray-600 mt-1">Once saved, the pack is recorded. The items are deduced from your Inventory, and the cost/revenue is added to the Dashboard stats.</p>
+                                            <h4 class="font-bold text-gray-800">${this.tr('help.sections.workflow.steps.saveMonitor.title')}</h4>
+                                            <p class="text-sm text-gray-600 mt-1">${this.tr('help.sections.workflow.steps.saveMonitor.body')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -608,17 +1004,17 @@ export class WelcomePackManager {
 
                             <div id="help-section-dashboard" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-chart-pie text-purple-500"></i> Dashboard & Stats
+                                    <i class="fas fa-chart-pie text-purple-500"></i> ${this.tr('help.sections.stats.title')}
                                 </h3>
-                                <p class="text-sm text-gray-600 mb-4">The dashboard gives you a financial overview. Hover over the <i class="fas fa-info-circle text-gray-400"></i> icons on the dashboard for detailed explanations.</p>
+                                <p class="text-sm text-gray-600 mb-4">${this.tr('help.sections.stats.body')}</p>
                                 <ul class="space-y-3 text-sm">
                                     <li class="flex items-start gap-2">
-                                        <span class="font-bold text-gray-700 min-w-[100px]">Profit Margin:</span>
-                                        <span class="text-gray-600">Calculated as <code>(Total Profit / Total Revenue) * 100</code>. Aim for >30%.</span>
+                                        <span class="font-bold text-gray-700 min-w-[100px]">${this.tr('help.sections.stats.items.margin.label')}</span>
+                                        <span class="text-gray-600">${this.tr('help.sections.stats.items.margin.body')}</span>
                                     </li>
                                     <li class="flex items-start gap-2">
-                                        <span class="font-bold text-gray-700 min-w-[100px]">Trends:</span>
-                                        <span class="text-gray-600">The "Performance Trends" chart shows if you are making more money (green line) even if delivering fewer packs (bars).</span>
+                                        <span class="font-bold text-gray-700 min-w-[100px]">${this.tr('help.sections.stats.items.trends.label')}</span>
+                                        <span class="text-gray-600">${this.tr('help.sections.stats.items.trends.body')}</span>
                                     </li>
                                 </ul>
                             </div>
@@ -626,16 +1022,16 @@ export class WelcomePackManager {
                              <!-- SECTION 3: INVENTORY -->
                             <div id="help-section-inventory" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-boxes text-amber-500"></i> Inventory & Presets
+                                    <i class="fas fa-boxes text-amber-500"></i> ${this.tr('help.sections.inventory.title')}
                                 </h3>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div class="bg-amber-50 p-3 rounded-lg">
-                                        <h4 class="font-bold text-amber-800 mb-1">Managing Stock</h4>
-                                        <p class="text-xs text-amber-700">Go to <strong>Inventory</strong> to add new items (e.g., "Wine Bottle", "cookies"). Set the 'Buy Price' (your cost) and 'Sell Price' (what you charge owner).</p>
+                                        <h4 class="font-bold text-amber-800 mb-1">${this.tr('help.sections.inventory.cards.stock.title')}</h4>
+                                        <p class="text-xs text-amber-700">${this.tr('help.sections.inventory.cards.stock.body')}</p>
                                     </div>
                                     <div class="bg-green-50 p-3 rounded-lg">
-                                        <h4 class="font-bold text-green-800 mb-1">Using Presets</h4>
-                                        <p class="text-xs text-green-700">In <strong>Presets</strong>, create a standard "Welcome Pack" containing your usual items. This saves time so you don't have to select 10 items every time you log a pack.</p>
+                                        <h4 class="font-bold text-green-800 mb-1">${this.tr('help.sections.inventory.cards.presets.title')}</h4>
+                                        <p class="text-xs text-green-700">${this.tr('help.sections.inventory.cards.presets.body')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -648,7 +1044,7 @@ export class WelcomePackManager {
                 <!-- Footer -->
                 <div class="p-4 bg-gray-100 border-t border-gray-200 text-center">
                     <button id="wp-help-done-btn" class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors">
-                        Got it, thanks!
+                        ${this.tr('help.done')}
                     </button>
                 </div>
             </div>
@@ -699,13 +1095,13 @@ export class WelcomePackManager {
                 ? 'text-[#e94b5a] border-b-2 border-[#e94b5a] bg-red-50'
                 : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}">
                         <i class="fas fa-calendar-alt mr-2"></i>
-                        Upcoming Reservations
+                        ${this.tr('reservations.tabs.upcoming')}
                     </button>
                     <button id="wp-subtab-settings" class="flex-1 px-6 py-4 text-center font-medium transition-colors ${this.reservationsSubTab === 'settings'
                 ? 'text-[#e94b5a] border-b-2 border-[#e94b5a] bg-red-50'
                 : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}">
                         <i class="fas fa-cog mr-2"></i>
-                        Property Settings
+                        ${this.tr('reservations.tabs.settings')}
                     </button>
                 </div>
                 
@@ -756,19 +1152,21 @@ export class WelcomePackManager {
 
         // Load cached last sync time
         const lastSync = localStorage.getItem('wp_last_sync');
-        const lastSyncText = lastSync ? `Last updated: ${new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+        const lastSyncText = lastSync
+            ? this.tr('reservations.upcoming.lastUpdated', { time: this.formatDisplayTime(lastSync) })
+            : '';
 
         container.innerHTML = `
             <!-- Header with Sync Button -->
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Future Bookings</h3>
-                    <p class="text-sm text-gray-500">${configuredCount} of ${totalCount} properties have Welcome Pack enabled</p>
+                    <h3 class="text-lg font-bold text-gray-800">${this.tr('reservations.upcoming.title')}</h3>
+                    <p class="text-sm text-gray-500">${this.tr('reservations.upcoming.summary', { enabled: configuredCount, total: totalCount })}</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <span id="wp-last-sync-label" class="text-xs text-gray-400 font-medium">${lastSyncText}</span>
                     <button id="wp-sync-reservations-btn" style="background-color: #ef4444 !important; color: white !important;" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
-                        <i class="fas fa-sync-alt"></i> Sync Now
+                        <i class="fas fa-sync-alt"></i> ${this.tr('reservations.upcoming.syncNow')}
                     </button>
                 </div>
             </div>
@@ -778,22 +1176,22 @@ export class WelcomePackManager {
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 7
                 ? 'bg-red-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="7" style="${filterDays === 7 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
-                    Next 7 Days
+                    ${this.tr('reservations.upcoming.filters.next7')}
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 15
                 ? 'bg-red-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="15" style="${filterDays === 15 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
-                    Next 15 Days
+                    ${this.tr('reservations.upcoming.filters.next15')}
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 30
                 ? 'bg-red-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="30" style="${filterDays === 30 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
-                    Next 30 Days
+                    ${this.tr('reservations.upcoming.filters.next30')}
                 </button>
                 <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 365
                 ? 'bg-red-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="365" style="${filterDays === 365 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
-                    View All
+                    ${this.tr('reservations.upcoming.filters.viewAll')}
                 </button>
             </div>
 
@@ -801,23 +1199,23 @@ export class WelcomePackManager {
             <div id="wp-reservations-list" class="space-y-3">
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-circle-notch fa-spin text-3xl text-gray-300 mb-4"></i>
-                    <p class="text-lg font-medium mb-2">Loading reservations...</p>
+                    <p class="text-lg font-medium mb-2">${this.tr('reservations.upcoming.loading')}</p>
                 </div>
             </div>
 
             <!-- Quick Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
                 <div class="bg-gray-50 rounded-lg p-4 text-center">
-                    <p class="text-sm text-gray-500">Check-ins Today</p>
-                    <p class="text-2xl font-bold text-gray-800" id="wp-today-count">—</p>
+                    <p class="text-sm text-gray-500">${this.tr('reservations.upcoming.stats.today')}</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-today-count">â€”</p>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4 text-center">
-                    <p class="text-sm text-gray-500">This Week</p>
-                    <p class="text-2xl font-bold text-gray-800" id="wp-week-count">—</p>
+                    <p class="text-sm text-gray-500">${this.tr('reservations.upcoming.stats.week')}</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-week-count">â€”</p>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4 text-center">
-                    <p class="text-sm text-gray-500">Next ${filterDays} Days</p>
-                    <p class="text-2xl font-bold text-gray-800" id="wp-period-count">—</p>
+                    <p class="text-sm text-gray-500">${this.tr('reservations.upcoming.stats.nextDays', { count: filterDays })}</p>
+                    <p class="text-2xl font-bold text-gray-800" id="wp-period-count">â€”</p>
                 </div>
             </div>
         `;
@@ -872,8 +1270,8 @@ export class WelcomePackManager {
             <!-- Header -->
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Welcome Pack Properties</h3>
-                    <p class="text-sm text-gray-500">${enabledCount} of ${properties.length} properties have welcome pack enabled</p>
+                    <h3 class="text-lg font-bold text-gray-800">${this.tr('reservations.settings.title')}</h3>
+                    <p class="text-sm text-gray-500">${this.tr('reservations.settings.summary', { enabled: enabledCount, total: properties.length })}</p>
                 </div>
             </div>
 
@@ -882,10 +1280,9 @@ export class WelcomePackManager {
                 <div class="flex items-start gap-3">
                     <i class="fas fa-info-circle text-blue-500 text-lg mt-0.5"></i>
                     <div>
-                        <p class="text-sm text-blue-800 font-medium">Configure which properties need welcome packs</p>
+                        <p class="text-sm text-blue-800 font-medium">${this.tr('reservations.settings.bannerTitle')}</p>
                         <p class="text-sm text-blue-700 mt-1">
-                            Search for a property below and enable welcome pack tracking. 
-                            Only enabled properties will appear in the Upcoming Reservations list.
+                            ${this.tr('reservations.settings.bannerBody')}
                         </p>
                     </div>
                 </div>
@@ -897,7 +1294,7 @@ export class WelcomePackManager {
                     <i class="fas fa-search text-gray-400"></i>
                 </div>
                 <input type="text" id="wp-property-settings-search" 
-                    placeholder="Search for a property to enable/disable..." 
+                    placeholder="${this.tr('reservations.settings.searchPlaceholder')}" 
                     class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
                     autocomplete="off">
             </div>
@@ -910,14 +1307,14 @@ export class WelcomePackManager {
             <!-- Empty State / Instructions -->
             <div id="wp-property-settings-empty" class="text-center py-8 text-gray-500 mb-6">
                 <i class="fas fa-building text-4xl text-gray-300 mb-3"></i>
-                <p>Start typing to search for a property</p>
+                <p>${this.tr('reservations.settings.startTyping')}</p>
             </div>
 
             <!-- Enabled Properties List -->
             <div class="border-t border-gray-200 pt-6">
                 <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">
                     <i class="fas fa-gift text-[#e94b5a] mr-2"></i>
-                    Properties with Welcome Pack Enabled (${enabledCount})
+                    ${this.tr('reservations.settings.enabledListTitle', { count: enabledCount })}
                 </h4>
                 
                 ${enabledCount > 0 ? `
@@ -927,12 +1324,12 @@ export class WelcomePackManager {
                                 <div class="flex-1">
                                     <span class="font-medium text-gray-800">${property.name || property.id}</span>
                                     <span class="ml-2 text-xs text-green-600">
-                                        <i class="fas fa-check-circle"></i> Welcome Pack Enabled
+                                        <i class="fas fa-check-circle"></i> ${this.tr('reservations.settings.enabledBadge')}
                                     </span>
                                 </div>
                                 <button class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
                                     onclick="welcomePackManager.toggleWelcomePack('${property.id}', false)">
-                                    <i class="fas fa-times mr-1"></i> Disable
+                                    <i class="fas fa-times mr-1"></i> ${this.tr('reservations.search.disable')}
                                 </button>
                             </div>
                         `).join('')}
@@ -940,8 +1337,8 @@ export class WelcomePackManager {
                 ` : `
                     <div class="text-center py-6 text-gray-400 bg-gray-50 rounded-lg">
                         <i class="fas fa-gift text-3xl mb-2 opacity-50"></i>
-                        <p>No properties have welcome pack enabled yet</p>
-                        <p class="text-sm">Search and enable properties above</p>
+                        <p>${this.tr('reservations.settings.emptyTitle')}</p>
+                        <p class="text-sm">${this.tr('reservations.settings.emptyBody')}</p>
                     </div>
                 `}
             </div>
@@ -977,7 +1374,7 @@ export class WelcomePackManager {
         emptyState.classList.add('hidden');
         resultsContainer.innerHTML = `
             <div class="p-4 text-center text-gray-500">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Searching...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> ${this.tr('reservations.search.loading')}
             </div>
         `;
 
@@ -995,7 +1392,7 @@ export class WelcomePackManager {
                 resultsContainer.innerHTML = `
                     <div class="p-4 text-center text-gray-500">
                         <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
-                        <p>No properties found matching "${query}"</p>
+                        <p>${this.tr('reservations.search.noMatch', { query })}</p>
                     </div>
                 `;
                 return;
@@ -1007,10 +1404,10 @@ export class WelcomePackManager {
                         <span class="font-medium text-gray-800">${property.name || property.id}</span>
                         ${property.welcomePackEnabled
                     ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
-                                <i class="fas fa-check-circle"></i> Enabled
+                                <i class="fas fa-check-circle"></i> ${this.tr('reservations.search.enabled')}
                               </span>`
                     : `<span class="ml-2 inline-flex items-center gap-1 text-gray-400 text-xs">
-                                <i class="fas fa-times-circle"></i> Disabled
+                                <i class="fas fa-times-circle"></i> ${this.tr('reservations.search.disabled')}
                               </span>`
                 }
                     </div>
@@ -1021,8 +1418,8 @@ export class WelcomePackManager {
                 }"
                         onclick="welcomePackManager.toggleWelcomePack('${property.id}', ${!property.welcomePackEnabled})">
                         ${property.welcomePackEnabled
-                    ? '<i class="fas fa-times mr-1"></i> Disable'
-                    : '<i class="fas fa-check mr-1"></i> Enable'}
+                    ? `<i class="fas fa-times mr-1"></i> ${this.tr('reservations.search.disable')}`
+                    : `<i class="fas fa-check mr-1"></i> ${this.tr('reservations.search.enable')}`}
                     </button>
                 </div>
             `).join('');
@@ -1031,7 +1428,7 @@ export class WelcomePackManager {
             console.error('[WelcomePack] Error searching properties:', error);
             resultsContainer.innerHTML = `
                 <div class="p-4 text-center text-red-500">
-                    <i class="fas fa-exclamation-circle mr-2"></i> Error searching properties
+                    <i class="fas fa-exclamation-circle mr-2"></i> ${this.tr('reservations.search.error')}
                 </div>
             `;
         }
@@ -1047,7 +1444,7 @@ export class WelcomePackManager {
             this.renderReservations(document.getElementById('wp-view-container'));
         } catch (error) {
             console.error('[WelcomePack] Error toggling welcome pack:', error);
-            alert('Error updating property. Please try again.');
+            alert(this.tr('reservations.messages.toggleError'));
         }
     }
 
@@ -1066,7 +1463,7 @@ export class WelcomePackManager {
         emptyState.classList.add('hidden');
         resultsContainer.innerHTML = `
             <div class="p-4 text-center text-gray-500">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Searching...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> ${this.tr('reservations.search.loading')}
             </div>
         `;
 
@@ -1084,7 +1481,7 @@ export class WelcomePackManager {
                 resultsContainer.innerHTML = `
                     <div class="p-4 text-center text-gray-500">
                         <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
-                        <p>No properties found matching "${query}"</p>
+                        <p>${this.tr('reservations.search.noMatch', { query })}</p>
                     </div>
                 `;
                 return;
@@ -1096,10 +1493,10 @@ export class WelcomePackManager {
                         <span class="font-medium text-gray-800">${property.name || property.id}</span>
                         ${property.icalUrl
                     ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
-                                <i class="fas fa-check-circle"></i> Connected
+                                <i class="fas fa-check-circle"></i> ${this.tr('ical.search.connected')}
                               </span>`
                     : `<span class="ml-2 inline-flex items-center gap-1 text-gray-400 text-xs">
-                                <i class="fas fa-times-circle"></i> Not connected
+                                <i class="fas fa-times-circle"></i> ${this.tr('ical.search.notConnected')}
                               </span>`
                 }
                     </div>
@@ -1109,7 +1506,9 @@ export class WelcomePackManager {
                     : 'bg-[#e94b5a] text-white hover:bg-[#d3414f]'
                 }"
                         onclick="welcomePackManager.showIcalConfigModal('${property.id}', '${(property.name || '').replace(/'/g, "\\'")}', '${(property.icalUrl || '').replace(/'/g, "\\'")}')">
-                        ${property.icalUrl ? '<i class="fas fa-edit mr-1"></i> Edit' : '<i class="fas fa-plus mr-1"></i> Add iCal'}
+                        ${property.icalUrl
+                    ? `<i class="fas fa-edit mr-1"></i> ${this.tr('ical.search.edit')}`
+                    : `<i class="fas fa-plus mr-1"></i> ${this.tr('ical.search.add')}`}
                     </button>
                 </div>
             `).join('');
@@ -1118,7 +1517,7 @@ export class WelcomePackManager {
             console.error('[WelcomePack] Error searching properties:', error);
             resultsContainer.innerHTML = `
                 <div class="p-4 text-center text-red-500">
-                    <i class="fas fa-exclamation-circle mr-2"></i> Error searching properties
+                    <i class="fas fa-exclamation-circle mr-2"></i> ${this.tr('reservations.search.error')}
                 </div>
             `;
         }
@@ -1128,7 +1527,7 @@ export class WelcomePackManager {
      * Remove iCal URL from a property
      */
     async removeIcalUrl(propertyId, propertyName) {
-        if (!confirm(`Remove iCal connection for "${propertyName}"?\n\nThis will stop syncing reservations for this property.`)) {
+        if (!confirm(this.tr('ical.messages.removeConfirm', { property: propertyName }))) {
             return;
         }
 
@@ -1138,7 +1537,7 @@ export class WelcomePackManager {
             this.renderReservations(document.getElementById('wp-view-container'));
         } catch (error) {
             console.error('[WelcomePack] Error removing iCal URL:', error);
-            alert('Error removing iCal connection. Please try again.');
+            alert(this.tr('ical.messages.removeError'));
         }
     }
 
@@ -1158,13 +1557,13 @@ export class WelcomePackManager {
 
         // Show loading state only if not background sync
         if (!isBackground && syncBtn) {
-            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+            syncBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${this.tr('reservations.upcoming.syncing')}`;
             syncBtn.disabled = true;
 
             listContainer.innerHTML = `
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-circle-notch fa-spin text-4xl text-gray-400 mb-4"></i>
-                    <p class="text-lg">Fetching reservations...</p>
+                    <p class="text-lg">${this.tr('reservations.upcoming.fetching')}</p>
                 </div>
             `;
         }
@@ -1195,7 +1594,9 @@ export class WelcomePackManager {
 
             // 4. Update UI
             if (lastSyncLabel) {
-                lastSyncLabel.textContent = `Last updated: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                lastSyncLabel.textContent = this.tr('reservations.upcoming.lastUpdated', {
+                    time: this.formatDisplayTime(now)
+                });
             }
 
             this.displayReservationsList(allReservations, properties);
@@ -1206,7 +1607,7 @@ export class WelcomePackManager {
                 listContainer.innerHTML = `
                     <div class="text-center py-12 text-red-500">
                         <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
-                        <p class="text-lg font-medium">Error syncing calendars</p>
+                        <p class="text-lg font-medium">${this.tr('reservations.upcoming.syncErrorTitle')}</p>
                         <p class="text-sm">${error.message}</p>
                     </div>
                 `;
@@ -1214,7 +1615,7 @@ export class WelcomePackManager {
         } finally {
             // Reset button state
             if (syncBtn) {
-                syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Now';
+                syncBtn.innerHTML = `<i class="fas fa-sync-alt"></i> ${this.tr('reservations.upcoming.syncNow')}`;
                 syncBtn.disabled = false;
             }
         }
@@ -1244,11 +1645,11 @@ export class WelcomePackManager {
             listContainer.innerHTML = `
                 <div class="text-center py-12">
                     <i class="fas fa-gift text-5xl text-amber-400 mb-4"></i>
-                    <p class="text-lg font-medium text-gray-700 mb-2">No properties have welcome pack enabled</p>
-                    <p class="text-sm text-gray-500 mb-4">Go to "Property Settings" to enable welcome pack for your properties</p>
+                    <p class="text-lg font-medium text-gray-700 mb-2">${this.tr('reservations.upcoming.noEnabledTitle')}</p>
+                    <p class="text-sm text-gray-500 mb-4">${this.tr('reservations.upcoming.noEnabledBody')}</p>
                     <button onclick="welcomePackManager.reservationsSubTab='settings'; welcomePackManager.renderReservations(document.getElementById('wp-view-container'));"
                         class="px-4 py-2 bg-[#e94b5a] text-white rounded-lg hover:bg-[#d3414f] transition-colors">
-                        <i class="fas fa-cog mr-2"></i> Configure Properties
+                        <i class="fas fa-cog mr-2"></i> ${this.tr('reservations.upcoming.configureProperties')}
                     </button>
                 </div>
             `;
@@ -1296,9 +1697,9 @@ export class WelcomePackManager {
             listContainer.innerHTML = `
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-calendar-check text-4xl text-gray-300 mb-3"></i>
-                    <p class="text-lg font-medium text-gray-600">No check-ins in the next ${filterDays} days</p>
-                    <p class="text-sm mt-1">Reservations will appear here when guests book</p>
-                    ${enabledReservations.length === 0 ? '<p class="text-xs text-amber-500 mt-2">(No reservations found for enabled properties)</p>' : ''}
+                    <p class="text-lg font-medium text-gray-600">${this.tr('reservations.upcoming.noUpcomingTitle', { count: filterDays })}</p>
+                    <p class="text-sm mt-1">${this.tr('reservations.upcoming.noUpcomingBody')}</p>
+                    ${enabledReservations.length === 0 ? `<p class="text-xs text-amber-500 mt-2">${this.tr('reservations.upcoming.noEnabledReservations')}</p>` : ''}
                 </div>
             `;
             return;
@@ -1318,33 +1719,33 @@ export class WelcomePackManager {
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-1">
-                            ${isToday ? '<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TODAY</span>' : ''}
-                            ${isTomorrow ? '<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">CHECK-IN TOMORROW</span>' : ''}
+                            ${isToday ? `<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">${this.tr('reservations.upcoming.badges.today')}</span>` : ''}
+                            ${isTomorrow ? `<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">${this.tr('reservations.upcoming.badges.tomorrow')}</span>` : ''}
                             <span class="font-medium text-gray-800">${reservation.propertyName}</span>
                         </div>
                         <div class="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
                             <div>
-                                <p class="text-xs text-gray-400 uppercase">Check-in</p>
+                                <p class="text-xs text-gray-400 uppercase">${this.tr('reservations.upcoming.labels.checkIn')}</p>
                                 <p class="font-medium flex items-center gap-1">
                                     <i class="fas fa-sign-in-alt text-green-500"></i>
-                                    ${checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    ${this.formatCompactDate(checkInDate)}
                                 </p>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-400 uppercase">Check-out</p>
+                                <p class="text-xs text-gray-400 uppercase">${this.tr('reservations.upcoming.labels.checkOut')}</p>
                                 <p class="font-medium flex items-center gap-1">
                                     <i class="fas fa-sign-out-alt text-red-500"></i>
-                                    ${checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    ${this.formatCompactDate(checkOutDate)}
                                 </p>
                             </div>
                         </div>
                         <div class="flex items-center gap-3 text-xs text-gray-500">
-                            <span class="bg-gray-100 px-2 py-1 rounded">${nights} night${nights > 1 ? 's' : ''}</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">${this.pluralize('reservations.upcoming.nights', nights)}</span>
                             ${reservation.guestName
                     ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${reservation.guestName}</span>`
                     : (reservation.summary && reservation.summary !== 'UNAVAILABLE')
                         ? `<span><i class="fas fa-user mr-1"></i>${reservation.summary}</span>`
-                        : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>Blocked / Reserved</span>`
+                        : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>${this.tr('reservations.upcoming.blockedReserved')}</span>`
                 }
                             ${reservation.portal
                     ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${reservation.portal.toLowerCase().includes('airbnb') ? 'bg-red-100 text-red-700' :
@@ -1358,7 +1759,7 @@ export class WelcomePackManager {
                     </div>
                     <button onclick="welcomePackManager.logPackForReservation('${reservation.propertyName.replace(/'/g, "\\'")}')"
                             class="px-3 py-2 bg-[#e94b5a] text-white text-sm rounded-lg hover:bg-[#d3414f] transition-colors flex items-center gap-1 ml-4">
-                    <i class="fas fa-gift"></i> Assign Pack
+                    <i class="fas fa-gift"></i> ${this.tr('reservations.upcoming.assignPack')}
                 </button>
                     </div>
                 </div>
@@ -1435,7 +1836,7 @@ export class WelcomePackManager {
                     propertyName: propertyName,
                     checkIn: checkIn.toISOString(),
                     checkOut: checkOut.toISOString(),
-                    summary: summaryMatch ? summaryMatch[1].trim() : 'Reserved'
+                    summary: summaryMatch ? summaryMatch[1].trim() : this.tr('reservations.upcoming.reserved')
                 });
             }
         }
@@ -1473,21 +1874,13 @@ export class WelcomePackManager {
      * Quick action to log a pack for a reservation
      */
     logPackForReservation(propertyName) {
-        // Switch to log pack view and pre-fill property
-        this.currentView = 'log';
-        this.render();
+        this.setCurrentView('log', { resetEdit: true });
 
-        // Try to set the property in the form
         setTimeout(() => {
-            const propertySelect = document.getElementById('wp-log-property');
-            if (propertySelect) {
-                // Find the option that matches
-                for (const option of propertySelect.options) {
-                    if (option.text === propertyName || option.value === propertyName) {
-                        propertySelect.value = option.value;
-                        break;
-                    }
-                }
+            const propertyInput = document.getElementById('wp-log-property');
+            if (propertyInput) {
+                propertyInput.value = propertyName;
+                propertyInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }, 100);
     }
@@ -1502,33 +1895,33 @@ export class WelcomePackManager {
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-ical-config-modal">
                 <div class="relative p-5 border w-[500px] shadow-lg rounded-xl bg-white">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Configure iCal URL</h3>
-                    <p class="text-sm text-gray-600 mb-4">Property: <strong>${propertyName || propertyId}</strong></p>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">${this.tr('ical.modal.title')}</h3>
+                    <p class="text-sm text-gray-600 mb-4">${this.tr('ical.modal.property', { property: propertyName || propertyId })}</p>
                     
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">iCal/ICS URL</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">${this.tr('ical.modal.urlLabel')}</label>
                             <input type="url" id="wp-ical-url-input" value="${currentUrl}" 
-                                placeholder="https://www.airbnb.com/calendar/ical/..." 
+                                placeholder="${this.tr('ical.modal.urlPlaceholder')}" 
                                 class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <p class="text-xs text-gray-500 mt-1">
-                                Find this in your channel manager (Airbnb, Booking.com, VRBO, etc.)
+                                ${this.tr('ical.modal.urlHelp')}
                             </p>
                         </div>
                         
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>How to find your iCal URL:</p>
+                            <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>${this.tr('ical.modal.howToFind')}</p>
                             <ul class="text-xs text-blue-700 mt-2 space-y-1 ml-4">
-                                <li>• <strong>Airbnb:</strong> Calendar → Availability settings → Export calendar</li>
-                                <li>• <strong>Booking.com:</strong> Property → Calendar → Sync calendars</li>
-                                <li>• <strong>VRBO:</strong> Calendar → Import/Export → Export</li>
+                                <li>${this.tr('ical.modal.providers.airbnb')}</li>
+                                <li>${this.tr('ical.modal.providers.booking')}</li>
+                                <li>${this.tr('ical.modal.providers.vrbo')}</li>
                             </ul>
                         </div>
                         
                         <div class="flex justify-end gap-2">
-                            <button id="wp-ical-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
-                            <button id="wp-ical-test-btn" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">Test URL</button>
-                            <button id="wp-ical-save-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save</button>
+                            <button id="wp-ical-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
+                            <button id="wp-ical-test-btn" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">${this.tr('ical.modal.test')}</button>
+                            <button id="wp-ical-save-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('ical.modal.save')}</button>
                         </div>
                     </div>
                 </div>
@@ -1544,12 +1937,12 @@ export class WelcomePackManager {
         document.getElementById('wp-ical-test-btn').onclick = async () => {
             const url = document.getElementById('wp-ical-url-input').value.trim();
             if (!url) {
-                alert('Please enter a URL first');
+                alert(this.tr('ical.messages.enterUrl'));
                 return;
             }
 
             const btn = document.getElementById('wp-ical-test-btn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${this.tr('ical.modal.testing')}`;
             btn.disabled = true;
 
             try {
@@ -1558,14 +1951,14 @@ export class WelcomePackManager {
                 const text = await response.text();
 
                 if (text.includes('BEGIN:VCALENDAR')) {
-                    alert('✅ URL is valid! Calendar data received successfully.');
+                    alert(this.tr('ical.messages.valid'));
                 } else {
-                    alert('⚠️ URL returned data but it doesn\'t appear to be a valid iCal format.');
+                    alert(this.tr('ical.messages.invalid'));
                 }
             } catch (error) {
-                alert('❌ Could not fetch URL. Please check if the URL is correct and accessible.');
+                alert(this.tr('ical.messages.fetchFailed'));
             } finally {
-                btn.innerHTML = 'Test URL';
+                btn.innerHTML = this.tr('ical.modal.test');
                 btn.disabled = false;
             }
         };
@@ -1581,7 +1974,7 @@ export class WelcomePackManager {
                     // Fallback: store in a separate collection
                     console.warn('[WelcomePack] updatePropertyIcalUrl not available, storing separately');
                     // For now, just close and show message
-                    alert('iCal URL saved! (Note: Full integration requires DataManager update)');
+                    alert(this.tr('ical.messages.savedFallback'));
                 }
 
                 this._invalidateCache('properties');
@@ -1589,31 +1982,41 @@ export class WelcomePackManager {
                 this.render();
             } catch (error) {
                 console.error('[WelcomePack] Error saving iCal URL:', error);
-                alert('Error saving URL. Please try again.');
+                alert(this.tr('ical.messages.saveFailed'));
             }
         };
     }
 
 
     exportToCSV(logs) {
-
-
         if (!logs || logs.length === 0) {
-            alert('No data to export');
+            alert(this.tr('messages.noDataToExport'));
             return;
         }
 
-        const headers = ['Date', 'Property', 'Items', 'Total Cost', 'Total Sell', 'Profit'];
+        const normalizedLogs = logs.map((log) => normalizeWelcomePackLog(log));
+        const headers = [
+            this.tr('export.date'),
+            this.tr('export.property'),
+            this.tr('export.materials'),
+            this.tr('export.units'),
+            this.tr('export.materialCost'),
+            this.tr('export.suggestedCharge'),
+            this.tr('export.chargedAmount'),
+            this.tr('export.profit')
+        ];
         const csvContent = [
             headers.join(','),
-            ...logs.map(log => {
-                const itemNames = log.items.map(i => i.name).join('; ');
+            ...normalizedLogs.map((log) => {
+                const itemNames = log.items.map((item) => `${item.quantity || 1}x ${item.name}`).join('; ');
                 return [
                     log.date,
-                    `"${log.property}"`,
+                    `"${log.propertyName || log.property}"`,
                     `"${itemNames}"`,
+                    log.totalUnits,
                     log.totalCost.toFixed(2),
-                    log.totalSell.toFixed(2),
+                    log.suggestedSell.toFixed(2),
+                    log.chargedAmount.toFixed(2),
                     log.profit.toFixed(2)
                 ].join(',');
             })
@@ -1628,90 +2031,113 @@ export class WelcomePackManager {
 
     async renderInventory(container) {
         const items = await this._fetchData('items');
-
-        // Calculate low stock items for alert
-        const lowStockItems = items.filter(item => (item.quantity || 0) < 5);
+        const inventorySummary = summarizeWelcomePackInventory(items);
+        const lowStockItems = inventorySummary.lowStockItems;
 
         container.innerHTML = `
             ${lowStockItems.length > 0 ? `
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <i class="fas fa-exclamation-triangle text-amber-500 mt-1"></i>
-                <div>
-                    <p class="font-semibold text-amber-800">Low Stock Alert</p>
-                    <p class="text-sm text-amber-700">${lowStockItems.length} item${lowStockItems.length > 1 ? 's are' : ' is'} running low: ${lowStockItems.map(i => `<strong>${i.name}</strong> (${i.quantity || 0})`).join(', ')}</p>
+            <section class="welcome-pack-inline-alert">
+                <div class="welcome-pack-inline-alert-icon">
+                    <i class="fas fa-triangle-exclamation"></i>
                 </div>
-            </div>
+                <div class="flex-1 min-w-0">
+                    <h3>${this.tr('inventory.lowStockTitle')}</h3>
+                    <p>${this.tr('inventory.lowStockBody', {
+                        items: lowStockItems.map((item) => `${item.name} (${item.quantity || 0})`).join(', ')
+                    })}</p>
+                </div>
+            </section>
             ` : ''}
-            
-            <div class="bg-white rounded-xl shadow-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold text-gray-800">Items Inventory</h3>
-                    <button id="wp-add-item-btn" class="bg-[#e94b5a] hover:bg-[#d3414f] text-white px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center">
-                        <i class="fas fa-plus mr-2"></i> Add Item
+
+            <section class="welcome-pack-panel">
+                <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
+                    <div>
+                        <p class="welcome-pack-section-kicker">${this.tr('workflow.materialCosts.label')}</p>
+                        <h3>${this.tr('inventory.title')}</h3>
+                        <p>${this.tr('inventory.description')}</p>
+                    </div>
+                    <button id="wp-add-item-btn" class="welcome-pack-nav-button is-active">
+                        <i class="fas fa-plus"></i>
+                        <span>${this.tr('inventory.addMaterial')}</span>
                     </button>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+
+                <div class="welcome-pack-metric-grid">
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('inventory.metrics.tracked')}</span>
+                        <strong>${inventorySummary.totals.materialCount}</strong>
+                        <small>${this.tr('inventory.metrics.lowStock', { count: inventorySummary.totals.lowStockCount })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('inventory.metrics.unitsInStock')}</span>
+                        <strong>${inventorySummary.totals.stockUnits}</strong>
+                        <small>${this.tr('inventory.metrics.unitsInStockDescription')}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('inventory.metrics.stockCostValue')}</span>
+                        <strong>${this.formatCurrency(inventorySummary.totals.stockCostValue)}</strong>
+                        <small>${this.tr('inventory.metrics.stockCostValueDescription')}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('inventory.metrics.projectedBilledValue')}</span>
+                        <strong>${this.formatCurrency(inventorySummary.totals.stockSellValue)}</strong>
+                        <small>${this.tr('inventory.metrics.potentialMargin', { amount: this.formatCurrency(inventorySummary.totals.potentialProfit) })}</small>
+                    </article>
+                </div>
+
+                ${inventorySummary.items.length > 0 ? `
+                <div class="welcome-pack-table-wrap">
+                    <table class="welcome-pack-table">
                         <thead>
-                            <tr class="text-gray-500 border-b border-gray-200 text-sm">
-                                <th class="py-3 font-medium">Item Name</th>
-                                <th class="py-3 font-medium text-center">Stock</th>
-                                <th class="py-3 font-medium">VAT</th>
-                                <th class="py-3 font-medium">Cost (Net)</th>
-                                <th class="py-3 font-medium">Cost (Gross)</th>
-                                <th class="py-3 font-medium">Sell (Net)</th>
-                                <th class="py-3 font-medium">Sell (Gross)</th>
-                                <th class="py-3 font-medium">Profit</th>
-                                <th class="py-3 font-medium text-right">Actions</th>
+                            <tr>
+                                <th>${this.tr('inventory.table.material')}</th>
+                                <th>${this.tr('inventory.table.stock')}</th>
+                                <th>${this.tr('inventory.table.costPerUnit')}</th>
+                                <th>${this.tr('inventory.table.chargePerUnit')}</th>
+                                <th>${this.tr('inventory.table.marginPerUnit')}</th>
+                                <th>${this.tr('inventory.table.vat')}</th>
+                                <th>${this.tr('inventory.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody id="wp-inventory-list">
-                            ${items.map(item => {
-            const costVat = item.costVatRate || 22;
-            const sellVat = item.sellVatRate || 22;
-            const costGross = item.costGross || (item.costPrice * (1 + costVat / 100));
-            const sellGross = item.sellGross || (item.sellPrice * (1 + sellVat / 100));
-            const profit = sellGross - costGross;
+                            ${inventorySummary.items.map((item) => {
             const isLowStock = (item.quantity || 0) < 5;
+            const margin = item.sellPrice - item.costPrice;
 
             return `
-                                <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 ${isLowStock ? 'bg-red-50/50' : ''}">
-                                    <td class="py-3 text-gray-800 font-medium">
-                                        ${item.name}
-                                        ${isLowStock ? '<i class="fas fa-exclamation-circle text-red-500 ml-2" title="Low Stock"></i>' : ''}
+                                <tr>
+                                    <td>
+                                        <strong>${item.name}</strong>
+                                        <span>${isLowStock ? this.tr('inventory.status.needsRestock') : this.tr('inventory.status.ready')}</span>
                                     </td>
-                                    <td class="py-3 text-center">
-                                        <span class="px-2 py-1 rounded text-xs font-bold ${isLowStock ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}">
-                                            ${item.quantity || 0}
-                                        </span>
-                                    </td>
-                                    <td class="py-3">
-                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${this.getVatBadgeClass(sellVat)}">
-                                            ${sellVat}%
-                                        </span>
-                                    </td>
-                                    <td class="py-3 text-gray-600 text-sm">€${parseFloat(item.costPrice).toFixed(2)}</td>
-                                    <td class="py-3 text-gray-800 font-medium text-sm">€${costGross.toFixed(2)}</td>
-                                    <td class="py-3 text-gray-600 text-sm">€${parseFloat(item.sellPrice).toFixed(2)}</td>
-                                    <td class="py-3 text-gray-800 font-medium text-sm">€${sellGross.toFixed(2)}</td>
-                                    <td class="py-3 text-green-600 font-medium text-sm">+€${profit.toFixed(2)}</td>
-                                    <td class="py-3 text-right">
-                                        <button class="text-blue-500 hover:text-blue-700 p-1 mr-2" onclick="welcomePackManager.editItem('${item.id}')" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="text-red-400 hover:text-red-600 transition-colors p-1" onclick="welcomePackManager.deleteItem('${item.id}')" title="Delete">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
+                                    <td>${item.quantity || 0}</td>
+                                    <td>${this.formatCurrency(item.costPrice)}</td>
+                                    <td>${this.formatCurrency(item.sellPrice)}</td>
+                                    <td>${this.formatCurrency(margin)}</td>
+                                    <td>${item.sellVatRate || 22}%</td>
+                                    <td>
+                                        <div class="welcome-pack-action-row">
+                                            <button type="button" class="welcome-pack-icon-button" onclick="welcomePackManager.editItem('${item.id}')" title="${this.tr('actions.editMaterial')}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" onclick="welcomePackManager.deleteItem('${item.id}')" title="${this.tr('actions.deleteMaterial')}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             `;
         }).join('')}
                         </tbody>
                     </table>
-                    ${items.length === 0 ? '<p class="text-center text-gray-500 py-8">No items in inventory. Add one to get started.</p>' : ''}
                 </div>
-            </div>
+                ` : `
+                <div class="welcome-pack-empty-state">
+                    <h4>${this.tr('inventory.emptyTitle')}</h4>
+                    <p>${this.tr('inventory.emptyDescription')}</p>
+                </div>
+                `}
+            </section>
         `;
 
         document.getElementById('wp-add-item-btn').onclick = () => this.showAddItemModal();
@@ -1724,9 +2150,9 @@ export class WelcomePackManager {
         container.innerHTML = `
             <div class="bg-white rounded-xl shadow-md p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold text-gray-800">Pack Presets</h3>
+                    <h3 class="text-lg font-bold text-gray-800">${this.tr('presets.title')}</h3>
                     <button id="wp-add-preset-btn" class="bg-[#e94b5a] hover:bg-[#d3414f] text-white px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center">
-                        <i class="fas fa-plus mr-2"></i> Create Preset
+                        <i class="fas fa-plus mr-2"></i> ${this.tr('presets.create')}
                     </button>
                 </div>
 
@@ -1744,23 +2170,23 @@ export class WelcomePackManager {
             return `
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative group bg-gray-50">
                             <h4 class="font-bold text-gray-800 mb-2">${preset.name}</h4>
-                            <p class="text-sm text-gray-600 mb-3">${totalItemCount} item${totalItemCount > 1 ? 's' : ''}</p>
+                            <p class="text-sm text-gray-600 mb-3">${this.pluralize('presets.itemCount', totalItemCount)}</p>
                             <ul class="text-sm text-gray-500 space-y-1 mb-4">
-                                ${preset.items.slice(0, 4).map(i => `<li>• ${i.quantity && i.quantity > 1 ? `${i.quantity}× ` : ''}${i.name}</li>`).join('')}
-                                ${preset.items.length > 4 ? `<li class="text-gray-400">+ ${preset.items.length - 4} more...</li>` : ''}
+                                ${preset.items.slice(0, 4).map(i => `<li>â€¢ ${i.quantity && i.quantity > 1 ? `${i.quantity}Ã— ` : ''}${i.name}</li>`).join('')}
+                                ${preset.items.length > 4 ? `<li class="text-gray-400">${this.tr('presets.moreItems', { count: preset.items.length - 4 })}</li>` : ''}
                             </ul>
                             <div class="flex justify-between items-center mt-auto border-t border-gray-200 pt-3">
                                 <div>
-                                    <span class="font-bold text-gray-800">€${totalGross.toFixed(2)}</span>
-                                    <span class="text-xs text-gray-500 ml-1">(incl. VAT)</span>
+                                    <span class="font-bold text-gray-800">${this.formatCurrency(totalGross)}</span>
+                                    <span class="text-xs text-gray-500 ml-1">${this.tr('presets.inclVat')}</span>
                                 </div>
-                                <button class="text-red-400 hover:text-red-600 p-1" onclick="welcomePackManager.deletePreset('${preset.id}')" title="Delete Preset">
+                                <button class="text-red-400 hover:text-red-600 p-1" onclick="welcomePackManager.deletePreset('${preset.id}')" title="${this.tr('presets.deleteTitle')}">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
                         </div>
                     `;
-        }).join('') || '<p class="col-span-3 text-center text-gray-500 py-8">No presets created.</p>'}
+        }).join('') || `<p class="col-span-3 text-center text-gray-500 py-8">${this.tr('presets.empty')}</p>`}
                 </div>
             </div>
         `;
@@ -1770,7 +2196,7 @@ export class WelcomePackManager {
 
 
     async deletePreset(id) {
-        if (confirm('Delete this preset?')) {
+        if (confirm(this.tr('presets.deleteConfirm'))) {
             await this.dataManager.deleteWelcomePackPreset(id);
             this._invalidateCache('presets');
             this.render();
@@ -1783,12 +2209,12 @@ export class WelcomePackManager {
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-add-preset-modal">
                 <div class="relative p-5 border w-[550px] shadow-lg rounded-xl bg-white max-h-[85vh] flex flex-col">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Create New Pack Preset</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">${this.tr('presets.modal.title')}</h3>
                     
-                    <input type="text" id="wp-preset-name" placeholder="Preset Name (e.g. Gold Welcome Pack)" class="w-full p-2 border rounded mb-4">
+                    <input type="text" id="wp-preset-name" placeholder="${this.tr('presets.modal.namePlaceholder')}" class="w-full p-2 border rounded mb-4">
                     
                     <div class="bg-gray-50 p-3 rounded-lg border mb-4 flex-1 overflow-hidden flex flex-col">
-                        <p class="text-sm font-bold text-gray-700 mb-2">Select Items & Quantities:</p>
+                        <p class="text-sm font-bold text-gray-700 mb-2">${this.tr('presets.modal.selectItems')}</p>
                         <div class="flex-1 overflow-y-auto space-y-2 pr-1">
                             ${items.map(item => {
             const vatRate = item.sellVatRate || 22;
@@ -1802,8 +2228,8 @@ export class WelcomePackManager {
                                         <span class="ml-2 px-1.5 py-0.5 text-xs rounded ${this.getVatBadgeClass(vatRate)}">${vatRate}%</span>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-sm text-gray-500">€${sellGross.toFixed(2)}</span>
-                                        <span class="text-gray-400">×</span>
+                                        <span class="text-sm text-gray-500">${this.formatCurrency(sellGross)}</span>
+                                        <span class="text-gray-400">Ã—</span>
                                         <input type="number" class="wp-preset-item-qty w-16 p-1.5 border rounded text-center text-sm" 
                                             value="1" min="1" max="99" disabled>
                                     </div>
@@ -1815,15 +2241,15 @@ export class WelcomePackManager {
                     
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-blue-800">Pack Total:</span>
-                            <span id="wp-preset-total" class="text-lg font-bold text-blue-900">€0.00</span>
+                            <span class="text-sm font-medium text-blue-800">${this.tr('presets.modal.packTotal')}</span>
+                            <span id="wp-preset-total" class="text-lg font-bold text-blue-900">${this.formatCurrency(0)}</span>
                         </div>
-                        <div id="wp-preset-summary" class="text-xs text-blue-700 mt-1">Select items to see pack composition</div>
+                        <div id="wp-preset-summary" class="text-xs text-blue-700 mt-1">${this.tr('presets.modal.emptySummary')}</div>
                     </div>
 
                     <div class="flex justify-end gap-2">
-                        <button id="wp-cancel-preset-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
-                        <button id="wp-save-preset-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save Preset</button>
+                        <button id="wp-cancel-preset-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
+                        <button id="wp-save-preset-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('presets.modal.save')}</button>
                     </div>
                 </div>
             </div>
@@ -1849,14 +2275,14 @@ export class WelcomePackManager {
 
                     totalNet += itemData.sellPrice * qty;
                     totalGross += itemGross * qty;
-                    summaryParts.push(`${qty}× ${itemData.name}`);
+                    summaryParts.push(`${qty}Ã— ${itemData.name}`);
                 }
             });
 
-            document.getElementById('wp-preset-total').textContent = `€${totalGross.toFixed(2)}`;
+            document.getElementById('wp-preset-total').textContent = this.formatCurrency(totalGross);
             document.getElementById('wp-preset-summary').textContent = summaryParts.length > 0
-                ? summaryParts.join(', ') + ` (Net: €${totalNet.toFixed(2)} + VAT)`
-                : 'Select items to see pack composition';
+                ? this.tr('presets.modal.summary', { items: summaryParts.join(', '), amount: this.formatCurrency(totalNet) })
+                : this.tr('presets.modal.emptySummary');
         };
 
         document.querySelectorAll('.wp-preset-item-checkbox').forEach(checkbox => {
@@ -1883,7 +2309,7 @@ export class WelcomePackManager {
             const rows = document.querySelectorAll('.wp-preset-item-row');
 
             if (!name) {
-                alert('Please enter a preset name');
+                alert(this.tr('presets.messages.nameRequired'));
                 return;
             }
 
@@ -1902,7 +2328,7 @@ export class WelcomePackManager {
             });
 
             if (selectedItems.length === 0) {
-                alert('Please select at least one item');
+                alert(this.tr('presets.messages.itemsRequired'));
                 return;
             }
 
@@ -1920,8 +2346,9 @@ export class WelcomePackManager {
 
 
     async renderLogForm(container) {
-        const items = await this._fetchData('items');
+        const items = (await this._fetchData('items')).map((item) => normalizeWelcomePackItem(item));
         const presets = await this._fetchData('presets');
+        const allLogs = (await this._fetchData('logs')).map((log) => normalizeWelcomePackLog(log));
         let properties = [];
         try {
             properties = await this._fetchData('properties');
@@ -1930,137 +2357,281 @@ export class WelcomePackManager {
         }
 
         const isEditing = !!this.editingLogId;
-        const editingLog = isEditing ? await this._getLogById(this.editingLogId) : null;
+        const editingLog = isEditing ? normalizeWelcomePackLog(await this._getLogById(this.editingLogId)) : null;
+        const propertyOptions = Array.from(
+            new Map(
+                properties
+                    .map((property) => {
+                        const label = String(property?.name || property?.id || '').trim();
+                        if (!label) {
+                            return null;
+                        }
+                        return [label.toLowerCase(), {
+                            label,
+                            enabled: Boolean(property?.welcomePackEnabled)
+                        }];
+                    })
+                    .filter(Boolean)
+            ).values()
+        ).sort((left, right) => {
+            if (left.enabled !== right.enabled) {
+                return Number(right.enabled) - Number(left.enabled);
+            }
+            return left.label.localeCompare(right.label);
+        });
 
         container.innerHTML = `
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Left: Form -->
-                <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-bold text-gray-800">${isEditing ? 'Edit Log Entry' : 'Log New Welcome Pack'}</h3>
-                        ${isEditing ? `<button class="text-sm text-gray-500 hover:text-gray-700 underline" onclick="welcomePackManager.cancelEdit()">Cancel Edit</button>` : ''}
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)] gap-6">
+                <section class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
+                        <div>
+                            <p class="welcome-pack-section-kicker">${this.tr('workflow.propertyCharges.label')}</p>
+                            <h3>${isEditing ? this.tr('log.editTitle') : this.tr('log.title')}</h3>
+                            <p>${this.tr('log.description')}</p>
+                        </div>
+                        ${isEditing ? `
+                        <button type="button" class="welcome-pack-secondary-button" onclick="welcomePackManager.cancelEdit()" title="${this.tr('actions.cancelEdit')}">
+                            <i class="fas fa-rotate-left"></i>
+                            <span>${this.tr('actions.cancelEdit')}</span>
+                        </button>
+                        ` : ''}
                     </div>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Property</label>
-                            <input type="text" id="wp-log-property" list="wp-properties-list" 
-                                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#e94b5a] focus:border-transparent" 
-                                placeholder="Select Property..." value="${editingLog ? (editingLog.propertyName || editingLog.property) : ''}">
+                        <label class="welcome-pack-field">
+                            <span>${this.tr('log.fields.property')}</span>
+                            <input type="text" id="wp-log-property" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${editingLog ? (editingLog.propertyName || editingLog.property) : ''}">
                             <datalist id="wp-properties-list">
-                                ${properties.map(p => `<option value="${p.name}"></option>`).join('')}
-                            </datalist> 
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input type="date" id="wp-log-date" 
-                                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#e94b5a] focus:border-transparent" 
-                                value="${editingLog ? editingLog.date : new Date().toISOString().split('T')[0]}">
-                        </div>
+                                ${propertyOptions.map((property) => `<option value="${property.label}"></option>`).join('')}
+                            </datalist>
+                        </label>
+                        <label class="welcome-pack-field">
+                            <span>${this.tr('log.fields.date')}</span>
+                            <input type="date" id="wp-log-date" value="${editingLog ? editingLog.date : new Date().toISOString().split('T')[0]}">
+                        </label>
                     </div>
 
                     ${!isEditing ? `
-                    <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Load Preset</label>
-                        <select id="wp-preset-select" class="w-full p-2 border border-gray-300 rounded-lg">
-                            <option value="">Select a preset to load items...</option>
-                            ${presets.map(p => `<option value='${JSON.stringify(p.items)}'>${p.name} (${p.items.length} items)</option>`).join('')}
-                        </select>
+                    <div class="welcome-pack-support-card">
+                        <label class="welcome-pack-field">
+                            <span>${this.tr('log.loadPreset')}</span>
+                            <select id="wp-preset-select">
+                                <option value="">${this.tr('log.loadPresetPlaceholder')}</option>
+                                ${presets.map((preset) => `<option value='${JSON.stringify(preset.items)}'>${preset.name} (${preset.items.length} items)</option>`).join('')}
+                            </select>
+                        </label>
+                        <p>${this.tr('log.loadPresetHelp')}</p>
                     </div>
                     ` : ''}
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Items</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-lg bg-gray-50">
-                            ${items.map(item => `
-                                <button class="wp-item-select-btn flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-lg hover:border-[#e94b5a] hover:shadow-sm transition-all relative overflow-hidden" 
-                                    data-id="${item.id}" data-name="${item.name}" data-cost="${item.costPrice}" data-sell="${item.sellPrice}">
-                                    <span class="font-medium text-gray-800 text-sm z-10 relative">${item.name}</span>
-                                    <span class="text-xs text-gray-600 z-10 relative">€${parseFloat(item.sellPrice).toFixed(2)}</span>
-                                    ${item.quantity < 5 ? `<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" title="Low Stock"></span>` : ''}
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('log.materialsTitle')}</h3>
+                        <p>${this.tr('log.materialsDescription')}</p>
+                    </div>
+
+                    ${items.length > 0 ? `
+                    <div class="welcome-pack-catalog-list">
+                        ${items.map((item) => {
+            const safeName = String(item.name || '').replace(/"/g, '&quot;');
+            return `
+                            <article class="welcome-pack-catalog-item ${item.quantity < 5 ? 'is-low-stock' : ''}">
+                                <div>
+                                    <strong>${item.name}</strong>
+                                    <span>${this.tr('log.materialInStock', { count: item.quantity || 0 })}</span>
+                                </div>
+                                <div>
+                                    <span>${this.tr('log.materialCost', { amount: this.formatCurrency(item.costPrice) })}</span>
+                                    <span>${this.tr('log.materialCharge', { amount: this.formatCurrency(item.sellPrice) })}</span>
+                                </div>
+                                <button type="button"
+                                    class="welcome-pack-secondary-button wp-item-select-btn"
+                                    data-id="${item.id}"
+                                    data-name="${safeName}"
+                                    data-cost="${item.costPrice}"
+                                    data-sell="${item.sellPrice}"
+                                    data-cost-vat="${item.costVatRate || 22}"
+                                    data-sell-vat="${item.sellVatRate || 22}">
+                                    <i class="fas fa-plus"></i>
+                                    <span>${this.tr('actions.add')}</span>
                                 </button>
-                            `).join('')}
-                        </div>
+                            </article>
+                            `;
+        }).join('')}
                     </div>
-                </div>
+                    ` : `
+                    <div class="welcome-pack-empty-state">
+                        <h4>${this.tr('log.noMaterialsTitle')}</h4>
+                        <p>${this.tr('log.noMaterialsDescription')}</p>
+                        <button type="button" id="wp-open-inventory-from-log-btn" class="welcome-pack-nav-button is-active">
+                            <i class="fas fa-box-open"></i>
+                            <span>${this.tr('dashboard.openMaterialCosts')}</span>
+                        </button>
+                    </div>
+                    `}
+                </section>
 
-                <!-- Right: Summary -->
-                <div class="bg-white rounded-xl shadow-md p-6 h-fit">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Pack Summary</h3>
-                    <div id="wp-cart-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto">
-                        <p class="text-gray-500 text-sm text-center py-4">No items selected</p>
-                    </div>
-                    
-                    <div class="border-t border-gray-200 pt-4 space-y-2">
-                        <div class="flex justify-between text-sm text-gray-600">
-                            <span>Total Cost:</span>
-                            <span id="wp-total-cost">€0.00</span>
-                        </div>
-                        <div class="flex justify-between text-lg font-bold text-gray-800">
-                            <span>Total Sell Price:</span>
-                            <span id="wp-total-sell">€0.00</span>
-                        </div>
-                        <div class="flex justify-between text-sm text-green-600 font-medium">
-                            <span>Estimated Profit:</span>
-                            <span id="wp-total-profit">€0.00</span>
-                        </div>
+                <aside class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('log.summaryTitle')}</h3>
+                        <p>${this.tr('log.summaryDescription')}</p>
                     </div>
 
-                    <button id="wp-save-log-btn" class="w-full mt-6 bg-[#e94b5a] hover:bg-[#d3414f] text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
-                        ${isEditing ? 'Update Log' : 'Save Log'}
+                    <div id="wp-property-charge-history" class="welcome-pack-support-card">
+                        <strong>${this.tr('log.history.noPropertyTitle')}</strong>
+                        <p>${this.tr('log.history.noPropertyDescription')}</p>
+                    </div>
+
+                    <div id="wp-cart-list" class="welcome-pack-cart-list">
+                        <p class="text-sm text-gray-500">${this.tr('log.noMaterialsSelected')}</p>
+                    </div>
+
+                    <div id="wp-cart-meta" class="welcome-pack-chip-row"></div>
+
+                    <label class="welcome-pack-field">
+                        <span>${this.tr('log.fields.chargedAmount')}</span>
+                        <input type="number" id="wp-log-charged-amount" step="0.01" min="0" value="${editingLog ? editingLog.chargedAmount.toFixed(2) : ''}">
+                    </label>
+
+                    <button type="button" id="wp-use-suggested-charge-btn" class="welcome-pack-secondary-button">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                        <span>${this.tr('log.useSuggestedAmount')}</span>
                     </button>
+
+                    <div class="welcome-pack-summary-stack">
+                        <div class="welcome-pack-summary-row">
+                            <span>${this.tr('log.summary.materialCost')}</span>
+                            <strong id="wp-total-cost">€0.00</strong>
+                        </div>
+                        <div class="welcome-pack-summary-row">
+                            <span>${this.tr('log.summary.suggestedCharge')}</span>
+                            <strong id="wp-total-suggested">€0.00</strong>
+                        </div>
+                        <div class="welcome-pack-summary-row">
+                            <span>${this.tr('log.summary.actualCharge')}</span>
+                            <strong id="wp-total-sell">€0.00</strong>
+                        </div>
+                        <div class="welcome-pack-summary-row">
+                            <span>${this.tr('log.summary.profit')}</span>
+                            <strong id="wp-total-profit">€0.00</strong>
+                        </div>
+                    </div>
+
+                    <button id="wp-save-log-btn" class="welcome-pack-nav-button is-active welcome-pack-nav-button--full">
+                        <i class="fas ${isEditing ? 'fa-floppy-disk' : 'fa-check'}"></i>
+                        <span>${isEditing ? this.tr('log.updateCharge') : this.tr('log.saveCharge')}</span>
+                    </button>
+
                     ${isEditing ? `
-                     <div class="mt-2 text-center">
-                        <p class="text-xs text-amber-600"><i class="fas fa-exclamation-triangle mr-1"></i> Updating will adjust stock differences.</p>
-                     </div>
-                    ` : ''}
-                </div>
+                    <p class="text-xs text-amber-600">${this.tr('log.editHint')}</p>
+                    ` : `
+                    <p class="text-xs text-gray-500">${this.tr('log.saveHint')}</p>
+                    `}
+                </aside>
             </div>
         `;
 
-        // Initialize cart if editing
+        this.logFormLogs = allLogs;
+        this.editingLogCreatedAt = editingLog?.createdAt || null;
+
         if (isEditing && editingLog) {
-            this.cart = [...editingLog.items];
-            // Store original items for diffing logic in saveLog
-            this.editingOriginalItems = [...editingLog.items];
+            this.cart = editingLog.items.map((item) => normalizeWelcomePackItem(item));
+            this.editingOriginalItems = editingLog.items.map((item) => normalizeWelcomePackItem(item));
+            this.chargeAmountManuallyEdited = true;
         } else {
             this.cart = [];
+            this.editingOriginalItems = null;
+            this.chargeAmountManuallyEdited = false;
         }
-        this.updateCartUI();
 
-        // Preset Listener
+        this.updateCartUI();
+        this.refreshPropertyChargeHistory();
+
+        document.getElementById('wp-log-property')?.addEventListener('input', () => this.refreshPropertyChargeHistory());
+        document.getElementById('wp-log-charged-amount')?.addEventListener('input', () => {
+            this.chargeAmountManuallyEdited = true;
+            this.updateCartUI();
+        });
+        document.getElementById('wp-use-suggested-charge-btn')?.addEventListener('click', () => {
+            this.chargeAmountManuallyEdited = false;
+            this.updateCartUI();
+        });
+        document.getElementById('wp-open-inventory-from-log-btn')?.addEventListener('click', () => {
+            this.setCurrentView('inventory');
+        });
+
         const presetSelect = document.getElementById('wp-preset-select');
         if (presetSelect) {
-            presetSelect.onchange = (e) => {
-                if (e.target.value) {
-                    const newItems = JSON.parse(e.target.value);
-                    this.cart = [...this.cart, ...newItems];
-                    this.updateCartUI();
-                    e.target.value = ""; // Reset dropdown
+            presetSelect.onchange = (event) => {
+                if (event.target.value) {
+                    this.loadItemsIntoCart(JSON.parse(event.target.value));
+                    event.target.value = '';
                 }
             };
         }
 
-        // Item selection logic
-        container.querySelectorAll('.wp-item-select-btn').forEach(btn => {
-            btn.onclick = () => {
-                const item = {
-                    id: btn.dataset.id,
-                    name: btn.dataset.name,
-                    costPrice: parseFloat(btn.dataset.cost),
-                    sellPrice: parseFloat(btn.dataset.sell)
-                };
-                this.cart.push(item);
-                this.updateCartUI();
+        container.querySelectorAll('.wp-item-select-btn').forEach((button) => {
+            button.onclick = () => {
+                this.addItemToCart({
+                    id: button.dataset.id,
+                    name: button.dataset.name,
+                    quantity: 1,
+                    costPrice: Number.parseFloat(button.dataset.cost) || 0,
+                    sellPrice: Number.parseFloat(button.dataset.sell) || 0,
+                    costVatRate: Number.parseFloat(button.dataset.costVat) || 22,
+                    sellVatRate: Number.parseFloat(button.dataset.sellVat) || 22
+                });
             };
         });
 
         document.getElementById('wp-save-log-btn').onclick = () => this.saveLog();
     }
 
+    addItemToCart(item) {
+        const normalizedItem = normalizeWelcomePackItem(item);
+        const existingIndex = this.cart.findIndex((entry) => entry.id && entry.id === normalizedItem.id);
+
+        if (existingIndex >= 0) {
+            this.cart[existingIndex] = normalizeWelcomePackItem({
+                ...this.cart[existingIndex],
+                quantity: (this.cart[existingIndex].quantity || 1) + (normalizedItem.quantity || 1)
+            });
+        } else {
+            this.cart.push(normalizedItem);
+        }
+
+        this.updateCartUI();
+    }
+
+    loadItemsIntoCart(items = []) {
+        items.forEach((item) => this.addItemToCart(item));
+    }
+
+    updateCartItemQuantity(index, quantity) {
+        const nextQuantity = Number.parseInt(quantity, 10);
+        if (!Number.isInteger(nextQuantity) || nextQuantity <= 0) {
+            this.removeCartItem(index);
+            return;
+        }
+
+        if (!this.cart[index]) {
+            return;
+        }
+
+        this.cart[index] = normalizeWelcomePackItem({
+            ...this.cart[index],
+            quantity: nextQuantity
+        });
+        this.updateCartUI();
+    }
+
+    removeCartItem(index) {
+        this.cart.splice(index, 1);
+        this.updateCartUI();
+    }
+
     async _getLogById(id) {
         const logs = await this._fetchData('logs');
-        return logs.find(l => l.id === id);
+        return logs.find((log) => log.id === id);
     }
 
     cancelEdit() {
@@ -2069,90 +2640,159 @@ export class WelcomePackManager {
         this.render();
     }
 
+    refreshPropertyChargeHistory() {
+        const historyContainer = document.getElementById('wp-property-charge-history');
+        const property = String(document.getElementById('wp-log-property')?.value || '').trim();
+        if (!historyContainer) {
+            return;
+        }
+
+        if (!property) {
+            historyContainer.innerHTML = `
+                <strong>${this.tr('log.history.noPropertyTitle')}</strong>
+                <p>${this.tr('log.history.noPropertyDescription')}</p>
+            `;
+            return;
+        }
+
+        const propertyKey = property.toLowerCase();
+        const matchingLogs = (this.logFormLogs || [])
+            .filter((log) => {
+                const label = String(log.propertyName || log.property || '').trim().toLowerCase();
+                return label === propertyKey && log.id !== this.editingLogId;
+            })
+            .sort((left, right) => `${right.date || ''}`.localeCompare(`${left.date || ''}`));
+
+        if (matchingLogs.length === 0) {
+            historyContainer.innerHTML = `
+                <strong>${property}</strong>
+                <p>${this.tr('log.history.noPreviousCharge')}</p>
+            `;
+            return;
+        }
+
+        const latest = matchingLogs[0];
+        historyContainer.innerHTML = `
+            <strong>${property}</strong>
+            <p>${this.tr('log.history.lastCharge', {
+                amount: this.formatCurrency(latest.chargedAmount),
+                date: this.formatDisplayDate(latest.date)
+            })}</p>
+            <p>${this.tr('log.history.costProfit', {
+                cost: this.formatCurrency(latest.totalCost),
+                profit: this.formatCurrency(latest.profit)
+            })}</p>
+        `;
+    }
+
     updateCartUI() {
         const list = document.getElementById('wp-cart-list');
-        if (this.cart.length === 0) {
-            list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No items selected</p>';
-        } else {
-            list.innerHTML = this.cart.map((item, index) => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span class="text-sm font-medium text-gray-700">${item.name}</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-500">€${item.sellPrice.toFixed(2)}</span>
-                        <button class="text-red-400 hover:text-red-600" onclick="document.dispatchEvent(new CustomEvent('wp-remove-cart-item', {detail: ${index}}))">×</button>
-                    </div>
-                </div>
-            `).join('');
+        const chargedAmountInput = document.getElementById('wp-log-charged-amount');
+        const rawChargeValue = chargedAmountInput?.value || '';
+        const manualChargeValue = this.chargeAmountManuallyEdited && rawChargeValue !== ''
+            ? Number.parseFloat(rawChargeValue)
+            : null;
+        const summary = summarizeWelcomePackCart(this.cart, manualChargeValue);
+
+        if (list) {
+            if (summary.items.length === 0) {
+                list.innerHTML = `<p class="text-sm text-gray-500">${this.tr('log.noMaterialsSelected')}</p>`;
+            } else {
+                list.innerHTML = summary.items.map((item, index) => `
+                    <article class="welcome-pack-cart-item">
+                        <div>
+                            <strong>${item.name}</strong>
+                            <span>${this.tr('log.cart.costCharge', {
+                                cost: this.formatCurrency(item.costPrice),
+                                charge: this.formatCurrency(item.sellPrice)
+                            })}</span>
+                        </div>
+                        <div class="welcome-pack-cart-controls">
+                            <label>
+                                <span>${this.tr('log.cart.qty')}</span>
+                                <input type="number" min="1" step="1" value="${item.quantity || 1}" onchange="welcomePackManager.updateCartItemQuantity(${index}, this.value)" title="${this.tr('log.cart.qty')}">
+                            </label>
+                            <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" onclick="welcomePackManager.removeCartItem(${index})" title="${this.tr('actions.removeMaterial')}">
+                                <i class="fas fa-xmark"></i>
+                            </button>
+                        </div>
+                    </article>
+                `).join('');
+            }
         }
 
-        // Add remove listener
-        if (!this._cartRemoveListenerAttached) {
-            document.addEventListener('wp-remove-cart-item', (e) => {
-                this.cart.splice(e.detail, 1);
-                this.updateCartUI();
-            });
-            this._cartRemoveListenerAttached = true;
+        if (chargedAmountInput && !this.chargeAmountManuallyEdited) {
+            chargedAmountInput.value = summary.totals.suggestedCharge.toFixed(2);
         }
 
-        // Update totals
-        const totalCost = this.cart.reduce((sum, item) => sum + item.costPrice, 0);
-        const totalSell = this.cart.reduce((sum, item) => sum + item.sellPrice, 0);
-        const totalProfit = totalSell - totalCost;
+        const cartMeta = document.getElementById('wp-cart-meta');
+        if (cartMeta) {
+            cartMeta.innerHTML = `
+                <span class="welcome-pack-chip">${this.tr('log.cart.materialLines', { count: summary.totals.totalLines })}</span>
+                <span class="welcome-pack-chip">${this.tr('log.cart.units', { count: summary.totals.totalUnits })}</span>
+            `;
+        }
 
-        document.getElementById('wp-total-cost').textContent = `€${totalCost.toFixed(2)}`;
-        document.getElementById('wp-total-sell').textContent = `€${totalSell.toFixed(2)}`;
-        document.getElementById('wp-total-profit').textContent = `€${totalProfit.toFixed(2)}`;
+        document.getElementById('wp-total-cost').textContent = this.formatCurrency(summary.totals.totalCost);
+        document.getElementById('wp-total-suggested').textContent = this.formatCurrency(summary.totals.suggestedCharge);
+        document.getElementById('wp-total-sell').textContent = this.formatCurrency(summary.totals.chargedAmount);
+        document.getElementById('wp-total-profit').textContent = this.formatCurrency(summary.totals.profit);
+        this.refreshPropertyChargeHistory();
     }
 
     async saveLog() {
-        const property = document.getElementById('wp-log-property').value;
+        const property = String(document.getElementById('wp-log-property').value || '').trim();
         const date = document.getElementById('wp-log-date').value;
 
         if (!property) {
-            alert('Please select a property');
+            alert(this.tr('messages.selectProperty'));
             return;
         }
         if (this.cart.length === 0) {
-            alert('Please select at least one item');
+            alert(this.tr('messages.selectMaterial'));
             return;
         }
 
-        const totalCost = this.cart.reduce((sum, item) => sum + item.costPrice, 0);
-        const totalSell = this.cart.reduce((sum, item) => sum + item.sellPrice, 0);
+        const rawChargeValue = document.getElementById('wp-log-charged-amount')?.value || '';
+        const manualChargeValue = rawChargeValue === '' ? null : Number.parseFloat(rawChargeValue);
+        const summary = summarizeWelcomePackCart(this.cart, manualChargeValue);
 
         const logData = {
             property,
             date,
-            items: this.cart,
-            totalCost,
-            totalSell,
-            profit: totalSell - totalCost,
-            createdAt: new Date().toISOString()
+            items: summary.items,
+            totalCost: summary.totals.totalCost,
+            suggestedSell: summary.totals.suggestedCharge,
+            chargedAmount: summary.totals.chargedAmount,
+            totalSell: summary.totals.chargedAmount,
+            profit: summary.totals.profit,
+            createdAt: this.editingLogCreatedAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
 
         try {
             if (this.editingLogId) {
-                // Update existing log
                 await this.dataManager.updateWelcomePackLog(this.editingLogId, this.editingOriginalItems, logData);
-                alert('Welcome Pack updated successfully!');
+                alert(this.tr('messages.chargeUpdated'));
                 this.editingLogId = null;
                 this.editingOriginalItems = null;
+                this.editingLogCreatedAt = null;
             } else {
-                // Create new log
                 await this.dataManager.logWelcomePack(logData);
-                alert('Welcome Pack logged successfully!');
+                alert(this.tr('messages.chargeSaved'));
             }
             this._invalidateCache(['logs', 'items']);
+            this.chargeAmountManuallyEdited = false;
             this.currentView = 'dashboard';
             this.render();
         } catch (error) {
             console.error('Error saving pack:', error);
-            alert('Failed to save pack. Please try again.');
+            alert(this.tr('messages.saveFailed'));
         }
     }
 
     async deleteLog(id) {
-        if (confirm('Are you sure you want to delete this log? Stock will be restored.')) {
+        if (confirm(this.tr('messages.confirmDeleteCharge'))) {
             const logs = await this._fetchData('logs');
             const log = logs.find(l => l.id === id);
             if (log) {
@@ -2165,8 +2805,7 @@ export class WelcomePackManager {
 
     async editLog(id) {
         this.editingLogId = id;
-        this.currentView = 'log';
-        this.render();
+        this.setCurrentView('log');
     }
 
     // Helper function to calculate VAT
@@ -2190,15 +2829,15 @@ export class WelcomePackManager {
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-add-item-modal">
                 <div class="relative p-5 border w-[420px] shadow-lg rounded-xl bg-white">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Add New Item</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">${this.tr('modals.addMaterial.title')}</h3>
                     <div class="space-y-4">
-                        <input type="text" id="wp-new-item-name" placeholder="Item Name" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-new-item-stock" placeholder="Initial Stock Quantity" class="w-full p-2 border rounded" min="0">
+                        <input type="text" id="wp-new-item-name" placeholder="${this.tr('modals.addMaterial.namePlaceholder')}" class="w-full p-2 border rounded">
+                        <input type="number" id="wp-new-item-stock" placeholder="${this.tr('modals.addMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0">
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Cost Price (Net, excl. VAT)</p>
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.costLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-new-item-cost" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-new-item-cost" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-new-item-cost-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4">4% (Reduced)</option>
                                     <option value="12">12% (Intermediate)</option>
@@ -2211,9 +2850,9 @@ export class WelcomePackManager {
                         </div>
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Sell Price (Net, excl. VAT)</p>
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.chargeLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-new-item-sell-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4">4% (Reduced)</option>
                                     <option value="12">12% (Intermediate)</option>
@@ -2226,8 +2865,8 @@ export class WelcomePackManager {
                         </div>
                         
                         <div class="flex justify-end gap-2 mt-4">
-                            <button id="wp-cancel-add-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
-                            <button id="wp-confirm-add-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Add Item</button>
+                            <button id="wp-cancel-add-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
+                            <button id="wp-confirm-add-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('modals.addMaterial.confirm')}</button>
                         </div>
                     </div>
                 </div>
@@ -2243,7 +2882,11 @@ export class WelcomePackManager {
 
             if (netPrice > 0) {
                 const { vatAmount, grossPrice } = this.calculateVAT(netPrice, vatRate);
-                preview.innerHTML = `<span class="text-gray-500">€${netPrice.toFixed(2)}</span> + <span class="text-orange-600">€${vatAmount.toFixed(2)} VAT</span> = <span class="font-bold text-gray-800">€${grossPrice.toFixed(2)}</span>`;
+                preview.innerHTML = this.tr('modals.vatPreview', {
+                    net: `<span class="text-gray-500">${this.formatCurrency(netPrice)}</span>`,
+                    vat: `<span class="text-orange-600">${this.formatCurrency(vatAmount)} ${this.tr('inventory.table.vat')}</span>`,
+                    gross: `<span class="font-bold text-gray-800">${this.formatCurrency(grossPrice)}</span>`
+                });
                 preview.classList.remove('hidden');
             } else {
                 preview.classList.add('hidden');
@@ -2287,7 +2930,7 @@ export class WelcomePackManager {
                 document.getElementById('wp-add-item-modal').remove();
                 this.render(); // Refresh list
             } else {
-                alert('Please fill all fields correctly');
+                alert(this.tr('messages.fillAllMaterialFields'));
             }
         };
     }
@@ -2308,15 +2951,15 @@ export class WelcomePackManager {
         const modalHtml = `
             <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-edit-item-modal">
                 <div class="relative p-5 border w-[420px] shadow-lg rounded-xl bg-white">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Edit Item</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">${this.tr('modals.editMaterial.title')}</h3>
                     <div class="space-y-4">
-                        <input type="text" id="wp-edit-item-name" value="${item.name}" placeholder="Item Name" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="Stock Quantity" class="w-full p-2 border rounded" min="0">
+                        <input type="text" id="wp-edit-item-name" value="${item.name}" placeholder="${this.tr('modals.editMaterial.namePlaceholder')}" class="w-full p-2 border rounded">
+                        <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="${this.tr('modals.editMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0">
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Cost Price (Net, excl. VAT)</p>
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.costLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-edit-item-cost-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4" ${currentCostVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
                                     <option value="12" ${currentCostVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
@@ -2329,9 +2972,9 @@ export class WelcomePackManager {
                         </div>
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">Sell Price (Net, excl. VAT)</p>
+                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.chargeLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (€)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-edit-item-sell-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4" ${currentSellVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
                                     <option value="12" ${currentSellVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
@@ -2344,8 +2987,8 @@ export class WelcomePackManager {
                         </div>
                         
                         <div class="flex justify-end gap-2 mt-4">
-                            <button id="wp-cancel-edit-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
-                            <button id="wp-confirm-edit-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">Save Changes</button>
+                            <button id="wp-cancel-edit-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
+                            <button id="wp-confirm-edit-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('modals.editMaterial.confirm')}</button>
                         </div>
                     </div>
                 </div>
@@ -2361,7 +3004,11 @@ export class WelcomePackManager {
 
             if (netPrice > 0) {
                 const { vatAmount, grossPrice } = this.calculateVAT(netPrice, vatRate);
-                preview.innerHTML = `<span class="text-gray-500">€${netPrice.toFixed(2)}</span> + <span class="text-orange-600">€${vatAmount.toFixed(2)} VAT</span> = <span class="font-bold text-gray-800">€${grossPrice.toFixed(2)}</span>`;
+                preview.innerHTML = this.tr('modals.vatPreview', {
+                    net: `<span class="text-gray-500">${this.formatCurrency(netPrice)}</span>`,
+                    vat: `<span class="text-orange-600">${this.formatCurrency(vatAmount)} ${this.tr('inventory.table.vat')}</span>`,
+                    gross: `<span class="font-bold text-gray-800">${this.formatCurrency(grossPrice)}</span>`
+                });
             } else {
                 preview.innerHTML = '';
             }
@@ -2408,14 +3055,14 @@ export class WelcomePackManager {
                 document.getElementById('wp-edit-item-modal').remove();
                 this.renderCurrentView(); // Refresh list
             } else {
-                alert('Please fill out all fields correctly.');
+                alert(this.tr('messages.fillAllMaterialFields'));
             }
         };
 
     }
 
     async deleteItem(id) {
-        if (confirm('Are you sure you want to delete this item?')) {
+        if (confirm(this.tr('messages.confirmDeleteMaterial'))) {
             await this.dataManager.deleteWelcomePackItem(id);
             this._invalidateCache('items');
             this.render();
@@ -2423,3 +3070,4 @@ export class WelcomePackManager {
     }
 
 }
+

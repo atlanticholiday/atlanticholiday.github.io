@@ -104,6 +104,410 @@
     "cleaningAh": "Cleaning AH",
     "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
   },
+  "welcomePack": {
+    "header": {
+      "title": "Welcome Packs",
+      "subtitle": "Track material cost, property charges, and profit"
+    },
+    "hero": {
+      "kicker": "Welcome Packs",
+      "title": "Track materials, charges, and profit without switching between confusing tabs.",
+      "body": "The workflow is now split into three clear jobs: define the material costs, register what you charged at each property, and let the calculations view show totals and margin for you."
+    },
+    "workflow": {
+      "materialCosts": {
+        "label": "Material Costs",
+        "step": "Step 1",
+        "description": "Add every material you buy and fill in stock, cost, and the usual charge per unit."
+      },
+      "propertyCharges": {
+        "label": "Property Charges",
+        "step": "Step 2",
+        "description": "Choose the property, add the materials used in that pack, and confirm what you actually charged."
+      },
+      "calculations": {
+        "label": "Calculations",
+        "step": "Step 3",
+        "description": "Open the calculations view to check totals, profit, and property performance automatically."
+      }
+    },
+    "support": {
+      "label": "Support tools",
+      "reservations": "Reservations",
+      "presets": "Presets"
+    },
+    "help": {
+      "title": "Welcome Pack Manager Guide",
+      "subtitle": "Learn how to manage packs, reservations, and inventory.",
+      "nav": {
+        "workflow": "Typical Workflow",
+        "stats": "Understanding Stats",
+        "inventory": "Inventory & Presets"
+      },
+      "sections": {
+        "workflow": {
+          "title": "Daily Workflow",
+          "steps": {
+            "checkReservations": {
+              "title": "Check Reservations",
+              "body": "Open <strong>Reservations</strong> to review upcoming check-ins and see which properties will need a welcome pack soon."
+            },
+            "logPack": {
+              "title": "Log a Pack",
+              "body": "Open <strong>Property Charges</strong>, select the property and date, then add the materials used or load a preset as a starting point."
+            },
+            "saveMonitor": {
+              "title": "Save & Monitor",
+              "body": "After saving, stock is updated and the pack cost, charge, and profit are reflected in the calculations area automatically."
+            }
+          }
+        },
+        "stats": {
+          "title": "Calculations & Stats",
+          "body": "The calculations view gives you a financial overview of what each pack cost, what was charged, and how each property performed.",
+          "items": {
+            "margin": {
+              "label": "Profit Margin:",
+              "body": "Calculated as <code>(Profit / Charged Amount) * 100</code>. Higher margin means the welcome pack is more profitable."
+            },
+            "trends": {
+              "label": "Property View:",
+              "body": "Use the property table and recent charges list to see where margin is strongest and fix older entries when needed."
+            }
+          }
+        },
+        "inventory": {
+          "title": "Inventory & Presets",
+          "cards": {
+            "stock": {
+              "title": "Managing Stock",
+              "body": "Use <strong>Material Costs</strong> to add materials, keep stock up to date, and define the usual cost and suggested charge for each item."
+            },
+            "presets": {
+              "title": "Using Presets",
+              "body": "Use <strong>Presets</strong> to save your standard welcome pack so recurring property charges can be logged faster."
+            }
+          }
+        }
+      },
+      "done": "Got it, thanks!"
+    },
+    "reservations": {
+      "tabs": {
+        "upcoming": "Upcoming Reservations",
+        "settings": "Property Settings"
+      },
+      "upcoming": {
+        "title": "Future Bookings",
+        "summary": "{{enabled}} of {{total}} properties have Welcome Pack enabled",
+        "lastUpdated": "Last updated: {{time}}",
+        "syncNow": "Sync Now",
+        "syncing": "Syncing...",
+        "fetching": "Fetching reservations...",
+        "syncErrorTitle": "Error syncing calendars",
+        "filters": {
+          "next7": "Next 7 Days",
+          "next15": "Next 15 Days",
+          "next30": "Next 30 Days",
+          "viewAll": "View All"
+        },
+        "loading": "Loading reservations...",
+        "stats": {
+          "today": "Check-ins Today",
+          "week": "This Week",
+          "nextDays": "Next {{count}} Days"
+        },
+        "noEnabledTitle": "No properties have welcome pack enabled",
+        "noEnabledBody": "Go to Property Settings to enable welcome pack tracking for your properties.",
+        "configureProperties": "Configure Properties",
+        "noUpcomingTitle": "No check-ins in the next {{count}} days",
+        "noUpcomingBody": "Reservations will appear here when guests book.",
+        "noEnabledReservations": "(No reservations found for enabled properties)",
+        "badges": {
+          "today": "CHECK-IN TODAY",
+          "tomorrow": "CHECK-IN TOMORROW"
+        },
+        "labels": {
+          "checkIn": "Check-in",
+          "checkOut": "Check-out"
+        },
+        "nights": {
+          "one": "{{count}} night",
+          "other": "{{count}} nights"
+        },
+        "blockedReserved": "Blocked / Reserved",
+        "reserved": "Reserved",
+        "assignPack": "Assign Pack"
+      },
+      "settings": {
+        "title": "Welcome Pack Properties",
+        "summary": "{{enabled}} of {{total}} properties have welcome pack enabled",
+        "bannerTitle": "Configure which properties need welcome packs",
+        "bannerBody": "Search for a property below and enable welcome pack tracking. Only enabled properties will appear in the Upcoming Reservations list.",
+        "searchPlaceholder": "Search for a property to enable or disable...",
+        "startTyping": "Start typing to search for a property",
+        "enabledListTitle": "Properties with Welcome Pack Enabled ({{count}})",
+        "enabledBadge": "Welcome Pack Enabled",
+        "emptyTitle": "No properties have welcome pack enabled yet",
+        "emptyBody": "Search and enable properties above."
+      },
+      "search": {
+        "loading": "Searching...",
+        "noMatch": "No properties found matching \"{{query}}\"",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "enable": "Enable",
+        "disable": "Disable",
+        "error": "Error searching properties"
+      },
+      "messages": {
+        "toggleError": "Error updating property. Please try again."
+      }
+    },
+    "presets": {
+      "title": "Pack Presets",
+      "create": "Create Preset",
+      "itemCount": {
+        "one": "{{count}} item",
+        "other": "{{count}} items"
+      },
+      "moreItems": "+ {{count}} more...",
+      "inclVat": "(incl. VAT)",
+      "deleteTitle": "Delete preset",
+      "empty": "No presets created.",
+      "deleteConfirm": "Delete this preset?",
+      "modal": {
+        "title": "Create New Pack Preset",
+        "namePlaceholder": "Preset Name (e.g. Gold Welcome Pack)",
+        "selectItems": "Select Items & Quantities:",
+        "packTotal": "Pack Total:",
+        "emptySummary": "Select items to see pack composition",
+        "summary": "{{items}} (Net: {{amount}} + VAT)",
+        "save": "Save Preset"
+      },
+      "messages": {
+        "nameRequired": "Please enter a preset name",
+        "itemsRequired": "Please select at least one item"
+      }
+    },
+    "ical": {
+      "search": {
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "edit": "Edit",
+        "add": "Add iCal"
+      },
+      "modal": {
+        "title": "Configure iCal URL",
+        "property": "Property: <strong>{{property}}</strong>",
+        "urlLabel": "iCal/ICS URL",
+        "urlPlaceholder": "https://www.airbnb.com/calendar/ical/...",
+        "urlHelp": "Find this in your channel manager (Airbnb, Booking.com, VRBO, etc.)",
+        "howToFind": "How to find your iCal URL:",
+        "providers": {
+          "airbnb": "Airbnb: Calendar -> Availability settings -> Export calendar",
+          "booking": "Booking.com: Property -> Calendar -> Sync calendars",
+          "vrbo": "VRBO: Calendar -> Import/Export -> Export"
+        },
+        "test": "Test URL",
+        "testing": "Testing...",
+        "save": "Save"
+      },
+      "messages": {
+        "removeConfirm": "Remove iCal connection for \"{{property}}\"?\n\nThis will stop syncing reservations for this property.",
+        "removeError": "Error removing iCal connection. Please try again.",
+        "enterUrl": "Please enter a URL first",
+        "valid": "URL is valid. Calendar data was received successfully.",
+        "invalid": "The URL returned data, but it does not appear to be a valid iCal format.",
+        "fetchFailed": "Could not fetch the URL. Please check whether it is correct and accessible.",
+        "savedFallback": "iCal URL saved. Full integration still requires the DataManager update.",
+        "saveFailed": "Error saving URL. Please try again."
+      }
+    },
+    "states": {
+      "loading": "Loading Welcome Packs...",
+      "permissionDenied": "Welcome Packs is not available for this account. Check your access level and try again.",
+      "unauthenticated": "Sign in again to load Welcome Packs.",
+      "unavailable": "Welcome Packs could not be loaded right now. Please try again.",
+      "unavailableTitle": "Welcome Packs Unavailable"
+    },
+    "actions": {
+      "apply": "Apply",
+      "exportCsv": "Export CSV",
+      "editEntry": "Edit entry",
+      "deleteEntry": "Delete entry",
+      "cancelEdit": "Cancel edit",
+      "editMaterial": "Edit material",
+      "deleteMaterial": "Delete material",
+      "removeMaterial": "Remove material",
+      "cancel": "Cancel",
+      "add": "Add"
+    },
+    "dashboard": {
+      "lowStockTitle": "Low stock needs attention",
+      "lowStockBody": "{{count}} material(s) are nearly out: {{items}}.",
+      "openMaterialCosts": "Open Material Costs",
+      "title": "Profit by period",
+      "description": "Use the date filter to see how much the packs cost, how much you charged, and which properties performed best.",
+      "from": "From",
+      "to": "To",
+      "metrics": {
+        "loggedCharges": "Charges logged",
+        "unitsUsed": "{{count}} material units used",
+        "materialCost": "Material cost",
+        "averagePerPack": "Average {{amount}} per pack",
+        "amountCharged": "Amount charged",
+        "profit": "Profit",
+        "marginInPeriod": "{{margin}}% margin in this period"
+      },
+      "chips": {
+        "currentStockValue": "Current stock value: {{amount}}",
+        "materialsInStock": "Materials in stock: {{count}}",
+        "lowStockMaterials": "Low stock materials: {{count}}"
+      },
+      "propertyPerformanceTitle": "Property performance",
+      "propertyPerformanceDescription": "Each row compares the materials consumed with what you actually charged at that property.",
+      "table": {
+        "property": "Property",
+        "packs": "Packs",
+        "cost": "Cost",
+        "charged": "Charged",
+        "profit": "Profit",
+        "margin": "Margin",
+        "lastCharge": "Last charge",
+        "units": "{{count}} units"
+      },
+      "emptyTitle": "No welcome pack charges in this period",
+      "emptyDescription": "Open Property Charges to register the first pack and the calculations will appear here automatically.",
+      "openPropertyCharges": "Open Property Charges",
+      "recentChargesTitle": "Recent charges",
+      "recentChargesDescription": "Review what was charged at each property and adjust older entries if a value was wrong.",
+      "recentCostProfit": "Cost {{cost}} | Profit {{profit}}",
+      "noChargesTitle": "No charges logged yet",
+      "noChargesDescription": "After you add a charge in Property Charges, the latest entries will appear here.",
+      "unknownProperty": "Unknown property"
+    },
+    "inventory": {
+      "lowStockTitle": "Some materials need restocking",
+      "lowStockBody": "{{items}}",
+      "title": "Material catalogue",
+      "description": "Keep one row per material with the current stock, the net cost to Atlantic Holiday, and the usual charge used in a welcome pack.",
+      "addMaterial": "Add Material",
+      "metrics": {
+        "tracked": "Materials tracked",
+        "lowStock": "{{count}} low-stock materials",
+        "unitsInStock": "Units in stock",
+        "unitsInStockDescription": "Current quantity across the catalogue",
+        "stockCostValue": "Stock cost value",
+        "stockCostValueDescription": "Based on the net material cost",
+        "projectedBilledValue": "Projected billed value",
+        "potentialMargin": "Potential margin {{amount}}"
+      },
+      "table": {
+        "material": "Material",
+        "stock": "Stock",
+        "costPerUnit": "Cost / unit",
+        "chargePerUnit": "Charge / unit",
+        "marginPerUnit": "Margin / unit",
+        "vat": "VAT",
+        "actions": "Actions"
+      },
+      "status": {
+        "needsRestock": "Needs restock soon",
+        "ready": "Ready to use in packs"
+      },
+      "emptyTitle": "No materials saved yet",
+      "emptyDescription": "Add your first material so the Property Charges and Calculations screens can work from it."
+    },
+    "log": {
+      "title": "Register a property charge",
+      "editTitle": "Edit property charge",
+      "description": "Select the property, choose the materials used in the pack, and confirm the amount you actually charged.",
+      "fields": {
+        "property": "Property",
+        "propertyPlaceholder": "Select property...",
+        "date": "Date",
+        "chargedAmount": "Amount charged to property"
+      },
+      "loadPreset": "Load preset",
+      "loadPresetPlaceholder": "Select a preset to load materials...",
+      "loadPresetHelp": "Presets help you drop in your standard pack before adjusting the actual materials used.",
+      "materialsTitle": "Materials in this pack",
+      "materialsDescription": "Add the materials that were actually used for this property. Repeated clicks increase the quantity.",
+      "materialInStock": "{{count}} in stock",
+      "materialCost": "Cost {{amount}}",
+      "materialCharge": "Charge {{amount}}",
+      "noMaterialsTitle": "No materials available yet",
+      "noMaterialsDescription": "Open Material Costs first and add the materials that can be used in a welcome pack.",
+      "summaryTitle": "Charge summary",
+      "summaryDescription": "The amount charged can follow the suggested value or be edited manually if a property was billed differently.",
+      "history": {
+        "noPropertyTitle": "No property selected yet",
+        "noPropertyDescription": "Select a property to see the last recorded welcome pack charge.",
+        "noPreviousCharge": "No previous welcome pack charge was found for this property.",
+        "lastCharge": "Last charge: {{amount}} on {{date}}.",
+        "costProfit": "Material cost {{cost}} and profit {{profit}}."
+      },
+      "noMaterialsSelected": "No materials selected",
+      "useSuggestedAmount": "Use suggested amount",
+      "summary": {
+        "materialCost": "Material cost",
+        "suggestedCharge": "Suggested charge",
+        "actualCharge": "Actual charge",
+        "profit": "Profit"
+      },
+      "updateCharge": "Update charge",
+      "saveCharge": "Save charge",
+      "editHint": "Updating an existing charge will restore the old stock and deduct the new quantities again.",
+      "saveHint": "The calculation screen will update automatically after you save this charge.",
+      "cart": {
+        "costCharge": "{{cost}} cost | {{charge}} charge",
+        "qty": "Qty",
+        "materialLines": "{{count}} material line(s)",
+        "units": "{{count}} unit(s)"
+      }
+    },
+    "modals": {
+      "vatPreview": "{{net}} + {{vat}} = {{gross}}",
+      "addMaterial": {
+        "title": "Add Material",
+        "namePlaceholder": "Material Name",
+        "stockPlaceholder": "Initial Stock Quantity",
+        "costLabel": "Material Cost (Net, excl. VAT)",
+        "chargeLabel": "Suggested Charge (Net, excl. VAT)",
+        "confirm": "Add Material"
+      },
+      "editMaterial": {
+        "title": "Edit Material",
+        "namePlaceholder": "Material Name",
+        "stockPlaceholder": "Stock Quantity",
+        "costLabel": "Material Cost (Net, excl. VAT)",
+        "chargeLabel": "Suggested Charge (Net, excl. VAT)",
+        "confirm": "Save Changes"
+      }
+    },
+    "messages": {
+      "selectProperty": "Please select a property",
+      "selectMaterial": "Please select at least one material",
+      "chargeUpdated": "Welcome pack charge updated successfully.",
+      "chargeSaved": "Welcome pack charge saved successfully.",
+      "saveFailed": "Failed to save pack. Please try again.",
+      "confirmDeleteCharge": "Are you sure you want to delete this charge? Stock will be restored.",
+      "fillAllMaterialFields": "Please fill all fields correctly.",
+      "confirmDeleteMaterial": "Are you sure you want to delete this material?",
+      "noDataToExport": "No data to export"
+    },
+    "export": {
+      "date": "Date",
+      "property": "Property",
+      "materials": "Materials",
+      "units": "Units",
+      "materialCost": "Material Cost",
+      "suggestedCharge": "Suggested Charge",
+      "chargedAmount": "Charged Amount",
+      "profit": "Profit"
+    }
+  },
   "cleaningAh": {
     "header": {
       "kicker": "Finance",

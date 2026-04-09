@@ -1,6 +1,26 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import { WelcomePackManager } from "../../../../js/features/operations/welcome-pack-manager.js";
 import { resetDom } from "../../../test-utils.js";
+import { i18n } from "../../../../js/core/i18n.js";
+
+function primeWelcomePackTranslations() {
+  i18n.currentLang = "en";
+  i18n.translations.en = {
+    ...(i18n.translations.en || {}),
+    welcomePack: {
+      ...((i18n.translations.en || {}).welcomePack || {}),
+      reservations: {
+        upcoming: {
+          reserved: "Reserved"
+        }
+      },
+      states: {
+        unavailableTitle: "Welcome Packs Unavailable",
+        permissionDenied: "Welcome Packs is not available for this account. Check your access level and try again."
+      }
+    }
+  };
+}
 
 describe("WelcomePackManager", () => {
   test("calculates VAT from a net amount", () => {
@@ -14,6 +34,7 @@ describe("WelcomePackManager", () => {
   });
 
   test("parses iCal reservations into check-in and check-out dates", () => {
+    primeWelcomePackTranslations();
     const manager = new WelcomePackManager({});
     const ical = [
       "BEGIN:VCALENDAR",
@@ -54,6 +75,7 @@ describe("WelcomePackManager", () => {
   });
 
   test("renders an inline error when the dashboard cannot be loaded", async () => {
+    primeWelcomePackTranslations();
     resetDom(`<div id="welcome-pack-content"></div>`);
     const originalConsoleError = console.error;
     console.error = () => {};

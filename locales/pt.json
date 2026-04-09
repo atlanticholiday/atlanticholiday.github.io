@@ -104,6 +104,410 @@
         "cleaningAh": "Cleaning AH",
         "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
     },
+    "welcomePack": {
+        "header": {
+            "title": "Welcome Packs",
+            "subtitle": "Acompanhar custo de materiais, cobranças por propriedade e lucro"
+        },
+        "hero": {
+            "kicker": "Welcome Packs",
+            "title": "Acompanhe materiais, cobranças e lucro sem saltar entre separadores confusos.",
+            "body": "O fluxo está agora dividido em três tarefas claras: definir os custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar-lhe os totais e a margem."
+        },
+        "workflow": {
+            "materialCosts": {
+                "label": "Custos dos Materiais",
+                "step": "Passo 1",
+                "description": "Adicione todos os materiais que compra e preencha stock, custo e cobrança habitual por unidade."
+            },
+            "propertyCharges": {
+                "label": "Cobranças por Propriedade",
+                "step": "Passo 2",
+                "description": "Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor realmente cobrado."
+            },
+            "calculations": {
+                "label": "Cálculos",
+                "step": "Passo 3",
+                "description": "Abra a vista de cálculos para confirmar automaticamente totais, lucro e desempenho por propriedade."
+            }
+        },
+        "support": {
+            "label": "Ferramentas de apoio",
+            "reservations": "Reservas",
+            "presets": "Presets"
+        },
+        "help": {
+            "title": "Guia do Welcome Packs",
+            "subtitle": "Saiba como gerir packs, reservas e inventário.",
+            "nav": {
+                "workflow": "Fluxo habitual",
+                "stats": "Perceber os cálculos",
+                "inventory": "Inventário e presets"
+            },
+            "sections": {
+                "workflow": {
+                    "title": "Fluxo diário",
+                    "steps": {
+                        "checkReservations": {
+                            "title": "Ver reservas",
+                            "body": "Abra <strong>Reservas</strong> para rever os próximos check-ins e perceber que propriedades vão precisar de welcome pack em breve."
+                        },
+                        "logPack": {
+                            "title": "Registar um pack",
+                            "body": "Abra <strong>Cobranças por Propriedade</strong>, escolha a propriedade e a data, e depois adicione os materiais usados ou carregue um preset como ponto de partida."
+                        },
+                        "saveMonitor": {
+                            "title": "Guardar e acompanhar",
+                            "body": "Depois de guardar, o stock é atualizado e o custo, a cobrança e o lucro desse pack aparecem automaticamente na área de cálculos."
+                        }
+                    }
+                },
+                "stats": {
+                    "title": "Cálculos e métricas",
+                    "body": "A vista de cálculos dá-lhe um resumo financeiro do custo de cada pack, do valor cobrado e do desempenho de cada propriedade.",
+                    "items": {
+                        "margin": {
+                            "label": "Margem de lucro:",
+                            "body": "Calculada como <code>(Lucro / Valor Cobrado) * 100</code>. Quanto maior a margem, mais rentável é o welcome pack."
+                        },
+                        "trends": {
+                            "label": "Vista por propriedade:",
+                            "body": "Use a tabela por propriedade e a lista de cobranças recentes para perceber onde a margem é mais forte e corrigir registos antigos quando for preciso."
+                        }
+                    }
+                },
+                "inventory": {
+                    "title": "Inventário e presets",
+                    "cards": {
+                        "stock": {
+                            "title": "Gerir stock",
+                            "body": "Use <strong>Custos dos Materiais</strong> para adicionar materiais, manter o stock atualizado e definir o custo habitual e a cobrança sugerida de cada item."
+                        },
+                        "presets": {
+                            "title": "Usar presets",
+                            "body": "Use <strong>Presets</strong> para guardar o welcome pack standard e registar cobranças recorrentes mais depressa."
+                        }
+                    }
+                }
+            },
+            "done": "Perfeito, obrigado!"
+        },
+        "reservations": {
+            "tabs": {
+                "upcoming": "Próximas reservas",
+                "settings": "Definições das propriedades"
+            },
+            "upcoming": {
+                "title": "Reservas futuras",
+                "summary": "{{enabled}} de {{total}} propriedades têm Welcome Pack ativo",
+                "lastUpdated": "Última atualização: {{time}}",
+                "syncNow": "Sincronizar agora",
+                "syncing": "A sincronizar...",
+                "fetching": "A procurar reservas...",
+                "syncErrorTitle": "Erro ao sincronizar calendários",
+                "filters": {
+                    "next7": "Próximos 7 dias",
+                    "next15": "Próximos 15 dias",
+                    "next30": "Próximos 30 dias",
+                    "viewAll": "Ver tudo"
+                },
+                "loading": "A carregar reservas...",
+                "stats": {
+                    "today": "Check-ins hoje",
+                    "week": "Esta semana",
+                    "nextDays": "Próximos {{count}} dias"
+                },
+                "noEnabledTitle": "Nenhuma propriedade tem Welcome Pack ativo",
+                "noEnabledBody": "Abra as Definições das Propriedades para ativar o acompanhamento de welcome packs nas suas propriedades.",
+                "configureProperties": "Configurar propriedades",
+                "noUpcomingTitle": "Não há check-ins nos próximos {{count}} dias",
+                "noUpcomingBody": "As reservas vão aparecer aqui quando existirem novas marcações.",
+                "noEnabledReservations": "(Não foram encontradas reservas para as propriedades ativas)",
+                "badges": {
+                    "today": "CHECK-IN HOJE",
+                    "tomorrow": "CHECK-IN AMANHÃ"
+                },
+                "labels": {
+                    "checkIn": "Check-in",
+                    "checkOut": "Check-out"
+                },
+                "nights": {
+                    "one": "{{count}} noite",
+                    "other": "{{count}} noites"
+                },
+                "blockedReserved": "Bloqueado / Reservado",
+                "reserved": "Reservado",
+                "assignPack": "Atribuir pack"
+            },
+            "settings": {
+                "title": "Propriedades com Welcome Pack",
+                "summary": "{{enabled}} de {{total}} propriedades têm welcome pack ativo",
+                "bannerTitle": "Defina que propriedades precisam de welcome pack",
+                "bannerBody": "Pesquise uma propriedade abaixo e ative o acompanhamento de welcome pack. Só as propriedades ativas aparecem na lista de Próximas Reservas.",
+                "searchPlaceholder": "Pesquisar uma propriedade para ativar ou desativar...",
+                "startTyping": "Comece a escrever para procurar uma propriedade",
+                "enabledListTitle": "Propriedades com Welcome Pack ativo ({{count}})",
+                "enabledBadge": "Welcome Pack ativo",
+                "emptyTitle": "Ainda não há propriedades com welcome pack ativo",
+                "emptyBody": "Pesquise acima e ative as propriedades necessárias."
+            },
+            "search": {
+                "loading": "A pesquisar...",
+                "noMatch": "Não foram encontradas propriedades para \"{{query}}\"",
+                "enabled": "Ativo",
+                "disabled": "Inativo",
+                "enable": "Ativar",
+                "disable": "Desativar",
+                "error": "Erro ao pesquisar propriedades"
+            },
+            "messages": {
+                "toggleError": "Erro ao atualizar a propriedade. Tente novamente."
+            }
+        },
+        "presets": {
+            "title": "Presets de packs",
+            "create": "Criar preset",
+            "itemCount": {
+                "one": "{{count}} item",
+                "other": "{{count}} itens"
+            },
+            "moreItems": "+ {{count}} mais...",
+            "inclVat": "(incl. IVA)",
+            "deleteTitle": "Eliminar preset",
+            "empty": "Ainda não existem presets.",
+            "deleteConfirm": "Eliminar este preset?",
+            "modal": {
+                "title": "Criar novo preset de pack",
+                "namePlaceholder": "Nome do preset (ex.: Welcome Pack Gold)",
+                "selectItems": "Selecionar itens e quantidades:",
+                "packTotal": "Total do pack:",
+                "emptySummary": "Selecione itens para ver a composição do pack",
+                "summary": "{{items}} (Líquido: {{amount}} + IVA)",
+                "save": "Guardar preset"
+            },
+            "messages": {
+                "nameRequired": "Introduza um nome para o preset",
+                "itemsRequired": "Selecione pelo menos um item"
+            }
+        },
+        "ical": {
+            "search": {
+                "connected": "Ligado",
+                "notConnected": "Sem ligação",
+                "edit": "Editar",
+                "add": "Adicionar iCal"
+            },
+            "modal": {
+                "title": "Configurar URL iCal",
+                "property": "Propriedade: <strong>{{property}}</strong>",
+                "urlLabel": "URL iCal/ICS",
+                "urlPlaceholder": "https://www.airbnb.com/calendar/ical/...",
+                "urlHelp": "Encontre esta ligação no seu channel manager (Airbnb, Booking.com, VRBO, etc.)",
+                "howToFind": "Como encontrar o URL iCal:",
+                "providers": {
+                    "airbnb": "Airbnb: Calendar -> Availability settings -> Export calendar",
+                    "booking": "Booking.com: Property -> Calendar -> Sync calendars",
+                    "vrbo": "VRBO: Calendar -> Import/Export -> Export"
+                },
+                "test": "Testar URL",
+                "testing": "A testar...",
+                "save": "Guardar"
+            },
+            "messages": {
+                "removeConfirm": "Remover a ligação iCal de \"{{property}}\"?\n\nIsto vai parar a sincronização de reservas desta propriedade.",
+                "removeError": "Erro ao remover a ligação iCal. Tente novamente.",
+                "enterUrl": "Introduza primeiro um URL",
+                "valid": "O URL é válido. Os dados do calendário foram recebidos com sucesso.",
+                "invalid": "O URL devolveu dados, mas não parece estar num formato iCal válido.",
+                "fetchFailed": "Não foi possível obter o URL. Confirme se está correto e acessível.",
+                "savedFallback": "O URL iCal foi guardado. A integração completa ainda precisa da atualização do DataManager.",
+                "saveFailed": "Erro ao guardar o URL. Tente novamente."
+            }
+        },
+        "states": {
+            "loading": "A carregar Welcome Packs...",
+            "permissionDenied": "O Welcome Packs não está disponível para esta conta. Verifique o nível de acesso e tente novamente.",
+            "unauthenticated": "Inicie sessão novamente para carregar o Welcome Packs.",
+            "unavailable": "Não foi possível carregar o Welcome Packs agora. Tente novamente.",
+            "unavailableTitle": "Welcome Packs Indisponível"
+        },
+        "actions": {
+            "apply": "Aplicar",
+            "exportCsv": "Exportar CSV",
+            "editEntry": "Editar registo",
+            "deleteEntry": "Eliminar registo",
+            "cancelEdit": "Cancelar edição",
+            "editMaterial": "Editar material",
+            "deleteMaterial": "Eliminar material",
+            "removeMaterial": "Remover material",
+            "cancel": "Cancelar",
+            "add": "Adicionar"
+        },
+        "dashboard": {
+            "lowStockTitle": "O stock baixo precisa de atenção",
+            "lowStockBody": "{{count}} material(is) está(ão) quase a terminar: {{items}}.",
+            "openMaterialCosts": "Abrir Custos dos Materiais",
+            "title": "Lucro por período",
+            "description": "Use o filtro de datas para ver quanto custaram os packs, quanto foi cobrado e quais propriedades tiveram melhor desempenho.",
+            "from": "De",
+            "to": "Até",
+            "metrics": {
+                "loggedCharges": "Cobranças registadas",
+                "unitsUsed": "{{count}} unidades de material usadas",
+                "materialCost": "Custo dos materiais",
+                "averagePerPack": "Média de {{amount}} por pack",
+                "amountCharged": "Valor cobrado",
+                "profit": "Lucro",
+                "marginInPeriod": "{{margin}}% de margem neste período"
+            },
+            "chips": {
+                "currentStockValue": "Valor atual do stock: {{amount}}",
+                "materialsInStock": "Materiais em stock: {{count}}",
+                "lowStockMaterials": "Materiais com stock baixo: {{count}}"
+            },
+            "propertyPerformanceTitle": "Desempenho por propriedade",
+            "propertyPerformanceDescription": "Cada linha compara os materiais consumidos com o valor realmente cobrado nessa propriedade.",
+            "table": {
+                "property": "Propriedade",
+                "packs": "Packs",
+                "cost": "Custo",
+                "charged": "Cobrado",
+                "profit": "Lucro",
+                "margin": "Margem",
+                "lastCharge": "Última cobrança",
+                "units": "{{count}} unidades"
+            },
+            "emptyTitle": "Não existem cobranças de welcome pack neste período",
+            "emptyDescription": "Abra Cobranças por Propriedade para registar o primeiro pack e os cálculos aparecerão aqui automaticamente.",
+            "openPropertyCharges": "Abrir Cobranças por Propriedade",
+            "recentChargesTitle": "Cobranças recentes",
+            "recentChargesDescription": "Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.",
+            "recentCostProfit": "Custo {{cost}} | Lucro {{profit}}",
+            "noChargesTitle": "Ainda não existem cobranças registadas",
+            "noChargesDescription": "Depois de adicionar uma cobrança em Cobranças por Propriedade, os últimos registos aparecerão aqui.",
+            "unknownProperty": "Propriedade desconhecida"
+        },
+        "inventory": {
+            "lowStockTitle": "Alguns materiais precisam de reposição",
+            "lowStockBody": "{{items}}",
+            "title": "Catálogo de materiais",
+            "description": "Mantenha uma linha por material com o stock atual, o custo líquido para a Atlantic Holiday e o valor normalmente cobrado num welcome pack.",
+            "addMaterial": "Adicionar Material",
+            "metrics": {
+                "tracked": "Materiais registados",
+                "lowStock": "{{count}} materiais com stock baixo",
+                "unitsInStock": "Unidades em stock",
+                "unitsInStockDescription": "Quantidade atual em todo o catálogo",
+                "stockCostValue": "Valor do stock a custo",
+                "stockCostValueDescription": "Baseado no custo líquido do material",
+                "projectedBilledValue": "Valor faturável projetado",
+                "potentialMargin": "Margem potencial {{amount}}"
+            },
+            "table": {
+                "material": "Material",
+                "stock": "Stock",
+                "costPerUnit": "Custo / unidade",
+                "chargePerUnit": "Cobrança / unidade",
+                "marginPerUnit": "Margem / unidade",
+                "vat": "IVA",
+                "actions": "Ações"
+            },
+            "status": {
+                "needsRestock": "Precisa de reposição em breve",
+                "ready": "Pronto para usar nos packs"
+            },
+            "emptyTitle": "Ainda não existem materiais guardados",
+            "emptyDescription": "Adicione o primeiro material para que Cobranças por Propriedade e Cálculos possam funcionar."
+        },
+        "log": {
+            "title": "Registar uma cobrança por propriedade",
+            "editTitle": "Editar cobrança por propriedade",
+            "description": "Selecione a propriedade, escolha os materiais usados no pack e confirme o valor que foi realmente cobrado.",
+            "fields": {
+                "property": "Propriedade",
+                "propertyPlaceholder": "Selecionar propriedade...",
+                "date": "Data",
+                "chargedAmount": "Valor cobrado à propriedade"
+            },
+            "loadPreset": "Carregar preset",
+            "loadPresetPlaceholder": "Selecione um preset para carregar materiais...",
+            "loadPresetHelp": "Os presets ajudam a lançar o pack normal antes de ajustar os materiais realmente usados.",
+            "materialsTitle": "Materiais neste pack",
+            "materialsDescription": "Adicione os materiais que foram realmente usados para esta propriedade. Cliques repetidos aumentam a quantidade.",
+            "materialInStock": "{{count}} em stock",
+            "materialCost": "Custo {{amount}}",
+            "materialCharge": "Cobrança {{amount}}",
+            "noMaterialsTitle": "Ainda não existem materiais disponíveis",
+            "noMaterialsDescription": "Abra primeiro Custos dos Materiais e adicione os materiais que podem ser usados num welcome pack.",
+            "summaryTitle": "Resumo da cobrança",
+            "summaryDescription": "O valor cobrado pode seguir o valor sugerido ou ser alterado manualmente se a propriedade tiver sido faturada de forma diferente.",
+            "history": {
+                "noPropertyTitle": "Ainda não foi selecionada nenhuma propriedade",
+                "noPropertyDescription": "Selecione uma propriedade para ver a última cobrança de welcome pack registada.",
+                "noPreviousCharge": "Não foi encontrada nenhuma cobrança anterior de welcome pack para esta propriedade.",
+                "lastCharge": "Última cobrança: {{amount}} em {{date}}.",
+                "costProfit": "Custo dos materiais {{cost}} e lucro {{profit}}."
+            },
+            "noMaterialsSelected": "Nenhum material selecionado",
+            "useSuggestedAmount": "Usar valor sugerido",
+            "summary": {
+                "materialCost": "Custo dos materiais",
+                "suggestedCharge": "Cobrança sugerida",
+                "actualCharge": "Cobrança real",
+                "profit": "Lucro"
+            },
+            "updateCharge": "Atualizar cobrança",
+            "saveCharge": "Guardar cobrança",
+            "editHint": "Ao atualizar uma cobrança existente, o stock antigo será reposto e as novas quantidades serão novamente descontadas.",
+            "saveHint": "A área de cálculos será atualizada automaticamente depois de guardar esta cobrança.",
+            "cart": {
+                "costCharge": "{{cost}} custo | {{charge}} cobrança",
+                "qty": "Qtd",
+                "materialLines": "{{count}} linha(s) de material",
+                "units": "{{count}} unidade(s)"
+            }
+        },
+        "modals": {
+            "vatPreview": "{{net}} + {{vat}} = {{gross}}",
+            "addMaterial": {
+                "title": "Adicionar Material",
+                "namePlaceholder": "Nome do Material",
+                "stockPlaceholder": "Quantidade Inicial em Stock",
+                "costLabel": "Custo do Material (Líquido, sem IVA)",
+                "chargeLabel": "Cobrança Sugerida (Líquido, sem IVA)",
+                "confirm": "Adicionar Material"
+            },
+            "editMaterial": {
+                "title": "Editar Material",
+                "namePlaceholder": "Nome do Material",
+                "stockPlaceholder": "Quantidade em Stock",
+                "costLabel": "Custo do Material (Líquido, sem IVA)",
+                "chargeLabel": "Cobrança Sugerida (Líquido, sem IVA)",
+                "confirm": "Guardar Alterações"
+            }
+        },
+        "messages": {
+            "selectProperty": "Selecione uma propriedade",
+            "selectMaterial": "Selecione pelo menos um material",
+            "chargeUpdated": "Cobrança de welcome pack atualizada com sucesso.",
+            "chargeSaved": "Cobrança de welcome pack guardada com sucesso.",
+            "saveFailed": "Não foi possível guardar o pack. Tente novamente.",
+            "confirmDeleteCharge": "Tem a certeza de que pretende eliminar esta cobrança? O stock será reposto.",
+            "fillAllMaterialFields": "Preencha todos os campos corretamente.",
+            "confirmDeleteMaterial": "Tem a certeza de que pretende eliminar este material?",
+            "noDataToExport": "Não existem dados para exportar"
+        },
+        "export": {
+            "date": "Data",
+            "property": "Propriedade",
+            "materials": "Materiais",
+            "units": "Unidades",
+            "materialCost": "Custo dos Materiais",
+            "suggestedCharge": "Cobrança Sugerida",
+            "chargedAmount": "Valor Cobrado",
+            "profit": "Lucro"
+        }
+    },
     "cleaningAh": {
         "header": {
             "kicker": "Financeiro",
