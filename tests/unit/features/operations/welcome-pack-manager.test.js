@@ -201,8 +201,12 @@ describe("WelcomePackManager", () => {
       assert.equal(savedBatches[0][1].date, "2026-04-15");
       assert.equal(savedBatches[0][0].chargedAmountNet, 2);
       assert.equal(savedBatches[0][1].chargedAmountNet, 2);
+      assert.equal(savedBatches[0][0].chargedAmount, 2);
+      assert.equal(savedBatches[0][1].chargedAmount, 2);
       assert.equal(savedBatches[0][0].chargedAmountGross, 2.44);
       assert.equal(savedBatches[0][1].chargedAmountGross, 2.44);
+      assert.equal(savedBatches[0][0].totalSell, 2);
+      assert.equal(savedBatches[0][1].totalSell, 2);
       assert.ok(alerts.length > 0);
     } finally {
       restoreAlert();

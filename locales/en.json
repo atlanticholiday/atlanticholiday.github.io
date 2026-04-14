@@ -272,7 +272,7 @@
         "other": "{{count}} items"
       },
       "moreItems": "+ {{count}} more...",
-      "inclVat": "(incl. VAT)",
+      "inclVat": "(net)",
       "deleteTitle": "Delete preset",
       "empty": "No presets created.",
       "deleteConfirm": "Delete this preset?",
@@ -282,7 +282,7 @@
         "selectItems": "Select Items & Quantities:",
         "packTotal": "Pack Total:",
         "emptySummary": "Select items to see pack composition",
-        "summary": "{{items}} (Net: {{amount}} + VAT)",
+        "summary": "{{items}} (Net total: {{amount}})",
         "save": "Save Preset"
       },
       "messages": {
@@ -356,19 +356,19 @@
         "unitsUsed": "{{count}} material units used",
         "materialCost": "Material cost",
         "averagePerPack": "Average {{amount}} per pack",
-        "netCharged": "Net charged",
+        "netCharged": "Charged amount",
         "vatCollected": "VAT charged",
         "amountCharged": "Amount charged",
         "netProfit": "Net profit",
         "marginInPeriod": "{{margin}}% margin in this period"
       },
       "insights": {
-        "topProperty": "Top property by billed value",
-        "topPropertyBody": "{{amount}} billed | {{profit}} net profit",
+        "topProperty": "Top property by charged value",
+        "topPropertyBody": "{{amount}} charged | {{profit}} net profit",
         "bestMargin": "Best margin property",
         "bestMarginBody": "{{margin}}% margin across {{packs}} pack(s)",
-        "bestDay": "Strongest billing day",
-        "bestDayBody": "{{amount}} billed across {{packs}} pack(s)",
+        "bestDay": "Strongest charge day",
+        "bestDayBody": "{{amount}} charged across {{packs}} pack(s)",
         "noData": "No data yet"
       },
       "chips": {
@@ -377,10 +377,10 @@
         "lowStockMaterials": "Low stock materials: {{count}}"
       },
       "propertyPerformanceTitle": "Property performance",
-      "propertyPerformanceDescription": "Each row compares material cost, net revenue, VAT, gross billed value, and net profit by property.",
+      "propertyPerformanceDescription": "Each row compares material cost, charged amount, and net profit by property.",
       "trends": {
-        "title": "Recent billing trend",
-        "description": "Review the last seven active days to spot when gross billing and profit were strongest.",
+        "title": "Recent charge trend",
+        "description": "Review the last seven active days to spot when charged amounts and profit were strongest.",
         "packsCount": "{{count}} pack(s)",
         "netProfit": "Net profit {{amount}}"
       },
@@ -395,10 +395,10 @@
       "table": {
         "property": "Property",
         "packs": "Packs",
-        "netCharged": "Net",
+        "netCharged": "Charged",
         "vat": "VAT",
         "cost": "Cost",
-        "charged": "Gross billed",
+        "charged": "Charged",
         "profit": "Net profit",
         "margin": "Margin",
         "lastCharge": "Last charge",
@@ -409,7 +409,7 @@
       "openPropertyCharges": "Open Property Charges",
       "recentChargesTitle": "Recent charges",
       "recentChargesDescription": "Review what was charged at each property and adjust older entries if a value was wrong.",
-      "recentCostProfit": "Cost {{cost}} | VAT {{vat}} | Net profit {{profit}}",
+      "recentCostProfit": "Cost {{cost}} | Net profit {{profit}}",
       "noChargesTitle": "No charges logged yet",
       "noChargesDescription": "After you add a charge in Property Charges, the latest entries will appear here.",
       "unknownProperty": "Unknown property"
@@ -484,9 +484,9 @@
       "useSuggestedAmount": "Use suggested amount",
       "summary": {
         "materialCost": "Material cost",
-        "suggestedCharge": "Suggested billed total",
+        "suggestedCharge": "Suggested amount",
         "vat": "VAT (22%)",
-        "actualCharge": "Actual billed total",
+        "actualCharge": "Charged amount",
         "profit": "Net profit"
       },
       "updateCharge": "Update charge",
@@ -537,7 +537,7 @@
       "materials": "Materials",
       "units": "Units",
       "materialCost": "Material Cost",
-      "suggestedChargeNet": "Suggested Net Charge",
+      "suggestedChargeNet": "Suggested Charge",
       "suggestedCharge": "Suggested Charge",
       "vat": "VAT",
       "chargedAmount": "Charged Amount",

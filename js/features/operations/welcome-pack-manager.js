@@ -176,7 +176,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             other: '{{count}} itens'
         },
         moreItems: '+ {{count}} mais...',
-        inclVat: '(incl. IVA)',
+        inclVat: '(líquido)',
         deleteTitle: 'Eliminar preset',
         empty: 'Ainda não existem presets.',
         deleteConfirm: 'Eliminar este preset?',
@@ -186,7 +186,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             selectItems: 'Selecionar Itens e Quantidades:',
             packTotal: 'Total do Pack:',
             emptySummary: 'Selecione itens para ver a composição do pack',
-            summary: '{{items}} (Líquido: {{amount}} + IVA)',
+            summary: '{{items}} (Total líquido: {{amount}})',
             save: 'Guardar Preset'
         },
         messages: {
@@ -272,19 +272,19 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             unitsUsed: '{{count}} unidades de material usadas',
             materialCost: 'Custo dos materiais',
             averagePerPack: 'Média de {{amount}} por pack',
-            netCharged: 'Valor líquido cobrado',
-            vatCollected: 'IVA cobrado',
+            netCharged: 'Valor cobrado',
+            vatCollected: 'IVA',
             amountCharged: 'Valor cobrado',
             netProfit: 'Lucro líquido',
             marginInPeriod: '{{margin}}% de margem neste período'
         },
         insights: {
-            topProperty: 'Melhor propriedade por valor faturado',
-            topPropertyBody: '{{amount}} faturados | {{profit}} lucro líquido',
+            topProperty: 'Melhor propriedade por valor cobrado',
+            topPropertyBody: '{{amount}} cobrados | {{profit}} lucro líquido',
             bestMargin: 'Melhor margem',
             bestMarginBody: '{{margin}}% de margem em {{packs}} pack(s)',
-            bestDay: 'Dia com maior faturação',
-            bestDayBody: '{{amount}} faturados em {{packs}} pack(s)',
+            bestDay: 'Dia com maior valor cobrado',
+            bestDayBody: '{{amount}} cobrados em {{packs}} pack(s)',
             noData: 'Ainda sem dados'
         },
         chips: {
@@ -293,10 +293,10 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             lowStockMaterials: 'Materiais com stock baixo: {{count}}'
         },
         propertyPerformanceTitle: 'Desempenho por propriedade',
-        propertyPerformanceDescription: 'Cada linha compara custo, valor líquido, IVA, total faturado e lucro líquido por propriedade.',
+        propertyPerformanceDescription: 'Cada linha compara custo, valor cobrado e lucro líquido por propriedade.',
         trends: {
             title: 'Tendência recente de faturação',
-            description: 'Veja os últimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.',
+            description: 'Veja os últimos sete dias ativos para perceber quando o valor cobrado e o lucro foram mais fortes.',
             packsCount: '{{count}} pack(s)',
             netProfit: 'Lucro líquido {{amount}}'
         },
@@ -311,10 +311,10 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         table: {
             property: 'Propriedade',
             packs: 'Packs',
-            netCharged: 'Líquido',
+            netCharged: 'Cobrado',
             vat: 'IVA',
             cost: 'Custo',
-            charged: 'Total faturado',
+            charged: 'Cobrado',
             profit: 'Lucro líquido',
             margin: 'Margem',
             lastCharge: 'Última cobrança',
@@ -325,7 +325,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         openPropertyCharges: 'Abrir Cobranças por Propriedade',
         recentChargesTitle: 'Cobranças recentes',
         recentChargesDescription: 'Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.',
-        recentCostProfit: 'Custo {{cost}} | IVA {{vat}} | Lucro líquido {{profit}}',
+        recentCostProfit: 'Custo {{cost}} | Lucro líquido {{profit}}',
         noChargesTitle: 'Ainda não existem cobranças registadas',
         noChargesDescription: 'Depois de adicionar uma cobrança em Cobranças por Propriedade, os últimos registos aparecerão aqui.',
         unknownProperty: 'Propriedade desconhecida'
@@ -400,9 +400,9 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         useSuggestedAmount: 'Usar valor sugerido',
         summary: {
             materialCost: 'Custo dos materiais',
-            suggestedCharge: 'Total faturado sugerido',
+            suggestedCharge: 'Valor sugerido',
             vat: 'IVA (22%)',
-            actualCharge: 'Total faturado real',
+            actualCharge: 'Valor cobrado',
             profit: 'Lucro líquido'
         },
         updateCharge: 'Atualizar cobrança',
@@ -441,7 +441,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         materials: 'Materiais',
         units: 'Unidades',
         materialCost: 'Custo dos Materiais',
-        suggestedChargeNet: 'Cobrança Líquida Sugerida',
+        suggestedChargeNet: 'Cobrança Sugerida',
         suggestedCharge: 'Cobrança Sugerida',
         vat: 'IVA',
         chargedAmount: 'Valor Cobrado',
@@ -879,11 +879,11 @@ export class WelcomePackManager {
             `;
         }
 
-        const maxGross = Math.max(...entries.map((entry) => entry.grossRevenue), 1);
+        const maxNet = Math.max(...entries.map((entry) => entry.netRevenue), 1);
         return `
             <div class="space-y-3">
                 ${entries.map((entry) => {
-                    const width = Math.max(10, Math.round((entry.grossRevenue / maxGross) * 100));
+                    const width = Math.max(10, Math.round((entry.netRevenue / maxNet) * 100));
                     return `
                         <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <div class="mb-2 flex items-center justify-between gap-3">
@@ -892,7 +892,7 @@ export class WelcomePackManager {
                                     <div class="text-sm text-slate-500">${this.tr('dashboard.trends.packsCount', { count: entry.count })}</div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-semibold text-slate-900">${this.formatCurrency(entry.grossRevenue)}</div>
+                                    <div class="font-semibold text-slate-900">${this.formatCurrency(entry.netRevenue)}</div>
                                     <div class="text-sm text-slate-500">${this.tr('dashboard.trends.netProfit', { amount: this.formatCurrency(entry.profit) })}</div>
                                 </div>
                             </div>
@@ -1103,7 +1103,7 @@ export class WelcomePackManager {
         const lowStockItems = inventorySummary.lowStockItems;
         const topProperty = logSummary.byProperty[0] || null;
         const strongestMarginProperty = [...logSummary.byProperty].sort((left, right) => right.margin - left.margin)[0] || null;
-        const bestDay = [...logSummary.byDate].sort((left, right) => right.grossRevenue - left.grossRevenue)[0] || null;
+        const bestDay = [...logSummary.byDate].sort((left, right) => right.netRevenue - left.netRevenue)[0] || null;
 
         container.innerHTML = `
             ${lowStockItems.length > 0 ? `
@@ -1166,19 +1166,9 @@ export class WelcomePackManager {
                         <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageCost) })}</small>
                     </article>
                     <article class="welcome-pack-metric">
-                        <span>${this.tr('dashboard.metrics.netCharged')}</span>
+                        <span>${this.tr('dashboard.metrics.amountCharged')}</span>
                         <strong>${this.formatCurrency(logSummary.totals.netRevenue)}</strong>
                         <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageNetCharge) })}</small>
-                    </article>
-                    <article class="welcome-pack-metric">
-                        <span>${this.tr('dashboard.metrics.vatCollected')}</span>
-                        <strong>${this.formatCurrency(logSummary.totals.vatCollected)}</strong>
-                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageVat) })}</small>
-                    </article>
-                    <article class="welcome-pack-metric">
-                        <span>${this.tr('dashboard.metrics.amountCharged')}</span>
-                        <strong>${this.formatCurrency(logSummary.totals.grossRevenue)}</strong>
-                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageGrossCharge) })}</small>
                     </article>
                     <article class="welcome-pack-metric">
                         <span>${this.tr('dashboard.metrics.netProfit')}</span>
@@ -1200,7 +1190,7 @@ export class WelcomePackManager {
                     topProperty ? topProperty.label : this.tr('dashboard.insights.noData'),
                     topProperty
                         ? this.tr('dashboard.insights.topPropertyBody', {
-                            amount: this.formatCurrency(topProperty.grossRevenue),
+                            amount: this.formatCurrency(topProperty.netRevenue),
                             profit: this.formatCurrency(topProperty.profit)
                         })
                         : this.tr('dashboard.noChargesDescription')
@@ -1220,7 +1210,7 @@ export class WelcomePackManager {
                     bestDay ? this.formatDisplayDate(bestDay.date) : this.tr('dashboard.insights.noData'),
                     bestDay
                         ? this.tr('dashboard.insights.bestDayBody', {
-                            amount: this.formatCurrency(bestDay.grossRevenue),
+                            amount: this.formatCurrency(bestDay.netRevenue),
                             packs: bestDay.count
                         })
                         : this.tr('dashboard.noChargesDescription')
@@ -1240,8 +1230,6 @@ export class WelcomePackManager {
                                 <tr>
                                     <th>${this.tr('dashboard.table.property')}</th>
                                     <th>${this.tr('dashboard.table.packs')}</th>
-                                    <th>${this.tr('dashboard.table.netCharged')}</th>
-                                    <th>${this.tr('dashboard.table.vat')}</th>
                                     <th>${this.tr('dashboard.table.cost')}</th>
                                     <th>${this.tr('dashboard.table.charged')}</th>
                                     <th>${this.tr('dashboard.table.profit')}</th>
@@ -1257,10 +1245,8 @@ export class WelcomePackManager {
                                             <span>${this.tr('dashboard.table.units', { count: property.units })}</span>
                                         </td>
                                         <td>${property.count}</td>
-                                        <td>${this.formatCurrency(property.netRevenue)}</td>
-                                        <td>${this.formatCurrency(property.vatCollected)}</td>
                                         <td>${this.formatCurrency(property.cost)}</td>
-                                        <td>${this.formatCurrency(property.grossRevenue)}</td>
+                                        <td>${this.formatCurrency(property.netRevenue)}</td>
                                         <td>${this.formatCurrency(property.profit)}</td>
                                         <td>${property.margin.toFixed(1)}%</td>
                                         <td>${this.formatDisplayDate(property.lastDate)}</td>
@@ -1312,11 +1298,10 @@ export class WelcomePackManager {
                                     <span>${this.formatDisplayDate(log.date)}</span>
                                 </div>
                                 <div>
-                                    <strong>${this.formatCurrency(log.chargedAmountGross)}</strong>
+                                    <strong>${this.formatCurrency(log.chargedAmountNet)}</strong>
                                     <span>${this.tr('dashboard.recentCostProfit', {
                                         cost: this.formatCurrency(log.totalCost),
-                                        profit: this.formatCurrency(log.profit),
-                                        vat: this.formatCurrency(log.vatAmount)
+                                        profit: this.formatCurrency(log.profit)
                                     })}</span>
                                 </div>
                                 <div class="welcome-pack-activity-actions">
@@ -2817,8 +2802,6 @@ export class WelcomePackManager {
             this.tr('export.units'),
             this.tr('export.materialCost'),
             this.tr('export.suggestedChargeNet'),
-            this.tr('export.suggestedCharge'),
-            this.tr('export.vat'),
             this.tr('export.chargedAmount'),
             this.tr('export.profit')
         ];
@@ -2833,9 +2816,7 @@ export class WelcomePackManager {
                     log.totalUnits,
                     log.totalCost.toFixed(2),
                     log.suggestedSellNet.toFixed(2),
-                    log.suggestedSellGross.toFixed(2),
-                    log.vatAmount.toFixed(2),
-                    log.chargedAmount.toFixed(2),
+                    log.chargedAmountNet.toFixed(2),
                     log.profit.toFixed(2)
                 ].join(',');
             })
@@ -2967,13 +2948,11 @@ export class WelcomePackManager {
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     ${presets.map(preset => {
-            // Calculate total items count and total price with VAT
+            // Calculate total items count and net total
             const totalItemCount = preset.items.reduce((sum, i) => sum + (i.quantity || 1), 0);
-            const totalGross = preset.items.reduce((sum, i) => {
+            const totalNet = preset.items.reduce((sum, i) => {
                 const qty = i.quantity || 1;
-                const vatRate = i.sellVatRate || 22;
-                const itemGross = i.sellPrice * (1 + vatRate / 100);
-                return sum + (itemGross * qty);
+                return sum + ((i.sellPrice || 0) * qty);
             }, 0);
 
             return `
@@ -2986,8 +2965,7 @@ export class WelcomePackManager {
                             </ul>
                             <div class="flex justify-between items-center mt-auto border-t border-gray-200 pt-3">
                                 <div>
-                                    <span class="font-bold text-gray-800">${this.formatCurrency(totalGross)}</span>
-                                    <span class="text-xs text-gray-500 ml-1">${this.tr('presets.inclVat')}</span>
+                                    <span class="font-bold text-gray-800">${this.formatCurrency(totalNet)}</span>
                                 </div>
                                 <button class="text-red-400 hover:text-red-600 p-1" onclick="welcomePackManager.deletePreset('${preset.id}')" title="${this.tr('presets.deleteTitle')}">
                                     <i class="fas fa-trash-alt"></i>
@@ -3027,7 +3005,6 @@ export class WelcomePackManager {
                         <div class="flex-1 overflow-y-auto space-y-2 pr-1">
                             ${items.map(item => {
             const vatRate = item.sellVatRate || 22;
-            const sellGross = item.sellGross || (item.sellPrice * (1 + vatRate / 100));
             return `
                                 <div class="flex items-center gap-3 p-2 bg-white rounded border border-gray-200 hover:border-gray-300 transition-colors wp-preset-item-row" data-item-id="${item.id}">
                                     <input type="checkbox" class="wp-preset-item-checkbox form-checkbox h-5 w-5 text-[#e94b5a] rounded focus:ring-[#e94b5a] cursor-pointer" 
@@ -3037,7 +3014,7 @@ export class WelcomePackManager {
                                         <span class="ml-2 px-1.5 py-0.5 text-xs rounded ${this.getVatBadgeClass(vatRate)}">${vatRate}%</span>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-sm text-gray-500">${this.formatCurrency(sellGross)}</span>
+                                        <span class="text-sm text-gray-500">${this.formatCurrency(item.sellPrice || 0)}</span>
                                         <span class="text-gray-400">Ã—</span>
                                         <input type="number" class="wp-preset-item-qty w-16 p-1.5 border rounded text-center text-sm" 
                                             value="1" min="1" max="99" disabled>
@@ -3069,7 +3046,6 @@ export class WelcomePackManager {
         const updateTotals = () => {
             const rows = document.querySelectorAll('.wp-preset-item-row');
             let totalNet = 0;
-            let totalGross = 0;
             const summaryParts = [];
 
             rows.forEach(row => {
@@ -3079,16 +3055,13 @@ export class WelcomePackManager {
                 if (checkbox.checked) {
                     const itemData = JSON.parse(checkbox.dataset.item);
                     const qty = parseInt(qtyInput.value) || 1;
-                    const vatRate = itemData.sellVatRate || 22;
-                    const itemGross = itemData.sellPrice * (1 + vatRate / 100);
 
                     totalNet += itemData.sellPrice * qty;
-                    totalGross += itemGross * qty;
                     summaryParts.push(`${qty}Ã— ${itemData.name}`);
                 }
             });
 
-            document.getElementById('wp-preset-total').textContent = this.formatCurrency(totalGross);
+            document.getElementById('wp-preset-total').textContent = this.formatCurrency(totalNet);
             document.getElementById('wp-preset-summary').textContent = summaryParts.length > 0
                 ? this.tr('presets.modal.summary', { items: summaryParts.join(', '), amount: this.formatCurrency(totalNet) })
                 : this.tr('presets.modal.emptySummary');
@@ -3299,10 +3272,6 @@ export class WelcomePackManager {
                             <strong id="wp-total-cost">€0.00</strong>
                         </div>
                         <div class="welcome-pack-summary-row">
-                            <span>${this.tr('log.summary.vat')}</span>
-                            <strong id="wp-total-vat">€0.00</strong>
-                        </div>
-                        <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.actualCharge')}</span>
                             <strong id="wp-total-sell">€0.00</strong>
                         </div>
@@ -3464,7 +3433,7 @@ export class WelcomePackManager {
         historyContainer.innerHTML = `
             <strong>${property}</strong>
             <p>${this.tr('log.history.lastCharge', {
-                amount: this.formatCurrency(latest.chargedAmount),
+                amount: this.formatCurrency(latest.chargedAmountNet),
                 date: this.formatDisplayDate(latest.date)
             })}</p>
             <p>${this.tr('log.history.costProfit', {
@@ -3514,12 +3483,10 @@ export class WelcomePackManager {
         }
 
         const totalCost = document.getElementById('wp-total-cost');
-        const totalVat = document.getElementById('wp-total-vat');
         const totalSell = document.getElementById('wp-total-sell');
         const totalProfit = document.getElementById('wp-total-profit');
         if (totalCost) totalCost.textContent = this.formatCurrency(summary.totals.totalCost);
-        if (totalVat) totalVat.textContent = this.formatCurrency(summary.totals.vatAmount);
-        if (totalSell) totalSell.textContent = this.formatCurrency(summary.totals.chargedAmountGross);
+        if (totalSell) totalSell.textContent = this.formatCurrency(summary.totals.chargedAmountNet);
         if (totalProfit) totalProfit.textContent = this.formatCurrency(summary.totals.profit);
         const saveHint = document.getElementById('wp-log-save-hint');
         if (saveHint) {
@@ -3556,11 +3523,11 @@ export class WelcomePackManager {
                     totalCost: summary.totals.totalCost,
                     suggestedSell: summary.totals.suggestedChargeNet,
                     suggestedSellGross: summary.totals.suggestedChargeGross,
-                    chargedAmount: summary.totals.chargedAmountGross,
+                    chargedAmount: summary.totals.chargedAmountNet,
                     chargedAmountNet: summary.totals.chargedAmountNet,
                     chargedAmountGross: summary.totals.chargedAmountGross,
                     vatAmount: summary.totals.vatAmount,
-                    totalSell: summary.totals.chargedAmountGross,
+                    totalSell: summary.totals.chargedAmountNet,
                     profit: summary.totals.profit,
                     manualCharge: editingEntry.manualCharge,
                     chargeEntryMode: editingEntry.manualCharge ? 'manual' : 'none',
@@ -3583,11 +3550,11 @@ export class WelcomePackManager {
                         totalCost: summary.totals.totalCost,
                         suggestedSell: summary.totals.suggestedChargeNet,
                         suggestedSellGross: summary.totals.suggestedChargeGross,
-                        chargedAmount: summary.totals.chargedAmountGross,
+                        chargedAmount: summary.totals.chargedAmountNet,
                         chargedAmountNet: summary.totals.chargedAmountNet,
                         chargedAmountGross: summary.totals.chargedAmountGross,
                         vatAmount: summary.totals.vatAmount,
-                        totalSell: summary.totals.chargedAmountGross,
+                        totalSell: summary.totals.chargedAmountNet,
                         profit: summary.totals.profit,
                         manualCharge: entry.manualCharge,
                         chargeEntryMode: entry.manualCharge ? 'manual' : 'none',

@@ -38,8 +38,9 @@ describe("Welcome Pack utilities", () => {
         assert.equal(normalized.suggestedSellNet, 0);
         assert.equal(normalized.suggestedSellGross, 0);
         assert.equal(normalized.chargedAmountNet, 10);
+        assert.equal(normalized.chargedAmount, 10);
         assert.equal(normalized.chargedAmountGross, 12.2);
-        assert.equal(normalized.totalSell, 12.2);
+        assert.equal(normalized.totalSell, 10);
         assert.equal(normalized.profit, 5.5);
         assert.equal(normalized.isChargeLogged, false);
     });

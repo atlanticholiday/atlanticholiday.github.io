@@ -149,13 +149,13 @@ export function normalizeWelcomePackLog(log = {}) {
         suggestedSell: suggestedSellNet,
         suggestedSellNet,
         suggestedSellGross,
-        chargedAmount: chargedAmountGross,
+        chargedAmount: chargedAmountNet,
         chargedAmountNet,
         chargedAmountGross,
         vatAmount,
-        totalSell: chargedAmountGross,
+        totalSell: chargedAmountNet,
         profit,
-        isChargeLogged: isManualCharge && hasExplicitCharge && chargedAmountGross > 0,
+        isChargeLogged: isManualCharge && hasExplicitCharge && chargedAmountNet > 0,
         totalLines: cartSummary.totals.totalLines,
         totalUnits: cartSummary.totals.totalUnits
     };
@@ -199,7 +199,7 @@ export function summarizeWelcomePackLogs(logs = [], filters = {}) {
         profit: 0
     });
 
-    totals.revenue = totals.grossRevenue;
+    totals.revenue = totals.netRevenue;
     totals.margin = totals.netRevenue > 0
         ? roundWelcomePackCurrency((totals.profit / totals.netRevenue) * 100)
         : 0;
@@ -286,7 +286,7 @@ export function summarizeWelcomePackLogs(logs = [], filters = {}) {
     const byProperty = Array.from(byPropertyMap.values())
         .map((entry) => ({
             ...entry,
-            revenue: entry.grossRevenue,
+            revenue: entry.netRevenue,
             margin: entry.netRevenue > 0
                 ? roundWelcomePackCurrency((entry.profit / entry.netRevenue) * 100)
                 : 0,
