@@ -188,6 +188,9 @@ describe("WelcomePackManager", () => {
         date: "2026-04-15"
       });
 
+      manager.updateLogEntryField(firstEntry.id, "chargedAmount", "2");
+      manager.updateLogEntryField(manager.logEntries[1].id, "chargedAmount", "2");
+
       await manager.saveLog();
 
       assert.equal(savedBatches.length, 1);

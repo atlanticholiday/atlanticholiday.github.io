@@ -11,28 +11,28 @@ import { i18n, t } from '../../core/i18n.js';
 const PT_WELCOME_PACK_TRANSLATIONS = {
     header: {
         title: 'Welcome Packs',
-        subtitle: 'Acompanhar custos, cobrancas por propriedade e lucro'
+        subtitle: 'Acompanhar custos, cobranças por propriedade e lucro'
     },
     hero: {
         kicker: 'Welcome Packs',
-        title: 'Acompanhe materiais, cobrancas e lucro sem saltar entre separadores confusos.',
-        body: 'O fluxo esta dividido em tres tarefas claras: definir custos dos materiais, registar o valor cobrado em cada propriedade e deixar a area de calculos mostrar os totais e a margem.'
+        title: 'Acompanhe materiais, cobranças e lucro sem saltar entre separadores confusos.',
+        body: 'O fluxo está dividido em três tarefas claras: definir custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar os totais e a margem.'
     },
     workflow: {
         materialCosts: {
             label: 'Custos dos Materiais',
             step: 'Passo 1',
-            description: 'Adicione todos os materiais que compra e preencha stock, custo e referencia de cobranca.'
+            description: 'Adicione todos os materiais que compra e preencha stock, custo e referência de cobrança.'
         },
         propertyCharges: {
             label: 'Cobrancas por Propriedade',
             step: 'Passo 2',
-            description: 'Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor liquido realmente cobrado.'
+            description: 'Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor líquido realmente cobrado.'
         },
         calculations: {
             label: 'Calculos',
             step: 'Passo 3',
-            description: 'Abra a vista de calculos para confirmar automaticamente totais, IVA, lucro e desempenho por propriedade.'
+            description: 'Abra a vista de cálculos para confirmar automaticamente totais, IVA, lucro e desempenho por propriedade.'
         }
     },
     support: {
@@ -50,33 +50,33 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         },
         sections: {
             workflow: {
-                title: 'Fluxo Diario',
+                title: 'Fluxo Diário',
                 steps: {
                     checkReservations: {
                         title: 'Verificar Reservas',
-                        body: 'Abra <strong>Reservas</strong> para rever os proximos check-ins e ver que propriedades vao precisar de um welcome pack em breve.'
+                        body: 'Abra <strong>Reservas</strong> para rever os próximos check-ins e ver que propriedades vão precisar de um welcome pack em breve.'
                     },
                     logPack: {
                         title: 'Registar um Pack',
-                        body: 'Abra <strong>Cobrancas por Propriedade</strong>, selecione a propriedade e a data, depois adicione os materiais usados ou carregue um preset como ponto de partida.'
+                        body: 'Abra <strong>Cobranças por Propriedade</strong>, selecione a propriedade e a data, depois adicione os materiais usados ou carregue um preset como ponto de partida.'
                     },
                     saveMonitor: {
                         title: 'Guardar e Acompanhar',
-                        body: 'Depois de guardar, o stock e atualizado e o custo, a cobranca e o lucro do pack aparecem automaticamente na area de calculos.'
+                        body: 'Depois de guardar, o stock é atualizado e o custo, a cobrança e o lucro do pack aparecem automaticamente na área de cálculos.'
                     }
                 }
             },
             stats: {
-                title: 'Calculos e Estatisticas',
-                body: 'A vista de calculos da-lhe uma visao financeira do custo de cada pack, do valor cobrado e do desempenho de cada propriedade.',
+                title: 'Cálculos e Estatísticas',
+                body: 'A vista de cálculos dá-lhe uma visão financeira do custo de cada pack, do valor cobrado e do desempenho de cada propriedade.',
                 items: {
                     margin: {
                         label: 'Margem de Lucro:',
-                        body: 'Calculada como <code>(Lucro / Valor Cobrado) * 100</code>. Uma margem mais alta significa que o welcome pack e mais rentavel.'
+                        body: 'Calculada como <code>(Lucro / Valor Cobrado) * 100</code>. Uma margem mais alta significa que o welcome pack é mais rentável.'
                     },
                     trends: {
                         label: 'Vista por Propriedade:',
-                        body: 'Use a tabela por propriedade e a lista de cobrancas recentes para ver onde a margem e mais forte e corrigir registos antigos quando for preciso.'
+                        body: 'Use a tabela por propriedade e a lista de cobranças recentes para ver onde a margem é mais forte e corrigir registos antigos quando for preciso.'
                     }
                 }
             },
@@ -85,11 +85,11 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
                 cards: {
                     stock: {
                         title: 'Gerir Stock',
-                        body: 'Use <strong>Custos dos Materiais</strong> para adicionar materiais, manter o stock atualizado e definir o custo habitual e o valor de referencia de cada item.'
+                        body: 'Use <strong>Custos dos Materiais</strong> para adicionar materiais, manter o stock atualizado e definir o custo habitual e o valor de referência de cada item.'
                     },
                     presets: {
                         title: 'Usar Presets',
-                        body: 'Use <strong>Presets</strong> para guardar o seu welcome pack normal e registar cobrancas recorrentes mais depressa.'
+                        body: 'Use <strong>Presets</strong> para guardar o seu welcome pack normal e registar cobranças recorrentes mais depressa.'
                     }
                 }
             }
@@ -103,33 +103,33 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         },
         upcoming: {
             title: 'Reservas Futuras',
-            summary: '{{enabled}} de {{total}} propriedades tem Welcome Pack ativo',
-            lastUpdated: 'Ultima atualizacao: {{time}}',
+            summary: '{{enabled}} de {{total}} propriedades têm Welcome Pack ativo',
+            lastUpdated: 'Última atualização: {{time}}',
             syncNow: 'Sincronizar Agora',
             syncing: 'A sincronizar...',
             fetching: 'A procurar reservas...',
             syncErrorTitle: 'Erro ao sincronizar calendarios',
             filters: {
-                next7: 'Proximos 7 Dias',
-                next15: 'Proximos 15 Dias',
-                next30: 'Proximos 30 Dias',
+                next7: 'Próximos 7 Dias',
+                next15: 'Próximos 15 Dias',
+                next30: 'Próximos 30 Dias',
                 viewAll: 'Ver Tudo'
             },
             loading: 'A carregar reservas...',
             stats: {
                 today: 'Check-ins Hoje',
                 week: 'Esta Semana',
-                nextDays: 'Proximos {{count}} Dias'
+                nextDays: 'Próximos {{count}} Dias'
             },
             noEnabledTitle: 'Nenhuma propriedade tem welcome pack ativo',
-            noEnabledBody: 'Abra Definicoes das Propriedades para ativar o acompanhamento de welcome packs nas suas propriedades.',
+            noEnabledBody: 'Abra Definições das Propriedades para ativar o acompanhamento de welcome packs nas suas propriedades.',
             configureProperties: 'Configurar Propriedades',
-            noUpcomingTitle: 'Sem check-ins nos proximos {{count}} dias',
-            noUpcomingBody: 'As reservas aparecem aqui quando existirem novas marcacoes.',
-            noEnabledReservations: '(Nao foram encontradas reservas para propriedades ativas)',
+            noUpcomingTitle: 'Sem check-ins nos próximos {{count}} dias',
+            noUpcomingBody: 'As reservas aparecem aqui quando existirem novas marcações.',
+            noEnabledReservations: '(Não foram encontradas reservas para propriedades ativas)',
             badges: {
                 today: 'CHECK-IN HOJE',
-                tomorrow: 'CHECK-IN AMANHA'
+                tomorrow: 'CHECK-IN AMANHÃ'
             },
             labels: {
                 checkIn: 'Check-in',
@@ -145,14 +145,14 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         },
         settings: {
             title: 'Propriedades com Welcome Pack',
-            summary: '{{enabled}} de {{total}} propriedades tem Welcome Pack ativo',
+            summary: '{{enabled}} de {{total}} propriedades têm Welcome Pack ativo',
             bannerTitle: 'Configure quais propriedades precisam de welcome pack',
-            bannerBody: 'Procure uma propriedade abaixo e ative o acompanhamento do welcome pack. So as propriedades ativas aparecem na lista de Reservas Futuras.',
+            bannerBody: 'Procure uma propriedade abaixo e ative o acompanhamento do welcome pack. Só as propriedades ativas aparecem na lista de Reservas Futuras.',
             searchPlaceholder: 'Procure uma propriedade para ativar ou desativar...',
             startTyping: 'Comece a escrever para procurar uma propriedade',
             enabledListTitle: 'Propriedades com Welcome Pack Ativo ({{count}})',
             enabledBadge: 'Welcome Pack Ativo',
-            emptyTitle: 'Ainda nao existem propriedades com welcome pack ativo',
+            emptyTitle: 'Ainda não existem propriedades com welcome pack ativo',
             emptyBody: 'Procure e ative propriedades acima.'
         },
         search: {
@@ -178,14 +178,14 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         moreItems: '+ {{count}} mais...',
         inclVat: '(incl. IVA)',
         deleteTitle: 'Eliminar preset',
-        empty: 'Ainda nao existem presets.',
+        empty: 'Ainda não existem presets.',
         deleteConfirm: 'Eliminar este preset?',
         modal: {
             title: 'Criar Novo Preset de Pack',
             namePlaceholder: 'Nome do Preset (ex.: Welcome Pack Gold)',
             selectItems: 'Selecionar Itens e Quantidades:',
             packTotal: 'Total do Pack:',
-            emptySummary: 'Selecione itens para ver a composicao do pack',
+            emptySummary: 'Selecione itens para ver a composição do pack',
             summary: '{{items}} (Liquido: {{amount}} + IVA)',
             save: 'Guardar Preset'
         },
@@ -218,13 +218,13 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             save: 'Guardar'
         },
         messages: {
-            removeConfirm: 'Remover a ligacao iCal de \"{{property}}\"?\n\nIsto vai parar a sincronizacao de reservas desta propriedade.',
-            removeError: 'Erro ao remover a ligacao iCal. Tente novamente.',
+            removeConfirm: 'Remover a ligação iCal de \"{{property}}\"?\n\nIsto vai parar a sincronização de reservas desta propriedade.',
+            removeError: 'Erro ao remover a ligação iCal. Tente novamente.',
             enterUrl: 'Introduza primeiro uma URL',
             valid: 'A URL e valida. Os dados do calendario foram recebidos com sucesso.',
-            invalid: 'A URL devolveu dados, mas nao parece ter um formato iCal valido.',
+            invalid: 'A URL devolveu dados, mas não parece ter um formato iCal válido.',
             fetchFailed: 'Nao foi possivel obter a URL. Verifique se esta correta e acessivel.',
-            savedFallback: 'URL iCal guardada. A integracao completa ainda precisa da atualizacao no DataManager.',
+            savedFallback: 'URL iCal guardada. A integração completa ainda precisa da atualização no DataManager.',
             saveFailed: 'Erro ao guardar a URL. Tente novamente.'
         }
     },
@@ -268,19 +268,19 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         from: 'De',
         to: 'Ate',
         metrics: {
-            loggedCharges: 'Cobrancas registadas',
+            loggedCharges: 'Cobranças registadas',
             unitsUsed: '{{count}} unidades de material usadas',
             materialCost: 'Custo dos materiais',
-            averagePerPack: 'Media de {{amount}} por pack',
-            netCharged: 'Valor liquido cobrado',
+            averagePerPack: 'Média de {{amount}} por pack',
+            netCharged: 'Valor líquido cobrado',
             vatCollected: 'IVA cobrado',
             amountCharged: 'Valor cobrado',
-            netProfit: 'Lucro liquido',
-            marginInPeriod: '{{margin}}% de margem neste periodo'
+            netProfit: 'Lucro líquido',
+            marginInPeriod: '{{margin}}% de margem neste período'
         },
         insights: {
             topProperty: 'Melhor propriedade por valor faturado',
-            topPropertyBody: '{{amount}} faturados | {{profit}} lucro liquido',
+            topPropertyBody: '{{amount}} faturados | {{profit}} lucro líquido',
             bestMargin: 'Melhor margem',
             bestMarginBody: '{{margin}}% de margem em {{packs}} pack(s)',
             bestDay: 'Dia com maior faturacao',
@@ -293,40 +293,40 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             lowStockMaterials: 'Materiais com stock baixo: {{count}}'
         },
         propertyPerformanceTitle: 'Desempenho por propriedade',
-        propertyPerformanceDescription: 'Cada linha compara custo, valor liquido, IVA, total faturado e lucro liquido por propriedade.',
+        propertyPerformanceDescription: 'Cada linha compara custo, valor líquido, IVA, total faturado e lucro líquido por propriedade.',
         trends: {
             title: 'Tendencia recente de faturacao',
             description: 'Veja os ultimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.',
             packsCount: '{{count}} pack(s)',
-            netProfit: 'Lucro liquido {{amount}}'
+            netProfit: 'Lucro líquido {{amount}}'
         },
         materials: {
             title: 'Materiais mais usados',
             description: 'Estes sao os itens que mais consomem stock no periodo selecionado.',
             unitsUsed: '{{count}} unidades usadas',
-            costUsed: 'Custo liquido {{amount}}',
-            emptyTitle: 'Ainda nao ha consumo de materiais',
+            costUsed: 'Custo líquido {{amount}}',
+            emptyTitle: 'Ainda não há consumo de materiais',
             emptyDescription: 'Assim que registar cobrancas, os materiais mais usados aparecem aqui.'
         },
         table: {
             property: 'Propriedade',
             packs: 'Packs',
-            netCharged: 'Liquido',
+            netCharged: 'Líquido',
             vat: 'IVA',
             cost: 'Custo',
             charged: 'Total faturado',
-            profit: 'Lucro liquido',
+            profit: 'Lucro líquido',
             margin: 'Margem',
-            lastCharge: 'Ultima cobranca',
+            lastCharge: 'Última cobrança',
             units: '{{count}} unidades'
         },
-        emptyTitle: 'Nao existem cobrancas de welcome pack neste periodo',
+        emptyTitle: 'Não existem cobranças de welcome pack neste período',
         emptyDescription: 'Abra Cobrancas por Propriedade para registar o primeiro pack e os calculos aparecerao aqui automaticamente.',
         openPropertyCharges: 'Abrir Cobrancas por Propriedade',
         recentChargesTitle: 'Cobrancas recentes',
         recentChargesDescription: 'Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.',
-        recentCostProfit: 'Custo {{cost}} | IVA {{vat}} | Lucro liquido {{profit}}',
-        noChargesTitle: 'Ainda nao existem cobrancas registadas',
+        recentCostProfit: 'Custo {{cost}} | IVA {{vat}} | Lucro líquido {{profit}}',
+        noChargesTitle: 'Ainda não existem cobranças registadas',
         noChargesDescription: 'Depois de adicionar uma cobranca em Cobrancas por Propriedade, os ultimos registos aparecerao aqui.',
         unknownProperty: 'Propriedade desconhecida'
     },
@@ -728,19 +728,6 @@ export class WelcomePackManager {
         this.updateCartUI();
     }
 
-    useSuggestedAmountForEntry(entryId) {
-        const entry = this.logEntries.find((candidate) => candidate.id === entryId);
-        if (!entry) {
-            return;
-        }
-
-        entry.manualCharge = false;
-        entry.chargedAmount = '';
-        this.activeLogEntryId = entryId;
-        this.refreshLogEntryCards();
-        this.updateCartUI();
-    }
-
     renderLogEntryRows() {
         const container = document.getElementById('wp-log-entries');
         if (!container) {
@@ -752,9 +739,6 @@ export class WelcomePackManager {
             <div class="space-y-3">
                 ${this.logEntries.map((entry, index) => {
                     const entrySummary = this.getLogEntrySummary(entry);
-                    const chargeValue = entry.manualCharge
-                        ? entry.chargedAmount
-                        : entrySummary.totals.suggestedChargeNet.toFixed(2);
                     const rowClasses = this.activeLogEntryId === entry.id
                         ? 'border-sky-300 bg-sky-50/60 shadow-sm'
                         : 'border-slate-200 bg-white';
@@ -774,7 +758,7 @@ export class WelcomePackManager {
                                 </button>
                                 ` : ''}
                             </div>
-                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(160px,0.75fr)_minmax(180px,0.85fr)_auto]">
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(160px,0.75fr)_minmax(180px,0.85fr)]">
                                 <label class="welcome-pack-field">
                                     <span>${this.tr('log.fields.property')}</span>
                                     <input type="text" data-wp-entry-property="${entry.id}" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${entry.property}">
@@ -785,12 +769,8 @@ export class WelcomePackManager {
                                 </label>
                                 <label class="welcome-pack-field">
                                     <span>${this.tr('log.fields.chargedAmount')}</span>
-                                    <input type="number" data-wp-entry-charge="${entry.id}" step="0.01" min="0" value="${chargeValue}">
+                                    <input type="number" data-wp-entry-charge="${entry.id}" step="0.01" min="0" value="${entry.chargedAmount}">
                                 </label>
-                                <button type="button" class="welcome-pack-secondary-button self-end" data-wp-entry-suggested="${entry.id}">
-                                    <i class="fas fa-wand-magic-sparkles"></i>
-                                    <span>${this.tr('log.useSuggestedAmount')}</span>
-                                </button>
                             </div>
                         </article>
                     `;
@@ -828,10 +808,6 @@ export class WelcomePackManager {
             input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryCharge, 'chargedAmount', input.value));
         });
 
-        container.querySelectorAll('[data-wp-entry-suggested]').forEach((button) => {
-            button.addEventListener('click', () => this.useSuggestedAmountForEntry(button.dataset.wpEntrySuggested));
-        });
-
         container.querySelectorAll('[data-wp-entry-remove]').forEach((button) => {
             button.addEventListener('click', () => this.removeLogEntry(button.dataset.wpEntryRemove));
         });
@@ -861,11 +837,6 @@ export class WelcomePackManager {
                     cost: this.formatCurrency(summary.totals.totalCost),
                     profit: this.formatCurrency(summary.totals.profit)
                 });
-            }
-
-            const chargeInput = card.querySelector(`[data-wp-entry-charge="${entry.id}"]`);
-            if (chargeInput && !entry.manualCharge) {
-                chargeInput.value = this.getLogEntrySummary(entry).totals.suggestedChargeNet.toFixed(2);
             }
 
             const removeButton = card.querySelector(`[data-wp-entry-remove="${entry.id}"]`);
@@ -2926,11 +2897,6 @@ export class WelcomePackManager {
                         <strong>${this.formatCurrency(inventorySummary.totals.stockCostValue)}</strong>
                         <small>${this.tr('inventory.metrics.stockCostValueDescription')}</small>
                     </article>
-                    <article class="welcome-pack-metric">
-                        <span>${this.tr('inventory.metrics.projectedBilledValue')}</span>
-                        <strong>${this.formatCurrency(inventorySummary.totals.stockSellValue)}</strong>
-                        <small>${this.tr('inventory.metrics.potentialMargin', { amount: this.formatCurrency(inventorySummary.totals.potentialProfit) })}</small>
-                    </article>
                 </div>
 
                 ${inventorySummary.items.length > 0 ? `
@@ -2941,7 +2907,6 @@ export class WelcomePackManager {
                                 <th>${this.tr('inventory.table.material')}</th>
                                 <th>${this.tr('inventory.table.stock')}</th>
                                 <th>${this.tr('inventory.table.costPerUnit')}</th>
-                                <th>${this.tr('inventory.table.chargePerUnit')}</th>
                                 <th>${this.tr('inventory.table.vat')}</th>
                                 <th>${this.tr('inventory.table.actions')}</th>
                             </tr>
@@ -2958,8 +2923,7 @@ export class WelcomePackManager {
                                     </td>
                                     <td>${item.quantity || 0}</td>
                                     <td>${this.formatCurrency(item.costPrice)}</td>
-                                    <td>${this.formatCurrency(item.sellPrice)}</td>
-                                    <td>${item.sellVatRate || 22}%</td>
+                                    <td>${item.costVatRate || 22}%</td>
                                     <td>
                                         <div class="welcome-pack-action-row">
                                             <button type="button" class="welcome-pack-icon-button" onclick="welcomePackManager.editItem('${item.id}')" title="${this.tr('actions.editMaterial')}">
@@ -3284,16 +3248,15 @@ export class WelcomePackManager {
                                 </div>
                                 <div>
                                     <span>${this.tr('log.materialCost', { amount: this.formatCurrency(item.costPrice) })}</span>
-                                    <span>${this.tr('log.materialCharge', { amount: this.formatCurrency(item.sellPrice) })}</span>
                                 </div>
                                 <button type="button"
                                     class="welcome-pack-secondary-button wp-item-select-btn"
                                     data-id="${item.id}"
                                     data-name="${safeName}"
                                     data-cost="${item.costPrice}"
-                                    data-sell="${item.sellPrice}"
                                     data-cost-vat="${item.costVatRate || 22}"
-                                    data-sell-vat="${item.sellVatRate || 22}">
+                                    data-sell="0"
+                                    data-sell-vat="22">
                                     <i class="fas fa-plus"></i>
                                     <span>${this.tr('actions.add')}</span>
                                 </button>
@@ -3334,10 +3297,6 @@ export class WelcomePackManager {
                         <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.materialCost')}</span>
                             <strong id="wp-total-cost">€0.00</strong>
-                        </div>
-                        <div class="welcome-pack-summary-row">
-                            <span>${this.tr('log.summary.suggestedCharge')}</span>
-                            <strong id="wp-total-suggested">€0.00</strong>
                         </div>
                         <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.vat')}</span>
@@ -3555,12 +3514,10 @@ export class WelcomePackManager {
         }
 
         const totalCost = document.getElementById('wp-total-cost');
-        const totalSuggested = document.getElementById('wp-total-suggested');
         const totalVat = document.getElementById('wp-total-vat');
         const totalSell = document.getElementById('wp-total-sell');
         const totalProfit = document.getElementById('wp-total-profit');
         if (totalCost) totalCost.textContent = this.formatCurrency(summary.totals.totalCost);
-        if (totalSuggested) totalSuggested.textContent = this.formatCurrency(summary.totals.suggestedChargeGross);
         if (totalVat) totalVat.textContent = this.formatCurrency(summary.totals.vatAmount);
         if (totalSell) totalSell.textContent = this.formatCurrency(summary.totals.chargedAmountGross);
         if (totalProfit) totalProfit.textContent = this.formatCurrency(summary.totals.profit);
@@ -3605,6 +3562,8 @@ export class WelcomePackManager {
                     vatAmount: summary.totals.vatAmount,
                     totalSell: summary.totals.chargedAmountGross,
                     profit: summary.totals.profit,
+                    manualCharge: editingEntry.manualCharge,
+                    chargeEntryMode: editingEntry.manualCharge ? 'manual' : 'none',
                     createdAt: this.editingLogCreatedAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
@@ -3630,6 +3589,8 @@ export class WelcomePackManager {
                         vatAmount: summary.totals.vatAmount,
                         totalSell: summary.totals.chargedAmountGross,
                         profit: summary.totals.profit,
+                        manualCharge: entry.manualCharge,
+                        chargeEntryMode: entry.manualCharge ? 'manual' : 'none',
                         createdAt: timestamp,
                         updatedAt: timestamp
                     };
@@ -3713,21 +3674,6 @@ export class WelcomePackManager {
                             </div>
                         </div>
                         
-                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.chargeLabel')}</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
-                                <select id="wp-new-item-sell-vat" class="w-full p-2 border rounded bg-white">
-                                    <option value="4">4% (Reduced)</option>
-                                    <option value="12">12% (Intermediate)</option>
-                                    <option value="22" selected>22% (Standard)</option>
-                                </select>
-                            </div>
-                            <div id="wp-sell-vat-preview" class="mt-2 text-sm text-gray-600 hidden">
-                                <!-- VAT preview will be inserted here -->
-                            </div>
-                        </div>
-                        
                         <div class="flex justify-end gap-2 mt-4">
                             <button id="wp-cancel-add-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
                             <button id="wp-confirm-add-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('modals.addMaterial.confirm')}</button>
@@ -3762,10 +3708,6 @@ export class WelcomePackManager {
             document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-new-item-cost', 'wp-new-item-cost-vat', 'wp-cost-vat-preview'));
             document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-new-item-cost', 'wp-new-item-cost-vat', 'wp-cost-vat-preview'));
         });
-        ['wp-new-item-sell', 'wp-new-item-sell-vat'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-new-item-sell', 'wp-new-item-sell-vat', 'wp-sell-vat-preview'));
-            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-new-item-sell', 'wp-new-item-sell-vat', 'wp-sell-vat-preview'));
-        });
 
         document.getElementById('wp-cancel-add-btn').onclick = () => document.getElementById('wp-add-item-modal').remove();
         document.getElementById('wp-confirm-add-btn').onclick = async () => {
@@ -3773,10 +3715,10 @@ export class WelcomePackManager {
             const stock = parseInt(document.getElementById('wp-new-item-stock').value) || 0;
             const costPrice = parseFloat(document.getElementById('wp-new-item-cost').value);
             const costVatRate = parseInt(document.getElementById('wp-new-item-cost-vat').value) || 22;
-            const sellPrice = parseFloat(document.getElementById('wp-new-item-sell').value);
-            const sellVatRate = parseInt(document.getElementById('wp-new-item-sell-vat').value) || 22;
+            const sellPrice = 0;
+            const sellVatRate = 22;
 
-            if (name && !isNaN(costPrice) && !isNaN(sellPrice)) {
+            if (name && !isNaN(costPrice)) {
                 const costCalc = this.calculateVAT(costPrice, costVatRate);
                 const sellCalc = this.calculateVAT(sellPrice, sellVatRate);
 
@@ -3835,21 +3777,6 @@ export class WelcomePackManager {
                             </div>
                         </div>
                         
-                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.chargeLabel')}</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
-                                <select id="wp-edit-item-sell-vat" class="w-full p-2 border rounded bg-white">
-                                    <option value="4" ${currentSellVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
-                                    <option value="12" ${currentSellVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
-                                    <option value="22" ${currentSellVat === 22 ? 'selected' : ''}>22% (Standard)</option>
-                                </select>
-                            </div>
-                            <div id="wp-edit-sell-vat-preview" class="mt-2 text-sm text-gray-600">
-                                <!-- VAT preview will be inserted here -->
-                            </div>
-                        </div>
-                        
                         <div class="flex justify-end gap-2 mt-4">
                             <button id="wp-cancel-edit-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
                             <button id="wp-confirm-edit-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('modals.editMaterial.confirm')}</button>
@@ -3883,14 +3810,9 @@ export class WelcomePackManager {
             document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview'));
             document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview'));
         });
-        ['wp-edit-item-sell', 'wp-edit-item-sell-vat'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview'));
-            document.getElementById(id).addEventListener('change', () => updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview'));
-        });
 
         // Initial preview update
         updateVatPreview('wp-edit-item-cost', 'wp-edit-item-cost-vat', 'wp-edit-cost-vat-preview');
-        updateVatPreview('wp-edit-item-sell', 'wp-edit-item-sell-vat', 'wp-edit-sell-vat-preview');
 
         document.getElementById('wp-cancel-edit-btn').onclick = () => document.getElementById('wp-edit-item-modal').remove();
         document.getElementById('wp-confirm-edit-btn').onclick = async () => {
@@ -3898,10 +3820,10 @@ export class WelcomePackManager {
             const stock = document.getElementById('wp-edit-item-stock').value;
             const costPrice = parseFloat(document.getElementById('wp-edit-item-cost').value);
             const costVatRate = parseInt(document.getElementById('wp-edit-item-cost-vat').value) || 22;
-            const sellPrice = parseFloat(document.getElementById('wp-edit-item-sell').value);
-            const sellVatRate = parseInt(document.getElementById('wp-edit-item-sell-vat').value) || 22;
+            const sellPrice = Number.isFinite(item.sellPrice) ? item.sellPrice : 0;
+            const sellVatRate = Number.isFinite(item.sellVatRate) ? item.sellVatRate : 22;
 
-            if (name && !isNaN(costPrice) && !isNaN(sellPrice)) {
+            if (name && !isNaN(costPrice)) {
                 const costCalc = this.calculateVAT(costPrice, costVatRate);
                 const sellCalc = this.calculateVAT(sellPrice, sellVatRate);
 

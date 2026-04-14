@@ -26,15 +26,13 @@ export function normalizeWelcomePackItem(item = {}) {
     const quantityValue = Number.parseInt(item.quantity ?? item.qty ?? 1, 10);
     const quantity = Number.isInteger(quantityValue) && quantityValue > 0 ? quantityValue : 1;
     const costPrice = roundWelcomePackCurrency(item.costPrice);
-    const sellPrice = roundWelcomePackCurrency(item.sellPrice);
+    const sellPrice = 0;
     const costVatRate = toFiniteNumber(item.costVatRate, 22);
-    const sellVatRate = toFiniteNumber(item.sellVatRate, 22);
+    const sellVatRate = 22;
     const costGross = roundWelcomePackCurrency(
         item.costGross ?? (costPrice * (1 + (costVatRate / 100)))
     );
-    const sellGross = roundWelcomePackCurrency(
-        item.sellGross ?? (sellPrice * (1 + (sellVatRate / 100)))
-    );
+    const sellGross = 0;
 
     return {
         ...item,
@@ -59,7 +57,6 @@ export function summarizeWelcomePackCart(items = [], chargedAmountNet = null) {
         summary.totalLines += 1;
         summary.totalUnits += quantity;
         summary.totalCost = roundWelcomePackCurrency(summary.totalCost + (item.costPrice * quantity));
-        summary.suggestedChargeNet = roundWelcomePackCurrency(summary.suggestedChargeNet + (item.sellPrice * quantity));
         return summary;
     }, {
         totalLines: 0,
@@ -71,9 +68,11 @@ export function summarizeWelcomePackCart(items = [], chargedAmountNet = null) {
     const suggestedVat = applyWelcomePackVat(totals.suggestedChargeNet);
     const hasManualCharge = chargedAmountNet !== null && chargedAmountNet !== undefined && chargedAmountNet !== "";
     const actualVat = applyWelcomePackVat(
-        hasManualCharge ? chargedAmountNet : totals.suggestedChargeNet
+        hasManualCharge ? chargedAmountNet : 0
     );
-    const profit = roundWelcomePackCurrency(actualVat.net - totals.totalCost);
+    const profit = hasManualCharge
+        ? roundWelcomePackCurrency(actualVat.net - totals.totalCost)
+        : 0;
 
     return {
         items: normalizedItems,
@@ -103,18 +102,43 @@ export function normalizeWelcomePackLog(log = {}) {
     const suggestedSellGross = roundWelcomePackCurrency(
         log.suggestedSellGross ?? applyWelcomePackVat(suggestedSellNet).gross
     );
+    const hasExplicitNetCharge = log.chargedAmountNet !== null
+        && log.chargedAmountNet !== undefined
+        && log.chargedAmountNet !== "";
+    const hasExplicitLegacyCharge = log.chargedAmount !== null
+        && log.chargedAmount !== undefined
+        && log.chargedAmount !== "";
+    const hasExplicitGrossCharge = log.chargedAmountGross !== null
+        && log.chargedAmountGross !== undefined
+        && log.chargedAmountGross !== "";
+    const hasExplicitLegacyGross = log.totalSell !== null
+        && log.totalSell !== undefined
+        && log.totalSell !== "";
+    const hasExplicitCharge = hasExplicitNetCharge
+        || hasExplicitLegacyCharge
+        || hasExplicitGrossCharge
+        || hasExplicitLegacyGross;
     const chargedAmountNet = roundWelcomePackCurrency(
-        log.chargedAmountNet ?? log.chargedAmount ?? log.totalSell ?? suggestedSellNet
+        hasExplicitCharge
+            ? (log.chargedAmountNet ?? log.chargedAmount ?? log.totalSell ?? suggestedSellNet)
+            : 0
     );
     const chargedAmountGross = roundWelcomePackCurrency(
-        log.chargedAmountGross ?? applyWelcomePackVat(chargedAmountNet).gross
+        hasExplicitGrossCharge
+            ? log.chargedAmountGross
+            : applyWelcomePackVat(chargedAmountNet).gross
     );
     const vatAmount = roundWelcomePackCurrency(
-        log.vatAmount ?? (chargedAmountGross - chargedAmountNet)
+        hasExplicitCharge
+            ? (log.vatAmount ?? (chargedAmountGross - chargedAmountNet))
+            : 0
     );
     const profit = roundWelcomePackCurrency(
-        log.profit ?? (chargedAmountNet - totalCost)
+        hasExplicitCharge
+            ? (log.profit ?? (chargedAmountNet - totalCost))
+            : 0
     );
+    const isManualCharge = log.manualCharge === true || log.chargeEntryMode === 'manual';
 
     return {
         ...log,
@@ -131,6 +155,7 @@ export function normalizeWelcomePackLog(log = {}) {
         vatAmount,
         totalSell: chargedAmountGross,
         profit,
+        isChargeLogged: isManualCharge && hasExplicitCharge && chargedAmountGross > 0,
         totalLines: cartSummary.totals.totalLines,
         totalUnits: cartSummary.totals.totalUnits
     };
@@ -153,7 +178,9 @@ export function summarizeWelcomePackLogs(logs = [], filters = {}) {
             return true;
         });
 
-    const totals = normalizedLogs.reduce((summary, log) => {
+    const chargedLogs = normalizedLogs.filter((log) => log.isChargeLogged);
+
+    const totals = chargedLogs.reduce((summary, log) => {
         summary.count += 1;
         summary.units += log.totalUnits || 0;
         summary.netRevenue = roundWelcomePackCurrency(summary.netRevenue + log.chargedAmountNet);
@@ -197,7 +224,7 @@ export function summarizeWelcomePackLogs(logs = [], filters = {}) {
     const byDateMap = new Map();
     const materialUsageMap = new Map();
 
-    normalizedLogs.forEach((log) => {
+    chargedLogs.forEach((log) => {
         const label = log.propertyName || log.property || "Unknown property";
         const current = byPropertyMap.get(label) || {
             label,
@@ -289,7 +316,7 @@ export function summarizeWelcomePackLogs(logs = [], filters = {}) {
         })
         .slice(0, 8);
 
-    const recentLogs = [...normalizedLogs].sort((left, right) => {
+    const recentLogs = [...chargedLogs].sort((left, right) => {
         const rightKey = `${right.date || ""} ${right.createdAt || ""}`;
         const leftKey = `${left.date || ""} ${left.createdAt || ""}`;
         return rightKey.localeCompare(leftKey);
@@ -335,7 +362,7 @@ export function summarizeWelcomePackInventory(items = []) {
         totals: {
             ...totals,
             lowStockCount: lowStockItems.length,
-            potentialProfit: roundWelcomePackCurrency(totals.stockSellValue - totals.stockCostValue)
+            potentialProfit: 0
         }
     };
 }

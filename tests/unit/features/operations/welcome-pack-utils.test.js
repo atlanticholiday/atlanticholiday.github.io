@@ -17,8 +17,8 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.totals.totalLines, 2);
         assert.equal(summary.totals.totalUnits, 3);
         assert.equal(summary.totals.totalCost, 4);
-        assert.equal(summary.totals.suggestedChargeNet, 9.2);
-        assert.equal(summary.totals.suggestedChargeGross, 11.22);
+        assert.equal(summary.totals.suggestedChargeNet, 0);
+        assert.equal(summary.totals.suggestedChargeGross, 0);
         assert.equal(summary.totals.chargedAmountNet, 8.4);
         assert.equal(summary.totals.chargedAmountGross, 10.25);
         assert.equal(summary.totals.vatAmount, 1.85);
@@ -35,12 +35,13 @@ describe("Welcome Pack utilities", () => {
 
         assert.equal(normalized.propertyName, "Sea Breeze");
         assert.equal(normalized.totalCost, 4.5);
-        assert.equal(normalized.suggestedSellNet, 8);
-        assert.equal(normalized.suggestedSellGross, 9.76);
+        assert.equal(normalized.suggestedSellNet, 0);
+        assert.equal(normalized.suggestedSellGross, 0);
         assert.equal(normalized.chargedAmountNet, 10);
         assert.equal(normalized.chargedAmountGross, 12.2);
         assert.equal(normalized.totalSell, 12.2);
         assert.equal(normalized.profit, 5.5);
+        assert.equal(normalized.isChargeLogged, false);
     });
 
     test("summarizes logs by totals and property within a date range", () => {
@@ -84,6 +85,73 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.recentLogs[0].date, "2026-04-04");
     });
 
+    test("ignores logs without an explicit charged amount", () => {
+        const summary = summarizeWelcomePackLogs([
+            {
+                property: "Sea Breeze",
+                date: "2026-04-08",
+                items: [{ name: "Water", quantity: 1, costPrice: 4.1, sellPrice: 5 }]
+            }
+        ], {
+            startDate: "2026-04-01",
+            endDate: "2026-04-30"
+        });
+
+        assert.equal(summary.totals.count, 0);
+        assert.equal(summary.totals.netRevenue, 0);
+        assert.equal(summary.totals.grossRevenue, 0);
+        assert.equal(summary.totals.profit, 0);
+        assert.equal(summary.byProperty.length, 0);
+        assert.equal(summary.byDate.length, 0);
+        assert.equal(summary.recentLogs.length, 0);
+    });
+
+    test("ignores legacy auto-filled charges that only match the old suggested total", () => {
+        const summary = summarizeWelcomePackLogs([
+            {
+                property: "Sea Breeze",
+                date: "2026-04-08",
+                items: [{ name: "Water", quantity: 1, costPrice: 4.1, sellPrice: 5 }],
+                suggestedSell: 5,
+                suggestedSellGross: 6.1,
+                chargedAmountNet: 5,
+                chargedAmountGross: 6.1,
+                vatAmount: 1.1,
+                profit: 0.9
+            }
+        ], {
+            startDate: "2026-04-01",
+            endDate: "2026-04-30"
+        });
+
+        assert.equal(summary.totals.count, 0);
+        assert.equal(summary.totals.grossRevenue, 0);
+        assert.equal(summary.recentLogs.length, 0);
+    });
+
+    test("counts a log only when the charge was explicitly manual", () => {
+        const summary = summarizeWelcomePackLogs([
+            {
+                property: "Sea Breeze",
+                date: "2026-04-08",
+                items: [{ name: "Water", quantity: 1, costPrice: 4.1, sellPrice: 5 }],
+                chargedAmountNet: 5,
+                chargedAmountGross: 6.1,
+                vatAmount: 1.1,
+                profit: 0.9,
+                manualCharge: true,
+                chargeEntryMode: "manual"
+            }
+        ], {
+            startDate: "2026-04-01",
+            endDate: "2026-04-30"
+        });
+
+        assert.equal(summary.totals.count, 1);
+        assert.equal(summary.totals.netRevenue, 5);
+        assert.equal(summary.totals.grossRevenue, 6.1);
+    });
+
     test("summarizes inventory value and low stock materials", () => {
         const summary = summarizeWelcomePackInventory([
             { name: "Water", quantity: 12, costPrice: 1.1, sellPrice: 2.4 },
@@ -93,8 +161,8 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.totals.materialCount, 2);
         assert.equal(summary.totals.stockUnits, 15);
         assert.equal(summary.totals.stockCostValue, 17.7);
-        assert.equal(summary.totals.stockSellValue, 39.6);
-        assert.equal(summary.totals.potentialProfit, 21.9);
+        assert.equal(summary.totals.stockSellValue, 0);
+        assert.equal(summary.totals.potentialProfit, 0);
         assert.equal(summary.totals.lowStockCount, 1);
         assert.equal(summary.lowStockItems[0].name, "Cookies");
     });
