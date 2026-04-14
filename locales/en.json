@@ -111,7 +111,7 @@
     },
     "hero": {
       "kicker": "Welcome Packs",
-      "title": "Track materials, charges, and profit without switching between confusing tabs.",
+      "title": "",
       "body": "The workflow is now split into three clear jobs: define the material costs, register what you charged at each property, and let the calculations view show totals and margin for you."
     },
     "workflow": {

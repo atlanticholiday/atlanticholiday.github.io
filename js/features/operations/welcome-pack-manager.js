@@ -15,7 +15,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     },
     hero: {
         kicker: 'Welcome Packs',
-        title: 'Acompanhe materiais, cobranças e lucro sem saltar entre separadores confusos.',
+        title: '',
         body: 'O fluxo está dividido em três tarefas claras: definir custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar os totais e a margem.'
     },
     workflow: {
@@ -25,12 +25,12 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             description: 'Adicione todos os materiais que compra e preencha stock, custo e referência de cobrança.'
         },
         propertyCharges: {
-            label: 'Cobrancas por Propriedade',
+            label: 'Cobranças por Propriedade',
             step: 'Passo 2',
             description: 'Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor líquido realmente cobrado.'
         },
         calculations: {
-            label: 'Calculos',
+            label: 'Cálculos',
             step: 'Passo 3',
             description: 'Abra a vista de cálculos para confirmar automaticamente totais, IVA, lucro e desempenho por propriedade.'
         }
@@ -45,7 +45,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         subtitle: 'Aprenda a gerir packs, reservas e stock.',
         nav: {
             workflow: 'Fluxo Normal',
-            stats: 'Como Ler os Calculos',
+            stats: 'Como Ler os Cálculos',
             inventory: 'Stock e Presets'
         },
         sections: {
@@ -99,7 +99,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     reservations: {
         tabs: {
             upcoming: 'Reservas Futuras',
-            settings: 'Definicoes das Propriedades'
+            settings: 'Definições das Propriedades'
         },
         upcoming: {
             title: 'Reservas Futuras',
@@ -108,7 +108,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             syncNow: 'Sincronizar Agora',
             syncing: 'A sincronizar...',
             fetching: 'A procurar reservas...',
-            syncErrorTitle: 'Erro ao sincronizar calendarios',
+            syncErrorTitle: 'Erro ao sincronizar calendários',
             filters: {
                 next7: 'Próximos 7 Dias',
                 next15: 'Próximos 15 Dias',
@@ -186,7 +186,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             selectItems: 'Selecionar Itens e Quantidades:',
             packTotal: 'Total do Pack:',
             emptySummary: 'Selecione itens para ver a composição do pack',
-            summary: '{{items}} (Liquido: {{amount}} + IVA)',
+            summary: '{{items}} (Líquido: {{amount}} + IVA)',
             save: 'Guardar Preset'
         },
         messages: {
@@ -197,7 +197,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     ical: {
         search: {
             connected: 'Ligado',
-            notConnected: 'Nao ligado',
+            notConnected: 'Não ligado',
             edit: 'Editar',
             add: 'Adicionar iCal'
         },
@@ -209,9 +209,9 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             urlHelp: 'Encontre isto no seu channel manager (Airbnb, Booking.com, VRBO, etc.)',
             howToFind: 'Como encontrar a sua URL iCal:',
             providers: {
-                airbnb: 'Airbnb: Calendario -> Definicoes de disponibilidade -> Exportar calendario',
-                booking: 'Booking.com: Propriedade -> Calendario -> Sincronizar calendarios',
-                vrbo: 'VRBO: Calendario -> Importar/Exportar -> Exportar'
+                airbnb: 'Airbnb: Calendário -> Definições de disponibilidade -> Exportar calendário',
+                booking: 'Booking.com: Propriedade -> Calendário -> Sincronizar calendários',
+                vrbo: 'VRBO: Calendário -> Importar/Exportar -> Exportar'
             },
             test: 'Testar URL',
             testing: 'A testar...',
@@ -221,9 +221,9 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             removeConfirm: 'Remover a ligação iCal de \"{{property}}\"?\n\nIsto vai parar a sincronização de reservas desta propriedade.',
             removeError: 'Erro ao remover a ligação iCal. Tente novamente.',
             enterUrl: 'Introduza primeiro uma URL',
-            valid: 'A URL e valida. Os dados do calendario foram recebidos com sucesso.',
+            valid: 'A URL é válida. Os dados do calendário foram recebidos com sucesso.',
             invalid: 'A URL devolveu dados, mas não parece ter um formato iCal válido.',
-            fetchFailed: 'Nao foi possivel obter a URL. Verifique se esta correta e acessivel.',
+            fetchFailed: 'Não foi possível obter a URL. Verifique se está correta e acessível.',
             savedFallback: 'URL iCal guardada. A integração completa ainda precisa da atualização no DataManager.',
             saveFailed: 'Erro ao guardar a URL. Tente novamente.'
         }
@@ -234,17 +234,17 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             title: 'Adicionar Material',
             namePlaceholder: 'Nome do Material',
             stockPlaceholder: 'Quantidade Inicial em Stock',
-            costLabel: 'Custo do Material (Liquido, sem IVA)',
-            chargeLabel: 'Referencia de Cobranca (Liquido, sem IVA)',
+            costLabel: 'Custo do Material (Líquido, sem IVA)',
+            chargeLabel: 'Referência de Cobrança (Líquido, sem IVA)',
             confirm: 'Adicionar Material'
         },
         editMaterial: {
             title: 'Editar Material',
             namePlaceholder: 'Nome do Material',
             stockPlaceholder: 'Quantidade em Stock',
-            costLabel: 'Custo do Material (Liquido, sem IVA)',
-            chargeLabel: 'Referencia de Cobranca (Liquido, sem IVA)',
-            confirm: 'Guardar Alteracoes'
+            costLabel: 'Custo do Material (Líquido, sem IVA)',
+            chargeLabel: 'Referência de Cobrança (Líquido, sem IVA)',
+            confirm: 'Guardar Alterações'
         }
     },
     actions: {
@@ -252,7 +252,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         exportCsv: 'Exportar CSV',
         editEntry: 'Editar registo',
         deleteEntry: 'Eliminar registo',
-        cancelEdit: 'Cancelar edicao',
+        cancelEdit: 'Cancelar edição',
         editMaterial: 'Editar material',
         deleteMaterial: 'Eliminar material',
         removeMaterial: 'Remover material',
@@ -260,13 +260,13 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         add: 'Adicionar'
     },
     dashboard: {
-        lowStockTitle: 'O stock baixo precisa de atencao',
-        lowStockBody: '{{count}} material(is) esta(ao) quase a terminar: {{items}}.',
+        lowStockTitle: 'O stock baixo precisa de atenção',
+        lowStockBody: '{{count}} material(is) está(ão) quase a terminar: {{items}}.',
         openMaterialCosts: 'Abrir Custos dos Materiais',
-        title: 'Lucro por periodo',
+        title: 'Lucro por período',
         description: 'Use o filtro de datas para ver quanto custaram os packs, quanto foi cobrado e quais propriedades tiveram melhor desempenho.',
         from: 'De',
-        to: 'Ate',
+        to: 'Até',
         metrics: {
             loggedCharges: 'Cobranças registadas',
             unitsUsed: '{{count}} unidades de material usadas',
@@ -283,7 +283,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             topPropertyBody: '{{amount}} faturados | {{profit}} lucro líquido',
             bestMargin: 'Melhor margem',
             bestMarginBody: '{{margin}}% de margem em {{packs}} pack(s)',
-            bestDay: 'Dia com maior faturacao',
+            bestDay: 'Dia com maior faturação',
             bestDayBody: '{{amount}} faturados em {{packs}} pack(s)',
             noData: 'Ainda sem dados'
         },
@@ -295,18 +295,18 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         propertyPerformanceTitle: 'Desempenho por propriedade',
         propertyPerformanceDescription: 'Cada linha compara custo, valor líquido, IVA, total faturado e lucro líquido por propriedade.',
         trends: {
-            title: 'Tendencia recente de faturacao',
-            description: 'Veja os ultimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.',
+            title: 'Tendência recente de faturação',
+            description: 'Veja os últimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.',
             packsCount: '{{count}} pack(s)',
             netProfit: 'Lucro líquido {{amount}}'
         },
         materials: {
             title: 'Materiais mais usados',
-            description: 'Estes sao os itens que mais consomem stock no periodo selecionado.',
+            description: 'Estes são os itens que mais consomem stock no período selecionado.',
             unitsUsed: '{{count}} unidades usadas',
             costUsed: 'Custo líquido {{amount}}',
             emptyTitle: 'Ainda não há consumo de materiais',
-            emptyDescription: 'Assim que registar cobrancas, os materiais mais usados aparecem aqui.'
+            emptyDescription: 'Assim que registar cobranças, os materiais mais usados aparecem aqui.'
         },
         table: {
             property: 'Propriedade',
@@ -321,51 +321,51 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             units: '{{count}} unidades'
         },
         emptyTitle: 'Não existem cobranças de welcome pack neste período',
-        emptyDescription: 'Abra Cobrancas por Propriedade para registar o primeiro pack e os calculos aparecerao aqui automaticamente.',
-        openPropertyCharges: 'Abrir Cobrancas por Propriedade',
-        recentChargesTitle: 'Cobrancas recentes',
+        emptyDescription: 'Abra Cobranças por Propriedade para registar o primeiro pack e os cálculos aparecerão aqui automaticamente.',
+        openPropertyCharges: 'Abrir Cobranças por Propriedade',
+        recentChargesTitle: 'Cobranças recentes',
         recentChargesDescription: 'Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.',
         recentCostProfit: 'Custo {{cost}} | IVA {{vat}} | Lucro líquido {{profit}}',
         noChargesTitle: 'Ainda não existem cobranças registadas',
-        noChargesDescription: 'Depois de adicionar uma cobranca em Cobrancas por Propriedade, os ultimos registos aparecerao aqui.',
+        noChargesDescription: 'Depois de adicionar uma cobrança em Cobranças por Propriedade, os últimos registos aparecerão aqui.',
         unknownProperty: 'Propriedade desconhecida'
     },
     inventory: {
-        lowStockTitle: 'Alguns materiais precisam de reposicao',
+        lowStockTitle: 'Alguns materiais precisam de reposição',
         lowStockBody: '{{items}}',
-        title: 'Catalogo de materiais',
-        description: 'Mantenha uma linha por material com o stock atual, o custo liquido para a Atlantic Holiday e a referencia de cobranca usada num welcome pack.',
+        title: 'Catálogo de materiais',
+        description: 'Mantenha uma linha por material com o stock atual, o custo líquido para a Atlantic Holiday e a referência de cobrança usada num welcome pack.',
         addMaterial: 'Adicionar Material',
         metrics: {
             tracked: 'Materiais registados',
             lowStock: '{{count}} materiais com stock baixo',
             unitsInStock: 'Unidades em stock',
-            unitsInStockDescription: 'Quantidade atual em todo o catalogo',
+            unitsInStockDescription: 'Quantidade atual em todo o catálogo',
             stockCostValue: 'Valor do stock a custo',
-            stockCostValueDescription: 'Baseado no custo liquido do material',
-            projectedBilledValue: 'Valor de referencia',
-            potentialMargin: 'Referencia atual {{amount}}'
+            stockCostValueDescription: 'Baseado no custo líquido do material',
+            projectedBilledValue: 'Valor de referência',
+            potentialMargin: 'Referência atual {{amount}}'
         },
         table: {
             material: 'Material',
             stock: 'Stock',
             costPerUnit: 'Custo / unidade',
-            chargePerUnit: 'Referencia / unidade',
+            chargePerUnit: 'Referência / unidade',
             vat: 'IVA',
-            actions: 'Acoes'
+            actions: 'Ações'
         },
         status: {
-            needsRestock: 'Precisa de reposicao em breve',
+            needsRestock: 'Precisa de reposição em breve',
             ready: 'Pronto para usar nos packs'
         },
-        emptyTitle: 'Ainda nao existem materiais guardados',
-        emptyDescription: 'Adicione o primeiro material para que Cobrancas por Propriedade e Calculos possam funcionar.'
+        emptyTitle: 'Ainda não existem materiais guardados',
+        emptyDescription: 'Adicione o primeiro material para que Cobranças por Propriedade e Cálculos possam funcionar.'
     },
     log: {
-        title: 'Registar uma cobranca por propriedade',
-        editTitle: 'Editar cobranca por propriedade',
-        description: 'Selecione a propriedade, escolha os materiais usados no pack e confirme o valor liquido realmente cobrado.',
-        entriesTitle: 'Registos de cobranca',
+        title: 'Registar uma cobrança por propriedade',
+        editTitle: 'Editar cobrança por propriedade',
+        description: 'Selecione a propriedade, escolha os materiais usados no pack e confirme o valor líquido realmente cobrado.',
+        entriesTitle: 'Registos de cobrança',
         entriesDescription: 'Adicione uma ou mais linhas com propriedade e data. Todas usam os mesmos materiais selecionados, mas cada linha pode ter a sua propriedade, data e valor cobrado.',
         entryLabel: 'Registo {{count}}',
         entrySummary: 'Custo dos materiais {{cost}} e lucro {{profit}}.',
@@ -375,25 +375,25 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             property: 'Propriedade',
             propertyPlaceholder: 'Selecionar propriedade...',
             date: 'Data',
-            chargedAmount: 'Valor liquido cobrado'
+            chargedAmount: 'Valor líquido cobrado'
         },
         loadPreset: 'Carregar preset',
         loadPresetPlaceholder: 'Selecione um preset para carregar materiais...',
-        loadPresetHelp: 'Os presets ajudam a lancar o pack normal antes de ajustar os materiais realmente usados.',
+        loadPresetHelp: 'Os presets ajudam a lançar o pack normal antes de ajustar os materiais realmente usados.',
         materialsTitle: 'Materiais neste pack',
         materialsDescription: 'Adicione os materiais que foram realmente usados para esta propriedade. Cliques repetidos aumentam a quantidade.',
         materialInStock: '{{count}} em stock',
         materialCost: 'Custo {{amount}}',
-        materialCharge: 'Referencia {{amount}}',
-        noMaterialsTitle: 'Ainda nao existem materiais disponiveis',
+        materialCharge: 'Referência {{amount}}',
+        noMaterialsTitle: 'Ainda não existem materiais disponíveis',
         noMaterialsDescription: 'Abra primeiro Custos dos Materiais e adicione os materiais que podem ser usados num welcome pack.',
-        summaryTitle: 'Resumo da cobranca',
+        summaryTitle: 'Resumo da cobrança',
         summaryDescription: 'O valor cobrado pode seguir o valor sugerido ou ser alterado manualmente se a propriedade tiver sido faturada de forma diferente.',
         history: {
-            noPropertyTitle: 'Ainda nao foi selecionada nenhuma propriedade',
-            noPropertyDescription: 'Selecione uma propriedade para ver a ultima cobranca de welcome pack registada.',
-            noPreviousCharge: 'Nao foi encontrada nenhuma cobranca anterior de welcome pack para esta propriedade.',
-            lastCharge: 'Ultima cobranca: {{amount}} em {{date}}.',
+            noPropertyTitle: 'Ainda não foi selecionada nenhuma propriedade',
+            noPropertyDescription: 'Selecione uma propriedade para ver a última cobrança de welcome pack registada.',
+            noPreviousCharge: 'Não foi encontrada nenhuma cobrança anterior de welcome pack para esta propriedade.',
+            lastCharge: 'Última cobrança: {{amount}} em {{date}}.',
             costProfit: 'Custo dos materiais {{cost}} e lucro {{profit}}.'
         },
         noMaterialsSelected: 'Nenhum material selecionado',
@@ -403,37 +403,37 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             suggestedCharge: 'Total faturado sugerido',
             vat: 'IVA (22%)',
             actualCharge: 'Total faturado real',
-            profit: 'Lucro liquido'
+            profit: 'Lucro líquido'
         },
-        updateCharge: 'Atualizar cobranca',
-        saveCharge: 'Guardar cobranca',
-        editHint: 'Ao atualizar uma cobranca existente, o stock antigo sera reposto e as novas quantidades serao novamente descontadas.',
-        saveHint: 'A area de calculos sera atualizada automaticamente depois de guardar {{count}} cobranca(s).',
+        updateCharge: 'Atualizar cobrança',
+        saveCharge: 'Guardar cobrança',
+        editHint: 'Ao atualizar uma cobrança existente, o stock antigo será reposto e as novas quantidades serão novamente descontadas.',
+        saveHint: 'A área de cálculos será atualizada automaticamente depois de guardar {{count}} cobrança(s).',
         cart: {
-            costCharge: '{{cost}} custo | {{charge}} referencia',
+            costCharge: '{{cost}} custo | {{charge}} referência',
             qty: 'Qtd',
             materialLines: '{{count}} linha(s) de material',
             units: '{{count}} unidade(s)',
-            entries: '{{count}} cobranca(s)'
+            entries: '{{count}} cobrança(s)'
         }
     },
     states: {
         loading: 'A carregar Welcome Packs...',
-        permissionDenied: 'O Welcome Packs nao esta disponivel para esta conta. Verifique o nivel de acesso e tente novamente.',
-        unauthenticated: 'Inicie sessao novamente para carregar o Welcome Packs.',
-        unavailable: 'Nao foi possivel carregar o Welcome Packs agora. Tente novamente.',
-        unavailableTitle: 'Welcome Packs indisponivel'
+        permissionDenied: 'O Welcome Packs não está disponível para esta conta. Verifique o nível de acesso e tente novamente.',
+        unauthenticated: 'Inicie sessão novamente para carregar o Welcome Packs.',
+        unavailable: 'Não foi possível carregar o Welcome Packs agora. Tente novamente.',
+        unavailableTitle: 'Welcome Packs indisponível'
     },
     messages: {
         selectProperty: 'Selecione uma propriedade',
         selectMaterial: 'Selecione pelo menos um material',
-        chargeUpdated: 'Cobranca de welcome pack atualizada com sucesso.',
-        chargeSaved: 'Cobranca de welcome pack guardada com sucesso.',
-        saveFailed: 'Nao foi possivel guardar o pack. Tente novamente.',
-        confirmDeleteCharge: 'Tem a certeza de que pretende eliminar esta cobranca? O stock sera reposto.',
+        chargeUpdated: 'Cobrança de welcome pack atualizada com sucesso.',
+        chargeSaved: 'Cobrança de welcome pack guardada com sucesso.',
+        saveFailed: 'Não foi possível guardar o pack. Tente novamente.',
+        confirmDeleteCharge: 'Tem a certeza de que pretende eliminar esta cobrança? O stock será reposto.',
         fillAllMaterialFields: 'Preencha todos os campos corretamente.',
         confirmDeleteMaterial: 'Tem a certeza de que pretende eliminar este material?',
-        noDataToExport: 'Nao existem dados para exportar'
+        noDataToExport: 'Não existem dados para exportar'
     },
     export: {
         date: 'Data',
@@ -441,8 +441,8 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         materials: 'Materiais',
         units: 'Unidades',
         materialCost: 'Custo dos Materiais',
-        suggestedChargeNet: 'Cobranca Liquida Sugerida',
-        suggestedCharge: 'Cobranca Sugerida',
+        suggestedChargeNet: 'Cobrança Líquida Sugerida',
+        suggestedCharge: 'Cobrança Sugerida',
         vat: 'IVA',
         chargedAmount: 'Valor Cobrado',
         profit: 'Lucro'
@@ -964,7 +964,7 @@ export class WelcomePackManager {
                     <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
                         <div class="w-full">
                             <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${this.tr('hero.kicker')}</div>
-                            <h2 class="mt-2 text-2xl font-semibold text-slate-900">${this.tr('hero.title')}</h2>
+                            ${this.tr('hero.title') ? `<h2 class="mt-2 text-2xl font-semibold text-slate-900">${this.tr('hero.title')}</h2>` : ''}
                             <p class="mt-2 w-full text-sm leading-6 text-slate-600">${this.tr('hero.body')}</p>
                         </div>
                     </div>
@@ -2875,7 +2875,7 @@ export class WelcomePackManager {
                         <h3>${this.tr('inventory.title')}</h3>
                         <p>${this.tr('inventory.description')}</p>
                     </div>
-                    <button id="wp-add-item-btn" class="welcome-pack-nav-button is-active">
+                    <button id="wp-add-item-btn" class="welcome-pack-action-button">
                         <i class="fas fa-plus"></i>
                         <span>${this.tr('inventory.addMaterial')}</span>
                     </button>

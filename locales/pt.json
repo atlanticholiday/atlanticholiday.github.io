@@ -111,7 +111,7 @@
         },
         "hero": {
             "kicker": "Welcome Packs",
-            "title": "Acompanhe materiais, cobranças e lucro sem saltar entre separadores confusos.",
+            "title": "",
             "body": "O fluxo está agora dividido em três tarefas claras: definir os custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar-lhe os totais e a margem."
         },
         "workflow": {
@@ -398,8 +398,8 @@
                 "description": "Estes sao os itens que mais consomem stock no periodo selecionado.",
                 "unitsUsed": "{{count}} unidades usadas",
                 "costUsed": "Custo liquido {{amount}}",
-                "emptyTitle": "Ainda nao ha consumo de materiais",
-                "emptyDescription": "Assim que registar cobrancas, os materiais mais usados aparecem aqui."
+                "emptyTitle": "Ainda não há consumo de materiais",
+                "emptyDescription": "Assim que registar cobranças, os materiais mais usados aparecem aqui."
             },
             "table": {
                 "property": "Propriedade",
@@ -545,7 +545,7 @@
             "materials": "Materiais",
             "units": "Unidades",
             "materialCost": "Custo dos Materiais",
-            "suggestedChargeNet": "Cobranca Liquida Sugerida",
+            "suggestedChargeNet": "Cobrança Líquida Sugerida",
             "suggestedCharge": "Cobrança Sugerida",
             "vat": "IVA",
             "chargedAmount": "Valor Cobrado",

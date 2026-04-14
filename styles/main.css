@@ -2135,7 +2135,8 @@ header h1, header h2, header h3 {
 
 .welcome-pack-nav-button,
 .welcome-pack-secondary-button,
-.welcome-pack-icon-button {
+.welcome-pack-icon-button,
+.welcome-pack-action-button {
     border: 0;
     cursor: pointer;
     font: inherit;
@@ -2143,7 +2144,8 @@ header h1, header h2, header h3 {
 }
 
 .welcome-pack-nav-button,
-.welcome-pack-secondary-button {
+.welcome-pack-secondary-button,
+.welcome-pack-action-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2176,6 +2178,14 @@ header h1, header h2, header h3 {
     border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
+.welcome-pack-action-button {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(251, 113, 133, 0.2));
+    color: #9f1239;
+    border: 1px solid rgba(251, 113, 133, 0.25);
+    box-shadow: 0 10px 24px rgba(244, 63, 94, 0.12);
+    font-weight: 700;
+}
+
 .welcome-pack-secondary-button.is-active {
     border-color: rgba(186, 230, 253, 0.96);
     background: rgba(240, 249, 255, 0.92);
@@ -2184,6 +2194,7 @@ header h1, header h2, header h3 {
 
 .welcome-pack-nav-button:hover,
 .welcome-pack-secondary-button:hover,
+.welcome-pack-action-button:hover,
 .welcome-pack-flow-card:hover,
 .welcome-pack-icon-button:hover {
     transform: translateY(-1px);
