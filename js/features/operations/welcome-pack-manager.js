@@ -8,6 +8,447 @@
 } from './welcome-pack-utils.js';
 import { i18n, t } from '../../core/i18n.js';
 
+const PT_WELCOME_PACK_TRANSLATIONS = {
+    header: {
+        title: 'Welcome Packs',
+        subtitle: 'Acompanhar custos, cobrancas por propriedade e lucro'
+    },
+    hero: {
+        kicker: 'Welcome Packs',
+        title: 'Acompanhe materiais, cobrancas e lucro sem saltar entre separadores confusos.',
+        body: 'O fluxo esta dividido em tres tarefas claras: definir custos dos materiais, registar o valor cobrado em cada propriedade e deixar a area de calculos mostrar os totais e a margem.'
+    },
+    workflow: {
+        materialCosts: {
+            label: 'Custos dos Materiais',
+            step: 'Passo 1',
+            description: 'Adicione todos os materiais que compra e preencha stock, custo e referencia de cobranca.'
+        },
+        propertyCharges: {
+            label: 'Cobrancas por Propriedade',
+            step: 'Passo 2',
+            description: 'Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor liquido realmente cobrado.'
+        },
+        calculations: {
+            label: 'Calculos',
+            step: 'Passo 3',
+            description: 'Abra a vista de calculos para confirmar automaticamente totais, IVA, lucro e desempenho por propriedade.'
+        }
+    },
+    support: {
+        label: 'Ferramentas de apoio',
+        reservations: 'Reservas',
+        presets: 'Presets'
+    },
+    help: {
+        title: 'Guia do Gestor de Welcome Packs',
+        subtitle: 'Aprenda a gerir packs, reservas e stock.',
+        nav: {
+            workflow: 'Fluxo Normal',
+            stats: 'Como Ler os Calculos',
+            inventory: 'Stock e Presets'
+        },
+        sections: {
+            workflow: {
+                title: 'Fluxo Diario',
+                steps: {
+                    checkReservations: {
+                        title: 'Verificar Reservas',
+                        body: 'Abra <strong>Reservas</strong> para rever os proximos check-ins e ver que propriedades vao precisar de um welcome pack em breve.'
+                    },
+                    logPack: {
+                        title: 'Registar um Pack',
+                        body: 'Abra <strong>Cobrancas por Propriedade</strong>, selecione a propriedade e a data, depois adicione os materiais usados ou carregue um preset como ponto de partida.'
+                    },
+                    saveMonitor: {
+                        title: 'Guardar e Acompanhar',
+                        body: 'Depois de guardar, o stock e atualizado e o custo, a cobranca e o lucro do pack aparecem automaticamente na area de calculos.'
+                    }
+                }
+            },
+            stats: {
+                title: 'Calculos e Estatisticas',
+                body: 'A vista de calculos da-lhe uma visao financeira do custo de cada pack, do valor cobrado e do desempenho de cada propriedade.',
+                items: {
+                    margin: {
+                        label: 'Margem de Lucro:',
+                        body: 'Calculada como <code>(Lucro / Valor Cobrado) * 100</code>. Uma margem mais alta significa que o welcome pack e mais rentavel.'
+                    },
+                    trends: {
+                        label: 'Vista por Propriedade:',
+                        body: 'Use a tabela por propriedade e a lista de cobrancas recentes para ver onde a margem e mais forte e corrigir registos antigos quando for preciso.'
+                    }
+                }
+            },
+            inventory: {
+                title: 'Stock e Presets',
+                cards: {
+                    stock: {
+                        title: 'Gerir Stock',
+                        body: 'Use <strong>Custos dos Materiais</strong> para adicionar materiais, manter o stock atualizado e definir o custo habitual e o valor de referencia de cada item.'
+                    },
+                    presets: {
+                        title: 'Usar Presets',
+                        body: 'Use <strong>Presets</strong> para guardar o seu welcome pack normal e registar cobrancas recorrentes mais depressa.'
+                    }
+                }
+            }
+        },
+        done: 'Percebi, obrigado!'
+    },
+    reservations: {
+        tabs: {
+            upcoming: 'Reservas Futuras',
+            settings: 'Definicoes das Propriedades'
+        },
+        upcoming: {
+            title: 'Reservas Futuras',
+            summary: '{{enabled}} de {{total}} propriedades tem Welcome Pack ativo',
+            lastUpdated: 'Ultima atualizacao: {{time}}',
+            syncNow: 'Sincronizar Agora',
+            syncing: 'A sincronizar...',
+            fetching: 'A procurar reservas...',
+            syncErrorTitle: 'Erro ao sincronizar calendarios',
+            filters: {
+                next7: 'Proximos 7 Dias',
+                next15: 'Proximos 15 Dias',
+                next30: 'Proximos 30 Dias',
+                viewAll: 'Ver Tudo'
+            },
+            loading: 'A carregar reservas...',
+            stats: {
+                today: 'Check-ins Hoje',
+                week: 'Esta Semana',
+                nextDays: 'Proximos {{count}} Dias'
+            },
+            noEnabledTitle: 'Nenhuma propriedade tem welcome pack ativo',
+            noEnabledBody: 'Abra Definicoes das Propriedades para ativar o acompanhamento de welcome packs nas suas propriedades.',
+            configureProperties: 'Configurar Propriedades',
+            noUpcomingTitle: 'Sem check-ins nos proximos {{count}} dias',
+            noUpcomingBody: 'As reservas aparecem aqui quando existirem novas marcacoes.',
+            noEnabledReservations: '(Nao foram encontradas reservas para propriedades ativas)',
+            badges: {
+                today: 'CHECK-IN HOJE',
+                tomorrow: 'CHECK-IN AMANHA'
+            },
+            labels: {
+                checkIn: 'Check-in',
+                checkOut: 'Check-out'
+            },
+            nights: {
+                one: '{{count}} noite',
+                other: '{{count}} noites'
+            },
+            blockedReserved: 'Bloqueado / Reservado',
+            reserved: 'Reservado',
+            assignPack: 'Atribuir Pack'
+        },
+        settings: {
+            title: 'Propriedades com Welcome Pack',
+            summary: '{{enabled}} de {{total}} propriedades tem Welcome Pack ativo',
+            bannerTitle: 'Configure quais propriedades precisam de welcome pack',
+            bannerBody: 'Procure uma propriedade abaixo e ative o acompanhamento do welcome pack. So as propriedades ativas aparecem na lista de Reservas Futuras.',
+            searchPlaceholder: 'Procure uma propriedade para ativar ou desativar...',
+            startTyping: 'Comece a escrever para procurar uma propriedade',
+            enabledListTitle: 'Propriedades com Welcome Pack Ativo ({{count}})',
+            enabledBadge: 'Welcome Pack Ativo',
+            emptyTitle: 'Ainda nao existem propriedades com welcome pack ativo',
+            emptyBody: 'Procure e ative propriedades acima.'
+        },
+        search: {
+            loading: 'A procurar...',
+            noMatch: 'Nenhuma propriedade encontrada para \"{{query}}\"',
+            enabled: 'Ativo',
+            disabled: 'Desativo',
+            enable: 'Ativar',
+            disable: 'Desativar',
+            error: 'Erro ao procurar propriedades'
+        },
+        messages: {
+            toggleError: 'Erro ao atualizar a propriedade. Tente novamente.'
+        }
+    },
+    presets: {
+        title: 'Presets de Pack',
+        create: 'Criar Preset',
+        itemCount: {
+            one: '{{count}} item',
+            other: '{{count}} itens'
+        },
+        moreItems: '+ {{count}} mais...',
+        inclVat: '(incl. IVA)',
+        deleteTitle: 'Eliminar preset',
+        empty: 'Ainda nao existem presets.',
+        deleteConfirm: 'Eliminar este preset?',
+        modal: {
+            title: 'Criar Novo Preset de Pack',
+            namePlaceholder: 'Nome do Preset (ex.: Welcome Pack Gold)',
+            selectItems: 'Selecionar Itens e Quantidades:',
+            packTotal: 'Total do Pack:',
+            emptySummary: 'Selecione itens para ver a composicao do pack',
+            summary: '{{items}} (Liquido: {{amount}} + IVA)',
+            save: 'Guardar Preset'
+        },
+        messages: {
+            nameRequired: 'Introduza um nome para o preset',
+            itemsRequired: 'Selecione pelo menos um item'
+        }
+    },
+    ical: {
+        search: {
+            connected: 'Ligado',
+            notConnected: 'Nao ligado',
+            edit: 'Editar',
+            add: 'Adicionar iCal'
+        },
+        modal: {
+            title: 'Configurar URL iCal',
+            property: 'Propriedade: <strong>{{property}}</strong>',
+            urlLabel: 'URL iCal/ICS',
+            urlPlaceholder: 'https://www.airbnb.com/calendar/ical/...',
+            urlHelp: 'Encontre isto no seu channel manager (Airbnb, Booking.com, VRBO, etc.)',
+            howToFind: 'Como encontrar a sua URL iCal:',
+            providers: {
+                airbnb: 'Airbnb: Calendario -> Definicoes de disponibilidade -> Exportar calendario',
+                booking: 'Booking.com: Propriedade -> Calendario -> Sincronizar calendarios',
+                vrbo: 'VRBO: Calendario -> Importar/Exportar -> Exportar'
+            },
+            test: 'Testar URL',
+            testing: 'A testar...',
+            save: 'Guardar'
+        },
+        messages: {
+            removeConfirm: 'Remover a ligacao iCal de \"{{property}}\"?\n\nIsto vai parar a sincronizacao de reservas desta propriedade.',
+            removeError: 'Erro ao remover a ligacao iCal. Tente novamente.',
+            enterUrl: 'Introduza primeiro uma URL',
+            valid: 'A URL e valida. Os dados do calendario foram recebidos com sucesso.',
+            invalid: 'A URL devolveu dados, mas nao parece ter um formato iCal valido.',
+            fetchFailed: 'Nao foi possivel obter a URL. Verifique se esta correta e acessivel.',
+            savedFallback: 'URL iCal guardada. A integracao completa ainda precisa da atualizacao no DataManager.',
+            saveFailed: 'Erro ao guardar a URL. Tente novamente.'
+        }
+    },
+    modals: {
+        vatPreview: '{{net}} + {{vat}} = {{gross}}',
+        addMaterial: {
+            title: 'Adicionar Material',
+            namePlaceholder: 'Nome do Material',
+            stockPlaceholder: 'Quantidade Inicial em Stock',
+            costLabel: 'Custo do Material (Liquido, sem IVA)',
+            chargeLabel: 'Referencia de Cobranca (Liquido, sem IVA)',
+            confirm: 'Adicionar Material'
+        },
+        editMaterial: {
+            title: 'Editar Material',
+            namePlaceholder: 'Nome do Material',
+            stockPlaceholder: 'Quantidade em Stock',
+            costLabel: 'Custo do Material (Liquido, sem IVA)',
+            chargeLabel: 'Referencia de Cobranca (Liquido, sem IVA)',
+            confirm: 'Guardar Alteracoes'
+        }
+    },
+    actions: {
+        apply: 'Aplicar',
+        exportCsv: 'Exportar CSV',
+        editEntry: 'Editar registo',
+        deleteEntry: 'Eliminar registo',
+        cancelEdit: 'Cancelar edicao',
+        editMaterial: 'Editar material',
+        deleteMaterial: 'Eliminar material',
+        removeMaterial: 'Remover material',
+        cancel: 'Cancelar',
+        add: 'Adicionar'
+    },
+    dashboard: {
+        lowStockTitle: 'O stock baixo precisa de atencao',
+        lowStockBody: '{{count}} material(is) esta(ao) quase a terminar: {{items}}.',
+        openMaterialCosts: 'Abrir Custos dos Materiais',
+        title: 'Lucro por periodo',
+        description: 'Use o filtro de datas para ver quanto custaram os packs, quanto foi cobrado e quais propriedades tiveram melhor desempenho.',
+        from: 'De',
+        to: 'Ate',
+        metrics: {
+            loggedCharges: 'Cobrancas registadas',
+            unitsUsed: '{{count}} unidades de material usadas',
+            materialCost: 'Custo dos materiais',
+            averagePerPack: 'Media de {{amount}} por pack',
+            netCharged: 'Valor liquido cobrado',
+            vatCollected: 'IVA cobrado',
+            amountCharged: 'Valor cobrado',
+            netProfit: 'Lucro liquido',
+            marginInPeriod: '{{margin}}% de margem neste periodo'
+        },
+        insights: {
+            topProperty: 'Melhor propriedade por valor faturado',
+            topPropertyBody: '{{amount}} faturados | {{profit}} lucro liquido',
+            bestMargin: 'Melhor margem',
+            bestMarginBody: '{{margin}}% de margem em {{packs}} pack(s)',
+            bestDay: 'Dia com maior faturacao',
+            bestDayBody: '{{amount}} faturados em {{packs}} pack(s)',
+            noData: 'Ainda sem dados'
+        },
+        chips: {
+            currentStockValue: 'Valor atual do stock: {{amount}}',
+            materialsInStock: 'Materiais em stock: {{count}}',
+            lowStockMaterials: 'Materiais com stock baixo: {{count}}'
+        },
+        propertyPerformanceTitle: 'Desempenho por propriedade',
+        propertyPerformanceDescription: 'Cada linha compara custo, valor liquido, IVA, total faturado e lucro liquido por propriedade.',
+        trends: {
+            title: 'Tendencia recente de faturacao',
+            description: 'Veja os ultimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.',
+            packsCount: '{{count}} pack(s)',
+            netProfit: 'Lucro liquido {{amount}}'
+        },
+        materials: {
+            title: 'Materiais mais usados',
+            description: 'Estes sao os itens que mais consomem stock no periodo selecionado.',
+            unitsUsed: '{{count}} unidades usadas',
+            costUsed: 'Custo liquido {{amount}}',
+            emptyTitle: 'Ainda nao ha consumo de materiais',
+            emptyDescription: 'Assim que registar cobrancas, os materiais mais usados aparecem aqui.'
+        },
+        table: {
+            property: 'Propriedade',
+            packs: 'Packs',
+            netCharged: 'Liquido',
+            vat: 'IVA',
+            cost: 'Custo',
+            charged: 'Total faturado',
+            profit: 'Lucro liquido',
+            margin: 'Margem',
+            lastCharge: 'Ultima cobranca',
+            units: '{{count}} unidades'
+        },
+        emptyTitle: 'Nao existem cobrancas de welcome pack neste periodo',
+        emptyDescription: 'Abra Cobrancas por Propriedade para registar o primeiro pack e os calculos aparecerao aqui automaticamente.',
+        openPropertyCharges: 'Abrir Cobrancas por Propriedade',
+        recentChargesTitle: 'Cobrancas recentes',
+        recentChargesDescription: 'Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.',
+        recentCostProfit: 'Custo {{cost}} | IVA {{vat}} | Lucro liquido {{profit}}',
+        noChargesTitle: 'Ainda nao existem cobrancas registadas',
+        noChargesDescription: 'Depois de adicionar uma cobranca em Cobrancas por Propriedade, os ultimos registos aparecerao aqui.',
+        unknownProperty: 'Propriedade desconhecida'
+    },
+    inventory: {
+        lowStockTitle: 'Alguns materiais precisam de reposicao',
+        lowStockBody: '{{items}}',
+        title: 'Catalogo de materiais',
+        description: 'Mantenha uma linha por material com o stock atual, o custo liquido para a Atlantic Holiday e a referencia de cobranca usada num welcome pack.',
+        addMaterial: 'Adicionar Material',
+        metrics: {
+            tracked: 'Materiais registados',
+            lowStock: '{{count}} materiais com stock baixo',
+            unitsInStock: 'Unidades em stock',
+            unitsInStockDescription: 'Quantidade atual em todo o catalogo',
+            stockCostValue: 'Valor do stock a custo',
+            stockCostValueDescription: 'Baseado no custo liquido do material',
+            projectedBilledValue: 'Valor de referencia',
+            potentialMargin: 'Referencia atual {{amount}}'
+        },
+        table: {
+            material: 'Material',
+            stock: 'Stock',
+            costPerUnit: 'Custo / unidade',
+            chargePerUnit: 'Referencia / unidade',
+            vat: 'IVA',
+            actions: 'Acoes'
+        },
+        status: {
+            needsRestock: 'Precisa de reposicao em breve',
+            ready: 'Pronto para usar nos packs'
+        },
+        emptyTitle: 'Ainda nao existem materiais guardados',
+        emptyDescription: 'Adicione o primeiro material para que Cobrancas por Propriedade e Calculos possam funcionar.'
+    },
+    log: {
+        title: 'Registar uma cobranca por propriedade',
+        editTitle: 'Editar cobranca por propriedade',
+        description: 'Selecione a propriedade, escolha os materiais usados no pack e confirme o valor liquido realmente cobrado.',
+        entriesTitle: 'Registos de cobranca',
+        entriesDescription: 'Adicione uma ou mais linhas com propriedade e data. Todas usam os mesmos materiais selecionados, mas cada linha pode ter a sua propriedade, data e valor cobrado.',
+        entryLabel: 'Registo {{count}}',
+        entrySummary: 'Custo dos materiais {{cost}} e lucro {{profit}}.',
+        addEntry: 'Adicionar outro registo',
+        removeEntry: 'Remover registo',
+        fields: {
+            property: 'Propriedade',
+            propertyPlaceholder: 'Selecionar propriedade...',
+            date: 'Data',
+            chargedAmount: 'Valor liquido cobrado'
+        },
+        loadPreset: 'Carregar preset',
+        loadPresetPlaceholder: 'Selecione um preset para carregar materiais...',
+        loadPresetHelp: 'Os presets ajudam a lancar o pack normal antes de ajustar os materiais realmente usados.',
+        materialsTitle: 'Materiais neste pack',
+        materialsDescription: 'Adicione os materiais que foram realmente usados para esta propriedade. Cliques repetidos aumentam a quantidade.',
+        materialInStock: '{{count}} em stock',
+        materialCost: 'Custo {{amount}}',
+        materialCharge: 'Referencia {{amount}}',
+        noMaterialsTitle: 'Ainda nao existem materiais disponiveis',
+        noMaterialsDescription: 'Abra primeiro Custos dos Materiais e adicione os materiais que podem ser usados num welcome pack.',
+        summaryTitle: 'Resumo da cobranca',
+        summaryDescription: 'O valor cobrado pode seguir o valor sugerido ou ser alterado manualmente se a propriedade tiver sido faturada de forma diferente.',
+        history: {
+            noPropertyTitle: 'Ainda nao foi selecionada nenhuma propriedade',
+            noPropertyDescription: 'Selecione uma propriedade para ver a ultima cobranca de welcome pack registada.',
+            noPreviousCharge: 'Nao foi encontrada nenhuma cobranca anterior de welcome pack para esta propriedade.',
+            lastCharge: 'Ultima cobranca: {{amount}} em {{date}}.',
+            costProfit: 'Custo dos materiais {{cost}} e lucro {{profit}}.'
+        },
+        noMaterialsSelected: 'Nenhum material selecionado',
+        useSuggestedAmount: 'Usar valor sugerido',
+        summary: {
+            materialCost: 'Custo dos materiais',
+            suggestedCharge: 'Total faturado sugerido',
+            vat: 'IVA (22%)',
+            actualCharge: 'Total faturado real',
+            profit: 'Lucro liquido'
+        },
+        updateCharge: 'Atualizar cobranca',
+        saveCharge: 'Guardar cobranca',
+        editHint: 'Ao atualizar uma cobranca existente, o stock antigo sera reposto e as novas quantidades serao novamente descontadas.',
+        saveHint: 'A area de calculos sera atualizada automaticamente depois de guardar {{count}} cobranca(s).',
+        cart: {
+            costCharge: '{{cost}} custo | {{charge}} referencia',
+            qty: 'Qtd',
+            materialLines: '{{count}} linha(s) de material',
+            units: '{{count}} unidade(s)',
+            entries: '{{count}} cobranca(s)'
+        }
+    },
+    states: {
+        loading: 'A carregar Welcome Packs...',
+        permissionDenied: 'O Welcome Packs nao esta disponivel para esta conta. Verifique o nivel de acesso e tente novamente.',
+        unauthenticated: 'Inicie sessao novamente para carregar o Welcome Packs.',
+        unavailable: 'Nao foi possivel carregar o Welcome Packs agora. Tente novamente.',
+        unavailableTitle: 'Welcome Packs indisponivel'
+    },
+    messages: {
+        selectProperty: 'Selecione uma propriedade',
+        selectMaterial: 'Selecione pelo menos um material',
+        chargeUpdated: 'Cobranca de welcome pack atualizada com sucesso.',
+        chargeSaved: 'Cobranca de welcome pack guardada com sucesso.',
+        saveFailed: 'Nao foi possivel guardar o pack. Tente novamente.',
+        confirmDeleteCharge: 'Tem a certeza de que pretende eliminar esta cobranca? O stock sera reposto.',
+        fillAllMaterialFields: 'Preencha todos os campos corretamente.',
+        confirmDeleteMaterial: 'Tem a certeza de que pretende eliminar este material?',
+        noDataToExport: 'Nao existem dados para exportar'
+    },
+    export: {
+        date: 'Data',
+        property: 'Propriedade',
+        materials: 'Materiais',
+        units: 'Unidades',
+        materialCost: 'Custo dos Materiais',
+        suggestedChargeNet: 'Cobranca Liquida Sugerida',
+        suggestedCharge: 'Cobranca Sugerida',
+        vat: 'IVA',
+        chargedAmount: 'Valor Cobrado',
+        profit: 'Lucro'
+    }
+};
+
 export class WelcomePackManager {
     constructor(dataManager) {
         this.dataManager = dataManager;
@@ -19,7 +460,9 @@ export class WelcomePackManager {
             endDate: new Date().toISOString().split('T')[0]
         };
         this.editingLogId = null;
-        this.chargeAmountManuallyEdited = false;
+        this.logEntries = [];
+        this.activeLogEntryId = null;
+        this.logEntrySequence = 0;
         this.cache = {
             logs: null,
             items: null,
@@ -32,7 +475,19 @@ export class WelcomePackManager {
         }
     }
 
+    ensureWelcomePackTranslations() {
+        if (!i18n.translations?.pt) {
+            return;
+        }
+
+        i18n.translations.pt.welcomePack = {
+            ...(i18n.translations.pt.welcomePack || {}),
+            ...PT_WELCOME_PACK_TRANSLATIONS
+        };
+    }
+
     tr(key, replacements = {}) {
+        this.ensureWelcomePackTranslations();
         return t(`welcomePack.${key}`, replacements);
     }
 
@@ -175,6 +630,253 @@ export class WelcomePackManager {
         return formatWelcomePackCurrency(value);
     }
 
+    createLogEntry(overrides = {}) {
+        const entryId = overrides.id || `wp-log-entry-${Date.now()}-${++this.logEntrySequence}`;
+        return {
+            id: entryId,
+            property: String(overrides.property || overrides.propertyName || '').trim(),
+            date: String(overrides.date || new Date().toISOString().split('T')[0]).trim(),
+            chargedAmount: overrides.chargedAmount === null || overrides.chargedAmount === undefined || overrides.chargedAmount === ''
+                ? ''
+                : String(overrides.chargedAmount),
+            manualCharge: Boolean(overrides.manualCharge)
+        };
+    }
+
+    ensureLogEntries({ isEditing = false, editingLog = null } = {}) {
+        if (isEditing && editingLog) {
+            this.logEntries = [this.createLogEntry({
+                id: 'wp-log-entry-editing',
+                property: editingLog.propertyName || editingLog.property,
+                date: editingLog.date,
+                chargedAmount: editingLog.chargedAmountNet.toFixed(2),
+                manualCharge: true
+            })];
+            this.activeLogEntryId = this.logEntries[0].id;
+            return;
+        }
+
+        if (!Array.isArray(this.logEntries) || this.logEntries.length === 0) {
+            this.logEntries = [this.createLogEntry()];
+        }
+
+        if (!this.logEntries.some((entry) => entry.id === this.activeLogEntryId)) {
+            this.activeLogEntryId = this.logEntries[0]?.id || null;
+        }
+    }
+
+    getActiveLogEntry() {
+        return this.logEntries.find((entry) => entry.id === this.activeLogEntryId) || this.logEntries[0] || null;
+    }
+
+    getLogEntrySummary(entry) {
+        const manualChargeValue = entry?.manualCharge && entry?.chargedAmount !== ''
+            ? Number.parseFloat(entry.chargedAmount)
+            : null;
+        return summarizeWelcomePackCart(this.cart, manualChargeValue);
+    }
+
+    setActiveLogEntry(entryId) {
+        if (!this.logEntries.some((entry) => entry.id === entryId)) {
+            return;
+        }
+
+        this.activeLogEntryId = entryId;
+        this.refreshLogEntryCards();
+        this.updateCartUI();
+    }
+
+    addLogEntry(overrides = {}) {
+        const nextEntry = this.createLogEntry(overrides);
+        this.logEntries.push(nextEntry);
+        this.activeLogEntryId = nextEntry.id;
+        this.renderLogEntryRows();
+        this.updateCartUI();
+    }
+
+    removeLogEntry(entryId) {
+        if (this.logEntries.length <= 1) {
+            return;
+        }
+
+        this.logEntries = this.logEntries.filter((entry) => entry.id !== entryId);
+        if (this.activeLogEntryId === entryId) {
+            this.activeLogEntryId = this.logEntries[0]?.id || null;
+        }
+
+        this.renderLogEntryRows();
+        this.updateCartUI();
+    }
+
+    updateLogEntryField(entryId, field, value) {
+        const entry = this.logEntries.find((candidate) => candidate.id === entryId);
+        if (!entry) {
+            return;
+        }
+
+        if (field === 'chargedAmount') {
+            entry.chargedAmount = value;
+            entry.manualCharge = value !== '';
+        } else if (field === 'property') {
+            entry.property = String(value || '').trimStart();
+        } else {
+            entry[field] = value;
+        }
+
+        this.activeLogEntryId = entryId;
+        this.refreshLogEntryCards();
+        this.updateCartUI();
+    }
+
+    useSuggestedAmountForEntry(entryId) {
+        const entry = this.logEntries.find((candidate) => candidate.id === entryId);
+        if (!entry) {
+            return;
+        }
+
+        entry.manualCharge = false;
+        entry.chargedAmount = '';
+        this.activeLogEntryId = entryId;
+        this.refreshLogEntryCards();
+        this.updateCartUI();
+    }
+
+    renderLogEntryRows() {
+        const container = document.getElementById('wp-log-entries');
+        if (!container) {
+            return;
+        }
+
+        const isEditing = Boolean(this.editingLogId);
+        container.innerHTML = `
+            <div class="space-y-3">
+                ${this.logEntries.map((entry, index) => {
+                    const entrySummary = this.getLogEntrySummary(entry);
+                    const chargeValue = entry.manualCharge
+                        ? entry.chargedAmount
+                        : entrySummary.totals.suggestedChargeNet.toFixed(2);
+                    const rowClasses = this.activeLogEntryId === entry.id
+                        ? 'border-sky-300 bg-sky-50/60 shadow-sm'
+                        : 'border-slate-200 bg-white';
+                    return `
+                        <article class="rounded-2xl border p-4 transition ${rowClasses}" data-wp-log-entry-id="${entry.id}">
+                            <div class="mb-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">${this.tr('log.entryLabel', { count: index + 1 })}</div>
+                                    <div class="text-sm text-slate-600" data-wp-entry-summary="${entry.id}">${this.tr('log.entrySummary', {
+                                        cost: this.formatCurrency(entrySummary.totals.totalCost),
+                                        profit: this.formatCurrency(entrySummary.totals.profit)
+                                    })}</div>
+                                </div>
+                                ${!isEditing ? `
+                                <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" data-wp-entry-remove="${entry.id}" title="${this.tr('log.removeEntry')}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                ` : ''}
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(160px,0.75fr)_minmax(180px,0.85fr)_auto]">
+                                <label class="welcome-pack-field">
+                                    <span>${this.tr('log.fields.property')}</span>
+                                    <input type="text" data-wp-entry-property="${entry.id}" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${entry.property}">
+                                </label>
+                                <label class="welcome-pack-field">
+                                    <span>${this.tr('log.fields.date')}</span>
+                                    <input type="date" data-wp-entry-date="${entry.id}" value="${entry.date}">
+                                </label>
+                                <label class="welcome-pack-field">
+                                    <span>${this.tr('log.fields.chargedAmount')}</span>
+                                    <input type="number" data-wp-entry-charge="${entry.id}" step="0.01" min="0" value="${chargeValue}">
+                                </label>
+                                <button type="button" class="welcome-pack-secondary-button self-end" data-wp-entry-suggested="${entry.id}">
+                                    <i class="fas fa-wand-magic-sparkles"></i>
+                                    <span>${this.tr('log.useSuggestedAmount')}</span>
+                                </button>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+                ${!isEditing ? `
+                <button type="button" id="wp-add-log-entry-btn" class="welcome-pack-secondary-button">
+                    <i class="fas fa-plus"></i>
+                    <span>${this.tr('log.addEntry')}</span>
+                </button>
+                ` : ''}
+            </div>
+        `;
+
+        container.querySelectorAll('[data-wp-log-entry-id]').forEach((card) => {
+            card.addEventListener('click', (event) => {
+                if (event.target.closest('input, button')) {
+                    return;
+                }
+                this.setActiveLogEntry(card.dataset.wpLogEntryId);
+            });
+        });
+
+        container.querySelectorAll('[data-wp-entry-property]').forEach((input) => {
+            input.addEventListener('focus', () => this.setActiveLogEntry(input.dataset.wpEntryProperty));
+            input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryProperty, 'property', input.value));
+        });
+
+        container.querySelectorAll('[data-wp-entry-date]').forEach((input) => {
+            input.addEventListener('focus', () => this.setActiveLogEntry(input.dataset.wpEntryDate));
+            input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryDate, 'date', input.value));
+        });
+
+        container.querySelectorAll('[data-wp-entry-charge]').forEach((input) => {
+            input.addEventListener('focus', () => this.setActiveLogEntry(input.dataset.wpEntryCharge));
+            input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryCharge, 'chargedAmount', input.value));
+        });
+
+        container.querySelectorAll('[data-wp-entry-suggested]').forEach((button) => {
+            button.addEventListener('click', () => this.useSuggestedAmountForEntry(button.dataset.wpEntrySuggested));
+        });
+
+        container.querySelectorAll('[data-wp-entry-remove]').forEach((button) => {
+            button.addEventListener('click', () => this.removeLogEntry(button.dataset.wpEntryRemove));
+        });
+
+        document.getElementById('wp-add-log-entry-btn')?.addEventListener('click', () => this.addLogEntry());
+        this.refreshLogEntryCards();
+    }
+
+    refreshLogEntryCards() {
+        this.logEntries.forEach((entry) => {
+            const card = document.querySelector(`[data-wp-log-entry-id="${entry.id}"]`);
+            if (!card) {
+                return;
+            }
+
+            const isActive = this.activeLogEntryId === entry.id;
+            card.classList.toggle('border-sky-300', isActive);
+            card.classList.toggle('bg-sky-50/60', isActive);
+            card.classList.toggle('shadow-sm', isActive);
+            card.classList.toggle('border-slate-200', !isActive);
+            card.classList.toggle('bg-white', !isActive);
+
+            const summaryNode = card.querySelector(`[data-wp-entry-summary="${entry.id}"]`);
+            if (summaryNode) {
+                const summary = this.getLogEntrySummary(entry);
+                summaryNode.textContent = this.tr('log.entrySummary', {
+                    cost: this.formatCurrency(summary.totals.totalCost),
+                    profit: this.formatCurrency(summary.totals.profit)
+                });
+            }
+
+            const chargeInput = card.querySelector(`[data-wp-entry-charge="${entry.id}"]`);
+            if (chargeInput && !entry.manualCharge) {
+                chargeInput.value = this.getLogEntrySummary(entry).totals.suggestedChargeNet.toFixed(2);
+            }
+
+            const removeButton = card.querySelector(`[data-wp-entry-remove="${entry.id}"]`);
+            if (removeButton) {
+                removeButton.disabled = this.logEntries.length <= 1;
+                removeButton.classList.toggle('opacity-50', this.logEntries.length <= 1);
+                removeButton.classList.toggle('cursor-not-allowed', this.logEntries.length <= 1);
+            }
+        });
+    }
+
     renderWorkspaceMetric(label, value) {
         return `
             <article class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 min-h-[72px]">
@@ -183,6 +885,85 @@ export class WelcomePackManager {
                     <div class="text-right text-lg font-semibold leading-none text-slate-900 tabular-nums whitespace-nowrap">${value}</div>
                 </div>
             </article>
+        `;
+    }
+
+    renderInsightCard(title, value, caption) {
+        return `
+            <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${title}</div>
+                <div class="mt-2 text-lg font-semibold text-slate-900">${value}</div>
+                <div class="mt-1 text-sm leading-5 text-slate-600">${caption}</div>
+            </article>
+        `;
+    }
+
+    renderTrendRows(entries = []) {
+        if (!entries.length) {
+            return `
+                <div class="welcome-pack-empty-state">
+                    <h4>${this.tr('dashboard.noChargesTitle')}</h4>
+                    <p>${this.tr('dashboard.noChargesDescription')}</p>
+                </div>
+            `;
+        }
+
+        const maxGross = Math.max(...entries.map((entry) => entry.grossRevenue), 1);
+        return `
+            <div class="space-y-3">
+                ${entries.map((entry) => {
+                    const width = Math.max(10, Math.round((entry.grossRevenue / maxGross) * 100));
+                    return `
+                        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <div>
+                                    <strong class="text-slate-900">${this.formatDisplayDate(entry.date)}</strong>
+                                    <div class="text-sm text-slate-500">${this.tr('dashboard.trends.packsCount', { count: entry.count })}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-semibold text-slate-900">${this.formatCurrency(entry.grossRevenue)}</div>
+                                    <div class="text-sm text-slate-500">${this.tr('dashboard.trends.netProfit', { amount: this.formatCurrency(entry.profit) })}</div>
+                                </div>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-200">
+                                <div class="h-2 rounded-full bg-sky-500" style="width: ${width}%"></div>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    renderTopMaterials(entries = []) {
+        if (!entries.length) {
+            return `
+                <div class="welcome-pack-empty-state">
+                    <h4>${this.tr('dashboard.materials.emptyTitle')}</h4>
+                    <p>${this.tr('dashboard.materials.emptyDescription')}</p>
+                </div>
+            `;
+        }
+
+        const maxUnits = Math.max(...entries.map((entry) => entry.units), 1);
+        return `
+            <div class="space-y-3">
+                ${entries.map((entry) => {
+                    const width = Math.max(12, Math.round((entry.units / maxUnits) * 100));
+                    return `
+                        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <strong class="text-slate-900">${entry.label}</strong>
+                                <span class="text-sm font-medium text-slate-600">${this.tr('dashboard.materials.unitsUsed', { count: entry.units })}</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-slate-200">
+                                <div class="h-2 rounded-full bg-emerald-500" style="width: ${width}%"></div>
+                            </div>
+                            <div class="mt-2 text-sm text-slate-500">${this.tr('dashboard.materials.costUsed', { amount: this.formatCurrency(entry.totalCost) })}</div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
         `;
     }
 
@@ -239,7 +1020,7 @@ export class WelcomePackManager {
                         ${this.renderWorkspaceMetric(this.tr('inventory.metrics.tracked'), String(inventorySummary.totals.materialCount))}
                         ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.loggedCharges'), String(logSummary.totals.count))}
                         ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.amountCharged'), this.formatCurrency(logSummary.totals.revenue))}
-                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.profit'), this.formatCurrency(logSummary.totals.profit))}
+                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.netProfit'), this.formatCurrency(logSummary.totals.profit))}
                     </div>
                 </section>
 
@@ -349,6 +1130,9 @@ export class WelcomePackManager {
         const inventorySummary = summarizeWelcomePackInventory(items);
         const filteredLogs = logSummary.logs;
         const lowStockItems = inventorySummary.lowStockItems;
+        const topProperty = logSummary.byProperty[0] || null;
+        const strongestMarginProperty = [...logSummary.byProperty].sort((left, right) => right.margin - left.margin)[0] || null;
+        const bestDay = [...logSummary.byDate].sort((left, right) => right.grossRevenue - left.grossRevenue)[0] || null;
 
         container.innerHTML = `
             ${lowStockItems.length > 0 ? `
@@ -399,7 +1183,7 @@ export class WelcomePackManager {
                     </div>
                 </div>
 
-                <div class="welcome-pack-metric-grid">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <article class="welcome-pack-metric">
                         <span>${this.tr('dashboard.metrics.loggedCharges')}</span>
                         <strong>${logSummary.totals.count}</strong>
@@ -411,12 +1195,22 @@ export class WelcomePackManager {
                         <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageCost) })}</small>
                     </article>
                     <article class="welcome-pack-metric">
-                        <span>${this.tr('dashboard.metrics.amountCharged')}</span>
-                        <strong>${this.formatCurrency(logSummary.totals.revenue)}</strong>
-                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageCharge) })}</small>
+                        <span>${this.tr('dashboard.metrics.netCharged')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.netRevenue)}</strong>
+                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageNetCharge) })}</small>
                     </article>
                     <article class="welcome-pack-metric">
-                        <span>${this.tr('dashboard.metrics.profit')}</span>
+                        <span>${this.tr('dashboard.metrics.vatCollected')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.vatCollected)}</strong>
+                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageVat) })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.amountCharged')}</span>
+                        <strong>${this.formatCurrency(logSummary.totals.grossRevenue)}</strong>
+                        <small>${this.tr('dashboard.metrics.averagePerPack', { amount: this.formatCurrency(logSummary.totals.averageGrossCharge) })}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('dashboard.metrics.netProfit')}</span>
                         <strong>${this.formatCurrency(logSummary.totals.profit)}</strong>
                         <small>${this.tr('dashboard.metrics.marginInPeriod', { margin: logSummary.totals.margin.toFixed(1) })}</small>
                     </article>
@@ -427,6 +1221,39 @@ export class WelcomePackManager {
                     <span class="welcome-pack-chip">${this.tr('dashboard.chips.materialsInStock', { count: inventorySummary.totals.stockUnits })}</span>
                     <span class="welcome-pack-chip">${this.tr('dashboard.chips.lowStockMaterials', { count: inventorySummary.totals.lowStockCount })}</span>
                 </div>
+            </section>
+
+            <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                ${this.renderInsightCard(
+                    this.tr('dashboard.insights.topProperty'),
+                    topProperty ? topProperty.label : this.tr('dashboard.insights.noData'),
+                    topProperty
+                        ? this.tr('dashboard.insights.topPropertyBody', {
+                            amount: this.formatCurrency(topProperty.grossRevenue),
+                            profit: this.formatCurrency(topProperty.profit)
+                        })
+                        : this.tr('dashboard.noChargesDescription')
+                )}
+                ${this.renderInsightCard(
+                    this.tr('dashboard.insights.bestMargin'),
+                    strongestMarginProperty ? strongestMarginProperty.label : this.tr('dashboard.insights.noData'),
+                    strongestMarginProperty
+                        ? this.tr('dashboard.insights.bestMarginBody', {
+                            margin: strongestMarginProperty.margin.toFixed(1),
+                            packs: strongestMarginProperty.count
+                        })
+                        : this.tr('dashboard.noChargesDescription')
+                )}
+                ${this.renderInsightCard(
+                    this.tr('dashboard.insights.bestDay'),
+                    bestDay ? this.formatDisplayDate(bestDay.date) : this.tr('dashboard.insights.noData'),
+                    bestDay
+                        ? this.tr('dashboard.insights.bestDayBody', {
+                            amount: this.formatCurrency(bestDay.grossRevenue),
+                            packs: bestDay.count
+                        })
+                        : this.tr('dashboard.noChargesDescription')
+                )}
             </section>
 
             <div class="welcome-pack-grid">
@@ -442,6 +1269,8 @@ export class WelcomePackManager {
                                 <tr>
                                     <th>${this.tr('dashboard.table.property')}</th>
                                     <th>${this.tr('dashboard.table.packs')}</th>
+                                    <th>${this.tr('dashboard.table.netCharged')}</th>
+                                    <th>${this.tr('dashboard.table.vat')}</th>
                                     <th>${this.tr('dashboard.table.cost')}</th>
                                     <th>${this.tr('dashboard.table.charged')}</th>
                                     <th>${this.tr('dashboard.table.profit')}</th>
@@ -457,8 +1286,10 @@ export class WelcomePackManager {
                                             <span>${this.tr('dashboard.table.units', { count: property.units })}</span>
                                         </td>
                                         <td>${property.count}</td>
+                                        <td>${this.formatCurrency(property.netRevenue)}</td>
+                                        <td>${this.formatCurrency(property.vatCollected)}</td>
                                         <td>${this.formatCurrency(property.cost)}</td>
-                                        <td>${this.formatCurrency(property.revenue)}</td>
+                                        <td>${this.formatCurrency(property.grossRevenue)}</td>
                                         <td>${this.formatCurrency(property.profit)}</td>
                                         <td>${property.margin.toFixed(1)}%</td>
                                         <td>${this.formatDisplayDate(property.lastDate)}</td>
@@ -481,6 +1312,24 @@ export class WelcomePackManager {
 
                 <section class="welcome-pack-panel">
                     <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('dashboard.trends.title')}</h3>
+                        <p>${this.tr('dashboard.trends.description')}</p>
+                    </div>
+                    ${this.renderTrendRows(logSummary.byDate.slice(-7).reverse())}
+                </section>
+            </div>
+
+            <div class="welcome-pack-grid">
+                <section class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('dashboard.materials.title')}</h3>
+                        <p>${this.tr('dashboard.materials.description')}</p>
+                    </div>
+                    ${this.renderTopMaterials(logSummary.topMaterials)}
+                </section>
+
+                <section class="welcome-pack-panel">
+                    <div class="welcome-pack-panel-heading">
                         <h3>${this.tr('dashboard.recentChargesTitle')}</h3>
                         <p>${this.tr('dashboard.recentChargesDescription')}</p>
                     </div>
@@ -492,10 +1341,11 @@ export class WelcomePackManager {
                                     <span>${this.formatDisplayDate(log.date)}</span>
                                 </div>
                                 <div>
-                                    <strong>${this.formatCurrency(log.chargedAmount)}</strong>
+                                    <strong>${this.formatCurrency(log.chargedAmountGross)}</strong>
                                     <span>${this.tr('dashboard.recentCostProfit', {
                                         cost: this.formatCurrency(log.totalCost),
-                                        profit: this.formatCurrency(log.profit)
+                                        profit: this.formatCurrency(log.profit),
+                                        vat: this.formatCurrency(log.vatAmount)
                                     })}</span>
                                 </div>
                                 <div class="welcome-pack-activity-actions">
@@ -1874,15 +2724,9 @@ export class WelcomePackManager {
      * Quick action to log a pack for a reservation
      */
     logPackForReservation(propertyName) {
+        this.logEntries = [this.createLogEntry({ property: propertyName })];
+        this.activeLogEntryId = this.logEntries[0].id;
         this.setCurrentView('log', { resetEdit: true });
-
-        setTimeout(() => {
-            const propertyInput = document.getElementById('wp-log-property');
-            if (propertyInput) {
-                propertyInput.value = propertyName;
-                propertyInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }, 100);
     }
 
 
@@ -2001,7 +2845,9 @@ export class WelcomePackManager {
             this.tr('export.materials'),
             this.tr('export.units'),
             this.tr('export.materialCost'),
+            this.tr('export.suggestedChargeNet'),
             this.tr('export.suggestedCharge'),
+            this.tr('export.vat'),
             this.tr('export.chargedAmount'),
             this.tr('export.profit')
         ];
@@ -2015,7 +2861,9 @@ export class WelcomePackManager {
                     `"${itemNames}"`,
                     log.totalUnits,
                     log.totalCost.toFixed(2),
-                    log.suggestedSell.toFixed(2),
+                    log.suggestedSellNet.toFixed(2),
+                    log.suggestedSellGross.toFixed(2),
+                    log.vatAmount.toFixed(2),
                     log.chargedAmount.toFixed(2),
                     log.profit.toFixed(2)
                 ].join(',');
@@ -2094,7 +2942,6 @@ export class WelcomePackManager {
                                 <th>${this.tr('inventory.table.stock')}</th>
                                 <th>${this.tr('inventory.table.costPerUnit')}</th>
                                 <th>${this.tr('inventory.table.chargePerUnit')}</th>
-                                <th>${this.tr('inventory.table.marginPerUnit')}</th>
                                 <th>${this.tr('inventory.table.vat')}</th>
                                 <th>${this.tr('inventory.table.actions')}</th>
                             </tr>
@@ -2102,7 +2949,6 @@ export class WelcomePackManager {
                         <tbody id="wp-inventory-list">
                             ${inventorySummary.items.map((item) => {
             const isLowStock = (item.quantity || 0) < 5;
-            const margin = item.sellPrice - item.costPrice;
 
             return `
                                 <tr>
@@ -2113,7 +2959,6 @@ export class WelcomePackManager {
                                     <td>${item.quantity || 0}</td>
                                     <td>${this.formatCurrency(item.costPrice)}</td>
                                     <td>${this.formatCurrency(item.sellPrice)}</td>
-                                    <td>${this.formatCurrency(margin)}</td>
                                     <td>${item.sellVatRate || 22}%</td>
                                     <td>
                                         <div class="welcome-pack-action-row">
@@ -2358,6 +3203,7 @@ export class WelcomePackManager {
 
         const isEditing = !!this.editingLogId;
         const editingLog = isEditing ? normalizeWelcomePackLog(await this._getLogById(this.editingLogId)) : null;
+        this.ensureLogEntries({ isEditing, editingLog });
         const propertyOptions = Array.from(
             new Map(
                 properties
@@ -2379,6 +3225,7 @@ export class WelcomePackManager {
             }
             return left.label.localeCompare(right.label);
         });
+        this.propertyOptions = propertyOptions;
 
         container.innerHTML = `
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)] gap-6">
@@ -2397,19 +3244,15 @@ export class WelcomePackManager {
                         ` : ''}
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <label class="welcome-pack-field">
-                            <span>${this.tr('log.fields.property')}</span>
-                            <input type="text" id="wp-log-property" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${editingLog ? (editingLog.propertyName || editingLog.property) : ''}">
-                            <datalist id="wp-properties-list">
-                                ${propertyOptions.map((property) => `<option value="${property.label}"></option>`).join('')}
-                            </datalist>
-                        </label>
-                        <label class="welcome-pack-field">
-                            <span>${this.tr('log.fields.date')}</span>
-                            <input type="date" id="wp-log-date" value="${editingLog ? editingLog.date : new Date().toISOString().split('T')[0]}">
-                        </label>
+                    <div class="welcome-pack-panel-heading">
+                        <h3>${this.tr('log.entriesTitle')}</h3>
+                        <p>${this.tr('log.entriesDescription')}</p>
                     </div>
+
+                    <datalist id="wp-properties-list">
+                        ${propertyOptions.map((property) => `<option value="${property.label}"></option>`).join('')}
+                    </datalist>
+                    <div id="wp-log-entries" class="mb-6"></div>
 
                     ${!isEditing ? `
                     <div class="welcome-pack-support-card">
@@ -2487,16 +3330,6 @@ export class WelcomePackManager {
 
                     <div id="wp-cart-meta" class="welcome-pack-chip-row"></div>
 
-                    <label class="welcome-pack-field">
-                        <span>${this.tr('log.fields.chargedAmount')}</span>
-                        <input type="number" id="wp-log-charged-amount" step="0.01" min="0" value="${editingLog ? editingLog.chargedAmount.toFixed(2) : ''}">
-                    </label>
-
-                    <button type="button" id="wp-use-suggested-charge-btn" class="welcome-pack-secondary-button">
-                        <i class="fas fa-wand-magic-sparkles"></i>
-                        <span>${this.tr('log.useSuggestedAmount')}</span>
-                    </button>
-
                     <div class="welcome-pack-summary-stack">
                         <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.materialCost')}</span>
@@ -2505,6 +3338,10 @@ export class WelcomePackManager {
                         <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.suggestedCharge')}</span>
                             <strong id="wp-total-suggested">€0.00</strong>
+                        </div>
+                        <div class="welcome-pack-summary-row">
+                            <span>${this.tr('log.summary.vat')}</span>
+                            <strong id="wp-total-vat">€0.00</strong>
                         </div>
                         <div class="welcome-pack-summary-row">
                             <span>${this.tr('log.summary.actualCharge')}</span>
@@ -2524,7 +3361,7 @@ export class WelcomePackManager {
                     ${isEditing ? `
                     <p class="text-xs text-amber-600">${this.tr('log.editHint')}</p>
                     ` : `
-                    <p class="text-xs text-gray-500">${this.tr('log.saveHint')}</p>
+                    <p class="text-xs text-gray-500" id="wp-log-save-hint">${this.tr('log.saveHint', { count: this.logEntries.length || 1 })}</p>
                     `}
                 </aside>
             </div>
@@ -2536,25 +3373,15 @@ export class WelcomePackManager {
         if (isEditing && editingLog) {
             this.cart = editingLog.items.map((item) => normalizeWelcomePackItem(item));
             this.editingOriginalItems = editingLog.items.map((item) => normalizeWelcomePackItem(item));
-            this.chargeAmountManuallyEdited = true;
         } else {
             this.cart = [];
             this.editingOriginalItems = null;
-            this.chargeAmountManuallyEdited = false;
         }
 
+        this.renderLogEntryRows();
         this.updateCartUI();
         this.refreshPropertyChargeHistory();
 
-        document.getElementById('wp-log-property')?.addEventListener('input', () => this.refreshPropertyChargeHistory());
-        document.getElementById('wp-log-charged-amount')?.addEventListener('input', () => {
-            this.chargeAmountManuallyEdited = true;
-            this.updateCartUI();
-        });
-        document.getElementById('wp-use-suggested-charge-btn')?.addEventListener('click', () => {
-            this.chargeAmountManuallyEdited = false;
-            this.updateCartUI();
-        });
         document.getElementById('wp-open-inventory-from-log-btn')?.addEventListener('click', () => {
             this.setCurrentView('inventory');
         });
@@ -2583,7 +3410,10 @@ export class WelcomePackManager {
             };
         });
 
-        document.getElementById('wp-save-log-btn').onclick = () => this.saveLog();
+        const saveButton = document.getElementById('wp-save-log-btn');
+        if (saveButton) {
+            saveButton.onclick = () => this.saveLog();
+        }
     }
 
     addItemToCart(item) {
@@ -2642,7 +3472,7 @@ export class WelcomePackManager {
 
     refreshPropertyChargeHistory() {
         const historyContainer = document.getElementById('wp-property-charge-history');
-        const property = String(document.getElementById('wp-log-property')?.value || '').trim();
+        const property = String(this.getActiveLogEntry()?.property || '').trim();
         if (!historyContainer) {
             return;
         }
@@ -2687,12 +3517,7 @@ export class WelcomePackManager {
 
     updateCartUI() {
         const list = document.getElementById('wp-cart-list');
-        const chargedAmountInput = document.getElementById('wp-log-charged-amount');
-        const rawChargeValue = chargedAmountInput?.value || '';
-        const manualChargeValue = this.chargeAmountManuallyEdited && rawChargeValue !== ''
-            ? Number.parseFloat(rawChargeValue)
-            : null;
-        const summary = summarizeWelcomePackCart(this.cart, manualChargeValue);
+        const summary = this.getLogEntrySummary(this.getActiveLogEntry());
 
         if (list) {
             if (summary.items.length === 0) {
@@ -2721,10 +3546,6 @@ export class WelcomePackManager {
             }
         }
 
-        if (chargedAmountInput && !this.chargeAmountManuallyEdited) {
-            chargedAmountInput.value = summary.totals.suggestedCharge.toFixed(2);
-        }
-
         const cartMeta = document.getElementById('wp-cart-meta');
         if (cartMeta) {
             cartMeta.innerHTML = `
@@ -2733,18 +3554,32 @@ export class WelcomePackManager {
             `;
         }
 
-        document.getElementById('wp-total-cost').textContent = this.formatCurrency(summary.totals.totalCost);
-        document.getElementById('wp-total-suggested').textContent = this.formatCurrency(summary.totals.suggestedCharge);
-        document.getElementById('wp-total-sell').textContent = this.formatCurrency(summary.totals.chargedAmount);
-        document.getElementById('wp-total-profit').textContent = this.formatCurrency(summary.totals.profit);
+        const totalCost = document.getElementById('wp-total-cost');
+        const totalSuggested = document.getElementById('wp-total-suggested');
+        const totalVat = document.getElementById('wp-total-vat');
+        const totalSell = document.getElementById('wp-total-sell');
+        const totalProfit = document.getElementById('wp-total-profit');
+        if (totalCost) totalCost.textContent = this.formatCurrency(summary.totals.totalCost);
+        if (totalSuggested) totalSuggested.textContent = this.formatCurrency(summary.totals.suggestedChargeGross);
+        if (totalVat) totalVat.textContent = this.formatCurrency(summary.totals.vatAmount);
+        if (totalSell) totalSell.textContent = this.formatCurrency(summary.totals.chargedAmountGross);
+        if (totalProfit) totalProfit.textContent = this.formatCurrency(summary.totals.profit);
+        const saveHint = document.getElementById('wp-log-save-hint');
+        if (saveHint) {
+            saveHint.textContent = this.tr('log.saveHint', { count: this.logEntries.length || 1 });
+        }
+        this.refreshLogEntryCards();
         this.refreshPropertyChargeHistory();
     }
 
     async saveLog() {
-        const property = String(document.getElementById('wp-log-property').value || '').trim();
-        const date = document.getElementById('wp-log-date').value;
+        const preparedEntries = this.logEntries.map((entry) => ({
+            ...entry,
+            property: String(entry.property || '').trim(),
+            date: String(entry.date || '').trim() || new Date().toISOString().split('T')[0]
+        }));
 
-        if (!property) {
+        if (preparedEntries.some((entry) => !entry.property)) {
             alert(this.tr('messages.selectProperty'));
             return;
         }
@@ -2753,36 +3588,65 @@ export class WelcomePackManager {
             return;
         }
 
-        const rawChargeValue = document.getElementById('wp-log-charged-amount')?.value || '';
-        const manualChargeValue = rawChargeValue === '' ? null : Number.parseFloat(rawChargeValue);
-        const summary = summarizeWelcomePackCart(this.cart, manualChargeValue);
-
-        const logData = {
-            property,
-            date,
-            items: summary.items,
-            totalCost: summary.totals.totalCost,
-            suggestedSell: summary.totals.suggestedCharge,
-            chargedAmount: summary.totals.chargedAmount,
-            totalSell: summary.totals.chargedAmount,
-            profit: summary.totals.profit,
-            createdAt: this.editingLogCreatedAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
         try {
             if (this.editingLogId) {
+                const editingEntry = preparedEntries[0];
+                const summary = this.getLogEntrySummary(editingEntry);
+                const logData = {
+                    property: editingEntry.property,
+                    date: editingEntry.date,
+                    items: summary.items,
+                    totalCost: summary.totals.totalCost,
+                    suggestedSell: summary.totals.suggestedChargeNet,
+                    suggestedSellGross: summary.totals.suggestedChargeGross,
+                    chargedAmount: summary.totals.chargedAmountGross,
+                    chargedAmountNet: summary.totals.chargedAmountNet,
+                    chargedAmountGross: summary.totals.chargedAmountGross,
+                    vatAmount: summary.totals.vatAmount,
+                    totalSell: summary.totals.chargedAmountGross,
+                    profit: summary.totals.profit,
+                    createdAt: this.editingLogCreatedAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
                 await this.dataManager.updateWelcomePackLog(this.editingLogId, this.editingOriginalItems, logData);
                 alert(this.tr('messages.chargeUpdated'));
                 this.editingLogId = null;
                 this.editingOriginalItems = null;
                 this.editingLogCreatedAt = null;
             } else {
-                await this.dataManager.logWelcomePack(logData);
+                const timestamp = new Date().toISOString();
+                const logsToSave = preparedEntries.map((entry) => {
+                    const summary = this.getLogEntrySummary(entry);
+                    return {
+                        property: entry.property,
+                        date: entry.date,
+                        items: summary.items,
+                        totalCost: summary.totals.totalCost,
+                        suggestedSell: summary.totals.suggestedChargeNet,
+                        suggestedSellGross: summary.totals.suggestedChargeGross,
+                        chargedAmount: summary.totals.chargedAmountGross,
+                        chargedAmountNet: summary.totals.chargedAmountNet,
+                        chargedAmountGross: summary.totals.chargedAmountGross,
+                        vatAmount: summary.totals.vatAmount,
+                        totalSell: summary.totals.chargedAmountGross,
+                        profit: summary.totals.profit,
+                        createdAt: timestamp,
+                        updatedAt: timestamp
+                    };
+                });
+
+                if (logsToSave.length > 1 && typeof this.dataManager.logWelcomePackBatch === 'function') {
+                    await this.dataManager.logWelcomePackBatch(logsToSave);
+                } else {
+                    for (const logData of logsToSave) {
+                        await this.dataManager.logWelcomePack(logData);
+                    }
+                }
                 alert(this.tr('messages.chargeSaved'));
+                this.logEntries = [this.createLogEntry()];
+                this.activeLogEntryId = this.logEntries[0].id;
             }
             this._invalidateCache(['logs', 'items']);
-            this.chargeAmountManuallyEdited = false;
             this.currentView = 'dashboard';
             this.render();
         } catch (error) {
@@ -2837,7 +3701,7 @@ export class WelcomePackManager {
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.costLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-new-item-cost" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-new-item-cost" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-new-item-cost-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4">4% (Reduced)</option>
                                     <option value="12">12% (Intermediate)</option>
@@ -2852,7 +3716,7 @@ export class WelcomePackManager {
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.chargeLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-new-item-sell" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-new-item-sell-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4">4% (Reduced)</option>
                                     <option value="12">12% (Intermediate)</option>
@@ -2959,7 +3823,7 @@ export class WelcomePackManager {
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.costLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-edit-item-cost" value="${item.costPrice}" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-edit-item-cost-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4" ${currentCostVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
                                     <option value="12" ${currentCostVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>
@@ -2974,7 +3838,7 @@ export class WelcomePackManager {
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.chargeLabel')}</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (â‚¬)" step="0.01" min="0" class="w-full p-2 border rounded">
+                                <input type="number" id="wp-edit-item-sell" value="${item.sellPrice}" placeholder="Net Price (\u20AC)" step="0.01" min="0" class="w-full p-2 border rounded">
                                 <select id="wp-edit-item-sell-vat" class="w-full p-2 border rounded bg-white">
                                     <option value="4" ${currentSellVat === 4 ? 'selected' : ''}>4% (Reduced)</option>
                                     <option value="12" ${currentSellVat === 12 ? 'selected' : ''}>12% (Intermediate)</option>

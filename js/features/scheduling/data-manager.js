@@ -1178,6 +1178,36 @@ export class DataManager {
         });
     }
 
+    async logWelcomePackBatch(logs) {
+        const normalizedLogs = Array.isArray(logs) ? logs.filter(Boolean) : [];
+        if (!normalizedLogs.length) {
+            return;
+        }
+
+        await runTransaction(this.db, async (transaction) => {
+            const stockAdjustments = new Map();
+
+            normalizedLogs.forEach((log) => {
+                const newLogRef = doc(collection(this.db, "welcome_pack_logs"));
+                transaction.set(newLogRef, log);
+
+                (Array.isArray(log.items) ? log.items : []).forEach((item) => {
+                    if (!item?.id) {
+                        return;
+                    }
+
+                    const qty = item.quantity || 1;
+                    stockAdjustments.set(item.id, (stockAdjustments.get(item.id) || 0) - qty);
+                });
+            });
+
+            stockAdjustments.forEach((quantityDelta, itemId) => {
+                const itemRef = doc(this.db, "welcome_pack_items", itemId);
+                transaction.update(itemRef, { quantity: increment(quantityDelta) });
+            });
+        });
+    }
+
     async deleteWelcomePackLog(logId, items) {
         await runTransaction(this.db, async (transaction) => {
             const logRef = doc(this.db, "welcome_pack_logs", logId);

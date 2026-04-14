@@ -84,7 +84,7 @@
     },
     "landing": {
         "welcome": "Bem-vindo ao seu centro de operações",
-        "subtitle": "Gerir propriedades, horários, segurança e muito mais — tudo num só lugar.",
+        "subtitle": "Gerir propriedades, horários, segurança e muito mais - tudo num só lugar.",
         "mainApps": "Aplicações Principais",
         "showMoreTools": "Mostrar Mais Ferramentas",
         "hideMoreTools": "Ocultar Ferramentas",
@@ -95,8 +95,8 @@
         "workScheduleDesc": "Planear horários e férias da equipa.",
         "vehicles": "Veículos",
         "vehiclesDesc": "Gerir frota, seguros e inspeções.",
-        "welcomePacks": "Cabazes de Boas-Vindas",
-        "welcomePacksDesc": "Gerir stocks e entregas.",
+        "welcomePacks": "Welcome Pack",
+        "welcomePacksDesc": "Gerir stock e entregas de welcome pack.",
         "staff": "Equipa",
         "staffDesc": "Gerir membros da equipa.",
         "properties": "Propriedades",
@@ -360,6 +360,17 @@
                 "profit": "Lucro",
                 "marginInPeriod": "{{margin}}% de margem neste período"
             },
+            "metrics": {
+                "loggedCharges": "CobranÃ§as registadas",
+                "unitsUsed": "{{count}} unidades de material usadas",
+                "materialCost": "Custo dos materiais",
+                "averagePerPack": "MÃ©dia de {{amount}} por pack",
+                "netCharged": "Valor lÃ­quido cobrado",
+                "vatCollected": "IVA cobrado",
+                "amountCharged": "Valor cobrado",
+                "netProfit": "Lucro lÃ­quido",
+                "marginInPeriod": "{{margin}}% de margem neste perÃ­odo"
+            },
             "chips": {
                 "currentStockValue": "Valor atual do stock: {{amount}}",
                 "materialsInStock": "Materiais em stock: {{count}}",
@@ -367,12 +378,37 @@
             },
             "propertyPerformanceTitle": "Desempenho por propriedade",
             "propertyPerformanceDescription": "Cada linha compara os materiais consumidos com o valor realmente cobrado nessa propriedade.",
+            "insights": {
+                "topProperty": "Melhor propriedade por valor faturado",
+                "topPropertyBody": "{{amount}} faturados | {{profit}} lucro liquido",
+                "bestMargin": "Melhor margem",
+                "bestMarginBody": "{{margin}}% de margem em {{packs}} pack(s)",
+                "bestDay": "Dia com maior faturacao",
+                "bestDayBody": "{{amount}} faturados em {{packs}} pack(s)",
+                "noData": "Ainda sem dados"
+            },
+            "trends": {
+                "title": "Tendencia recente de faturacao",
+                "description": "Veja os ultimos sete dias ativos para perceber quando o total faturado e o lucro foram mais fortes.",
+                "packsCount": "{{count}} pack(s)",
+                "netProfit": "Lucro liquido {{amount}}"
+            },
+            "materials": {
+                "title": "Materiais mais usados",
+                "description": "Estes sao os itens que mais consomem stock no periodo selecionado.",
+                "unitsUsed": "{{count}} unidades usadas",
+                "costUsed": "Custo liquido {{amount}}",
+                "emptyTitle": "Ainda nao ha consumo de materiais",
+                "emptyDescription": "Assim que registar cobrancas, os materiais mais usados aparecem aqui."
+            },
             "table": {
                 "property": "Propriedade",
                 "packs": "Packs",
+                "netCharged": "Liquido",
+                "vat": "IVA",
                 "cost": "Custo",
-                "charged": "Cobrado",
-                "profit": "Lucro",
+                "charged": "Total faturado",
+                "profit": "Lucro liquido",
                 "margin": "Margem",
                 "lastCharge": "Última cobrança",
                 "units": "{{count}} unidades"
@@ -382,7 +418,7 @@
             "openPropertyCharges": "Abrir Cobranças por Propriedade",
             "recentChargesTitle": "Cobranças recentes",
             "recentChargesDescription": "Veja o que foi cobrado em cada propriedade e ajuste registos antigos se algum valor estiver errado.",
-            "recentCostProfit": "Custo {{cost}} | Lucro {{profit}}",
+            "recentCostProfit": "Custo {{cost}} | IVA {{vat}} | Lucro liquido {{profit}}",
             "noChargesTitle": "Ainda não existem cobranças registadas",
             "noChargesDescription": "Depois de adicionar uma cobrança em Cobranças por Propriedade, os últimos registos aparecerão aqui.",
             "unknownProperty": "Propriedade desconhecida"
@@ -408,7 +444,6 @@
                 "stock": "Stock",
                 "costPerUnit": "Custo / unidade",
                 "chargePerUnit": "Cobrança / unidade",
-                "marginPerUnit": "Margem / unidade",
                 "vat": "IVA",
                 "actions": "Ações"
             },
@@ -423,11 +458,17 @@
             "title": "Registar uma cobrança por propriedade",
             "editTitle": "Editar cobrança por propriedade",
             "description": "Selecione a propriedade, escolha os materiais usados no pack e confirme o valor que foi realmente cobrado.",
+            "entriesTitle": "Registos de cobranÃ§a",
+            "entriesDescription": "Adicione uma ou mais linhas com propriedade e data. Todas usam os mesmos materiais selecionados, mas cada linha pode ter a sua propriedade, data e valor cobrado.",
+            "entryLabel": "Registo {{count}}",
+            "entrySummary": "Custo dos materiais {{cost}} e lucro {{profit}}.",
+            "addEntry": "Adicionar outro registo",
+            "removeEntry": "Remover registo",
             "fields": {
                 "property": "Propriedade",
                 "propertyPlaceholder": "Selecionar propriedade...",
                 "date": "Data",
-                "chargedAmount": "Valor cobrado à propriedade"
+                "chargedAmount": "Valor liquido cobrado"
             },
             "loadPreset": "Carregar preset",
             "loadPresetPlaceholder": "Selecione um preset para carregar materiais...",
@@ -452,9 +493,10 @@
             "useSuggestedAmount": "Usar valor sugerido",
             "summary": {
                 "materialCost": "Custo dos materiais",
-                "suggestedCharge": "Cobrança sugerida",
-                "actualCharge": "Cobrança real",
-                "profit": "Lucro"
+                "suggestedCharge": "Total faturado sugerido",
+                "vat": "IVA (22%)",
+                "actualCharge": "Total faturado real",
+                "profit": "Lucro liquido"
             },
             "updateCharge": "Atualizar cobrança",
             "saveCharge": "Guardar cobrança",
@@ -503,7 +545,9 @@
             "materials": "Materiais",
             "units": "Unidades",
             "materialCost": "Custo dos Materiais",
+            "suggestedChargeNet": "Cobranca Liquida Sugerida",
             "suggestedCharge": "Cobrança Sugerida",
+            "vat": "IVA",
             "chargedAmount": "Valor Cobrado",
             "profit": "Lucro"
         }

@@ -1,6 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import { WelcomePackManager } from "../../../../js/features/operations/welcome-pack-manager.js";
-import { resetDom } from "../../../test-utils.js";
+import { resetDom, installGlobalProperty } from "../../../test-utils.js";
 import { i18n } from "../../../../js/core/i18n.js";
 
 function primeWelcomePackTranslations() {
@@ -20,6 +20,10 @@ function primeWelcomePackTranslations() {
       }
     }
   };
+}
+
+async function flushRender() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe("WelcomePackManager", () => {
@@ -100,6 +104,105 @@ describe("WelcomePackManager", () => {
       assert.includes(text, "not available for this account");
     } finally {
       console.error = originalConsoleError;
+    }
+  });
+
+  test("creates multiple property charge rows for new entries", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() {
+        return [];
+      },
+      async getWelcomePackItems() {
+        return [];
+      },
+      async getWelcomePackPresets() {
+        return [];
+      },
+      async getAllProperties() {
+        return [{ id: "p1", name: "Sea Breeze", welcomePackEnabled: true }];
+      }
+    });
+
+    manager.currentView = "log";
+    await manager.render();
+    await flushRender();
+
+    document.getElementById("wp-add-log-entry-btn").click();
+
+    assert.equal(document.querySelectorAll("[data-wp-log-entry-id]").length, 2);
+  });
+
+  test("saves multiple property charge rows as a batch", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const alerts = [];
+    const restoreAlert = installGlobalProperty("alert", (message) => alerts.push(message));
+    const savedBatches = [];
+
+    try {
+      const manager = new WelcomePackManager({
+        async getWelcomePackLogs() {
+          return [];
+        },
+        async getWelcomePackItems() {
+          return [{
+            id: "item-1",
+            name: "Water",
+            quantity: 10,
+            costPrice: 1,
+            sellPrice: 2
+          }];
+        },
+        async getWelcomePackPresets() {
+          return [];
+        },
+        async getAllProperties() {
+          return [{ id: "p1", name: "Sea Breeze", welcomePackEnabled: true }];
+        },
+        async logWelcomePackBatch(logs) {
+          savedBatches.push(logs);
+        }
+      });
+
+      manager.currentView = "log";
+      await manager.render();
+      await flushRender();
+
+      manager.addItemToCart({
+        id: "item-1",
+        name: "Water",
+        quantity: 1,
+        costPrice: 1,
+        sellPrice: 2
+      });
+
+      const [firstEntry] = manager.logEntries;
+      manager.updateLogEntryField(firstEntry.id, "property", "Sea Breeze");
+      manager.updateLogEntryField(firstEntry.id, "date", "2026-04-14");
+
+      manager.addLogEntry({
+        property: "Ocean View",
+        date: "2026-04-15"
+      });
+
+      await manager.saveLog();
+
+      assert.equal(savedBatches.length, 1);
+      assert.equal(savedBatches[0].length, 2);
+      assert.equal(savedBatches[0][0].property, "Sea Breeze");
+      assert.equal(savedBatches[0][1].property, "Ocean View");
+      assert.equal(savedBatches[0][0].date, "2026-04-14");
+      assert.equal(savedBatches[0][1].date, "2026-04-15");
+      assert.equal(savedBatches[0][0].chargedAmountNet, 2);
+      assert.equal(savedBatches[0][1].chargedAmountNet, 2);
+      assert.equal(savedBatches[0][0].chargedAmountGross, 2.44);
+      assert.equal(savedBatches[0][1].chargedAmountGross, 2.44);
+      assert.ok(alerts.length > 0);
+    } finally {
+      restoreAlert();
     }
   });
 });

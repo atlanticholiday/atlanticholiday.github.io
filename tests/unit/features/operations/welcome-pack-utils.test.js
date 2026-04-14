@@ -17,8 +17,11 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.totals.totalLines, 2);
         assert.equal(summary.totals.totalUnits, 3);
         assert.equal(summary.totals.totalCost, 4);
-        assert.equal(summary.totals.suggestedCharge, 9.2);
-        assert.equal(summary.totals.chargedAmount, 8.4);
+        assert.equal(summary.totals.suggestedChargeNet, 9.2);
+        assert.equal(summary.totals.suggestedChargeGross, 11.22);
+        assert.equal(summary.totals.chargedAmountNet, 8.4);
+        assert.equal(summary.totals.chargedAmountGross, 10.25);
+        assert.equal(summary.totals.vatAmount, 1.85);
         assert.equal(summary.totals.profit, 4.4);
     });
 
@@ -32,9 +35,11 @@ describe("Welcome Pack utilities", () => {
 
         assert.equal(normalized.propertyName, "Sea Breeze");
         assert.equal(normalized.totalCost, 4.5);
-        assert.equal(normalized.suggestedSell, 8);
-        assert.equal(normalized.chargedAmount, 10);
-        assert.equal(normalized.totalSell, 10);
+        assert.equal(normalized.suggestedSellNet, 8);
+        assert.equal(normalized.suggestedSellGross, 9.76);
+        assert.equal(normalized.chargedAmountNet, 10);
+        assert.equal(normalized.chargedAmountGross, 12.2);
+        assert.equal(normalized.totalSell, 12.2);
         assert.equal(normalized.profit, 5.5);
     });
 
@@ -66,12 +71,16 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.totals.count, 2);
         assert.equal(summary.totals.units, 3);
         assert.equal(summary.totals.cost, 6);
-        assert.equal(summary.totals.revenue, 15);
+        assert.equal(summary.totals.netRevenue, 15);
+        assert.equal(summary.totals.grossRevenue, 18.3);
+        assert.equal(summary.totals.vatCollected, 3.3);
         assert.equal(summary.totals.profit, 9);
         assert.equal(summary.byProperty.length, 1);
         assert.equal(summary.byProperty[0].label, "Sea Breeze");
         assert.equal(summary.byProperty[0].count, 2);
         assert.equal(summary.byProperty[0].profit, 9);
+        assert.equal(summary.topMaterials.length, 2);
+        assert.equal(summary.byDate.length, 2);
         assert.equal(summary.recentLogs[0].date, "2026-04-04");
     });
 

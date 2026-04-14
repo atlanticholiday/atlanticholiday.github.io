@@ -84,7 +84,7 @@
   },
   "landing": {
     "welcome": "Welcome to your operations hub",
-    "subtitle": "Manage properties, schedules, safety and more — all in one beautiful place.",
+    "subtitle": "Manage properties, schedules, safety and more - all in one beautiful place.",
     "mainApps": "Main Apps",
     "showMoreTools": "Show More Tools",
     "hideMoreTools": "Hide More Tools",
@@ -356,9 +356,20 @@
         "unitsUsed": "{{count}} material units used",
         "materialCost": "Material cost",
         "averagePerPack": "Average {{amount}} per pack",
+        "netCharged": "Net charged",
+        "vatCollected": "VAT charged",
         "amountCharged": "Amount charged",
-        "profit": "Profit",
+        "netProfit": "Net profit",
         "marginInPeriod": "{{margin}}% margin in this period"
+      },
+      "insights": {
+        "topProperty": "Top property by billed value",
+        "topPropertyBody": "{{amount}} billed | {{profit}} net profit",
+        "bestMargin": "Best margin property",
+        "bestMarginBody": "{{margin}}% margin across {{packs}} pack(s)",
+        "bestDay": "Strongest billing day",
+        "bestDayBody": "{{amount}} billed across {{packs}} pack(s)",
+        "noData": "No data yet"
       },
       "chips": {
         "currentStockValue": "Current stock value: {{amount}}",
@@ -366,13 +377,29 @@
         "lowStockMaterials": "Low stock materials: {{count}}"
       },
       "propertyPerformanceTitle": "Property performance",
-      "propertyPerformanceDescription": "Each row compares the materials consumed with what you actually charged at that property.",
+      "propertyPerformanceDescription": "Each row compares material cost, net revenue, VAT, gross billed value, and net profit by property.",
+      "trends": {
+        "title": "Recent billing trend",
+        "description": "Review the last seven active days to spot when gross billing and profit were strongest.",
+        "packsCount": "{{count}} pack(s)",
+        "netProfit": "Net profit {{amount}}"
+      },
+      "materials": {
+        "title": "Most used materials",
+        "description": "These are the items consuming stock fastest in the selected period.",
+        "unitsUsed": "{{count}} units used",
+        "costUsed": "Net material cost {{amount}}",
+        "emptyTitle": "No material usage yet",
+        "emptyDescription": "Once you log charges, the most-used materials will appear here."
+      },
       "table": {
         "property": "Property",
         "packs": "Packs",
+        "netCharged": "Net",
+        "vat": "VAT",
         "cost": "Cost",
-        "charged": "Charged",
-        "profit": "Profit",
+        "charged": "Gross billed",
+        "profit": "Net profit",
         "margin": "Margin",
         "lastCharge": "Last charge",
         "units": "{{count}} units"
@@ -382,7 +409,7 @@
       "openPropertyCharges": "Open Property Charges",
       "recentChargesTitle": "Recent charges",
       "recentChargesDescription": "Review what was charged at each property and adjust older entries if a value was wrong.",
-      "recentCostProfit": "Cost {{cost}} | Profit {{profit}}",
+      "recentCostProfit": "Cost {{cost}} | VAT {{vat}} | Net profit {{profit}}",
       "noChargesTitle": "No charges logged yet",
       "noChargesDescription": "After you add a charge in Property Charges, the latest entries will appear here.",
       "unknownProperty": "Unknown property"
@@ -408,7 +435,6 @@
         "stock": "Stock",
         "costPerUnit": "Cost / unit",
         "chargePerUnit": "Charge / unit",
-        "marginPerUnit": "Margin / unit",
         "vat": "VAT",
         "actions": "Actions"
       },
@@ -423,11 +449,17 @@
       "title": "Register a property charge",
       "editTitle": "Edit property charge",
       "description": "Select the property, choose the materials used in the pack, and confirm the amount you actually charged.",
+      "entriesTitle": "Charge entries",
+      "entriesDescription": "Add one or more property/date rows. All rows use the same selected materials, but each row can have its own property, date, and charged amount.",
+      "entryLabel": "Entry {{count}}",
+      "entrySummary": "Material cost {{cost}} and profit {{profit}}.",
+      "addEntry": "Add another entry",
+      "removeEntry": "Remove entry",
       "fields": {
         "property": "Property",
         "propertyPlaceholder": "Select property...",
         "date": "Date",
-        "chargedAmount": "Amount charged to property"
+        "chargedAmount": "Net amount charged"
       },
       "loadPreset": "Load preset",
       "loadPresetPlaceholder": "Select a preset to load materials...",
@@ -452,19 +484,21 @@
       "useSuggestedAmount": "Use suggested amount",
       "summary": {
         "materialCost": "Material cost",
-        "suggestedCharge": "Suggested charge",
-        "actualCharge": "Actual charge",
-        "profit": "Profit"
+        "suggestedCharge": "Suggested billed total",
+        "vat": "VAT (22%)",
+        "actualCharge": "Actual billed total",
+        "profit": "Net profit"
       },
       "updateCharge": "Update charge",
       "saveCharge": "Save charge",
       "editHint": "Updating an existing charge will restore the old stock and deduct the new quantities again.",
-      "saveHint": "The calculation screen will update automatically after you save this charge.",
+      "saveHint": "The calculation screen will update automatically after you save {{count}} charge(s).",
       "cart": {
         "costCharge": "{{cost}} cost | {{charge}} charge",
         "qty": "Qty",
         "materialLines": "{{count}} material line(s)",
-        "units": "{{count}} unit(s)"
+        "units": "{{count}} unit(s)",
+        "entries": "{{count}} charge entries"
       }
     },
     "modals": {
@@ -503,7 +537,9 @@
       "materials": "Materials",
       "units": "Units",
       "materialCost": "Material Cost",
+      "suggestedChargeNet": "Suggested Net Charge",
       "suggestedCharge": "Suggested Charge",
+      "vat": "VAT",
       "chargedAmount": "Charged Amount",
       "profit": "Profit"
     }
