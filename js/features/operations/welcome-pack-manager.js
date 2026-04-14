@@ -1,4 +1,4 @@
-﻿import {
+import {
     formatWelcomePackCurrency,
     normalizeWelcomePackItem,
     normalizeWelcomePackLog,
@@ -375,6 +375,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             property: 'Propriedade',
             propertyPlaceholder: 'Selecionar propriedade...',
             date: 'Data',
+            quantity: 'Quantidade',
             chargedAmount: 'Valor líquido cobrado'
         },
         loadPreset: 'Carregar preset',
@@ -636,6 +637,7 @@ export class WelcomePackManager {
             id: entryId,
             property: String(overrides.property || overrides.propertyName || '').trim(),
             date: String(overrides.date || new Date().toISOString().split('T')[0]).trim(),
+            quantity: Number.parseInt(overrides.quantity || 1, 10) || 1,
             chargedAmount: overrides.chargedAmount === null || overrides.chargedAmount === undefined || overrides.chargedAmount === ''
                 ? ''
                 : String(overrides.chargedAmount),
@@ -649,6 +651,7 @@ export class WelcomePackManager {
                 id: 'wp-log-entry-editing',
                 property: editingLog.propertyName || editingLog.property,
                 date: editingLog.date,
+                quantity: 1,
                 chargedAmount: editingLog.chargedAmountNet.toFixed(2),
                 manualCharge: true
             })];
@@ -719,6 +722,9 @@ export class WelcomePackManager {
             entry.manualCharge = value !== '';
         } else if (field === 'property') {
             entry.property = String(value || '').trimStart();
+        } else if (field === 'quantity') {
+            const qty = Number.parseInt(value, 10);
+            entry.quantity = !Number.isNaN(qty) && qty > 0 ? qty : 1;
         } else {
             entry[field] = value;
         }
@@ -758,7 +764,7 @@ export class WelcomePackManager {
                                 </button>
                                 ` : ''}
                             </div>
-                            <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(160px,0.75fr)_minmax(180px,0.85fr)]">
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(140px,1fr)_minmax(80px,0.5fr)_minmax(170px,1fr)]">
                                 <label class="welcome-pack-field">
                                     <span>${this.tr('log.fields.property')}</span>
                                     <input type="text" data-wp-entry-property="${entry.id}" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${entry.property}">
@@ -766,6 +772,10 @@ export class WelcomePackManager {
                                 <label class="welcome-pack-field">
                                     <span>${this.tr('log.fields.date')}</span>
                                     <input type="date" data-wp-entry-date="${entry.id}" value="${entry.date}">
+                                </label>
+                                <label class="welcome-pack-field">
+                                    <span>${this.tr('log.fields.quantity')}</span>
+                                    <input type="number" data-wp-entry-quantity="${entry.id}" min="1" step="1" value="${entry.quantity || 1}">
                                 </label>
                                 <label class="welcome-pack-field">
                                     <span>${this.tr('log.fields.chargedAmount')}</span>
@@ -801,6 +811,11 @@ export class WelcomePackManager {
         container.querySelectorAll('[data-wp-entry-date]').forEach((input) => {
             input.addEventListener('focus', () => this.setActiveLogEntry(input.dataset.wpEntryDate));
             input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryDate, 'date', input.value));
+        });
+
+        container.querySelectorAll('[data-wp-entry-quantity]').forEach((input) => {
+            input.addEventListener('focus', () => this.setActiveLogEntry(input.dataset.wpEntryQuantity));
+            input.addEventListener('input', () => this.updateLogEntryField(input.dataset.wpEntryQuantity, 'quantity', input.value));
         });
 
         container.querySelectorAll('[data-wp-entry-charge]').forEach((input) => {
@@ -3490,7 +3505,8 @@ export class WelcomePackManager {
         if (totalProfit) totalProfit.textContent = this.formatCurrency(summary.totals.profit);
         const saveHint = document.getElementById('wp-log-save-hint');
         if (saveHint) {
-            saveHint.textContent = this.tr('log.saveHint', { count: this.logEntries.length || 1 });
+            const totalQuantity = this.logEntries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+            saveHint.textContent = this.tr('log.saveHint', { count: totalQuantity });
         }
         this.refreshLogEntryCards();
         this.refreshPropertyChargeHistory();
@@ -3541,26 +3557,31 @@ export class WelcomePackManager {
                 this.editingLogCreatedAt = null;
             } else {
                 const timestamp = new Date().toISOString();
-                const logsToSave = preparedEntries.map((entry) => {
+                const logsToSave = [];
+                preparedEntries.forEach((entry) => {
+                    const quantity = entry.quantity || 1;
                     const summary = this.getLogEntrySummary(entry);
-                    return {
-                        property: entry.property,
-                        date: entry.date,
-                        items: summary.items,
-                        totalCost: summary.totals.totalCost,
-                        suggestedSell: summary.totals.suggestedChargeNet,
-                        suggestedSellGross: summary.totals.suggestedChargeGross,
-                        chargedAmount: summary.totals.chargedAmountNet,
-                        chargedAmountNet: summary.totals.chargedAmountNet,
-                        chargedAmountGross: summary.totals.chargedAmountGross,
-                        vatAmount: summary.totals.vatAmount,
-                        totalSell: summary.totals.chargedAmountNet,
-                        profit: summary.totals.profit,
-                        manualCharge: entry.manualCharge,
-                        chargeEntryMode: entry.manualCharge ? 'manual' : 'none',
-                        createdAt: timestamp,
-                        updatedAt: timestamp
-                    };
+                    
+                    for (let i = 0; i < quantity; i++) {
+                        logsToSave.push({
+                            property: entry.property,
+                            date: entry.date,
+                            items: summary.items,
+                            totalCost: summary.totals.totalCost,
+                            suggestedSell: summary.totals.suggestedChargeNet,
+                            suggestedSellGross: summary.totals.suggestedChargeGross,
+                            chargedAmount: summary.totals.chargedAmountNet,
+                            chargedAmountNet: summary.totals.chargedAmountNet,
+                            chargedAmountGross: summary.totals.chargedAmountGross,
+                            vatAmount: summary.totals.vatAmount,
+                            totalSell: summary.totals.chargedAmountNet,
+                            profit: summary.totals.profit,
+                            manualCharge: entry.manualCharge,
+                            chargeEntryMode: entry.manualCharge ? 'manual' : 'none',
+                            createdAt: timestamp,
+                            updatedAt: timestamp
+                        });
+                    }
                 });
 
                 if (logsToSave.length > 1 && typeof this.dataManager.logWelcomePackBatch === 'function') {

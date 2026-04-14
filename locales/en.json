@@ -459,6 +459,7 @@
         "property": "Property",
         "propertyPlaceholder": "Select property...",
         "date": "Date",
+        "quantity": "Quantity",
         "chargedAmount": "Net amount charged"
       },
       "loadPreset": "Load preset",

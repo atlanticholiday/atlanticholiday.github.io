@@ -468,6 +468,7 @@
                 "property": "Propriedade",
                 "propertyPlaceholder": "Selecionar propriedade...",
                 "date": "Data",
+                "quantity": "Quantidade",
                 "chargedAmount": "Valor liquido cobrado"
             },
             "loadPreset": "Carregar preset",
