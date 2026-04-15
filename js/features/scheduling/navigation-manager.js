@@ -7,6 +7,7 @@ export class NavigationManager {
             operations: 'operations-page',
             welcomePacks: 'welcome-packs-page',
             airbnbReservationInvoices: 'airbnb-reservation-invoices-page',
+            operationalGuidelines: 'operational-guidelines-page',
             schedule: 'app-content',
             reservations: 'reservations-page',
             login: 'login-screen',
@@ -66,6 +67,12 @@ export class NavigationManager {
     showAirbnbReservationInvoicesPage() {
         this.showPage('airbnbReservationInvoices');
         const event = new CustomEvent('airbnbReservationInvoicesPageOpened');
+        document.dispatchEvent(event);
+    }
+
+    showOperationalGuidelinesPage() {
+        this.showPage('operationalGuidelines');
+        const event = new CustomEvent('operationalGuidelinesPageOpened');
         document.dispatchEvent(event);
     }
 
@@ -166,6 +173,7 @@ export class NavigationManager {
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
         const goToAirbnbReservationInvoicesBtn = document.getElementById('go-to-airbnb-reservation-invoices-btn');
+        const goToOperationalGuidelinesBtn = document.getElementById('go-to-operational-guidelines-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
@@ -205,6 +213,12 @@ export class NavigationManager {
         if (goToAirbnbReservationInvoicesBtn) {
             goToAirbnbReservationInvoicesBtn.addEventListener('click', () => {
                 this.showAirbnbReservationInvoicesPage();
+            });
+        }
+
+        if (goToOperationalGuidelinesBtn) {
+            goToOperationalGuidelinesBtn.addEventListener('click', () => {
+                this.showOperationalGuidelinesPage();
             });
         }
 
@@ -346,6 +360,7 @@ export class NavigationManager {
         const backToLandingBtn = document.getElementById('back-to-landing-btn');
         const backToLandingFromWelcomeBtn = document.getElementById('back-to-landing-from-welcome-btn');
         const backToLandingFromAirbnbReservationInvoicesBtn = document.getElementById('back-to-landing-from-airbnb-reservation-invoices-btn');
+        const backToLandingFromOperationalGuidelinesBtn = document.getElementById('back-to-landing-from-operational-guidelines-btn');
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
@@ -379,6 +394,12 @@ export class NavigationManager {
 
         if (backToLandingFromAirbnbReservationInvoicesBtn) {
             backToLandingFromAirbnbReservationInvoicesBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromOperationalGuidelinesBtn) {
+            backToLandingFromOperationalGuidelinesBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }
@@ -498,6 +519,7 @@ export class NavigationManager {
         const checklistsSignOutBtn = document.getElementById('checklists-sign-out-btn');
         const vehiclesSignOutBtn = document.getElementById('vehicles-sign-out-btn');
         const ownersSignOutBtn = document.getElementById('owners-sign-out-btn');
+        const operationalGuidelinesSignOutBtn = document.getElementById('operational-guidelines-sign-out-btn');
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
         const cleaningAhSignOutBtn = document.getElementById('cleaning-ah-sign-out-btn');
         const cleaningBillsSignOutBtn = document.getElementById('cleaning-bills-sign-out-btn');
@@ -553,6 +575,12 @@ export class NavigationManager {
         }
         if (ownersSignOutBtn) {
             ownersSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (operationalGuidelinesSignOutBtn) {
+            operationalGuidelinesSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

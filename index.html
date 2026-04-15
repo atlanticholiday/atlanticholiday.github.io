@@ -262,6 +262,16 @@
                         <p data-i18n="apps.welcomePacksDesc">Manage stocks and packs delivered.</p>
                     </div>
                 </button>
+
+                <button id="go-to-operational-guidelines-btn" class="dashboard-card">
+                    <div class="card-icon bg-stone-900/10 text-stone-700">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3 id="operational-guidelines-card-title">Operational Guide</h3>
+                        <p id="operational-guidelines-card-description">Search guest-response protocols and copy approved replies.</p>
+                    </div>
+                </button>
             </div>
 
             <!-- More Tools Toggle -->
@@ -1553,6 +1563,54 @@ Mountain Villa, Sintra Hills, V4"
 
                 <p id="airbnb-reservation-invoices-copy-feedback" class="hidden mt-4 text-sm font-medium"></p>
             </div>
+        </div>
+    </div>
+
+    <!-- Operational Guidelines Page -->
+    <div id="operational-guidelines-page" class="operational-guidelines-page hidden min-h-screen">
+        <header class="dashboard-header operational-guidelines-page-header">
+            <div class="container operational-guidelines-shell-container mx-auto flex flex-col gap-6 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="back-to-landing-from-operational-guidelines-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span class="sr-only" data-i18n="common.back">Back</span>
+                    </button>
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo" />
+                    <div class="leading-tight">
+                        <div id="operational-guidelines-header-kicker" class="page-mini">Team manual</div>
+                        <div id="operational-guidelines-page-title" class="brand-name brand-red">Operational Guide</div>
+                        <div id="operational-guidelines-page-subtitle" class="page-mini">Ask what happened and jump to the right protocol.</div>
+                    </div>
+                </div>
+                <div class="operational-guidelines-header-actions">
+                    <div
+                        class="language-switcher operational-guidelines-language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="en" title="English">EN</button>
+                        <button type="button"
+                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
+                            data-lang-option="pt" title="Portuguese">PT</button>
+                    </div>
+                    <button id="operational-guidelines-sign-out-btn"
+                        class="operational-guidelines-signout text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        <span data-i18n="common.signOut">Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container operational-guidelines-shell-container mx-auto px-4 py-8">
+            <div id="operational-guidelines-root"></div>
         </div>
     </div>
 

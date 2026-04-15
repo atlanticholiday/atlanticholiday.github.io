@@ -3,7 +3,7 @@ import { describe, test, assert } from "../test-harness.js";
 describe("HTML smoke", () => {
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
-      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-build-planner-btn", "build-planner-page"] },
+      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page"] },
       { path: "../property-settings.html", markers: ["property-settings-form", "save-settings"] },
       { path: "../inventory.html", markers: ["inventory"] }
     ];
@@ -21,6 +21,7 @@ describe("HTML smoke", () => {
       if (page.path === "../index.html") {
         const documentRef = new DOMParser().parseFromString(html, "text/html");
         assert.equal(documentRef.getElementById("welcome-packs-page")?.parentElement?.tagName, "BODY", "welcome-packs-page should be a top-level page");
+        assert.equal(documentRef.getElementById("operational-guidelines-page")?.parentElement?.tagName, "BODY", "operational-guidelines-page should be a top-level page");
         assert.equal(documentRef.getElementById("staff-page")?.parentElement?.tagName, "BODY", "staff-page should be a top-level page");
       }
     }

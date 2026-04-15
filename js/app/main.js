@@ -14,6 +14,7 @@ import { CleaningBillsManager } from '../features/operations/cleaning-bills-mana
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
+import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
 import { BuildPlannerManager } from '../features/planning/build-planner-manager.js';
 import { ReservationsManager } from '../features/operations/reservations-manager.js';
 import { RnalManager } from '../features/operations/rnal-manager.js';
@@ -46,7 +47,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -197,6 +198,7 @@ function syncAccessModeUi() {
         'go-to-vehicles-btn',
         'go-to-welcome-packs-btn',
         'go-to-airbnb-reservation-invoices-btn',
+        'go-to-operational-guidelines-btn',
         'go-to-staff-btn',
         'go-to-properties-btn',
         'go-to-allinfo-btn',
@@ -411,6 +413,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();
         window.airbnbReservationInvoicesManager = airbnbReservationInvoicesManager;
         airbnbReservationInvoicesManager.init();
+        operationalGuidelinesManager = new OperationalGuidelinesManager();
+        window.operationalGuidelinesManager = operationalGuidelinesManager;
+        operationalGuidelinesManager.init();
 
 
         scheduleManager = new ScheduleManager(dataManager, uiManager);
@@ -688,7 +693,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #time-clock-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn')) {
             signOut(auth);
         }
     });

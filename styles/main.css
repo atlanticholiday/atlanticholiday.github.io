@@ -3947,3 +3947,558 @@ header h1, header h2, header h3 {
         border-radius: 24px 0 0 24px;
     }
 }
+
+/* Operational Guidelines */
+.operational-guidelines-page {
+    background:
+        radial-gradient(circle at top left, rgba(120, 113, 108, 0.14), transparent 30rem),
+        linear-gradient(180deg, #faf8f3 0%, #f1eee7 100%);
+    color: #1c1917;
+}
+
+.operational-guidelines-shell-container {
+    max-width: 1240px;
+}
+
+.operational-guidelines-page-header {
+    background: rgba(250, 248, 243, 0.9);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(120, 113, 108, 0.18);
+}
+
+.operational-guidelines-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.operational-guide-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.operational-guide-search-panel,
+.operational-guide-answer-panel,
+.operational-guide-rules,
+.operational-guide-list {
+    border: 1px solid rgba(120, 113, 108, 0.18);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 24px 70px rgba(41, 37, 36, 0.08);
+}
+
+.operational-guide-search-panel {
+    border-radius: 30px;
+    padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.operational-guide-answer-panel {
+    position: sticky;
+    top: 1rem;
+    border-radius: 30px;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    background:
+        linear-gradient(135deg, rgba(28, 25, 23, 0.96), rgba(68, 64, 60, 0.92)),
+        #292524;
+    color: #fff7ed;
+}
+
+.operational-guide-answer-panel h2 {
+    margin: 0.4rem 0 1.25rem;
+    font-size: clamp(1.8rem, 4vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.operational-guide-stat-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+}
+
+.operational-guide-stat-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    background: #f5f2eb;
+    color: #57534e;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.operational-guide-search-label {
+    display: block;
+    margin-bottom: 0.65rem;
+    color: #44403c;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.operational-guide-search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-radius: 22px;
+    border: 1px solid rgba(120, 113, 108, 0.24);
+    background: #fff;
+    padding: 0.9rem 1rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.operational-guide-search-box:focus-within {
+    border-color: #a16207;
+    box-shadow: 0 18px 45px rgba(161, 98, 7, 0.13);
+    transform: translateY(-1px);
+}
+
+.operational-guide-search-box i {
+    color: #a16207;
+}
+
+.operational-guide-search-box input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #1c1917;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    box-shadow: none;
+}
+
+.operational-guide-search-box input::-webkit-search-decoration,
+.operational-guide-search-box input::-webkit-search-cancel-button,
+.operational-guide-search-box input::-webkit-search-results-button,
+.operational-guide-search-box input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+}
+
+.operational-guide-hint {
+    margin: 0.8rem 0 1.1rem;
+    color: #78716c;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.operational-guide-edit-toolbar,
+.operational-guide-editor-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.operational-guide-edit-toolbar button,
+.operational-guide-editor-header button,
+.operational-guide-editor-actions button {
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 900;
+    padding: 0.65rem 0.9rem;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.operational-guide-edit-toolbar button:first-child,
+.operational-guide-editor-actions button:first-child {
+    background: #292524;
+    color: #fff7ed;
+}
+
+.operational-guide-edit-toolbar button + button,
+.operational-guide-editor-header button,
+.operational-guide-editor-actions button + button {
+    background: #ede6da;
+    color: #44403c;
+}
+
+.operational-guide-edit-toolbar button:hover,
+.operational-guide-editor-header button:hover,
+.operational-guide-editor-actions button:hover {
+    transform: translateY(-1px);
+}
+
+.operational-guide-local-note {
+    margin: 0.75rem 0 1rem;
+    color: #78716c;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.operational-guide-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.operational-guide-suggestions span,
+.operational-guide-section-kicker {
+    color: #a16207;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.operational-guide-suggestions button,
+.operational-guide-answer-actions button,
+.operational-guide-protocol div button {
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 800;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.operational-guide-suggestions button {
+    background: #ede6da;
+    color: #44403c;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.82rem;
+}
+
+.operational-guide-suggestions button:hover,
+.operational-guide-answer-actions button:hover,
+.operational-guide-protocol div button:hover {
+    transform: translateY(-1px);
+}
+
+.operational-guide-contacts {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.35rem;
+    padding-top: 1.35rem;
+    border-top: 1px solid rgba(120, 113, 108, 0.2);
+}
+
+.operational-guide-contacts p {
+    margin: 0.25rem 0 0;
+    color: #57534e;
+}
+
+.operational-guide-contact-list {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.operational-guide-contact-list a {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-radius: 18px;
+    background: #f8f4ec;
+    color: #292524;
+    padding: 0.85rem 1rem;
+    text-decoration: none;
+}
+
+.operational-guide-contact-list span {
+    color: #78716c;
+}
+
+.operational-guide-answer-block {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1rem;
+}
+
+.operational-guide-answer-block span {
+    color: #fbbf24;
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.operational-guide-answer-block p,
+.operational-guide-answer-block blockquote {
+    margin: 0;
+    border-left: 3px solid rgba(251, 191, 36, 0.72);
+    padding-left: 1rem;
+    color: #fffbeb;
+    line-height: 1.6;
+}
+
+.operational-guide-answer-block blockquote {
+    font-size: 1.05rem;
+}
+
+.operational-guide-answer-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 1.3rem;
+}
+
+.operational-guide-answer-actions button {
+    background: #fbbf24;
+    color: #292524;
+    padding: 0.75rem 1rem;
+}
+
+.operational-guide-answer-actions button + button {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff7ed;
+}
+
+.operational-guide-copy-feedback {
+    min-height: 1.3rem;
+    margin: 0.8rem 0 0;
+    color: #fef3c7;
+    font-weight: 800;
+}
+
+.operational-guide-rules,
+.operational-guide-list,
+.operational-guide-editor {
+    margin-top: 1.25rem;
+    border-radius: 30px;
+    padding: clamp(1.1rem, 3vw, 1.6rem);
+}
+
+.operational-guide-editor {
+    border: 1px solid rgba(161, 98, 7, 0.28);
+    background: rgba(255, 251, 235, 0.86);
+    box-shadow: 0 24px 70px rgba(41, 37, 36, 0.08);
+}
+
+.operational-guide-editor-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.operational-guide-editor-header h3 {
+    margin: 0.2rem 0 0;
+    color: #292524;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
+.operational-guide-editor-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.operational-guide-editor-form label {
+    display: grid;
+    gap: 0.4rem;
+    color: #44403c;
+    font-weight: 800;
+}
+
+.operational-guide-editor-form label:nth-child(3),
+.operational-guide-editor-form label:nth-child(4),
+.operational-guide-editor-form label:nth-child(5),
+.operational-guide-editor-actions {
+    grid-column: 1 / -1;
+}
+
+.operational-guide-editor-form input,
+.operational-guide-editor-form select,
+.operational-guide-editor-form textarea {
+    width: 100%;
+    border: 1px solid rgba(120, 113, 108, 0.24);
+    border-radius: 18px;
+    background: #fff;
+    color: #1c1917;
+    padding: 0.75rem 0.9rem;
+    outline: 0;
+}
+
+.operational-guide-editor-form textarea {
+    resize: vertical;
+}
+
+.operational-guide-editor-form input:focus,
+.operational-guide-editor-form select:focus,
+.operational-guide-editor-form textarea:focus {
+    border-color: #a16207;
+    box-shadow: 0 0 0 4px rgba(161, 98, 7, 0.12);
+}
+
+.operational-guide-editor-form small {
+    color: #78716c;
+    font-weight: 500;
+}
+
+.operational-guide-rules {
+    display: grid;
+    grid-template-columns: 0.55fr 1.45fr;
+    gap: 1rem;
+}
+
+.operational-guide-rules h3,
+.operational-guide-list h3,
+.operational-guide-section-heading h4 {
+    margin: 0.2rem 0 0;
+    color: #292524;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
+.operational-guide-rule-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.operational-guide-rule-list article {
+    border-radius: 20px;
+    background: #f8f4ec;
+    padding: 1rem;
+}
+
+.operational-guide-rule-list p {
+    margin: 0.35rem 0 0;
+    color: #57534e;
+    line-height: 1.45;
+}
+
+.operational-guide-list-header,
+.operational-guide-section-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.operational-guide-list-header > span,
+.operational-guide-section-heading > span {
+    border-radius: 999px;
+    background: #ede6da;
+    color: #57534e;
+    padding: 0.35rem 0.65rem;
+    font-weight: 900;
+}
+
+.operational-guide-section {
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(120, 113, 108, 0.18);
+}
+
+.operational-guide-protocols {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 0.9rem;
+}
+
+.operational-guide-protocol {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+    gap: 0.9rem;
+    border-radius: 22px;
+    background: #fff;
+    padding: 0.75rem;
+    outline: 2px solid transparent;
+    transition: outline-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.operational-guide-protocol.is-active {
+    outline-color: rgba(161, 98, 7, 0.32);
+}
+
+.operational-guide-protocol.is-highlighted {
+    box-shadow: 0 0 0 7px rgba(251, 191, 36, 0.22);
+    transform: translateY(-2px);
+}
+
+.operational-guide-protocol > button {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: #292524;
+    cursor: pointer;
+}
+
+.operational-guide-protocol-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: #292524;
+    color: #fff7ed;
+    font-weight: 900;
+}
+
+.operational-guide-protocol strong {
+    display: block;
+    line-height: 1.2;
+}
+
+.operational-guide-protocol small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #78716c;
+    line-height: 1.35;
+}
+
+.operational-guide-protocol div p {
+    margin: 0;
+    color: #57534e;
+    line-height: 1.5;
+}
+
+.operational-guide-protocol div button {
+    margin-top: 0.65rem;
+    background: #f5f2eb;
+    color: #44403c;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.operational-guide-empty {
+    margin: 1rem 0 0;
+    color: #78716c;
+}
+
+@media (max-width: 1023px) {
+    .operational-guide-shell,
+    .operational-guide-rules,
+    .operational-guide-protocol {
+        grid-template-columns: 1fr;
+    }
+
+    .operational-guide-answer-panel {
+        position: static;
+    }
+}
+
+@media (max-width: 767px) {
+    .operational-guidelines-header-actions {
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+
+    .operational-guide-rule-list {
+        grid-template-columns: 1fr;
+    }
+
+    .operational-guide-list-header,
+    .operational-guide-section-heading,
+    .operational-guide-editor-header,
+    .operational-guide-contact-list a {
+        flex-direction: column;
+    }
+
+    .operational-guide-editor-form {
+        grid-template-columns: 1fr;
+    }
+}
