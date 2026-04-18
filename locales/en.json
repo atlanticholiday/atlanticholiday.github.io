@@ -97,12 +97,159 @@
     "vehiclesDesc": "Manage fleet, insurance and inspections.",
     "welcomePacks": "Welcome Packs",
     "welcomePacksDesc": "Manage stocks and packs delivered.",
+    "laundryLog": "Laundry Log",
+    "laundryLogDesc": "Track linen out to the laundry and back per property.",
     "staff": "Staff",
     "staffDesc": "Manage team members and details.",
     "properties": "Properties",
     "propertiesDesc": "Manage short rentals and full inventory.",
     "cleaningAh": "Cleaning AH",
     "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
+  },
+  "laundryLog": {
+    "header": {
+      "kicker": "Laundry Log",
+      "title": "Laundry Log",
+      "subtitle": "Track what goes out to the laundry and what comes back for each property."
+    },
+    "landing": {
+      "description": "Phone-first linen and towel handoff tracking by property."
+    },
+    "views": {
+      "entryWorkspace": "Entry",
+      "returnsWorkspace": "Returns",
+      "completedWorkspace": "Completed",
+      "formTitle": "New laundry handoff",
+      "editTitle": "Update laundry handoff",
+      "pendingTitle": "Pending returns",
+      "recordsTitle": "Recent records",
+      "returnsTitle": "Returns to check",
+      "completedTitle": "Completed returns",
+      "sectionNavTitle": "Laundry sections"
+    },
+    "stats": {
+      "totalRecords": "Records",
+      "pending": "Pending",
+      "matched": "Matched",
+      "unitsDelivered": "Units out",
+      "unitsReceived": "Units back"
+    },
+    "labels": {
+      "property": "Property",
+      "deliveryDate": "Delivery date",
+      "receivedDate": "Received date",
+      "notes": "Notes",
+      "deliveredShort": "Out",
+      "receivedShort": "Back",
+      "varianceShort": "Variance",
+      "notReturned": "Pending",
+      "unnamedProperty": "Unnamed property"
+    },
+    "form": {
+      "helper": "Save the record when the laundry leaves, then reopen it to confirm what came back.",
+      "propertyPlaceholder": "Start typing a property",
+      "notesPlaceholder": "Optional notes for this handoff"
+    },
+    "filters": {
+      "searchPlaceholder": "Search property or date",
+      "month": "Month",
+      "allMonths": "All months"
+    },
+    "actions": {
+      "save": "Save handoff",
+      "update": "Update handoff",
+      "reset": "Clear form",
+      "copyDelivered": "Copy out counts to back",
+      "setReceivedToday": "Set received date to today",
+      "openReturns": "Open returns",
+      "viewAllReturns": "View all returns",
+      "backToEntry": "Back to entry",
+      "review": "Review return",
+      "edit": "Open record",
+      "delete": "Delete",
+      "clearFilters": "Clear filters"
+    },
+    "status": {
+      "pending": "Pending return",
+      "matched": "Matched",
+      "mismatch": "Mismatch"
+    },
+    "summary": {
+      "recordStatus": "Live summary",
+      "delivered": "Out: {{count}}",
+      "received": "Back: {{count}}",
+      "variance": "Variance: {{count}}"
+    },
+    "counts": {
+      "records": {
+        "one": "{{count}} record",
+        "other": "{{count}} records"
+      },
+      "pendingRecords": {
+        "one": "{{count}} pending record",
+        "other": "{{count}} pending records"
+      },
+      "returnRecords": {
+        "one": "{{count}} return to check",
+        "other": "{{count}} returns to check"
+      },
+      "completedRecords": {
+        "one": "{{count}} completed record",
+        "other": "{{count}} completed records"
+      }
+    },
+    "empty": {
+      "pending": "No pending returns right now.",
+      "returns": "No return records match the current filters.",
+      "completed": "No completed records match the current filters.",
+      "records": "No records match the current filters."
+    },
+    "messages": {
+      "propertyRequired": "Choose a property before saving.",
+      "deliveryDateRequired": "Add the delivery date before saving.",
+      "countRequired": "Add at least one delivered or received quantity before saving.",
+      "saved": "Laundry handoff saved.",
+      "updated": "Laundry handoff updated.",
+      "deleted": "Laundry handoff deleted.",
+      "saveFailed": "Could not save the laundry handoff right now.",
+      "deleteFailed": "Could not delete the laundry handoff right now.",
+      "loadFailed": "Could not load laundry handoffs right now."
+    },
+    "confirm": {
+      "delete": "Delete this laundry handoff?"
+    },
+    "states": {
+      "restrictedTitle": "Laundry Log is not available in shared tablet mode.",
+      "restrictedBody": "Open it from a personal account or a manager session."
+    },
+    "sections": {
+      "doubleBed": "Double bed",
+      "singleBed": "Single bed",
+      "towels": "Towels",
+      "pillows": "Pillows",
+      "other": "Other"
+    },
+    "items": {
+      "doubleMattressProtector": "Mattress protectors",
+      "doubleFittedSheet": "Fitted sheets",
+      "doubleTopSheet": "Top sheets",
+      "doubleDuvet": "Duvets",
+      "doubleDuvetCover": "Duvet covers",
+      "singleMattressProtector": "Single mattress protectors",
+      "singleFittedSheet": "Single fitted sheets",
+      "singleTopSheet": "Single top sheets",
+      "singleDuvet": "Single duvets",
+      "singleDuvetCover": "Single duvet covers",
+      "bathTowel": "Bath towels",
+      "faceTowel": "Face towels",
+      "poolTowel": "Pool towels",
+      "bathMat": "Bath mats",
+      "pillows": "Pillows",
+      "pillowProtectors": "Pillow protectors",
+      "pillowCases": "Pillowcases",
+      "kitchenTowels": "Kitchen towels",
+      "blankets": "Blankets"
+    }
   },
   "welcomePack": {
     "header": {

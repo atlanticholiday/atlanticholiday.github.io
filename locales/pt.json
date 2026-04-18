@@ -97,12 +97,159 @@
         "vehiclesDesc": "Gerir frota, seguros e inspeções.",
         "welcomePacks": "Welcome Pack",
         "welcomePacksDesc": "Gerir stock e entregas de welcome pack.",
+        "laundryLog": "Registo de Lavandaria",
+        "laundryLogDesc": "Controlar roupa enviada e recebida por propriedade.",
         "staff": "Equipa",
         "staffDesc": "Gerir membros da equipa.",
         "properties": "Propriedades",
         "propertiesDesc": "Gerir alojamentos e inventário.",
         "cleaningAh": "Cleaning AH",
         "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
+    },
+    "laundryLog": {
+        "header": {
+            "kicker": "Registo de Lavandaria",
+            "title": "Registo de Lavandaria",
+            "subtitle": "Controlar o que sai para a lavandaria e o que regressa em cada propriedade."
+        },
+        "landing": {
+            "description": "Registo simples no telemovel para roupa de cama e toalhas por propriedade."
+        },
+        "views": {
+            "entryWorkspace": "Entrada",
+            "returnsWorkspace": "Devolucoes",
+            "completedWorkspace": "Concluidos",
+            "formTitle": "Nova entrega de lavandaria",
+            "editTitle": "Atualizar entrega de lavandaria",
+            "pendingTitle": "Devolucoes pendentes",
+            "recordsTitle": "Registos recentes",
+            "returnsTitle": "Devolucoes para conferir",
+            "completedTitle": "Devolucoes concluidas",
+            "sectionNavTitle": "Secoes da roupa"
+        },
+        "stats": {
+            "totalRecords": "Registos",
+            "pending": "Pendentes",
+            "matched": "Conferidos",
+            "unitsDelivered": "Unidades saida",
+            "unitsReceived": "Unidades entrada"
+        },
+        "labels": {
+            "property": "Propriedade",
+            "deliveryDate": "Data de entrega",
+            "receivedDate": "Data de recolha",
+            "notes": "Notas",
+            "deliveredShort": "Saiu",
+            "receivedShort": "Voltou",
+            "varianceShort": "Diferenca",
+            "notReturned": "Pendente",
+            "unnamedProperty": "Propriedade sem nome"
+        },
+        "form": {
+            "helper": "Guarde quando a roupa sai e abra o mesmo registo depois para confirmar o que voltou.",
+            "propertyPlaceholder": "Comece a escrever a propriedade",
+            "notesPlaceholder": "Notas opcionais para esta entrega"
+        },
+        "filters": {
+            "searchPlaceholder": "Pesquisar propriedade ou data",
+            "month": "Mes",
+            "allMonths": "Todos os meses"
+        },
+        "actions": {
+            "save": "Guardar registo",
+            "update": "Atualizar registo",
+            "reset": "Limpar formulario",
+            "copyDelivered": "Copiar saida para entrada",
+            "setReceivedToday": "Definir recolha para hoje",
+            "openReturns": "Abrir devolucoes",
+            "viewAllReturns": "Ver todas as devolucoes",
+            "backToEntry": "Voltar a entrada",
+            "review": "Rever devolucao",
+            "edit": "Abrir registo",
+            "delete": "Eliminar",
+            "clearFilters": "Limpar filtros"
+        },
+        "status": {
+            "pending": "Devolucao pendente",
+            "matched": "Conferido",
+            "mismatch": "Diferenca"
+        },
+        "summary": {
+            "recordStatus": "Resumo em direto",
+            "delivered": "Saiu: {{count}}",
+            "received": "Voltou: {{count}}",
+            "variance": "Diferenca: {{count}}"
+        },
+        "counts": {
+            "records": {
+                "one": "{{count}} registo",
+                "other": "{{count}} registos"
+            },
+            "pendingRecords": {
+                "one": "{{count}} registo pendente",
+                "other": "{{count}} registos pendentes"
+            },
+            "returnRecords": {
+                "one": "{{count}} devolucao para conferir",
+                "other": "{{count}} devolucoes para conferir"
+            },
+            "completedRecords": {
+                "one": "{{count}} registo concluido",
+                "other": "{{count}} registos concluidos"
+            }
+        },
+        "empty": {
+            "pending": "Nao existem devolucoes pendentes neste momento.",
+            "returns": "Nao existem devolucoes para conferir com os filtros atuais.",
+            "completed": "Nao existem registos concluidos com os filtros atuais.",
+            "records": "Nao existem registos com os filtros atuais."
+        },
+        "messages": {
+            "propertyRequired": "Escolha uma propriedade antes de guardar.",
+            "deliveryDateRequired": "Adicione a data de entrega antes de guardar.",
+            "countRequired": "Adicione pelo menos uma quantidade de saida ou entrada antes de guardar.",
+            "saved": "Registo de lavandaria guardado.",
+            "updated": "Registo de lavandaria atualizado.",
+            "deleted": "Registo de lavandaria eliminado.",
+            "saveFailed": "Nao foi possivel guardar o registo de lavandaria agora.",
+            "deleteFailed": "Nao foi possivel eliminar o registo de lavandaria agora.",
+            "loadFailed": "Nao foi possivel carregar os registos de lavandaria agora."
+        },
+        "confirm": {
+            "delete": "Eliminar este registo de lavandaria?"
+        },
+        "states": {
+            "restrictedTitle": "O Registo de Lavandaria nao esta disponivel no modo tablet partilhado.",
+            "restrictedBody": "Abra esta pagina numa conta pessoal ou de gestor."
+        },
+        "sections": {
+            "doubleBed": "Cama de casal",
+            "singleBed": "Cama de solteiro",
+            "towels": "Toalhas",
+            "pillows": "Almofadas",
+            "other": "Outros"
+        },
+        "items": {
+            "doubleMattressProtector": "Resguardos de colchao",
+            "doubleFittedSheet": "Lencois de baixo",
+            "doubleTopSheet": "Lencois de cima",
+            "doubleDuvet": "Edredoes",
+            "doubleDuvetCover": "Capas de edredao",
+            "singleMattressProtector": "Resguardos de colchao solteiro",
+            "singleFittedSheet": "Lencois de baixo solteiro",
+            "singleTopSheet": "Lencois de cima solteiro",
+            "singleDuvet": "Edredoes solteiro",
+            "singleDuvetCover": "Capas de edredao solteiro",
+            "bathTowel": "Toalhas de banho",
+            "faceTowel": "Toalhas de rosto",
+            "poolTowel": "Toalhas de piscina",
+            "bathMat": "Tapetes de banho",
+            "pillows": "Almofadas",
+            "pillowProtectors": "Resguardos de almofada",
+            "pillowCases": "Fronhas",
+            "kitchenTowels": "Toalhas de cozinha",
+            "blankets": "Mantas"
+        }
     },
     "welcomePack": {
         "header": {

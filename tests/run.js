@@ -14,6 +14,8 @@ import "./unit/features/operations/cleaning-ah-utils.test.js";
 import "./unit/features/operations/airbnb-reservation-invoices-manager.test.js";
 import "./unit/features/operations/cleaning-bills-manager.test.js";
 import "./unit/features/operations/commission-calculator-manager.test.js";
+import "./unit/features/operations/laundry-log-manager.test.js";
+import "./unit/features/operations/laundry-log-utils.test.js";
 import "./unit/features/operations/operational-guidelines-utils.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";
 import "./unit/features/planning/build-planner-manager.test.js";

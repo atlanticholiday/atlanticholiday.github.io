@@ -12,6 +12,7 @@ import { ChecklistsManager } from '../features/operations/checklists-manager.js'
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
 import { CleaningBillsManager } from '../features/operations/cleaning-bills-manager.js';
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
+import { LaundryLogManager } from '../features/operations/laundry-log-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
 import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
@@ -47,7 +48,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -198,6 +199,7 @@ function syncAccessModeUi() {
         'go-to-vehicles-btn',
         'go-to-welcome-packs-btn',
         'go-to-airbnb-reservation-invoices-btn',
+        'go-to-laundry-log-btn',
         'go-to-operational-guidelines-btn',
         'go-to-staff-btn',
         'go-to-properties-btn',
@@ -220,12 +222,15 @@ function syncAccessModeUi() {
                 ? (stationMode || (!canAccessWorkSchedule && limitedTimeClockMode))
                 : buttonId === 'go-to-cleaning-ah-btn'
                 ? (limitedTimeClockMode || !dataManager.hasPrivilegedRole())
+                : buttonId === 'go-to-laundry-log-btn'
+                ? stationMode
                 : limitedTimeClockMode;
             button.classList.toggle('hidden', shouldHide);
         }
     });
 
     cleaningAhManager?.syncAccessVisibility?.();
+    laundryLogManager?.syncAccessVisibility?.();
 
     const scheduleButton = document.getElementById('go-to-schedule-btn');
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
@@ -445,6 +450,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         commissionCalculatorManager = new CommissionCalculatorManager();
         window.commissionCalculatorManager = commissionCalculatorManager;
         try { commissionCalculatorManager.ensureDomScaffold?.(); } catch { }
+        laundryLogManager = new LaundryLogManager(db, {
+            getDataManager: () => dataManager,
+            getProperties: () => propertiesManager?.properties || []
+        });
+        window.laundryLogManager = laundryLogManager;
+        try { laundryLogManager.ensureDomScaffold?.(); } catch { }
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
         checklistsManager = new ChecklistsManager(userId); // Reverted to original
         window.checklistsManager = checklistsManager;
@@ -509,6 +520,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Cleaning Bills page render
         document.addEventListener('cleaningBillsPageOpened', () => {
             try { cleaningBillsManager?.render(); } catch (e) { console.warn('Cleaning Bills render failed:', e); }
+        });
+        document.addEventListener('laundryLogPageOpened', () => {
+            try { laundryLogManager?.render(); } catch (e) { console.warn('Laundry Log render failed:', e); }
         });
 
         // Listen for language changes and refresh the current view
@@ -693,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn')) {
             signOut(auth);
         }
     });
