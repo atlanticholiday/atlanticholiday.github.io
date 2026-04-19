@@ -218,7 +218,7 @@ export class LaundryLogManager {
                 card.className = parent.querySelector(".dashboard-card")?.className || "dashboard-card";
                 card.innerHTML = `
                     <div class="card-icon bg-rose-500/10 text-rose-600">
-                        <span class="text-2xl">LL</span>
+                        <i class="fas fa-tshirt"></i>
                     </div>
                     <div class="card-body">
                         <h3 id="laundry-log-card-title"></h3>

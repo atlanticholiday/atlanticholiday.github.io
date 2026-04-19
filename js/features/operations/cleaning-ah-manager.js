@@ -381,7 +381,7 @@ export class CleaningAhManager {
                 card.className = parent.querySelector(".dashboard-card")?.className || "dashboard-card";
                 card.innerHTML = `
                     <div class="card-icon bg-sky-500/10 text-sky-600">
-                        <span class="text-2xl">AH</span>
+                        <i class="fas fa-broom"></i>
                     </div>
                     <div class="card-body">
                         <h3 id="cleaning-ah-card-title"></h3>
