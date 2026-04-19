@@ -2888,18 +2888,22 @@ Mountain Villa, Sintra Hills, V4"
                         onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
                         class="dashboard-logo dashboard-logo--xl" />
                     <div class="leading-tight">
-                        <div class="header-title brand-red">Vehicles</div>
-                        <div class="header-sub">Manage vehicles, insurance and inspections</div>
+                        <div class="header-title brand-red" data-i18n="apps.vehicles">Vehicles</div>
+                        <div class="header-sub" data-i18n="apps.vehiclesDesc">Manage vehicles, insurance and inspections</div>
                     </div>
                 </div>
-                <div class="header-right">
+                <div class="header-right flex items-center gap-3">
+                    <div class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-sm">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
                     <button id="vehicles-sign-out-btn"
                         class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
                         <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                         </svg>
-                        Sign Out
+                        <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
         </header>
