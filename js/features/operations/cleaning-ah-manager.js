@@ -272,11 +272,11 @@ export class CleaningAhManager {
 
     hasAccess() {
         const dataManager = this.getDataManager();
-        if (!dataManager || typeof dataManager.hasPrivilegedRole !== "function") {
+        if (!dataManager || typeof dataManager.canAccessApp !== "function") {
             return true;
         }
 
-        return Boolean(dataManager.hasPrivilegedRole());
+        return Boolean(dataManager.canAccessApp("cleaningAh"));
     }
 
     syncAccessVisibility() {

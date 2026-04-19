@@ -3563,6 +3563,24 @@ header h1, header h2, header h3 {
     align-content: start;
 }
 
+.user-management-access-columns {
+    display: grid;
+    gap: 0.95rem;
+}
+
+.user-management-access-block {
+    min-width: 0;
+}
+
+.user-management-access-heading {
+    margin: 0 0 0.55rem;
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .user-management-role-option {
     position: relative;
 }
@@ -3588,6 +3606,11 @@ header h1, header h2, header h3 {
     transition: 160ms ease;
 }
 
+.user-management-role-label-disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
 .user-management-role-checkbox:checked + .user-management-role-label {
     border-color: rgba(233, 75, 90, 0.28);
     background: rgba(233, 75, 90, 0.08);
@@ -3598,6 +3621,13 @@ header h1, header h2, header h3 {
 .user-management-role-checkbox:focus-visible + .user-management-role-label {
     outline: 2px solid rgba(233, 75, 90, 0.35);
     outline-offset: 2px;
+}
+
+.user-management-app-note {
+    margin-top: 0.6rem;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.45;
 }
 
 .user-management-action-group {

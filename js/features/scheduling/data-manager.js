@@ -38,6 +38,7 @@ import {
     hasTimeClockStationRole,
     isSharedVacationBoardOnlyUser
 } from '../../shared/access-roles.js';
+import { normalizeAllowedApps } from '../../shared/app-access.js';
 import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 
 export class DataManager {
@@ -82,6 +83,7 @@ export class DataManager {
             email: null,
             emailCanonical: null,
             roles: [],
+            allowedApps: null,
             linkedEmployee: null
         };
 
@@ -95,12 +97,13 @@ export class DataManager {
         this.userId = userId;
     }
 
-    setCurrentUserContext({ uid = null, email = null, roles = [], linkedEmployee = null } = {}) {
+    setCurrentUserContext({ uid = null, email = null, roles = [], allowedApps = null, linkedEmployee = null } = {}) {
         this.currentUserContext = {
             uid,
             email: typeof email === 'string' ? email.trim().toLowerCase() : null,
             emailCanonical: canonicalizeEmail(email),
             roles: Array.isArray(roles) ? roles : [],
+            allowedApps: normalizeAllowedApps(allowedApps),
             linkedEmployee: linkedEmployee?.id ? {
                 id: linkedEmployee.id,
                 name: linkedEmployee.name || '',
@@ -732,6 +735,10 @@ export class DataManager {
         return this.currentUserContext.roles || [];
     }
 
+    getCurrentUserAllowedApps() {
+        return this.currentUserContext.allowedApps;
+    }
+
     getEmployeeLoadError() {
         return this.employeeLoadError;
     }
@@ -796,6 +803,40 @@ export class DataManager {
         return isSelfServiceEmployeeUser(this.getCurrentUserRoles(), {
             hasEmployeeLink: Boolean(this.getCurrentUserEmployee())
         });
+    }
+
+    hasAnyGrantedAppAccess() {
+        if (this.isTimeClockStationUser()) {
+            return false;
+        }
+
+        if (this.hasPrivilegedRole()) {
+            return true;
+        }
+
+        const allowedApps = this.getCurrentUserAllowedApps();
+        if (Array.isArray(allowedApps)) {
+            return allowedApps.length > 0;
+        }
+
+        return !this.isClockOnlyUser();
+    }
+
+    canAccessApp(appKey = '') {
+        if (!appKey || this.isTimeClockStationUser()) {
+            return false;
+        }
+
+        if (this.hasPrivilegedRole()) {
+            return true;
+        }
+
+        const allowedApps = this.getCurrentUserAllowedApps();
+        if (Array.isArray(allowedApps)) {
+            return allowedApps.includes(appKey);
+        }
+
+        return !this.isClockOnlyUser();
     }
 
     canAccessWorkSchedule() {

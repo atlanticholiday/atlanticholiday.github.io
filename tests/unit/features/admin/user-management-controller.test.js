@@ -58,23 +58,30 @@ function flushAsyncWork() {
 }
 
 describe("UserManagementController", () => {
-  test("renders users with roles and updates role assignments from checkbox changes", async () => {
+  test("renders users with roles and app access, then updates both selections", async () => {
     createFixture();
 
     const setRolesCalls = [];
+    const setAllowedAppsCalls = [];
     const syncEmployeeLinkCalls = [];
     const accessManager = {
       async listEmails() {
         return ["ana@example.com"];
       },
       async getRoles() {
-        return ["manager"];
+        return ["employee"];
+      },
+      async getAllowedApps() {
+        return [];
       },
       async syncEmployeeLink(email, employee) {
         syncEmployeeLinkCalls.push({ email, employee });
       },
       async setRoles(email, roles) {
         setRolesCalls.push({ email, roles });
+      },
+      async setAllowedApps(email, allowedApps) {
+        setAllowedAppsCalls.push({ email, allowedApps });
       },
       async removeEmail() {
         throw new Error("removeEmail should not be called in this test");
@@ -86,7 +93,7 @@ describe("UserManagementController", () => {
     const roleManager = {
       async listRoles() {
         return [
-          { key: "manager", title: "Manager" },
+          { key: "employee", title: "Employee" },
           { key: "ops", title: "Operations" }
         ];
       },
@@ -119,12 +126,21 @@ describe("UserManagementController", () => {
 
     assert.equal(setRolesCalls.length, 1);
     assert.equal(setRolesCalls[0].email, "ana@example.com");
-    assert.deepEqual(setRolesCalls[0].roles, ["manager", "ops"]);
-    assert.equal(syncEmployeeLinkCalls.length, 1);
-    assert.equal(syncEmployeeLinkCalls[0].email, "ana@example.com");
-    assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
-    assert.includes(document.getElementById("roles-list").textContent, "manager");
-    assert.includes(document.getElementById("access-link-overview").textContent, "Privileged access");
+    assert.deepEqual(setRolesCalls[0].roles, ["employee", "ops"]);
+
+    const laundryCheckbox = document.getElementById("app-ana@example.com-laundryLog");
+    laundryCheckbox.checked = true;
+    laundryCheckbox.dispatchEvent(new Event("change"));
+    await flushAsyncWork();
+
+    assert.equal(setAllowedAppsCalls.length, 1);
+    assert.equal(setAllowedAppsCalls[0].email, "ana@example.com");
+    assert.deepEqual(setAllowedAppsCalls[0].allowedApps, ["laundryLog"]);
+    assert.ok(syncEmployeeLinkCalls.length >= 1);
+    assert.equal(syncEmployeeLinkCalls.at(-1).email, "ana@example.com");
+    assert.equal(syncEmployeeLinkCalls.at(-1).employee.id, "emp-1");
+    assert.includes(document.getElementById("roles-list").textContent, "Employee");
+    assert.includes(document.getElementById("access-link-overview").textContent, "Self-service employee");
   });
 
   test("syncs stored employee links from matching staff emails during refresh", async () => {
@@ -139,10 +155,14 @@ describe("UserManagementController", () => {
         async getRoles() {
           return ["employee"];
         },
+        async getAllowedApps() {
+          return [];
+        },
         async syncEmployeeLink(email, employee) {
           syncEmployeeLinkCalls.push({ email, employee });
         },
         async setRoles() {},
+        async setAllowedApps() {},
         async removeEmail() {},
         async addEmail() {}
       },
@@ -169,7 +189,7 @@ describe("UserManagementController", () => {
     createFixture();
 
     const controller = new UserManagementController({
-      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async setRoles() {}, async removeEmail() {}, async addEmail() {} },
+      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async getAllowedApps() { return []; }, async setRoles() {}, async setAllowedApps() {}, async removeEmail() {}, async addEmail() {} },
       roleManager: { async listRoles() { return []; }, async addRole() {} },
       createAuthUser: async () => {},
       sendPasswordReset: async () => {},
@@ -190,11 +210,41 @@ describe("UserManagementController", () => {
     assert.equal(keySelect.value, "supervisor");
   });
 
+  test("disables app access editing for privileged users", async () => {
+    createFixture();
+
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["manager@example.com"];
+        },
+        async getRoles() {
+          return ["manager"];
+        },
+        async getAllowedApps() {
+          return ["laundryLog"];
+        },
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: { async listRoles() { return []; }, async addRole() {} },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    await controller.refreshUserList();
+
+    assert.equal(document.getElementById("app-manager@example.com-laundryLog").disabled, true);
+  });
+
   test("switches the main workspace tabs and keeps drawer tool panels visible when selected", () => {
     createFixture();
 
     const controller = new UserManagementController({
-      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async setRoles() {}, async removeEmail() {}, async addEmail() {} },
+      accessManager: { async listEmails() { return []; }, async getRoles() { return []; }, async getAllowedApps() { return []; }, async setRoles() {}, async setAllowedApps() {}, async removeEmail() {}, async addEmail() {} },
       roleManager: { async listRoles() { return []; }, async addRole() {} },
       createAuthUser: async () => {},
       sendPasswordReset: async () => {},
@@ -244,9 +294,13 @@ describe("UserManagementController", () => {
           const found = assignedRoles.find((entry) => entry.email === email);
           return found ? found.roles : [];
         },
+        async getAllowedApps() {
+          return [];
+        },
         async setRoles(email, roles) {
           assignedRoles.push({ email, roles });
         },
+        async setAllowedApps() {},
         async removeEmail() {},
         async addEmail(email) {
           if (!addedEmails.includes(email)) {
@@ -299,10 +353,14 @@ describe("UserManagementController", () => {
       async getRoles() {
         return [];
       },
+      async getAllowedApps() {
+        return [];
+      },
       async addEmail(email) {
         allowedEmails.push(email);
       },
       async setRoles() {},
+      async setAllowedApps() {},
       async removeEmail() {}
     };
     const roleManager = {
@@ -352,12 +410,16 @@ describe("UserManagementController", () => {
       async getRoles() {
         return [];
       },
+      async getAllowedApps() {
+        return [];
+      },
       async addEmail(email) {
         if (!allowedEmails.includes(email)) {
           allowedEmails.push(email);
         }
       },
       async setRoles() {},
+      async setAllowedApps() {},
       async removeEmail() {}
     };
 
@@ -414,7 +476,11 @@ describe("UserManagementController", () => {
         async getRoles() {
           return [];
         },
+        async getAllowedApps() {
+          return [];
+        },
         async setRoles() {},
+        async setAllowedApps() {},
         async removeEmail() {},
         async addEmail() {}
       },

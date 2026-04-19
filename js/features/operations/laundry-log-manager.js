@@ -133,10 +133,10 @@ export class LaundryLogManager {
 
     hasAccess() {
         const dataManager = this.getDataManager();
-        if (!dataManager || typeof dataManager.isTimeClockStationUser !== "function") {
+        if (!dataManager || typeof dataManager.canAccessApp !== "function") {
             return true;
         }
-        return !dataManager.isTimeClockStationUser();
+        return Boolean(dataManager.canAccessApp("laundryLog"));
     }
 
     syncAccessVisibility() {
@@ -190,7 +190,7 @@ export class LaundryLogManager {
                         <div class="flex items-center gap-3 self-start md:self-auto">
                             <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
                                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
-                                <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Portugues">PT</button>
+                                <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
                             </div>
                             <button id="laundry-log-sign-out-btn" class="text-sm text-red-600 hover:underline"></button>
                         </div>
@@ -531,6 +531,31 @@ export class LaundryLogManager {
         this.render();
     }
 
+    clearDate(field) {
+        const draft = this.readDraftFromDom();
+        if (field === "deliveryDate") {
+            draft.deliveryDate = "";
+        }
+        if (field === "receivedDate") {
+            draft.receivedDate = "";
+        }
+        this.draft = draft;
+        this.render();
+    }
+
+    clearItemCount(itemKey, field) {
+        if (!itemKey || !field) {
+            return;
+        }
+        const draft = this.readDraftFromDom();
+        if (!draft.items?.[itemKey]) {
+            return;
+        }
+        draft.items[itemKey][field] = 0;
+        this.draft = draft;
+        this.render();
+    }
+
     clearFilters() {
         this.searchQuery = "";
         this.selectedStatus = "all";
@@ -577,12 +602,16 @@ export class LaundryLogManager {
         const recordId = target.dataset.recordId || "";
         const workspace = target.dataset.workspace || "";
         const sectionKey = target.dataset.sectionKey || "";
+        const field = target.dataset.field || "";
+        const itemKey = target.dataset.itemKey || "";
         if (action === "workspace" && workspace) return void this.switchWorkspace(workspace);
         if (action === "jump-section" && sectionKey) return void this.jumpToSection(sectionKey);
         if (action === "save") return void this.saveDraft();
         if (action === "reset") return void this.resetDraft();
         if (action === "copy-delivered") return void this.copyDeliveredToReceived();
         if (action === "received-today") return void this.setReceivedDateToToday();
+        if (action === "clear-date" && field) return void this.clearDate(field);
+        if (action === "clear-count" && itemKey && field) return void this.clearItemCount(itemKey, field);
         if (action === "edit" && recordId) return void this.startEditing(recordId);
         if (action === "delete" && recordId) return void this.deleteRecord(recordId);
         if (action === "clear-filters") return void this.clearFilters();
@@ -618,6 +647,47 @@ export class LaundryLogManager {
                 <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(label)}</div>
                 <div class="mt-3 text-3xl font-semibold ${accentClass}">${escapeHtml(String(value))}</div>
             </article>
+        `;
+    }
+
+    renderCompactMetricCard(label, value, accentClass) {
+        return `
+            <article class="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(label)}</div>
+                <div class="mt-2 text-2xl font-semibold ${accentClass}">${escapeHtml(String(value))}</div>
+            </article>
+        `;
+    }
+
+    renderMetricsSection(totals) {
+        return `
+            <details class="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:hidden">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(this.tr("stats.summaryToggle"))}</div>
+                        <div class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("stats.summaryHint", { count: totals.count, pending: totals.pending }))}</div>
+                    </div>
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </span>
+                </summary>
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    ${this.renderCompactMetricCard(this.tr("stats.totalRecords"), totals.count, "text-slate-900")}
+                    ${this.renderCompactMetricCard(this.tr("stats.pending"), totals.pending, "text-amber-700")}
+                    ${this.renderCompactMetricCard(this.tr("stats.matched"), totals.matched, "text-emerald-700")}
+                    ${this.renderCompactMetricCard(this.tr("stats.unitsDelivered"), totals.deliveredUnits, "text-rose-700")}
+                    ${this.renderCompactMetricCard(this.tr("stats.unitsReceived"), totals.receivedUnits, "text-sky-700")}
+                </div>
+            </details>
+            <section class="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-5">
+                ${this.renderMetricCard(this.tr("stats.totalRecords"), totals.count, "text-slate-900")}
+                ${this.renderMetricCard(this.tr("stats.pending"), totals.pending, "text-amber-700")}
+                ${this.renderMetricCard(this.tr("stats.matched"), totals.matched, "text-emerald-700")}
+                ${this.renderMetricCard(this.tr("stats.unitsDelivered"), totals.deliveredUnits, "text-rose-700")}
+                ${this.renderMetricCard(this.tr("stats.unitsReceived"), totals.receivedUnits, "text-sky-700")}
+            </section>
         `;
     }
 
@@ -658,10 +728,12 @@ export class LaundryLogManager {
                                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.deliveredShort"))}
                                     <input type="number" min="0" inputmode="numeric" data-laundry-item-key="${escapeHtml(item.key)}" data-laundry-item-field="delivered" value="${escapeHtml(toInputNumber(counts.delivered))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                    <button type="button" data-laundry-action="clear-count" data-item-key="${escapeHtml(item.key)}" data-field="delivered" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                                 </label>
                                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.receivedShort"))}
                                     <input type="number" min="0" inputmode="numeric" data-laundry-item-key="${escapeHtml(item.key)}" data-laundry-item-field="received" value="${escapeHtml(toInputNumber(counts.received))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                    <button type="button" data-laundry-action="clear-count" data-item-key="${escapeHtml(item.key)}" data-field="received" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                                 </label>
                             </div>
                         `;
@@ -705,13 +777,13 @@ export class LaundryLogManager {
         return `
             <aside class="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-24">
                 <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(this.tr("views.sectionNavTitle"))}</div>
-                <div class="mt-4 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+                <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-col">
                     ${LAUNDRY_LOG_GROUPS.map((section) => `
                         <button
                             type="button"
                             data-laundry-action="jump-section"
                             data-section-key="${escapeHtml(section.key)}"
-                            class="whitespace-nowrap rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                         >
                             ${escapeHtml(this.tr(section.labelKey))}
                         </button>
@@ -829,20 +901,22 @@ export class LaundryLogManager {
                             <label class="block text-sm font-medium text-slate-700">
                                 ${escapeHtml(this.tr("labels.deliveryDate"))}
                                 <input id="laundry-log-delivery-date-input" type="date" value="${escapeHtml(this.draft.deliveryDate)}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                <button type="button" data-laundry-action="clear-date" data-field="deliveryDate" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearDate"))}</button>
                             </label>
                             <label class="block text-sm font-medium text-slate-700">
                                 ${escapeHtml(this.tr("labels.receivedDate"))}
                                 <input id="laundry-log-received-date-input" type="date" value="${escapeHtml(this.draft.receivedDate)}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                <button type="button" data-laundry-action="clear-date" data-field="receivedDate" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearDate"))}</button>
                             </label>
                             <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 <div class="font-semibold text-slate-900">${escapeHtml(this.tr("summary.recordStatus"))}</div>
                                 <div class="mt-2">${escapeHtml(this.tr("summary.delivered", { count: draftSummary.deliveredUnits }))} · ${escapeHtml(this.tr("summary.received", { count: draftSummary.receivedUnits }))} · ${escapeHtml(this.tr("summary.variance", { count: draftSummary.differenceUnits }))}</div>
                             </div>
                         </div>
-                        <div class="mt-5 flex flex-wrap gap-2">
-                            <button type="button" data-laundry-action="copy-delivered" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
-                            <button type="button" data-laundry-action="received-today" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
-                            <button type="button" data-laundry-action="workspace" data-workspace="returns" class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100">${escapeHtml(this.tr("actions.openReturns"))}</button>
+                        <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                            <button type="button" data-laundry-action="copy-delivered" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
+                            <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
+                            <button type="button" data-laundry-action="workspace" data-workspace="returns" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.openReturns"))}</button>
                         </div>
                         <div class="mt-6 space-y-4">
                             ${LAUNDRY_LOG_GROUPS.map((section) => {
@@ -855,9 +929,9 @@ export class LaundryLogManager {
                             <textarea id="laundry-log-notes-input" rows="4" placeholder="${escapeHtml(this.tr("form.notesPlaceholder"))}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">${escapeHtml(this.draft.notes)}</textarea>
                         </label>
                         <datalist id="laundry-log-property-list">${propertyOptions.map((propertyName) => `<option value="${escapeHtml(propertyName)}"></option>`).join("")}</datalist>
-                        <div class="mt-6 flex flex-wrap gap-3">
-                            <button type="button" data-laundry-action="save" class="rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
-                            <button type="button" data-laundry-action="reset" class="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.reset"))}</button>
+                        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
+                            <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
                         </div>
                     </article>
                     <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -982,13 +1056,7 @@ export class LaundryLogManager {
 
         root.innerHTML = `
             ${this.statusMessage ? `<section class="rounded-2xl border px-4 py-3 text-sm font-medium ${toneClass(this.statusTone)}">${escapeHtml(this.statusMessage)}</section>` : ""}
-            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                ${this.renderMetricCard(this.tr("stats.totalRecords"), totals.count, "text-slate-900")}
-                ${this.renderMetricCard(this.tr("stats.pending"), totals.pending, "text-amber-700")}
-                ${this.renderMetricCard(this.tr("stats.matched"), totals.matched, "text-emerald-700")}
-                ${this.renderMetricCard(this.tr("stats.unitsDelivered"), totals.deliveredUnits, "text-rose-700")}
-                ${this.renderMetricCard(this.tr("stats.unitsReceived"), totals.receivedUnits, "text-sky-700")}
-            </section>
+            ${this.renderMetricsSection(totals)}
             ${this.renderWorkspaceTabs()}
             ${this.activeWorkspace === "entry"
                 ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey })

@@ -1,5 +1,6 @@
 import { canonicalizeEmail, getNormalizedEmailDisplay } from '../../shared/email.js';
 import { PRIVILEGED_ROLE_KEYS, hasTimeClockStationRole } from '../../shared/access-roles.js';
+import { normalizeAllowedApps } from '../../shared/app-access.js';
 
 function normalizeName(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -19,6 +20,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
             const displayEmail = getNormalizedEmailDisplay(employee?.email);
             const matchedUser = email ? usersByEmail.get(email) : null;
             const roles = Array.isArray(matchedUser?.roles) ? matchedUser.roles : [];
+            const allowedApps = normalizeAllowedApps(matchedUser?.allowedApps) || [];
             const station = hasTimeClockStationRole(roles);
             const privileged = roles.some((role) => privilegedRoleSet.has(role));
 
@@ -55,6 +57,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     email,
                     displayEmail,
                     roles,
+                    allowedApps: [],
                     status: 'station',
                     label: 'Shared station',
                     helpText: 'This login opens the shared tablet picker so any colleague can clock in or out.'
@@ -68,9 +71,24 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                     email,
                     displayEmail,
                     roles,
+                    allowedApps,
                     status: 'privileged',
                     label: 'Privileged access',
                     helpText: 'This user keeps manager/admin visibility.'
+                };
+            }
+
+            if (allowedApps.length > 0) {
+                return {
+                    employeeId: employee?.id || null,
+                    employeeName: normalizeName(employee?.name) || 'Unnamed colleague',
+                    email,
+                    displayEmail,
+                    roles,
+                    allowedApps,
+                    status: 'app-access',
+                    label: 'Selected app access',
+                    helpText: 'This user opens the time clock plus the selected dashboard apps.'
                 };
             }
 
@@ -80,6 +98,7 @@ export function buildEmployeeAccessOverview(employees = [], users = [], privileg
                 email,
                 displayEmail,
                 roles,
+                allowedApps,
                 status: 'clock-only',
                 label: 'Self-service employee',
                 helpText: 'This user opens only the time clock and the read-only work schedule.'

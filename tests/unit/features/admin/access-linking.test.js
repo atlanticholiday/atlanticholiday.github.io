@@ -13,7 +13,7 @@ describe("Access linking", () => {
         { id: "5", name: "Eva", email: "eva@example.com" }
       ],
       [
-        { email: "ana@example.com", roles: [] },
+        { email: "ana@example.com", roles: [], allowedApps: [] },
         { email: "bruno@example.com", roles: ["manager"] },
         { email: "eva@example.com", roles: [TIME_CLOCK_STATION_ROLE] },
         { email: "other@example.com", roles: [] }
@@ -29,10 +29,20 @@ describe("Access linking", () => {
     assert.equal(byName.Eva.status, "station");
   });
 
+  test("classifies colleagues with selected apps separately from clock-only self-service access", () => {
+    const [row] = buildEmployeeAccessOverview(
+      [{ id: "1", name: "Ana", email: "ana@example.com" }],
+      [{ email: "ana@example.com", roles: ["employee"], allowedApps: ["laundryLog", "welcomePacks"] }]
+    );
+
+    assert.equal(row.status, "app-access");
+    assert.deepEqual(row.allowedApps, ["laundryLog", "welcomePacks"]);
+  });
+
   test("matches gmail aliases canonically", () => {
     const [row] = buildEmployeeAccessOverview(
       [{ id: "1", name: "Nastassja", email: "nastassjadeaguiaratlantic@gmail.com" }],
-      [{ email: "nastassja.deaguiaratlantic+clock@gmail.com", roles: ["employee"] }]
+      [{ email: "nastassja.deaguiaratlantic+clock@gmail.com", roles: ["employee"], allowedApps: [] }]
     );
 
     assert.equal(row.status, "clock-only");

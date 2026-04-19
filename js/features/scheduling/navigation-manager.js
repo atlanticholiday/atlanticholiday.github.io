@@ -1,5 +1,8 @@
+import { getAppAccessOptionByPageName } from '../../shared/app-access.js';
+
 export class NavigationManager {
-    constructor() {
+    constructor({ getDataManager = null } = {}) {
+        this.getDataManager = typeof getDataManager === 'function' ? getDataManager : () => null;
         this.currentPage = null;
         this.pages = {
             landing: 'landing-page',
@@ -31,6 +34,11 @@ export class NavigationManager {
     }
 
     showPage(pageName) {
+        if (!this.canOpenPage(pageName)) {
+            this.showDefaultAuthorizedPage();
+            return;
+        }
+
         // Hide all pages
         Object.values(this.pages).forEach(pageId => {
             const page = document.getElementById(pageId);
@@ -45,6 +53,45 @@ export class NavigationManager {
             targetPage.classList.remove('hidden');
             this.currentPage = pageName;
         }
+    }
+
+    canOpenPage(pageName) {
+        const dataManager = this.getDataManager();
+        if (!dataManager) {
+            return true;
+        }
+
+        if (pageName === 'landing' || pageName === 'login' || pageName === 'setup' || pageName === 'timeClock') {
+            return true;
+        }
+
+        if (pageName === 'schedule') {
+            return Boolean(dataManager.canAccessWorkSchedule?.());
+        }
+
+        if (pageName === 'userManagement') {
+            return Boolean(dataManager.hasPrivilegedRole?.());
+        }
+
+        const appOption = getAppAccessOptionByPageName(pageName);
+        if (appOption) {
+            return Boolean(dataManager.canAccessApp?.(appOption.key));
+        }
+
+        return true;
+    }
+
+    showDefaultAuthorizedPage() {
+        const dataManager = this.getDataManager();
+        const shouldOpenTimeClock = dataManager?.isTimeClockStationUser?.()
+            || (dataManager?.isClockOnlyUser?.() && !dataManager?.hasAnyGrantedAppAccess?.());
+
+        if (shouldOpenTimeClock) {
+            this.showPage('timeClock');
+            return;
+        }
+
+        this.showPage('landing');
     }
 
     showLandingPage() {

@@ -1,7 +1,8 @@
 import { buildEmployeeAccessOverview } from './access-linking.js';
 import { canonicalizeEmail } from '../../shared/email.js';
-import { TIME_CLOCK_STATION_ROLE } from '../../shared/access-roles.js';
+import { PRIVILEGED_ROLE_KEYS, TIME_CLOCK_STATION_ROLE } from '../../shared/access-roles.js';
 import { t } from '../../core/i18n.js';
+import { getAllAppAccessKeys, getAppAccessOptions, normalizeAllowedApps } from '../../shared/app-access.js';
 
 const PRESET_ROLES = [
     { key: 'admin', title: 'Administrator' },
@@ -46,6 +47,8 @@ const ROLE_UI_META = Object.freeze({
         descriptionKey: 'userManagement.roles.timeClockStation.description'
     }
 });
+
+const PRIVILEGED_ROLE_SET = new Set(PRIVILEGED_ROLE_KEYS);
 
 function isEmailAlreadyInUseError(error) {
     return error?.code === 'auth/email-already-in-use';
@@ -304,10 +307,26 @@ export class UserManagementController {
         ]);
 
         const users = await Promise.all(
-            emails.map(async (email) => ({
-                email,
-                roles: await this.accessManager.getRoles(email)
-            }))
+            emails.map(async (email) => {
+                if (typeof this.accessManager.getAccessEntry === 'function') {
+                    const entry = await this.accessManager.getAccessEntry(email);
+                    if (entry) {
+                        return {
+                            email: entry.email || email,
+                            roles: Array.isArray(entry.roles) ? entry.roles : [],
+                            allowedApps: entry.allowedApps ?? null
+                        };
+                    }
+                }
+
+                return {
+                    email,
+                    roles: await this.accessManager.getRoles(email),
+                    allowedApps: typeof this.accessManager.getAllowedApps === 'function'
+                        ? await this.accessManager.getAllowedApps(email)
+                        : null
+                };
+            })
         );
         const employees = await Promise.resolve(this.getEmployees());
         const employeesByEmail = new Map(
@@ -408,6 +427,7 @@ export class UserManagementController {
             'missing-email': 'user-management-status-pill-warning',
             'missing-access': 'user-management-status-pill-danger',
             'clock-only': 'user-management-status-pill-info',
+            'app-access': 'user-management-status-pill-info',
             'station': 'user-management-status-pill-station',
             'privileged': 'user-management-status-pill-success'
         };
@@ -425,6 +445,7 @@ export class UserManagementController {
                 </div>
                 <div class="text-sm text-gray-500">${this.getAccessOverviewHelpText(row)}</div>
                 <div class="text-xs text-gray-500">${row.roles.length ? `${this.translate('userManagement.accessOverview.rolesLabel', 'Roles')}: ${row.roles.map((role) => this.getRoleDisplayTitle({ key: role, title: role })).join(', ')}` : `${this.translate('userManagement.accessOverview.rolesLabel', 'Roles')}: ${this.translate('userManagement.accessOverview.noRoles', 'none')}`}</div>
+                <div class="text-xs text-gray-500">${this.translate('userManagement.accessOverview.appsLabel', 'Apps')}: ${this.getAccessOverviewAppsText(row)}</div>
             </article>
         `).join('');
     }
@@ -475,11 +496,42 @@ export class UserManagementController {
         identity.appendChild(emailLabel);
         identity.appendChild(meta);
 
+        const permissionsContainer = this.document.createElement('div');
+        permissionsContainer.className = 'user-management-access-columns';
+
+        const rolesBlock = this.document.createElement('section');
+        rolesBlock.className = 'user-management-access-block';
+        rolesBlock.appendChild(this.createAccessHeading(this.translate('userManagement.roles.title', 'Roles')));
+
         const rolesContainer = this.document.createElement('div');
         rolesContainer.className = 'user-management-role-grid';
         roles.forEach((role) => {
-            rolesContainer.appendChild(this.createRoleCheckbox(user.email, role, user.roles, rolesContainer));
+            rolesContainer.appendChild(this.createRoleCheckbox(user, role, rolesContainer));
         });
+        rolesBlock.appendChild(rolesContainer);
+
+        const appsBlock = this.document.createElement('section');
+        appsBlock.className = 'user-management-access-block';
+        appsBlock.appendChild(this.createAccessHeading(this.translate('userManagement.appAccess.title', 'App Access')));
+
+        const appAccessState = this.getUserAppAccessState(user, linkedEmployee);
+        const appsContainer = this.document.createElement('div');
+        appsContainer.className = 'user-management-role-grid';
+
+        getAppAccessOptions().forEach((appOption) => {
+            appsContainer.appendChild(this.createAppCheckbox(user, appOption, appsContainer, appAccessState));
+        });
+        appsBlock.appendChild(appsContainer);
+
+        if (appAccessState.note) {
+            const note = this.document.createElement('p');
+            note.className = 'user-management-app-note';
+            note.textContent = appAccessState.note;
+            appsBlock.appendChild(note);
+        }
+
+        permissionsContainer.appendChild(rolesBlock);
+        permissionsContainer.appendChild(appsBlock);
 
         const buttonGroup = this.document.createElement('div');
         buttonGroup.className = 'user-management-action-group';
@@ -487,39 +539,161 @@ export class UserManagementController {
         buttonGroup.appendChild(this.createDeleteAccessButton(user.email));
 
         listItem.appendChild(identity);
-        listItem.appendChild(rolesContainer);
+        listItem.appendChild(permissionsContainer);
         listItem.appendChild(buttonGroup);
 
         return listItem;
     }
 
-    createRoleCheckbox(email, role, selectedRoles, rolesContainer) {
+    createRoleCheckbox(user, role, rolesContainer) {
+        return this.createSelectionChip({
+            id: `role-${user.email}-${role.key}`,
+            value: role.key,
+            checked: user.roles.includes(role.key),
+            label: this.getRoleDisplayTitle(role),
+            onChange: async () => {
+                const nextRoles = Array.from(
+                    rolesContainer.querySelectorAll('input[type=checkbox]:checked')
+                ).map((input) => input.value);
+
+                await this.accessManager.setRoles(user.email, nextRoles);
+                await this.refreshUserList();
+            }
+        });
+    }
+
+    createAppCheckbox(user, appOption, appsContainer, appAccessState) {
+        return this.createSelectionChip({
+            id: `app-${user.email}-${appOption.key}`,
+            value: appOption.key,
+            checked: appAccessState.selectedApps.includes(appOption.key),
+            label: this.getAppLabel(appOption),
+            disabled: !appAccessState.editable,
+            onChange: async () => {
+                const nextAllowedApps = Array.from(
+                    appsContainer.querySelectorAll('input[type=checkbox]:checked')
+                ).map((input) => input.value);
+
+                await this.accessManager.setAllowedApps(user.email, nextAllowedApps);
+                await this.refreshUserList();
+            }
+        });
+    }
+
+    createAccessHeading(text) {
+        const heading = this.document.createElement('h3');
+        heading.className = 'user-management-access-heading';
+        heading.textContent = text;
+        return heading;
+    }
+
+    createSelectionChip({ id, value, checked = false, label, disabled = false, onChange = async () => {} }) {
         const wrapper = this.document.createElement('div');
         wrapper.className = 'user-management-role-option';
 
         const checkbox = this.document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = `role-${email}-${role.key}`;
-        checkbox.value = role.key;
-        checkbox.checked = selectedRoles.includes(role.key);
+        checkbox.id = id;
+        checkbox.value = value;
+        checkbox.checked = checked;
+        checkbox.disabled = disabled;
         checkbox.className = 'user-management-role-checkbox';
         checkbox.addEventListener('change', async () => {
-            const nextRoles = Array.from(
-                rolesContainer.querySelectorAll('input[type=checkbox]:checked')
-            ).map((input) => input.value);
-
-            await this.accessManager.setRoles(email, nextRoles);
+            try {
+                await onChange();
+            } catch (error) {
+                console.error('Failed to update user access selection:', error);
+                await this.refreshUserList();
+                this.window.alert(`Failed to save changes: ${error.message}`);
+            }
         });
 
-        const label = this.document.createElement('label');
-        label.htmlFor = checkbox.id;
-        label.className = 'user-management-role-label';
-        label.textContent = this.getRoleDisplayTitle(role);
+        const labelElement = this.document.createElement('label');
+        labelElement.htmlFor = checkbox.id;
+        labelElement.className = 'user-management-role-label';
+        labelElement.textContent = label;
+        if (disabled) {
+            labelElement.classList.add('user-management-role-label-disabled');
+        }
 
         wrapper.appendChild(checkbox);
-        wrapper.appendChild(label);
+        wrapper.appendChild(labelElement);
 
         return wrapper;
+    }
+
+    getUserAppAccessState(user, linkedEmployee = null) {
+        const roles = Array.isArray(user?.roles) ? user.roles : [];
+        const explicitAllowedApps = normalizeAllowedApps(user?.allowedApps);
+        const hasEmployeeLink = Boolean(linkedEmployee);
+        const isPrivileged = roles.some((role) => PRIVILEGED_ROLE_SET.has(role));
+        const isStation = roles.includes(TIME_CLOCK_STATION_ROLE);
+        const isSelfServiceUser = roles.includes('employee') || hasEmployeeLink;
+
+        if (isPrivileged) {
+            return {
+                editable: false,
+                selectedApps: getAllAppAccessKeys(),
+                note: this.translate('userManagement.appAccess.privilegedNote', 'Privileged roles keep full app access.')
+            };
+        }
+
+        if (isStation) {
+            return {
+                editable: false,
+                selectedApps: [],
+                note: this.translate('userManagement.appAccess.stationNote', 'Shared station logins do not use dashboard app access.')
+            };
+        }
+
+        if (explicitAllowedApps !== null) {
+            return {
+                editable: true,
+                selectedApps: explicitAllowedApps,
+                note: explicitAllowedApps.length
+                    ? ''
+                    : this.translate('userManagement.appAccess.emptyNote', 'No extra apps selected. This colleague keeps only time clock and self-service schedule access.')
+            };
+        }
+
+        if (isSelfServiceUser) {
+            return {
+                editable: true,
+                selectedApps: [],
+                note: this.translate('userManagement.appAccess.emptyNote', 'No extra apps selected. This colleague keeps only time clock and self-service schedule access.')
+            };
+        }
+
+        return {
+            editable: true,
+            selectedApps: getAllAppAccessKeys(),
+            note: this.translate('userManagement.appAccess.legacyNote', 'This older access login keeps the full dashboard until you choose a smaller set.')
+        };
+    }
+
+    getAppLabel(appOption) {
+        return this.translate(appOption.labelKey, appOption.fallbackLabel);
+    }
+
+    getAccessOverviewAppsText(row) {
+        if (row.status === 'privileged') {
+            return this.translate('userManagement.appAccess.all', 'All dashboard apps');
+        }
+
+        if (row.status === 'station') {
+            return this.translate('userManagement.appAccess.stationSummary', 'Shared station only');
+        }
+
+        if (!Array.isArray(row.allowedApps) || row.allowedApps.length === 0) {
+            return this.translate('userManagement.appAccess.none', 'No extra apps');
+        }
+
+        return row.allowedApps
+            .map((appKey) => {
+                const appOption = getAppAccessOptions().find((option) => option.key === appKey);
+                return appOption ? this.getAppLabel(appOption) : appKey;
+            })
+            .join(', ');
     }
 
     createResetPasswordButton(email) {
@@ -604,6 +778,7 @@ export class UserManagementController {
             'missing-email': 'userManagement.accessOverview.status.missingEmail',
             'missing-access': 'userManagement.accessOverview.status.missingAccess',
             'clock-only': 'userManagement.accessOverview.status.clockOnly',
+            'app-access': 'userManagement.accessOverview.status.appAccess',
             'station': 'userManagement.accessOverview.status.station',
             'privileged': 'userManagement.accessOverview.status.privileged'
         };
@@ -616,6 +791,7 @@ export class UserManagementController {
             'missing-email': 'userManagement.accessOverview.help.missingEmail',
             'missing-access': 'userManagement.accessOverview.help.missingAccess',
             'clock-only': 'userManagement.accessOverview.help.clockOnly',
+            'app-access': 'userManagement.accessOverview.help.appAccess',
             'station': 'userManagement.accessOverview.help.station',
             'privileged': 'userManagement.accessOverview.help.privileged'
         };
@@ -657,7 +833,7 @@ export class UserManagementController {
             reusedExistingAuthUser = true;
         }
 
-        await this.accessManager.addEmail(email);
+        await this.accessManager.addEmail(email, { allowedApps: [] });
 
         if (emailInput) emailInput.value = '';
         if (passwordInput) passwordInput.value = '';

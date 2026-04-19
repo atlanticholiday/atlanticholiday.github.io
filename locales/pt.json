@@ -113,26 +113,28 @@
             "subtitle": "Controlar o que sai para a lavandaria e o que regressa em cada propriedade."
         },
         "landing": {
-            "description": "Registo simples no telemovel para roupa de cama e toalhas por propriedade."
+            "description": "Registo simples no telemóvel para roupa de cama e toalhas por propriedade."
         },
         "views": {
             "entryWorkspace": "Entrada",
-            "returnsWorkspace": "Devolucoes",
-            "completedWorkspace": "Concluidos",
+            "returnsWorkspace": "Devoluções",
+            "completedWorkspace": "Concluídos",
             "formTitle": "Nova entrega de lavandaria",
             "editTitle": "Atualizar entrega de lavandaria",
-            "pendingTitle": "Devolucoes pendentes",
+            "pendingTitle": "Devoluções pendentes",
             "recordsTitle": "Registos recentes",
-            "returnsTitle": "Devolucoes para conferir",
-            "completedTitle": "Devolucoes concluidas",
-            "sectionNavTitle": "Secoes da roupa"
+            "returnsTitle": "Devoluções para conferir",
+            "completedTitle": "Devoluções concluídas",
+            "sectionNavTitle": "Secções da roupa"
         },
         "stats": {
             "totalRecords": "Registos",
             "pending": "Pendentes",
             "matched": "Conferidos",
-            "unitsDelivered": "Unidades saida",
-            "unitsReceived": "Unidades entrada"
+            "unitsDelivered": "Unidades saída",
+            "unitsReceived": "Unidades entrada",
+            "summaryToggle": "Resumo Rápido",
+            "summaryHint": "{{count}} registos, {{pending}} pendentes"
         },
         "labels": {
             "property": "Propriedade",
@@ -141,7 +143,7 @@
             "notes": "Notas",
             "deliveredShort": "Saiu",
             "receivedShort": "Voltou",
-            "varianceShort": "Diferenca",
+            "varianceShort": "Diferença",
             "notReturned": "Pendente",
             "unnamedProperty": "Propriedade sem nome"
         },
@@ -152,33 +154,35 @@
         },
         "filters": {
             "searchPlaceholder": "Pesquisar propriedade ou data",
-            "month": "Mes",
+            "month": "Mês",
             "allMonths": "Todos os meses"
         },
         "actions": {
             "save": "Guardar registo",
             "update": "Atualizar registo",
-            "reset": "Limpar formulario",
-            "copyDelivered": "Copiar saida para entrada",
+            "reset": "Limpar formulário",
+            "clearDate": "Limpar data",
+            "clearCount": "Limpar",
+            "copyDelivered": "Copiar saída para entrada",
             "setReceivedToday": "Definir recolha para hoje",
-            "openReturns": "Abrir devolucoes",
-            "viewAllReturns": "Ver todas as devolucoes",
-            "backToEntry": "Voltar a entrada",
-            "review": "Rever devolucao",
+            "openReturns": "Abrir devoluções",
+            "viewAllReturns": "Ver todas as devoluções",
+            "backToEntry": "Voltar à entrada",
+            "review": "Rever devolução",
             "edit": "Abrir registo",
             "delete": "Eliminar",
             "clearFilters": "Limpar filtros"
         },
         "status": {
-            "pending": "Devolucao pendente",
+            "pending": "Devolução pendente",
             "matched": "Conferido",
-            "mismatch": "Diferenca"
+            "mismatch": "Diferença"
         },
         "summary": {
             "recordStatus": "Resumo em direto",
             "delivered": "Saiu: {{count}}",
             "received": "Voltou: {{count}}",
-            "variance": "Diferenca: {{count}}"
+            "variance": "Diferença: {{count}}"
         },
         "counts": {
             "records": {
@@ -190,37 +194,37 @@
                 "other": "{{count}} registos pendentes"
             },
             "returnRecords": {
-                "one": "{{count}} devolucao para conferir",
-                "other": "{{count}} devolucoes para conferir"
+                "one": "{{count}} devolução para conferir",
+                "other": "{{count}} devoluções para conferir"
             },
             "completedRecords": {
-                "one": "{{count}} registo concluido",
-                "other": "{{count}} registos concluidos"
+                "one": "{{count}} registo concluído",
+                "other": "{{count}} registos concluídos"
             }
         },
         "empty": {
-            "pending": "Nao existem devolucoes pendentes neste momento.",
-            "returns": "Nao existem devolucoes para conferir com os filtros atuais.",
-            "completed": "Nao existem registos concluidos com os filtros atuais.",
-            "records": "Nao existem registos com os filtros atuais."
+            "pending": "Não existem devoluções pendentes neste momento.",
+            "returns": "Não existem devoluções para conferir com os filtros atuais.",
+            "completed": "Não existem registos concluídos com os filtros atuais.",
+            "records": "Não existem registos com os filtros atuais."
         },
         "messages": {
             "propertyRequired": "Escolha uma propriedade antes de guardar.",
             "deliveryDateRequired": "Adicione a data de entrega antes de guardar.",
-            "countRequired": "Adicione pelo menos uma quantidade de saida ou entrada antes de guardar.",
+            "countRequired": "Adicione pelo menos uma quantidade de saída ou entrada antes de guardar.",
             "saved": "Registo de lavandaria guardado.",
             "updated": "Registo de lavandaria atualizado.",
             "deleted": "Registo de lavandaria eliminado.",
-            "saveFailed": "Nao foi possivel guardar o registo de lavandaria agora.",
-            "deleteFailed": "Nao foi possivel eliminar o registo de lavandaria agora.",
-            "loadFailed": "Nao foi possivel carregar os registos de lavandaria agora."
+            "saveFailed": "Não foi possível guardar o registo de lavandaria agora.",
+            "deleteFailed": "Não foi possível eliminar o registo de lavandaria agora.",
+            "loadFailed": "Não foi possível carregar os registos de lavandaria agora."
         },
         "confirm": {
             "delete": "Eliminar este registo de lavandaria?"
         },
         "states": {
-            "restrictedTitle": "O Registo de Lavandaria nao esta disponivel no modo tablet partilhado.",
-            "restrictedBody": "Abra esta pagina numa conta pessoal ou de gestor."
+            "restrictedTitle": "O Registo de Lavandaria não está disponível no modo tablet partilhado.",
+            "restrictedBody": "Abra esta página numa conta pessoal ou de gestor."
         },
         "sections": {
             "doubleBed": "Cama de casal",
@@ -230,16 +234,16 @@
             "other": "Outros"
         },
         "items": {
-            "doubleMattressProtector": "Resguardos de colchao",
-            "doubleFittedSheet": "Lencois de baixo",
-            "doubleTopSheet": "Lencois de cima",
-            "doubleDuvet": "Edredoes",
-            "doubleDuvetCover": "Capas de edredao",
-            "singleMattressProtector": "Resguardos de colchao solteiro",
-            "singleFittedSheet": "Lencois de baixo solteiro",
-            "singleTopSheet": "Lencois de cima solteiro",
-            "singleDuvet": "Edredoes solteiro",
-            "singleDuvetCover": "Capas de edredao solteiro",
+            "doubleMattressProtector": "Resguardos de colchão",
+            "doubleFittedSheet": "Lençóis de baixo",
+            "doubleTopSheet": "Lençóis de cima",
+            "doubleDuvet": "Edredões",
+            "doubleDuvetCover": "Capas de edredão",
+            "singleMattressProtector": "Resguardos de colchão solteiro",
+            "singleFittedSheet": "Lençóis de baixo solteiro",
+            "singleTopSheet": "Lençóis de cima solteiro",
+            "singleDuvet": "Edredões solteiro",
+            "singleDuvetCover": "Capas de edredão solteiro",
             "bathTowel": "Toalhas de banho",
             "faceTowel": "Toalhas de rosto",
             "poolTowel": "Toalhas de piscina",
@@ -1029,16 +1033,18 @@
         "accessOverview": {
             "eyebrow": "Ligação",
             "title": "Ligações de Acesso dos Colegas",
-            "description": "Mostra se cada ficha de colaborador esta ligada a um login e se esse login e de autoatendimento, estacao partilhada ou privilegiado.",
+            "description": "Mostra se cada ficha de colaborador esta ligada a um login e se esse login e de autoatendimento, estacao partilhada, privilegiado ou com apps selecionadas.",
             "passwordFlow": "Fluxo de password: crie o acesso com uma password temporária, defina o mesmo email no registo do colega e depois use Repor Password para que o colega escolha a sua password por email.",
             "empty": "Ainda não existem colegas.",
             "noStaffEmail": "Sem email na ficha do colaborador",
             "rolesLabel": "Perfis",
+            "appsLabel": "Apps",
             "noRoles": "nenhum",
             "status": {
                 "missingEmail": "Falta email na ficha",
                 "missingAccess": "Sem acesso à app",
                 "clockOnly": "Colaborador de autoatendimento",
+                "appAccess": "Apps selecionadas",
                 "station": "Estação partilhada",
                 "privileged": "Acesso privilegiado",
                 "unknown": "Estado desconhecido"
@@ -1047,9 +1053,33 @@
                 "missingEmail": "Adicione o mesmo email que o colega vai usar para iniciar sessão.",
                 "missingAccess": "Crie acesso para este email na Gestão de Utilizadores.",
                 "clockOnly": "Este utilizador abre apenas o relogio de ponto e o horario de trabalho em modo so de leitura.",
+                "appAccess": "Este utilizador mantem o relogio de ponto e tambem pode abrir as apps selecionadas no painel.",
                 "station": "Este login abre o seletor do tablet partilhado para que qualquer colega possa registar entradas e saídas.",
                 "privileged": "Este utilizador abre o espaço completo de gestão, incluindo horários e ferramentas de administração.",
                 "unknown": "Reveja o registo deste colega e o acesso atribuído."
+            }
+        },
+        "appAccess": {
+            "title": "Acesso a Apps",
+            "none": "Sem apps extra",
+            "all": "Todas as apps do painel",
+            "stationSummary": "Apenas estacao partilhada",
+            "emptyNote": "Sem apps extra selecionadas. Este colega mantem apenas o relogio de ponto e o horario em autoatendimento.",
+            "privilegedNote": "Perfis privilegiados mantem acesso total as apps.",
+            "stationNote": "Logins de estacao partilhada nao usam acesso a apps do painel.",
+            "legacyNote": "Este login antigo mantem o painel completo ate escolher um conjunto mais pequeno.",
+            "options": {
+                "airbnbReservationInvoices": "Faturas IVA Airbnb",
+                "operationalGuidelines": "Guia Operacional",
+                "allinfo": "All Info",
+                "rnal": "RNAL",
+                "checklists": "Checklists",
+                "owners": "Owners",
+                "safety": "Safety",
+                "reservations": "Reservas Semanais",
+                "buildPlanner": "Build Planner",
+                "inventory": "Inventory",
+                "cleaningAh": "Cleaning AH"
             }
         },
         "goLive": {

@@ -132,7 +132,9 @@
       "pending": "Pending",
       "matched": "Matched",
       "unitsDelivered": "Units out",
-      "unitsReceived": "Units back"
+      "unitsReceived": "Units back",
+      "summaryToggle": "Quick Summary",
+      "summaryHint": "{{count}} records, {{pending}} pending"
     },
     "labels": {
       "property": "Property",
@@ -159,6 +161,8 @@
       "save": "Save handoff",
       "update": "Update handoff",
       "reset": "Clear form",
+      "clearDate": "Clear date",
+      "clearCount": "Clear",
       "copyDelivered": "Copy out counts to back",
       "setReceivedToday": "Set received date to today",
       "openReturns": "Open returns",
@@ -1021,16 +1025,18 @@
     "accessOverview": {
       "eyebrow": "Linking",
       "title": "Colleague Access Links",
-      "description": "This shows whether each staff profile is linked to a login, and whether that login is self-service, shared-station, or privileged.",
+      "description": "This shows whether each staff profile is linked to a login, and whether that login is self-service, shared-station, privileged, or has selected app access.",
       "passwordFlow": "Password flow: create access with a temporary password, set the same email on the colleague record, then use Reset Password so the colleague chooses their own password by email.",
       "empty": "No colleagues found yet.",
       "noStaffEmail": "No email on staff record",
       "rolesLabel": "Roles",
+      "appsLabel": "Apps",
       "noRoles": "none",
       "status": {
         "missingEmail": "Missing staff email",
         "missingAccess": "No app access",
         "clockOnly": "Self-service employee",
+        "appAccess": "Selected app access",
         "station": "Shared station",
         "privileged": "Privileged access",
         "unknown": "Unknown status"
@@ -1039,9 +1045,33 @@
         "missingEmail": "Add the same email the colleague will use to sign in.",
         "missingAccess": "Create access for this email in User Management.",
         "clockOnly": "This user opens only the time clock and the read-only work schedule.",
+        "appAccess": "This user keeps time clock access and can also open the selected dashboard apps.",
         "station": "This login opens the shared tablet picker so any colleague can clock in or out.",
         "privileged": "This user opens the full manager workspace, including scheduling and admin tools.",
         "unknown": "Review this colleague record and assigned access."
+      }
+    },
+    "appAccess": {
+      "title": "App Access",
+      "none": "No extra apps",
+      "all": "All dashboard apps",
+      "stationSummary": "Shared station only",
+      "emptyNote": "No extra apps selected. This colleague keeps only time clock and self-service schedule access.",
+      "privilegedNote": "Privileged roles keep full app access.",
+      "stationNote": "Shared station logins do not use dashboard app access.",
+      "legacyNote": "This older access login keeps the full dashboard until you choose a smaller set.",
+      "options": {
+        "airbnbReservationInvoices": "Airbnb VAT Invoices",
+        "operationalGuidelines": "Operational Guide",
+        "allinfo": "All Info",
+        "rnal": "RNAL",
+        "checklists": "Checklists",
+        "owners": "Owners",
+        "safety": "Safety",
+        "reservations": "Weekly Reservations",
+        "buildPlanner": "Build Planner",
+        "inventory": "Inventory",
+        "cleaningAh": "Cleaning AH"
       }
     },
     "goLive": {

@@ -37,6 +37,7 @@ import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
 import { UIManager } from '../features/scheduling/ui-manager.js';
+import { getAppAccessOptionByButtonId, getAppAccessOptions } from '../shared/app-access.js';
 import { canonicalizeEmail } from '../shared/email.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
@@ -181,7 +182,8 @@ function syncAccessModeUi() {
     const stationMode = dataManager.isTimeClockStationUser();
     const scheduleOnlyMode = dataManager.isScheduleOnlyUser();
     const canAccessWorkSchedule = dataManager.canAccessWorkSchedule();
-    const limitedTimeClockMode = clockOnlyMode || stationMode;
+    const hasGrantedApps = dataManager.hasAnyGrantedAppAccess?.();
+    const limitedTimeClockMode = stationMode || (clockOnlyMode && !hasGrantedApps);
 
     if (stationMode && i18n.getCurrentLanguage() !== 'pt') {
         i18n.setLanguage('pt').catch((error) => {
@@ -191,39 +193,25 @@ function syncAccessModeUi() {
 
     const landingPage = document.getElementById('landing-page');
     if (landingPage) {
-        landingPage.dataset.accessMode = stationMode ? 'station' : (clockOnlyMode ? 'clock-only' : 'manager');
+        landingPage.dataset.accessMode = stationMode ? 'station' : (limitedTimeClockMode ? 'clock-only' : 'manager');
     }
 
     const dashboardButtons = [
         'go-to-schedule-btn',
-        'go-to-vehicles-btn',
-        'go-to-welcome-packs-btn',
-        'go-to-airbnb-reservation-invoices-btn',
-        'go-to-laundry-log-btn',
-        'go-to-operational-guidelines-btn',
-        'go-to-staff-btn',
-        'go-to-properties-btn',
-        'go-to-allinfo-btn',
-        'go-to-rnal-btn',
-        'go-to-checklists-btn',
-        'go-to-owners-btn',
-        'go-to-safety-btn',
-        'go-to-reservations-btn',
         'go-to-user-management-btn',
-        'go-to-inventory-btn',
-        'go-to-cleaning-ah-btn',
-        'go-to-build-planner-btn'
+        ...getAppAccessOptions().map((option) => option.buttonId)
     ];
 
     dashboardButtons.forEach((buttonId) => {
         const button = document.getElementById(buttonId);
         if (button) {
+            const appOption = getAppAccessOptionByButtonId(buttonId);
             const shouldHide = buttonId === 'go-to-schedule-btn'
-                ? (stationMode || (!canAccessWorkSchedule && limitedTimeClockMode))
-                : buttonId === 'go-to-cleaning-ah-btn'
-                ? (limitedTimeClockMode || !dataManager.hasPrivilegedRole())
-                : buttonId === 'go-to-laundry-log-btn'
-                ? stationMode
+                ? (stationMode || !canAccessWorkSchedule)
+                : buttonId === 'go-to-user-management-btn'
+                ? (!dataManager.hasPrivilegedRole())
+                : appOption
+                ? (!dataManager.canAccessApp(appOption.key))
                 : limitedTimeClockMode;
             button.classList.toggle('hidden', shouldHide);
         }
@@ -249,10 +237,12 @@ function syncAccessModeUi() {
 
     const moreToolsToggle = document.getElementById('toggle-more-tools-btn');
     const moreToolsSection = document.getElementById('more-tools-section');
+    const visibleMoreToolCards = Array.from(document.querySelectorAll('#other-tools-grid .dashboard-card'))
+        .filter((card) => !card.classList.contains('hidden'));
     if (moreToolsToggle) {
-        moreToolsToggle.classList.toggle('hidden', limitedTimeClockMode);
+        moreToolsToggle.classList.toggle('hidden', limitedTimeClockMode || visibleMoreToolCards.length === 0);
     }
-    if (moreToolsSection && limitedTimeClockMode) {
+    if (moreToolsSection && (limitedTimeClockMode || visibleMoreToolCards.length === 0)) {
         moreToolsSection.classList.add('hidden');
     }
 
@@ -261,14 +251,14 @@ function syncAccessModeUi() {
     if (heroTitle) {
         heroTitle.textContent = stationMode
             ? t('timeClock.landing.stationTitle')
-            : clockOnlyMode
+            : limitedTimeClockMode && clockOnlyMode
             ? (employee ? t('timeClock.landing.clockOnlyNamedTitle', { name: employee.name }) : t('timeClock.landing.clockOnlyFallbackTitle'))
             : t('landing.welcome');
     }
     if (heroSubtitle) {
         heroSubtitle.textContent = stationMode
             ? t('timeClock.landing.stationSubtitle')
-            : clockOnlyMode
+            : limitedTimeClockMode && clockOnlyMode
             ? t('timeClock.landing.clockOnlySubtitle')
             : t('landing.subtitle');
     }
@@ -280,8 +270,9 @@ function syncAccessModeUi() {
 
     const scheduleBackButton = document.getElementById('back-to-landing-from-schedule-btn');
     if (scheduleBackButton) {
-        scheduleBackButton.dataset.targetPage = scheduleOnlyMode ? 'timeClock' : 'landing';
-        scheduleBackButton.title = scheduleOnlyMode ? t('timeClock.landing.backToTimeClock') : t('timeClock.landing.backToLanding');
+        const returnToTimeClock = scheduleOnlyMode && !hasGrantedApps;
+        scheduleBackButton.dataset.targetPage = returnToTimeClock ? 'timeClock' : 'landing';
+        scheduleBackButton.title = returnToTimeClock ? t('timeClock.landing.backToTimeClock') : t('timeClock.landing.backToLanding');
     }
 
     if (limitedTimeClockMode && navigationManager && !timeClockAutoOpenedForUser) {
@@ -293,7 +284,10 @@ function syncAccessModeUi() {
 function routeCurrentUserAccess() {
     if (!navigationManager || !dataManager) return;
 
-    if (dataManager.isClockOnlyUser() || dataManager.isTimeClockStationUser()) {
+    const shouldOpenTimeClockFirst = dataManager.isTimeClockStationUser()
+        || (dataManager.isClockOnlyUser() && !dataManager.hasAnyGrantedAppAccess?.());
+
+    if (shouldOpenTimeClockFirst) {
         navigationManager.showTimeClockPage();
         timeClockAutoOpenedForUser = true;
         return;
@@ -398,7 +392,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.uiManager = uiManager;
 
         eventManager = new EventManager(auth, dataManager, uiManager);
-        navigationManager = new NavigationManager();
+        navigationManager = new NavigationManager({
+            getDataManager: () => dataManager
+        });
         buildPlannerManager = new BuildPlannerManager();
         buildPlannerManager.init();
         window.buildPlannerManager = buildPlannerManager;
@@ -569,6 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     uid: user.uid,
                     email: user.email,
                     roles: accessEntry?.roles || [],
+                    allowedApps: accessEntry?.allowedApps ?? null,
                     linkedEmployee: accessEntry?.linkedEmployeeId ? {
                         id: accessEntry.linkedEmployeeId,
                         name: accessEntry.linkedEmployeeName || '',

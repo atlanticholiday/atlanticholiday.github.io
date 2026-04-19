@@ -1,6 +1,7 @@
 import { collection, doc, getDoc, getDocs, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getEmailLookupKeys, getNormalizedEmailDisplay } from "../../shared/email.js";
+import { normalizeAllowedApps } from "../../shared/app-access.js";
 
 export class AccessManager {
     constructor(db) {
@@ -28,6 +29,7 @@ export class AccessManager {
                 email: data.displayEmail || snap.id,
                 displayEmail: data.displayEmail || snap.id,
                 roles: Array.isArray(data.roles) ? data.roles : [],
+                allowedApps: normalizeAllowedApps(data.allowedApps),
                 linkedEmployeeId: data.linkedEmployeeId || null,
                 linkedEmployeeName: data.linkedEmployeeName || null,
                 linkedEmployeeEmail: data.linkedEmployeeEmail || null,
@@ -38,12 +40,19 @@ export class AccessManager {
         return null;
     }
 
-    async addEmail(email) {
+    async addEmail(email, { allowedApps } = {}) {
+        const normalizedAllowedApps = normalizeAllowedApps(allowedApps);
         const [primaryKey] = getEmailLookupKeys(email);
-        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
+        const payload = {
             addedAt: new Date(),
             displayEmail: getNormalizedEmailDisplay(email)
-        }, { merge: true });
+        };
+
+        if (normalizedAllowedApps !== null) {
+            payload.allowedApps = normalizedAllowedApps;
+        }
+
+        await setDoc(doc(this.db, this.collectionPath, primaryKey), payload, { merge: true });
     }
 
     async removeEmail(email) {
@@ -60,6 +69,11 @@ export class AccessManager {
         return entry?.roles || [];
     }
 
+    async getAllowedApps(email) {
+        const entry = await this.getAccessEntry(email);
+        return entry?.allowedApps ?? null;
+    }
+
     /**
      * Assign roles to an email
      * @param roles Array of role keys
@@ -68,6 +82,15 @@ export class AccessManager {
         const [primaryKey] = getEmailLookupKeys(email);
         await setDoc(doc(this.db, this.collectionPath, primaryKey), {
             roles,
+            displayEmail: getNormalizedEmailDisplay(email)
+        }, { merge: true });
+    }
+
+    async setAllowedApps(email, allowedApps) {
+        const normalizedAllowedApps = normalizeAllowedApps(allowedApps) || [];
+        const [primaryKey] = getEmailLookupKeys(email);
+        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
+            allowedApps: normalizedAllowedApps,
             displayEmail: getNormalizedEmailDisplay(email)
         }, { merge: true });
     }
