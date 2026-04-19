@@ -9,6 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import {
+    CLEANING_AH_CATEGORY_KEYS,
     CLEANING_AH_DEFAULTS,
     CLEANING_AH_RESERVATION_SOURCES,
     createCleaningAhFingerprint,
@@ -16,6 +17,8 @@ import {
     createStandaloneLaundryRecord,
     filterCleaningRegisterEntries,
     filterLaundryRegisterEntries,
+    getCleaningAhCategoryConfig,
+    normalizeCleaningAhCategoryKey,
     parseCleaningAhCsv,
     roundCurrency,
     summarizeCleaningAhRecords,
@@ -23,16 +26,7 @@ import {
 } from "./cleaning-ah-utils.js";
 import { i18n, t } from "../../core/i18n.js";
 
-const DEFAULT_CLEANING_CATEGORY = "Limpeza check-out";
-const DEFAULT_CATEGORY_OPTIONS = Object.freeze([
-    DEFAULT_CLEANING_CATEGORY,
-    "Limpeza Check-out",
-    "Primeira Limpeza",
-    "Limpeza Check-out e Contagem das roupas",
-    "Limpeza Check-out e Realizacao de Inventario",
-    "Limpeza check-out - proprietarios",
-    "Continuacao da Limpeza do Check-out"
-]);
+const DEFAULT_CLEANING_CATEGORY_KEY = CLEANING_AH_CATEGORY_KEYS.checkout;
 
 function escapeHtml(value) {
     return String(value || "")
@@ -88,7 +82,7 @@ export class CleaningAhManager {
         this.cleaningUnsubscribe = null;
         this.laundryUnsubscribe = null;
 
-        this.activeTab = "dashboard";
+        this.activeTab = "stats";
         this.searchQuery = "";
         this.selectedMonthKey = "";
         this.selectedPropertyName = "";
@@ -174,7 +168,74 @@ export class CleaningAhManager {
             : this.tr("reservationSources.platform");
     }
 
+    getCleaningCategoryDefinitions() {
+        return [
+            CLEANING_AH_CATEGORY_KEYS.checkout,
+            CLEANING_AH_CATEGORY_KEYS.ownerCheckout,
+            CLEANING_AH_CATEGORY_KEYS.firstCleaning,
+            CLEANING_AH_CATEGORY_KEYS.midTerm
+        ].map((key) => ({
+            key,
+            label: this.tr(`categories.${key}.label`)
+        }));
+    }
+
+    getCleaningCategoryKey(value) {
+        return normalizeCleaningAhCategoryKey(value) || DEFAULT_CLEANING_CATEGORY_KEY;
+    }
+
+    getCleaningCategoryLabel(value) {
+        const categoryKey = normalizeCleaningAhCategoryKey(value);
+        return categoryKey
+            ? this.tr(`categories.${categoryKey}.label`)
+            : normalizeLabel(value) || this.tr(`categories.${DEFAULT_CLEANING_CATEGORY_KEY}.label`);
+    }
+
+    getCleaningCategoryConfig(value) {
+        return getCleaningAhCategoryConfig(this.getCleaningCategoryKey(value));
+    }
+
+    getCleaningCategoryRuleKey(categoryValue) {
+        const categoryKey = this.getCleaningCategoryKey(categoryValue);
+        const ruleKeyByCategory = {
+            [CLEANING_AH_CATEGORY_KEYS.checkout]: "checkout",
+            [CLEANING_AH_CATEGORY_KEYS.ownerCheckout]: "ownerCheckout",
+            [CLEANING_AH_CATEGORY_KEYS.firstCleaning]: "firstCleaning",
+            [CLEANING_AH_CATEGORY_KEYS.midTerm]: "midTerm"
+        };
+
+        return ruleKeyByCategory[categoryKey] || "checkout";
+    }
+
+    getCleaningCategoryRuleText(categoryValue) {
+        return this.tr(`categoryRules.${this.getCleaningCategoryRuleKey(categoryValue)}`);
+    }
+
+    getCleaningAmountLabel(categoryValue) {
+        const categoryKey = this.getCleaningCategoryKey(categoryValue);
+        if (categoryKey === CLEANING_AH_CATEGORY_KEYS.midTerm) {
+            return this.tr("forms.savedAmount");
+        }
+
+        if (
+            categoryKey === CLEANING_AH_CATEGORY_KEYS.ownerCheckout
+            || categoryKey === CLEANING_AH_CATEGORY_KEYS.firstCleaning
+        ) {
+            return this.tr("forms.chargedAmount");
+        }
+
+        return this.tr("forms.guestAmount");
+    }
+
+    categoryUsesReservationSource(categoryValue) {
+        return this.getCleaningCategoryKey(categoryValue) === CLEANING_AH_CATEGORY_KEYS.checkout;
+    }
+
     getCleaningReservationSource(record = {}) {
+        if (!this.categoryUsesReservationSource(record.categoryKey || record.category)) {
+            return CLEANING_AH_RESERVATION_SOURCES.direct;
+        }
+
         return record.reservationSource
             || (roundCurrency(record.platformCommission || 0) === 0
                 ? CLEANING_AH_RESERVATION_SOURCES.direct
@@ -213,7 +274,7 @@ export class CleaningAhManager {
         return {
             date: getTodayIsoDate(),
             propertyName: "",
-            category: DEFAULT_CLEANING_CATEGORY,
+            categoryKey: DEFAULT_CLEANING_CATEGORY_KEY,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: "",
             laundryKg: "",
@@ -235,7 +296,7 @@ export class CleaningAhManager {
     createDefaultCleaningBatchDraft() {
         return {
             date: getTodayIsoDate(),
-            category: DEFAULT_CLEANING_CATEGORY,
+            categoryKey: DEFAULT_CLEANING_CATEGORY_KEY,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
             rows: [this.createCleaningBatchRow()]
         };
@@ -498,15 +559,25 @@ export class CleaningAhManager {
     }
 
     getKnownCategories() {
-        const categories = new Map(DEFAULT_CATEGORY_OPTIONS.map((entry) => [normalizeKey(entry), entry]));
+        const categories = new Map(
+            this.getCleaningCategoryDefinitions().map((entry) => [entry.key, entry])
+        );
         this.cleaningRecords.forEach((record) => {
-            const label = normalizeLabel(record.category);
-            if (label) {
-                categories.set(normalizeKey(label), label);
+            const rawCategory = normalizeLabel(record.category);
+            const categoryKey = normalizeCleaningAhCategoryKey(record.categoryKey || rawCategory);
+            if (categoryKey && categories.has(categoryKey)) {
+                return;
+            }
+
+            if (rawCategory) {
+                categories.set(`raw:${normalizeKey(rawCategory)}`, {
+                    key: rawCategory,
+                    label: rawCategory
+                });
             }
         });
 
-        return [...categories.values()].sort((left, right) => left.localeCompare(right));
+        return [...categories.values()].sort((left, right) => left.label.localeCompare(right.label));
     }
 
     getMonthOptions() {
@@ -578,11 +649,12 @@ export class CleaningAhManager {
     }
 
     getCleaningLinkLabel(record) {
-        return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${record.category || DEFAULT_CLEANING_CATEGORY}`;
+        return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${this.getCleaningCategoryLabel(record.categoryKey || record.category)}`;
     }
 
-    getSuggestedCleaningRecord(propertyName, { excludeRecordId = "" } = {}) {
+    getSuggestedCleaningRecord(propertyName, { excludeRecordId = "", categoryKey = "" } = {}) {
         const normalizedPropertyName = normalizeKey(propertyName);
+        const normalizedCategoryKey = normalizeCleaningAhCategoryKey(categoryKey);
         if (!normalizedPropertyName) {
             return null;
         }
@@ -593,6 +665,13 @@ export class CleaningAhManager {
             }
 
             if (normalizeKey(record.propertyName) !== normalizedPropertyName) {
+                return false;
+            }
+
+            if (
+                normalizedCategoryKey
+                && normalizeCleaningAhCategoryKey(record.categoryKey || record.category) !== normalizedCategoryKey
+            ) {
                 return false;
             }
 
@@ -615,7 +694,10 @@ export class CleaningAhManager {
         const explicitInputValue = String(draft?.guestAmount || "").trim();
         const suggestedInputValue = options.enableSuggestion === false
             ? ""
-            : this.getSuggestedCleaningGuestAmountInput(draft?.propertyName, options);
+            : this.getSuggestedCleaningGuestAmountInput(draft?.propertyName, {
+                ...options,
+                categoryKey: draft?.categoryKey || draft?.category || options.categoryKey || ""
+            });
         const inputValue = explicitInputValue || suggestedInputValue;
 
         return {
@@ -635,7 +717,10 @@ export class CleaningAhManager {
             if (this.selectedPropertyName && normalizeKey(record.propertyName) !== normalizeKey(this.selectedPropertyName)) {
                 return false;
             }
-            if (this.selectedCategory && normalizeKey(record.category) !== normalizeKey(this.selectedCategory)) {
+            if (
+                this.selectedCategory
+                && normalizeCleaningAhCategoryKey(record.categoryKey || record.category) !== normalizeCleaningAhCategoryKey(this.selectedCategory)
+            ) {
                 return false;
             }
             if (!search) {
@@ -764,12 +849,18 @@ export class CleaningAhManager {
     }
 
     getCleaningBatchPreview(draft = this.cleaningBatchDraft) {
-        const category = normalizeLabel(draft?.category) || DEFAULT_CLEANING_CATEGORY;
-        const reservationSource = draft?.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform;
+        const categoryKey = this.getCleaningCategoryKey(draft?.categoryKey || draft?.category);
+        const categoryLabel = this.getCleaningCategoryLabel(categoryKey);
+        const reservationSource = this.categoryUsesReservationSource(categoryKey)
+            ? (draft?.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+            : CLEANING_AH_RESERVATION_SOURCES.direct;
 
         return (draft?.rows || []).reduce((summary, row) => {
             const propertyName = normalizeLabel(row?.propertyName);
-            const guestAmountField = this.getCleaningGuestAmountFieldState(row);
+            const guestAmountField = this.getCleaningGuestAmountFieldState({
+                ...row,
+                categoryKey
+            });
             if (!propertyName || guestAmountField.numericValue === null || guestAmountField.numericValue < 0) {
                 return summary;
             }
@@ -777,7 +868,8 @@ export class CleaningAhManager {
             const record = createCleaningAhRecord({
                 date: draft?.date,
                 propertyName,
-                category,
+                categoryKey,
+                category: categoryLabel,
                 reservationSource,
                 guestAmount: guestAmountField.numericValue,
                 laundryKg: toOptionalNumber(row?.laundryKg) || 0
@@ -839,22 +931,28 @@ export class CleaningAhManager {
         const form = document.getElementById("cleaning-ah-cleaning-form");
         const propertyInput = form?.querySelector('[name="propertyName"]');
         const guestAmountInput = form?.querySelector('[name="guestAmount"]');
+        const categoryInput = form?.querySelector('[name="categoryKey"]');
         if (!propertyInput || !guestAmountInput) {
             return;
         }
 
-        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value);
+        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value, {
+            categoryKey: categoryInput?.value || ""
+        });
         this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
     }
 
     applyCleaningSuggestionToBatchRow(rowElement) {
         const propertyInput = rowElement?.querySelector('[name="propertyName"]');
         const guestAmountInput = rowElement?.querySelector('[name="guestAmount"]');
+        const categoryInput = document.querySelector('#cleaning-ah-cleaning-batch-form [name="categoryKey"]');
         if (!propertyInput || !guestAmountInput) {
             return;
         }
 
-        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value);
+        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value, {
+            categoryKey: categoryInput?.value || ""
+        });
         this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
     }
 
@@ -951,7 +1049,6 @@ export class CleaningAhManager {
             ${this.renderTabBar()}
             ${this.renderActiveTab(visibleCleaningRegisterEntries, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries)}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
-            <datalist id="cleaning-ah-category-options">${this.getKnownCategories().map((category) => `<option value="${escapeHtml(category)}"></option>`).join("")}</datalist>
         `;
 
         this.bindUiEvents();
@@ -1056,7 +1153,7 @@ export class CleaningAhManager {
             .map((propertyName) => `<option value="${escapeHtml(propertyName)}" ${normalizeKey(propertyName) === normalizeKey(this.selectedPropertyName) ? "selected" : ""}>${escapeHtml(propertyName)}</option>`)
             .join("");
         const categoryOptions = this.getKnownCategories()
-            .map((category) => `<option value="${escapeHtml(category)}" ${normalizeKey(category) === normalizeKey(this.selectedCategory) ? "selected" : ""}>${escapeHtml(category)}</option>`)
+            .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === this.selectedCategory ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
             .join("");
 
         return `
@@ -1094,7 +1191,7 @@ export class CleaningAhManager {
 
     renderTabBar() {
         const tabs = [
-            ["dashboard", this.tr("tabs.dashboard")],
+            ["stats", this.tr("tabs.stats")],
             ["cleanings", this.tr("tabs.cleanings")],
             ["laundry", this.tr("tabs.laundry")]
         ];
@@ -1121,10 +1218,10 @@ export class CleaningAhManager {
             return this.renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries);
         }
 
-        return this.renderDashboardTab(cleaningSummary, laundrySummary);
+        return this.renderStatsTab(cleaningSummary, laundrySummary);
     }
 
-    renderDashboardTab(cleaningSummary, laundrySummary) {
+    renderStatsTab(cleaningSummary, laundrySummary) {
         return `
             <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[1.5fr_1fr]">
                 <div class="space-y-6">
@@ -1143,24 +1240,26 @@ export class CleaningAhManager {
                             ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
                         </div>
                     </section>
-                    ${this.renderFinancialSummaryTable(this.tr("dashboard.byMonth"), cleaningSummary.byMonth, [
+                    ${this.renderFinancialSummaryTable(this.tr("stats.byMonth"), cleaningSummary.byMonth, [
                         [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
                         [this.tr("tables.count"), (entry) => String(entry.count)],
-                        [this.tr("tables.guest"), (entry) => this.formatCurrency(entry.guestAmount)],
+                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
                         [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
                         [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
-                    ${this.renderFinancialSummaryTable(this.tr("dashboard.topProperties"), cleaningSummary.byProperty.slice(0, 8), [
+                    ${this.renderFinancialSummaryTable(this.tr("stats.topProperties"), cleaningSummary.byProperty.slice(0, 8), [
                         [this.tr("tables.property"), (entry) => entry.label],
                         [this.tr("tables.count"), (entry) => String(entry.count)],
-                        [this.tr("tables.guest"), (entry) => this.formatCurrency(entry.guestAmount)],
+                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
                         [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
                 </div>
                 <div class="space-y-6">
-                    ${this.renderFinancialSummaryTable(this.tr("dashboard.categories"), cleaningSummary.byCategory.slice(0, 8), [
-                        [this.tr("tables.category"), (entry) => entry.label],
+                    ${this.renderFinancialSummaryTable(this.tr("stats.categories"), cleaningSummary.byCategory.slice(0, 8), [
+                        [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
                         [this.tr("tables.count"), (entry) => String(entry.count)],
+                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
+                        [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
                         [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                     ])}
                     ${this.renderLaundrySummaryBlock(laundrySummary)}
@@ -1171,16 +1270,22 @@ export class CleaningAhManager {
 
     renderCleaningsTab(filteredCleanings) {
         const draft = this.cleaningDraft;
+        const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
+        const categoryLabel = this.getCleaningCategoryLabel(categoryKey);
         const isBatchMode = !this.editingCleaningId && this.cleaningEntryMode === "batch";
         const guestAmountField = this.getCleaningGuestAmountFieldState(draft, {
             enableSuggestion: !this.editingCleaningId,
-            excludeRecordId: this.editingCleaningId || ""
+            excludeRecordId: this.editingCleaningId || "",
+            categoryKey
         });
         const previewRecord = createCleaningAhRecord({
             date: draft.date,
             propertyName: draft.propertyName,
-            category: draft.category || DEFAULT_CLEANING_CATEGORY,
-            reservationSource: draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
+            categoryKey,
+            category: categoryLabel,
+            reservationSource: this.categoryUsesReservationSource(categoryKey)
+                ? (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
             laundryKg: toOptionalNumber(draft.laundryKg) || 0,
             notes: draft.notes
@@ -1234,6 +1339,10 @@ export class CleaningAhManager {
     }
 
     renderCleaningSingleForm({ draft, preview, guestAmountField }) {
+        const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
+        const categoryOptions = this.getKnownCategories()
+            .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === categoryKey ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
+            .join("");
         const reservationSourceOptions = [
             [CLEANING_AH_RESERVATION_SOURCES.platform, this.tr("reservationSources.platform")],
             [CLEANING_AH_RESERVATION_SOURCES.direct, this.tr("reservationSources.direct")]
@@ -1252,18 +1361,20 @@ export class CleaningAhManager {
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.category"))}</span>
-                        <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(draft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                        <select name="categoryKey" class="mt-1 w-full">
+                            ${categoryOptions}
+                        </select>
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
-                        <select name="reservationSource" class="mt-1 w-full">
+                        <select name="reservationSource" class="mt-1 w-full" ${this.categoryUsesReservationSource(categoryKey) ? "" : "disabled"}>
                             ${reservationSourceOptions.map(([value, label]) => `
                                 <option value="${escapeHtml(value)}" ${draft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
                             `).join("")}
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.guestAmount"))}</span>
+                        <span class="text-sm text-slate-600">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                         <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" required>
                     </label>
                     <label class="block">
@@ -1275,6 +1386,7 @@ export class CleaningAhManager {
                     <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
                     <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
                 </label>
+                <p class="text-sm text-slate-500">${escapeHtml(this.getCleaningCategoryRuleText(categoryKey))}</p>
                 <div id="cleaning-ah-cleaning-preview">
                     ${this.renderCleaningPreview(preview)}
                 </div>
@@ -1286,6 +1398,10 @@ export class CleaningAhManager {
         const rows = this.cleaningBatchDraft.rows.length
             ? this.cleaningBatchDraft.rows
             : [this.createCleaningBatchRow()];
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningBatchDraft.categoryKey || this.cleaningBatchDraft.category);
+        const categoryOptions = this.getKnownCategories()
+            .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === categoryKey ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
+            .join("");
         const reservationSourceOptions = [
             [CLEANING_AH_RESERVATION_SOURCES.platform, this.tr("reservationSources.platform")],
             [CLEANING_AH_RESERVATION_SOURCES.direct, this.tr("reservationSources.direct")]
@@ -1300,11 +1416,13 @@ export class CleaningAhManager {
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchCategory"))}</span>
-                        <input type="text" name="category" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY)}" list="cleaning-ah-category-options" required>
+                        <select name="categoryKey" class="mt-1 w-full">
+                            ${categoryOptions}
+                        </select>
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
-                        <select name="reservationSource" class="mt-1 w-full">
+                        <select name="reservationSource" class="mt-1 w-full" ${this.categoryUsesReservationSource(categoryKey) ? "" : "disabled"}>
                             ${reservationSourceOptions.map(([value, label]) => `
                                 <option value="${escapeHtml(value)}" ${this.cleaningBatchDraft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
                             `).join("")}
@@ -1314,14 +1432,17 @@ export class CleaningAhManager {
                 <div class="rounded-2xl border border-slate-200">
                     <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.guestAmount"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
                     </div>
                     <div class="divide-y divide-slate-200">
                         ${rows.map((row, index) => {
-                            const guestAmountField = this.getCleaningGuestAmountFieldState(row);
+                            const guestAmountField = this.getCleaningGuestAmountFieldState({
+                                ...row,
+                                categoryKey
+                            });
                             return `
                                 <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
                                     <label class="block">
@@ -1329,7 +1450,7 @@ export class CleaningAhManager {
                                         <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.guestAmount"))}</span>
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                                         <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
                                     </label>
                                     <label class="block">
@@ -1349,7 +1470,7 @@ export class CleaningAhManager {
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-sm text-slate-500">${escapeHtml(this.tr("cleanings.batchHint"))}</p>
+                    <p class="text-sm text-slate-500">${escapeHtml(this.getCleaningCategoryRuleText(categoryKey))}</p>
                     <button type="button" id="cleaning-ah-add-cleaning-batch-row" class="view-btn">${escapeHtml(this.tr("actions.addRow"))}</button>
                 </div>
                 <div id="cleaning-ah-cleaning-batch-preview">
@@ -1736,7 +1857,7 @@ export class CleaningAhManager {
                 <tr class="border-t border-slate-200">
                     <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
                     <td class="px-3 py-2 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</td>
-                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(record.category)}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
                     <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                     <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.totalToAh))}</td>
                 </tr>
@@ -1813,7 +1934,7 @@ export class CleaningAhManager {
                                 ${record.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
                                 ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
                             </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.category)}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                             <td class="px-3 py-3 text-sm text-slate-600">
@@ -2071,6 +2192,11 @@ export class CleaningAhManager {
 
         const cleaningForm = document.getElementById("cleaning-ah-cleaning-form");
         cleaningForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "categoryKey") {
+                this.cleaningDraft = this.readCleaningDraftFromDom();
+                this.render();
+                return;
+            }
             if (event.target?.name === "propertyName") {
                 this.applyCleaningSuggestionToSingleForm();
             }
@@ -2086,6 +2212,11 @@ export class CleaningAhManager {
 
         const cleaningBatchForm = document.getElementById("cleaning-ah-cleaning-batch-form");
         cleaningBatchForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "categoryKey") {
+                this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                this.render();
+                return;
+            }
             if (event.target?.name === "propertyName") {
                 this.applyCleaningSuggestionToBatchRow(event.target.closest("[data-cleaning-batch-row]"));
             }
@@ -2265,7 +2396,7 @@ export class CleaningAhManager {
         return {
             date: String(formData.get("date") || "").trim(),
             propertyName: normalizeLabel(formData.get("propertyName")),
-            category: normalizeLabel(formData.get("category")) || DEFAULT_CLEANING_CATEGORY,
+            categoryKey: this.getCleaningCategoryKey(formData.get("categoryKey")),
             reservationSource: String(formData.get("reservationSource") || this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             guestAmount: String(formData.get("guestAmount") || "").trim(),
             laundryKg: String(formData.get("laundryKg") || "").trim(),
@@ -2294,7 +2425,7 @@ export class CleaningAhManager {
 
         return {
             date: String(formData.get("date") || "").trim(),
-            category: normalizeLabel(formData.get("category")) || DEFAULT_CLEANING_CATEGORY,
+            categoryKey: this.getCleaningCategoryKey(formData.get("categoryKey")),
             reservationSource: String(formData.get("reservationSource") || this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             rows: rows.length ? rows : [this.createCleaningBatchRow()]
         };
@@ -2353,8 +2484,11 @@ export class CleaningAhManager {
         const record = createCleaningAhRecord({
             date: this.cleaningDraft.date,
             propertyName: this.cleaningDraft.propertyName,
-            category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
-            reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
+            categoryKey: this.getCleaningCategoryKey(this.cleaningDraft.categoryKey || this.cleaningDraft.category),
+            category: this.getCleaningCategoryLabel(this.cleaningDraft.categoryKey || this.cleaningDraft.category),
+            reservationSource: this.categoryUsesReservationSource(this.cleaningDraft.categoryKey || this.cleaningDraft.category)
+                ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
             laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
             notes: this.cleaningDraft.notes
@@ -2394,9 +2528,11 @@ export class CleaningAhManager {
 
     async saveCleaningRecord() {
         this.cleaningDraft = this.readCleaningDraftFromDom();
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningDraft.categoryKey || this.cleaningDraft.category);
         const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
             enableSuggestion: !this.editingCleaningId,
-            excludeRecordId: this.editingCleaningId || ""
+            excludeRecordId: this.editingCleaningId || "",
+            categoryKey
         });
         if (!this.cleaningDraft.date || !this.cleaningDraft.propertyName) {
             this.setStatus(this.tr("status.cleaningValidationError"), "error");
@@ -2412,8 +2548,11 @@ export class CleaningAhManager {
             date: this.cleaningDraft.date,
             propertyName: this.cleaningDraft.propertyName,
             propertyId: property?.id || "",
-            category: this.cleaningDraft.category || DEFAULT_CLEANING_CATEGORY,
-            reservationSource: this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
+            categoryKey,
+            category: this.getCleaningCategoryLabel(categoryKey),
+            reservationSource: this.categoryUsesReservationSource(categoryKey)
+                ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
             laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
             notes: this.cleaningDraft.notes,
@@ -2447,11 +2586,15 @@ export class CleaningAhManager {
 
     async saveCleaningBatchRecords() {
         this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningBatchDraft.categoryKey || this.cleaningBatchDraft.category);
         const meaningfulRows = this.cleaningBatchDraft.rows.filter((row) => {
             return row.propertyName || row.guestAmount || row.laundryKg || row.notes;
         });
         const validRows = meaningfulRows.filter((row) => {
-            const guestAmount = this.getCleaningGuestAmountFieldState(row).numericValue;
+            const guestAmount = this.getCleaningGuestAmountFieldState({
+                ...row,
+                categoryKey
+            }).numericValue;
             return row.propertyName && guestAmount !== null && guestAmount >= 0;
         });
 
@@ -2468,13 +2611,19 @@ export class CleaningAhManager {
 
             validRows.forEach((row) => {
                 const property = this.findPropertyByName(row.propertyName);
-                const guestAmount = this.getCleaningGuestAmountFieldState(row).numericValue || 0;
+                const guestAmount = this.getCleaningGuestAmountFieldState({
+                    ...row,
+                    categoryKey
+                }).numericValue || 0;
                 const record = createCleaningAhRecord({
                     date: this.cleaningBatchDraft.date,
                     propertyName: row.propertyName,
                     propertyId: property?.id || "",
-                    category: this.cleaningBatchDraft.category || DEFAULT_CLEANING_CATEGORY,
-                    reservationSource: this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform,
+                    categoryKey,
+                    category: this.getCleaningCategoryLabel(categoryKey),
+                    reservationSource: this.categoryUsesReservationSource(categoryKey)
+                        ? (this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                        : CLEANING_AH_RESERVATION_SOURCES.direct,
                     guestAmount,
                     laundryKg: toOptionalNumber(row.laundryKg) || 0,
                     notes: row.notes,
@@ -2768,7 +2917,7 @@ export class CleaningAhManager {
         this.cleaningDraft = {
             date: record.date || getTodayIsoDate(),
             propertyName: record.propertyName || "",
-            category: record.category || DEFAULT_CLEANING_CATEGORY,
+            categoryKey: this.getCleaningCategoryKey(record.categoryKey || record.category),
             reservationSource: this.getCleaningReservationSource(record),
             guestAmount: toInputNumber(record.guestAmount),
             laundryKg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),

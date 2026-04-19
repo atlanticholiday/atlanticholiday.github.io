@@ -2,6 +2,7 @@ import { describe, test, assert } from "../../../test-harness.js";
 import { resetDom } from "../../../test-utils.js";
 import { i18n } from "../../../../js/core/i18n.js";
 import { CleaningAhManager } from "../../../../js/features/operations/cleaning-ah-manager.js";
+import { CLEANING_AH_CATEGORY_KEYS } from "../../../../js/features/operations/cleaning-ah-utils.js";
 
 describe("CleaningAhManager", () => {
   test("updates scaffold copy and locale-aware formatting when the language changes", () => {
@@ -188,6 +189,91 @@ describe("CleaningAhManager", () => {
     assert.equal(batchPreview.laundryAmount, 13);
     assert.equal(batchPreview.totalToAh, 86.7);
 
+    resetDom();
+  });
+
+  test("uses saved-amount rules for mid-term cleaning forms", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Check-out from property owner" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" }
+          },
+          categoryRules: {
+            midTerm: "Mid-term cleanings use the amount field as saved cleaning-company cost."
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount",
+            chargedAmount: "Charged amount",
+            savedAmount: "Saved amount",
+            kg: "Kg",
+            notesPlaceholder: "Optional note"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          preview: {
+            title: "Preview"
+          },
+          metrics: {
+            commission: "Commission",
+            vat: "VAT",
+            beforeLaundry: "Before laundry",
+            laundry: "Laundry",
+            currentNet: "Current net"
+          }
+        },
+        common: {
+          notes: "Notes"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.midTerm,
+      reservationSource: "platform",
+      guestAmount: "150",
+      laundryKg: "5",
+      notes: ""
+    };
+
+    const html = manager.renderCleaningSingleForm({
+      draft: manager.cleaningDraft,
+      preview: {
+        platformCommission: 0,
+        vatAmount: 0,
+        totalToAhWithoutLaundry: 150,
+        laundryAmount: 13,
+        totalToAh: 137
+      },
+      guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
+        enableSuggestion: false
+      })
+    });
+
+    assert.includes(html, "Saved amount");
+    assert.includes(html, "disabled");
+    assert.includes(html, "Mid-term cleanings use the amount field as saved cleaning-company cost.");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
     resetDom();
   });
 

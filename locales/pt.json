@@ -106,6 +106,98 @@
         "cleaningAh": "Cleaning AH",
         "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
     },
+    "vehicles": {
+        "header": {
+            "title": "Veículos",
+            "subtitle": "Gestão de frota"
+        },
+        "stats": {
+            "fleetBadge": "Frota",
+            "totalVehicles": "Total de veículos",
+            "actionNeededBadge": "Ação necessária",
+            "expiringSoon": "A expirar em breve (30 dias)",
+            "costsBadge": "Custos",
+            "totalMaintenance": "Total investido em manutenção"
+        },
+        "filters": {
+            "searchPlaceholder": "Pesquisar frota...",
+            "allCategories": "Todas as categorias"
+        },
+        "sections": {
+            "insurance": "Seguro",
+            "inspection": "Inspeção"
+        },
+        "labels": {
+            "notSet": "Não definido",
+            "notAvailable": "-",
+            "inspectionHint": "IPO / inspeção"
+        },
+        "categories": {
+            "car": "Carro",
+            "moto": "Motociclo",
+            "van": "Carrinha",
+            "scooter": "Scooter"
+        },
+        "fuelTypes": {
+            "gasoline": "Gasolina",
+            "diesel": "Gasóleo",
+            "electric": "Elétrico",
+            "hybrid": "Híbrido"
+        },
+        "dateStatus": {
+            "expired": "Expirado",
+            "expiresSoon": "Expira em breve"
+        },
+        "actions": {
+            "newVehicle": "Novo veículo",
+            "saveVehicle": "Guardar veículo",
+            "docs": "Documentos"
+        },
+        "empty": {
+            "title": "Nenhum veículo encontrado",
+            "description": "Experimente ajustar os filtros ou adicionar um novo veículo."
+        },
+        "form": {
+            "category": "Categoria",
+            "model": "Modelo",
+            "modelPlaceholder": "ex.: Renault Zoe",
+            "licensePlate": "Matrícula",
+            "licensePlatePlaceholder": "AA-00-BB",
+            "fuelType": "Tipo de combustível",
+            "insuranceDetails": "Detalhes do seguro",
+            "insuranceCompany": "Seguradora",
+            "policyNumber": "Número da apólice",
+            "expiryDate": "Data de validade",
+            "policyLink": "Ligação do Google Drive (apólice)",
+            "inspection": "Inspeção",
+            "nextInspection": "Próxima inspeção",
+            "notes": "Notas"
+        },
+        "modal": {
+            "addTitle": "Adicionar veículo",
+            "editTitle": "Editar veículo"
+        },
+        "maintenance": {
+            "title": "Registo de manutenção",
+            "buttonLabel": "Manutenção ({{count}})",
+            "empty": "Ainda não existem registos.",
+            "addRecord": "Adicionar registo",
+            "serviceTypePlaceholder": "Tipo de serviço (ex.: mudança de óleo)",
+            "costPlaceholder": "Custo (EUR)",
+            "odometerPlaceholder": "Odómetro (km)",
+            "workshopPlaceholder": "Oficina / fornecedor",
+            "notesPlaceholder": "Notas adicionais...",
+            "defaultTitle": "Serviço",
+            "kmUnit": "km"
+        },
+        "messages": {
+            "confirmDeleteVehicle": "Tem a certeza de que pretende eliminar este veículo? Esta ação não pode ser anulada.",
+            "confirmDeleteMaintenance": "Eliminar este registo de manutenção?",
+            "notSignedIn": "Sessão não iniciada",
+            "deleteVehicleFailed": "Não foi possível eliminar o veículo: {{message}}",
+            "saveVehicleFailed": "Erro ao guardar o veículo: {{message}}"
+        }
+    },
     "laundryLog": {
         "header": {
             "kicker": "Registo de Lavandaria",
@@ -718,14 +810,34 @@
         },
         "formula": {
             "kicker": "Formula",
-            "title": "Registo rapido com suporte a plataforma e direta.",
-            "body": "As limpezas usam a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. A lavandaria usa 2,60 EUR por kg quer a introduza logo na limpeza quer a adicione depois."
+            "title": "Regras por categoria de limpeza.",
+            "body": "O check-out usa a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. Os check-outs do proprietario e as primeiras limpezas nao pagam comissao de plataforma, enquanto as limpezas mid-term registam poupanca sem comissao nem IVA. A lavandaria usa 2,60 EUR por kg quer a introduza logo na limpeza quer a adicione depois."
         },
         "tabs": {
-            "dashboard": "Painel",
+            "stats": "Estatisticas",
             "cleanings": "Limpezas",
             "laundry": "Lavandaria",
             "ariaLabel": "Separadores do Cleaning AH"
+        },
+        "categories": {
+            "checkout": {
+                "label": "Check-out"
+            },
+            "owner-checkout": {
+                "label": "Check-out do proprietario"
+            },
+            "first-cleaning": {
+                "label": "Primeira limpeza"
+            },
+            "mid-term": {
+                "label": "Limpeza mid-term"
+            }
+        },
+        "categoryRules": {
+            "checkout": "Plataforma ou Direta aplica-se apenas aos registos de check-out. O IVA e extraido e a lavandaria continua opcional.",
+            "ownerCheckout": "Os check-outs do proprietario nao pagam comissao de plataforma. Introduza o valor cobrado e adicione lavandaria apenas quando existir.",
+            "firstCleaning": "As primeiras limpezas nao pagam comissao de plataforma. O IVA continua a aplicar-se e a lavandaria so entra quando existir.",
+            "midTerm": "As limpezas mid-term usam o campo de valor como poupanca face a empresa de limpeza. Nao existe comissao de plataforma nem IVA, por isso so a lavandaria reduz o liquido final."
         },
         "filters": {
             "search": "Pesquisar",
@@ -739,7 +851,7 @@
         },
         "metrics": {
             "checkOuts": "Check-outs",
-            "guestTotal": "Total hospede",
+            "guestTotal": "Total valor",
             "platformFees": "Comissoes da plataforma",
             "vat": "IVA",
             "laundry": "Lavandaria",
@@ -756,12 +868,14 @@
             "currentNet": "Liquido atual",
             "ratePerKg": "Preco / kg"
         },
+        "stats": {
+            "byMonth": "Por mes",
+            "topProperties": "Principais propriedades",
+            "categories": "Por categoria"
+        },
         "dashboard": {
             "overviewKicker": "Resumo",
             "overviewTitle": "Resumo da receita",
-            "byMonth": "Por mes",
-            "topProperties": "Principais propriedades",
-            "categories": "Categorias",
             "laundryKicker": "Lavandaria",
             "laundryTitle": "Totais da lavandaria",
             "laundryByMonth": "Lavandaria por mes",
@@ -847,6 +961,8 @@
             "category": "Categoria",
             "reservationSource": "Reserva",
             "guestAmount": "Valor hospede",
+            "chargedAmount": "Valor cobrado",
+            "savedAmount": "Valor poupado",
             "notesPlaceholder": "Nota opcional",
             "linkedCleaning": "Limpeza associada",
             "noLinkedCleaning": "Sem limpeza associada",
@@ -874,7 +990,7 @@
             "property": "Propriedade",
             "category": "Categoria",
             "reservation": "Reserva",
-            "guest": "Hospede",
+            "guest": "Valor",
             "laundry": "Lavandaria",
             "net": "Liquido",
             "source": "Origem",
@@ -947,7 +1063,7 @@
             "cleaningUpdated": "Registo de limpeza atualizado.",
             "cleaningSaved": "Registo de limpeza guardado.",
             "cleaningSaveFailed": "Nao foi possivel guardar o registo de limpeza.",
-            "cleaningBatchValidationError": "Introduza uma data e complete a propriedade e o valor hospede em cada linha de limpeza que pretende guardar.",
+            "cleaningBatchValidationError": "Introduza uma data e complete a propriedade e o valor em cada linha de limpeza que pretende guardar.",
             "cleaningBatchSaved": "Foram guardadas {{count}} linhas de limpeza.",
             "cleaningBatchSaveFailed": "Nao foi possivel guardar as linhas de limpeza.",
             "linkedLaundryValidationError": "Introduza uma data e os kg para guardar a lavandaria associada.",

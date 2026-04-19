@@ -11,6 +11,40 @@ export const CLEANING_AH_RESERVATION_SOURCES = Object.freeze({
     direct: 'direct'
 });
 
+export const CLEANING_AH_CATEGORY_KEYS = Object.freeze({
+    checkout: 'checkout',
+    ownerCheckout: 'owner-checkout',
+    firstCleaning: 'first-cleaning',
+    midTerm: 'mid-term'
+});
+
+const CLEANING_AH_CATEGORY_CONFIGS = Object.freeze({
+    [CLEANING_AH_CATEGORY_KEYS.checkout]: {
+        key: CLEANING_AH_CATEGORY_KEYS.checkout,
+        defaultLabel: 'Check-out',
+        appliesPlatformCommission: true,
+        appliesVat: true
+    },
+    [CLEANING_AH_CATEGORY_KEYS.ownerCheckout]: {
+        key: CLEANING_AH_CATEGORY_KEYS.ownerCheckout,
+        defaultLabel: 'Check-out from property owner',
+        appliesPlatformCommission: false,
+        appliesVat: true
+    },
+    [CLEANING_AH_CATEGORY_KEYS.firstCleaning]: {
+        key: CLEANING_AH_CATEGORY_KEYS.firstCleaning,
+        defaultLabel: 'First cleaning',
+        appliesPlatformCommission: false,
+        appliesVat: true
+    },
+    [CLEANING_AH_CATEGORY_KEYS.midTerm]: {
+        key: CLEANING_AH_CATEGORY_KEYS.midTerm,
+        defaultLabel: 'Mid-term cleaning',
+        appliesPlatformCommission: false,
+        appliesVat: false
+    }
+});
+
 const CSV_COLUMN_INDEXES = Object.freeze({
     date: 1,
     monthLabel: 2,
@@ -117,6 +151,83 @@ function normalizeReservationSource(value) {
         : CLEANING_AH_RESERVATION_SOURCES.platform;
 }
 
+export function normalizeCleaningAhCategoryKey(value) {
+    const normalizedValue = normalizeAscii(value);
+    if (!normalizedValue) {
+        return CLEANING_AH_CATEGORY_KEYS.checkout;
+    }
+
+    if (
+        normalizedValue === CLEANING_AH_CATEGORY_KEYS.checkout
+        || normalizedValue === 'checkout'
+        || normalizedValue === 'check-out'
+        || normalizedValue === 'limpeza check-out'
+        || normalizedValue === 'limpeza checkout'
+        || normalizedValue === 'limpeza check out'
+        || normalizedValue === 'checkout cleaning'
+        || normalizedValue === 'check-out cleaning'
+        || normalizedValue === 'limpeza check-out e contagem das roupas'
+        || normalizedValue === 'limpeza check-out e realizacao de inventario'
+        || normalizedValue === 'continuacao da limpeza do check-out'
+    ) {
+        return CLEANING_AH_CATEGORY_KEYS.checkout;
+    }
+
+    if (
+        normalizedValue === CLEANING_AH_CATEGORY_KEYS.ownerCheckout
+        || normalizedValue === 'checkout from property owner'
+        || normalizedValue === 'check-out from property owner'
+        || normalizedValue === 'owner checkout'
+        || normalizedValue === 'owner check-out'
+        || normalizedValue === 'limpeza check-out - proprietarios'
+        || normalizedValue === 'limpeza check-out proprietarios'
+        || normalizedValue === 'limpeza checkout - proprietarios'
+        || normalizedValue === 'limpeza proprietarios'
+    ) {
+        return CLEANING_AH_CATEGORY_KEYS.ownerCheckout;
+    }
+
+    if (
+        normalizedValue === CLEANING_AH_CATEGORY_KEYS.firstCleaning
+        || normalizedValue === 'first cleaning'
+        || normalizedValue === 'primeira limpeza'
+        || normalizedValue === 'deep clean'
+        || normalizedValue === 'deep cleaning'
+    ) {
+        return CLEANING_AH_CATEGORY_KEYS.firstCleaning;
+    }
+
+    if (
+        normalizedValue === CLEANING_AH_CATEGORY_KEYS.midTerm
+        || normalizedValue === 'mid term'
+        || normalizedValue === 'mid-term'
+        || normalizedValue === 'mid term cleaning'
+        || normalizedValue === 'mid-term cleaning'
+        || normalizedValue === 'mid therm cleaning'
+        || normalizedValue === 'limpeza mid term'
+        || normalizedValue === 'limpeza mid-term'
+        || normalizedValue === 'limpeza meio da estadia'
+    ) {
+        return CLEANING_AH_CATEGORY_KEYS.midTerm;
+    }
+
+    return '';
+}
+
+export function getCleaningAhCategoryConfig(value) {
+    const categoryKey = normalizeCleaningAhCategoryKey(value);
+    return CLEANING_AH_CATEGORY_CONFIGS[categoryKey] || CLEANING_AH_CATEGORY_CONFIGS[CLEANING_AH_CATEGORY_KEYS.checkout];
+}
+
+export function getCleaningAhCategoryLabel(categoryKey, fallbackLabel = '') {
+    const normalizedKey = normalizeCleaningAhCategoryKey(categoryKey);
+    if (normalizedKey) {
+        return CLEANING_AH_CATEGORY_CONFIGS[normalizedKey]?.defaultLabel || fallbackLabel;
+    }
+
+    return normalizeLabel(fallbackLabel);
+}
+
 function parseCsvRows(csvText) {
     const rows = [];
     const text = String(csvText || '').replace(/^\ufeff/, '');
@@ -167,10 +278,15 @@ function parseCsvRows(csvText) {
 }
 
 export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFAULTS) {
+    const categoryConfig = getCleaningAhCategoryConfig(input.categoryKey || input.category);
     const guestAmount = roundCurrency(toFiniteNumber(input.guestAmount, 0));
-    const reservationSource = normalizeReservationSource(input.reservationSource);
+    const reservationSource = categoryConfig.appliesPlatformCommission
+        ? normalizeReservationSource(input.reservationSource)
+        : CLEANING_AH_RESERVATION_SOURCES.direct;
     const platformCommissionRate = toFiniteNumber(
-        reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct ? 0 : input.platformCommissionRate,
+        !categoryConfig.appliesPlatformCommission || reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct
+            ? 0
+            : input.platformCommissionRate,
         defaults.platformCommissionRate
     );
     const vatRate = toFiniteNumber(input.vatRate, defaults.vatRate);
@@ -185,7 +301,9 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
 
     const platformCommission = roundCurrency(guestAmount * platformCommissionRate);
     const vatAmount = roundCurrency(
-        vatMode === 'flat'
+        !categoryConfig.appliesVat
+            ? 0
+            : vatMode === 'flat'
             ? guestAmount * vatRate
             : guestAmount * (vatRate / (1 + vatRate))
     );
@@ -201,6 +319,7 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
         : null;
 
     return {
+        categoryKey: categoryConfig.key,
         guestAmount,
         reservationSource,
         platformCommissionRate,
@@ -248,6 +367,7 @@ export function createCleaningAhRecord(input = {}, options = {}) {
     const preserveProvidedFinancials = Boolean(options.preserveProvidedFinancials);
     const date = String(input.date || '').trim();
     const monthKey = input.monthKey || getMonthKey(date);
+    const categoryConfig = getCleaningAhCategoryConfig(input.categoryKey || input.category);
 
     const importedValues = {
         platformCommission: toNullableFiniteNumber(input.platformCommission),
@@ -264,6 +384,7 @@ export function createCleaningAhRecord(input = {}, options = {}) {
     );
     const computedValues = computeCleaningAhAmounts({
         ...input,
+        categoryKey: categoryConfig.key,
         reservationSource: inferredReservationSource
     }, defaults);
 
@@ -282,7 +403,8 @@ export function createCleaningAhRecord(input = {}, options = {}) {
         monthKey,
         propertyName: normalizeLabel(input.propertyName),
         propertyId: normalizeLabel(input.propertyId),
-        category: normalizeLabel(input.category) || 'Limpeza check-out',
+        categoryKey: categoryConfig.key,
+        category: normalizeLabel(input.category) || getCleaningAhCategoryLabel(categoryConfig.key),
         reservationSource: inferredReservationSource,
         source: input.source || 'manual',
         notes: normalizeLabel(input.notes),
@@ -538,9 +660,14 @@ export function summarizeCleaningAhRecords(records = [], standaloneLaundryRecord
         );
         pushGroupedEntry(
             categoryGroups,
-            normalizeGroupingKey(record.category) || 'unknown',
-            record.category || 'Unknown',
-            record
+            record.categoryKey || normalizeGroupingKey(record.category) || 'unknown',
+            record.categoryKey
+                ? getCleaningAhCategoryLabel(record.categoryKey, record.category || 'Unknown')
+                : (record.category || 'Unknown'),
+            {
+                ...record,
+                categoryKey: record.categoryKey || normalizeCleaningAhCategoryKey(record.category)
+            }
         );
     });
 

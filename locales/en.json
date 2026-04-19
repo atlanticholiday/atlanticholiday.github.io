@@ -106,6 +106,98 @@
     "cleaningAh": "Cleaning AH",
     "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
   },
+  "vehicles": {
+    "header": {
+      "title": "Vehicles",
+      "subtitle": "Fleet Management"
+    },
+    "stats": {
+      "fleetBadge": "Fleet",
+      "totalVehicles": "Total Vehicles",
+      "actionNeededBadge": "Action Needed",
+      "expiringSoon": "Expiring Soon (30 days)",
+      "costsBadge": "Costs",
+      "totalMaintenance": "Total Maintenance Invested"
+    },
+    "filters": {
+      "searchPlaceholder": "Search fleet...",
+      "allCategories": "All Categories"
+    },
+    "sections": {
+      "insurance": "Insurance",
+      "inspection": "Inspection"
+    },
+    "labels": {
+      "notSet": "Not set",
+      "notAvailable": "-",
+      "inspectionHint": "IPO / MOT"
+    },
+    "categories": {
+      "car": "Car",
+      "moto": "Motorcycle",
+      "van": "Van",
+      "scooter": "Scooter"
+    },
+    "fuelTypes": {
+      "gasoline": "Gasoline",
+      "diesel": "Diesel",
+      "electric": "Electric",
+      "hybrid": "Hybrid"
+    },
+    "dateStatus": {
+      "expired": "Expired",
+      "expiresSoon": "Expires soon"
+    },
+    "actions": {
+      "newVehicle": "New Vehicle",
+      "saveVehicle": "Save Vehicle",
+      "docs": "Docs"
+    },
+    "empty": {
+      "title": "No vehicles found",
+      "description": "Try adjusting your filters or add a new vehicle."
+    },
+    "form": {
+      "category": "Category",
+      "model": "Model",
+      "modelPlaceholder": "e.g. Renault Zoe",
+      "licensePlate": "License Plate",
+      "licensePlatePlaceholder": "AA-00-BB",
+      "fuelType": "Fuel Type",
+      "insuranceDetails": "Insurance Details",
+      "insuranceCompany": "Insurance Company",
+      "policyNumber": "Policy Number",
+      "expiryDate": "Expiry Date",
+      "policyLink": "Google Drive Link (Policy)",
+      "inspection": "Inspection",
+      "nextInspection": "Next Inspection",
+      "notes": "Notes"
+    },
+    "modal": {
+      "addTitle": "Add New Vehicle",
+      "editTitle": "Edit Vehicle"
+    },
+    "maintenance": {
+      "title": "Maintenance Log",
+      "buttonLabel": "Maintenance ({{count}})",
+      "empty": "No records yet.",
+      "addRecord": "Add Record",
+      "serviceTypePlaceholder": "Service Type (e.g. Oil Change)",
+      "costPlaceholder": "Cost (EUR)",
+      "odometerPlaceholder": "Odometer (km)",
+      "workshopPlaceholder": "Workshop / Provider",
+      "notesPlaceholder": "Additional notes...",
+      "defaultTitle": "Service",
+      "kmUnit": "km"
+    },
+    "messages": {
+      "confirmDeleteVehicle": "Are you sure you want to delete this vehicle? This action cannot be undone.",
+      "confirmDeleteMaintenance": "Delete this maintenance record?",
+      "notSignedIn": "Not signed in",
+      "deleteVehicleFailed": "Failed to delete vehicle: {{message}}",
+      "saveVehicleFailed": "Error saving vehicle: {{message}}"
+    }
+  },
   "laundryLog": {
     "header": {
       "kicker": "Laundry Log",
@@ -710,14 +802,34 @@
     },
     "formula": {
       "kicker": "Formula",
-      "title": "Fast entry with platform and direct support.",
-      "body": "Cleanings use the standard 22% extracted VAT rule, with 15.5% commission only on platform reservations. Laundry uses 2.60 EUR per kg whether you enter it on the cleaning or add it later."
+      "title": "Category-based cleaning rules.",
+      "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs and first cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.60 EUR per kg whether you enter it on the cleaning or add it later."
     },
     "tabs": {
-      "dashboard": "Dashboard",
+      "stats": "Stats",
       "cleanings": "Cleanings",
       "laundry": "Laundry",
       "ariaLabel": "Cleaning AH tabs"
+    },
+    "categories": {
+      "checkout": {
+        "label": "Check-out"
+      },
+      "owner-checkout": {
+        "label": "Check-out from property owner"
+      },
+      "first-cleaning": {
+        "label": "First cleaning"
+      },
+      "mid-term": {
+        "label": "Mid-term cleaning"
+      }
+    },
+    "categoryRules": {
+      "checkout": "Platform or Direct applies only to check-out rows. VAT is extracted and laundry stays optional.",
+      "ownerCheckout": "Owner check-outs skip platform commission. Enter the charged amount and add laundry only when needed.",
+      "firstCleaning": "First cleanings skip platform commission. VAT still applies, and laundry can be added only when it exists.",
+      "midTerm": "Mid-term cleanings use the amount field as saved cleaning-company cost. There is no platform commission and no VAT, so only laundry reduces the final net."
     },
     "filters": {
       "search": "Search",
@@ -731,7 +843,7 @@
     },
     "metrics": {
       "checkOuts": "Check-outs",
-      "guestTotal": "Guest total",
+      "guestTotal": "Amount total",
       "platformFees": "Platform fees",
       "vat": "VAT",
       "laundry": "Laundry",
@@ -748,12 +860,14 @@
       "currentNet": "Current net",
       "ratePerKg": "Rate / kg"
     },
+    "stats": {
+      "byMonth": "By month",
+      "topProperties": "Top properties",
+      "categories": "By category"
+    },
     "dashboard": {
       "overviewKicker": "Overview",
       "overviewTitle": "Revenue snapshot",
-      "byMonth": "By month",
-      "topProperties": "Top properties",
-      "categories": "Categories",
       "laundryKicker": "Laundry",
       "laundryTitle": "Laundry totals",
       "laundryByMonth": "Laundry by month",
@@ -839,6 +953,8 @@
       "category": "Category",
       "reservationSource": "Reservation",
       "guestAmount": "Guest amount",
+      "chargedAmount": "Charged amount",
+      "savedAmount": "Saved amount",
       "notesPlaceholder": "Optional note",
       "linkedCleaning": "Linked cleaning",
       "noLinkedCleaning": "No linked cleaning",
@@ -866,7 +982,7 @@
       "property": "Property",
       "category": "Category",
       "reservation": "Reservation",
-      "guest": "Guest",
+      "guest": "Amount",
       "laundry": "Laundry",
       "net": "Net",
       "source": "Source",
@@ -939,7 +1055,7 @@
       "cleaningUpdated": "Cleaning record updated.",
       "cleaningSaved": "Cleaning record saved.",
       "cleaningSaveFailed": "Cleaning record could not be saved.",
-      "cleaningBatchValidationError": "Enter a date and complete property plus guest amount for each cleaning row you want to save.",
+      "cleaningBatchValidationError": "Enter a date and complete property plus amount for each cleaning row you want to save.",
       "cleaningBatchSaved": "Saved {{count}} cleaning rows.",
       "cleaningBatchSaveFailed": "Cleaning rows could not be saved.",
       "linkedLaundryValidationError": "Enter a date and kg to save linked laundry.",

@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+    CLEANING_AH_CATEGORY_KEYS,
     CLEANING_AH_DEFAULTS,
     CLEANING_AH_RESERVATION_SOURCES,
     computeCleaningAhAmounts,
@@ -37,6 +38,42 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.platformCommission, 0);
         assert.equal(result.totalToAhWithoutLaundry, 98.36);
         assert.equal(result.reservationSource, "direct");
+    });
+
+    test("skips platform commission for owner and first-cleaning categories", () => {
+        const ownerResult = computeCleaningAhAmounts({
+            categoryKey: CLEANING_AH_CATEGORY_KEYS.ownerCheckout,
+            guestAmount: 120,
+            reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform
+        });
+        const firstCleaningResult = computeCleaningAhAmounts({
+            categoryKey: CLEANING_AH_CATEGORY_KEYS.firstCleaning,
+            guestAmount: 120,
+            reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform
+        });
+
+        assert.equal(ownerResult.platformCommission, 0);
+        assert.equal(ownerResult.vatAmount, 21.64);
+        assert.equal(firstCleaningResult.platformCommission, 0);
+        assert.equal(firstCleaningResult.vatAmount, 21.64);
+        assert.equal(ownerResult.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
+        assert.equal(firstCleaningResult.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
+    });
+
+    test("treats mid-term cleanings as saved amount without commission or VAT", () => {
+        const result = computeCleaningAhAmounts({
+            categoryKey: CLEANING_AH_CATEGORY_KEYS.midTerm,
+            guestAmount: 120,
+            laundryKg: 10,
+            reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform
+        });
+
+        assert.equal(result.platformCommission, 0);
+        assert.equal(result.vatAmount, 0);
+        assert.equal(result.totalToAhWithoutLaundry, 120);
+        assert.equal(result.laundryAmount, 26);
+        assert.equal(result.totalToAh, 94);
+        assert.equal(result.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
     });
 
     test("preserves imported financials while still generating the duplicate fingerprint", () => {
@@ -165,7 +202,7 @@ describe("Cleaning AH utilities", () => {
         assert.equal(summary.totals.cleaningsWithLaundry, 3);
         assert.equal(summary.byMonth.length, 2);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
-        assert.equal(summary.byCategory[0].label, "Limpeza check-out");
+        assert.equal(summary.byCategory[0].key, CLEANING_AH_CATEGORY_KEYS.checkout);
         assert.equal(summary.records[1].effectiveLaundryAmount, 31.2);
     });
 
