@@ -803,7 +803,7 @@
     "formula": {
       "kicker": "Formula",
       "title": "Category-based cleaning rules.",
-      "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs and first cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.60 EUR per kg whether you enter it on the cleaning or add it later."
+      "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs and first cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.30 EUR per kg whether you enter it on the cleaning or add it later."
     },
     "tabs": {
       "stats": "Stats",
@@ -858,12 +858,49 @@
       "beforeLaundry": "Before laundry",
       "laundryPending": "Laundry pending",
       "currentNet": "Current net",
-      "ratePerKg": "Rate / kg"
+      "ratePerKg": "Rate / kg",
+      "laundryKg": "Laundry kg",
+      "lastEntry": "Last entry",
+      "avgKgPerCleaning": "Avg kg / cleaning"
     },
     "stats": {
       "byMonth": "By month",
       "topProperties": "Top properties",
-      "categories": "By category"
+      "categories": "By category",
+      "allCleaningTypes": "All cleaning types",
+      "overviewDescription": "Use the comparison table to rank properties with entries, then focus one property for its own breakdown.",
+      "compareKicker": "Comparison",
+      "compareTitle": "Property comparison",
+      "compareDescription": "Only properties with matching entries are listed here. Sort the table, then pick one property for a deeper view.",
+      "sortLabel": "Order properties by",
+      "focusLabel": "Focused property",
+      "focusKicker": "Focused property",
+      "focusTitle": "Property details",
+      "focusDescription": "These stats respect the current filters and update as you narrow the dataset.",
+      "focusEmpty": "Select a property with entries to see its detailed breakdown here.",
+      "focusByMonth": "Selected property by month",
+      "focusByCategory": "Selected property by category",
+      "focusByReservation": "Selected property by reservation",
+      "recentEntries": "Recent entries",
+      "empty": "No properties with entries match the current filters.",
+      "sortOptions": {
+        "netDesc": "Highest net",
+        "netAsc": "Lowest net",
+        "countDesc": "Most cleanings",
+        "countAsc": "Fewest cleanings",
+        "guestDesc": "Highest amount",
+        "guestAsc": "Lowest amount",
+        "avgNetDesc": "Highest avg net",
+        "avgNetAsc": "Lowest avg net",
+        "laundryDesc": "Highest laundry amount",
+        "laundryAsc": "Lowest laundry amount",
+        "kgDesc": "Highest laundry kg",
+        "kgAsc": "Lowest laundry kg",
+        "lastEntryDesc": "Latest entry",
+        "lastEntryAsc": "Oldest entry",
+        "propertyAsc": "Property A-Z",
+        "propertyDesc": "Property Z-A"
+      }
     },
     "dashboard": {
       "overviewKicker": "Overview",
@@ -994,6 +1031,9 @@
       "month": "Month",
       "count": "Count",
       "rows": "Rows",
+      "avgNet": "Avg net",
+      "avgKg": "Avg kg",
+      "lastEntry": "Last entry",
       "noData": "No data for the current filters."
     },
     "reservationSources": {

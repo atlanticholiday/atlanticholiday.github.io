@@ -22,7 +22,10 @@ import {
     parseCleaningAhCsv,
     roundCurrency,
     summarizeCleaningAhRecords,
-    summarizeLaundryRecords
+    summarizeCleaningAhPropertyDetail,
+    summarizeCleaningAhPropertyRows,
+    summarizeLaundryRecords,
+    sortCleaningAhPropertyRows
 } from "./cleaning-ah-utils.js";
 import { i18n, t } from "../../core/i18n.js";
 
@@ -87,6 +90,9 @@ export class CleaningAhManager {
         this.selectedMonthKey = "";
         this.selectedPropertyName = "";
         this.selectedCategory = "";
+        this.statsCategoryKey = "";
+        this.statsPropertySort = "net-desc";
+        this.statsSelectedPropertyName = "";
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
         this.laundryRegisterFilter = "all";
@@ -558,6 +564,36 @@ export class CleaningAhManager {
         return [...propertyNames.values()].sort((left, right) => left.localeCompare(right));
     }
 
+    getFilterPropertyNames() {
+        const propertyNames = new Map();
+
+        this.cleaningRecords.forEach((record) => {
+            if (this.selectedMonthKey && record.monthKey !== this.selectedMonthKey) {
+                return;
+            }
+            if (
+                this.selectedCategory
+                && normalizeCleaningAhCategoryKey(record.categoryKey || record.category) !== normalizeCleaningAhCategoryKey(this.selectedCategory)
+            ) {
+                return;
+            }
+            if (record.propertyName) {
+                propertyNames.set(normalizeKey(record.propertyName), record.propertyName);
+            }
+        });
+
+        this.laundryRecords.forEach((record) => {
+            if (this.selectedMonthKey && record.monthKey !== this.selectedMonthKey) {
+                return;
+            }
+            if (record.propertyName) {
+                propertyNames.set(normalizeKey(record.propertyName), record.propertyName);
+            }
+        });
+
+        return [...propertyNames.values()].sort((left, right) => left.localeCompare(right));
+    }
+
     getKnownCategories() {
         const categories = new Map(
             this.getCleaningCategoryDefinitions().map((entry) => [entry.key, entry])
@@ -594,6 +630,79 @@ export class CleaningAhManager {
         });
 
         return [...monthKeys].sort((left, right) => left.localeCompare(right));
+    }
+
+    getStatsPropertySortOptions() {
+        return [
+            ["net-desc", this.tr("stats.sortOptions.netDesc")],
+            ["net-asc", this.tr("stats.sortOptions.netAsc")],
+            ["count-desc", this.tr("stats.sortOptions.countDesc")],
+            ["count-asc", this.tr("stats.sortOptions.countAsc")],
+            ["guest-desc", this.tr("stats.sortOptions.guestDesc")],
+            ["guest-asc", this.tr("stats.sortOptions.guestAsc")],
+            ["avg-net-desc", this.tr("stats.sortOptions.avgNetDesc")],
+            ["avg-net-asc", this.tr("stats.sortOptions.avgNetAsc")],
+            ["laundry-desc", this.tr("stats.sortOptions.laundryDesc")],
+            ["laundry-asc", this.tr("stats.sortOptions.laundryAsc")],
+            ["kg-desc", this.tr("stats.sortOptions.kgDesc")],
+            ["kg-asc", this.tr("stats.sortOptions.kgAsc")],
+            ["last-entry-desc", this.tr("stats.sortOptions.lastEntryDesc")],
+            ["last-entry-asc", this.tr("stats.sortOptions.lastEntryAsc")],
+            ["property-asc", this.tr("stats.sortOptions.propertyAsc")],
+            ["property-desc", this.tr("stats.sortOptions.propertyDesc")]
+        ];
+    }
+
+    getStatsCategoryOptions(summary) {
+        return [
+            {
+                key: "",
+                label: this.tr("stats.allCleaningTypes"),
+                count: summary?.totals?.count || 0
+            },
+            ...(summary?.byCategory || []).map((entry) => ({
+                key: entry.key || "",
+                label: this.getCleaningCategoryLabel(entry.key || entry.label),
+                count: entry.count || 0
+            }))
+        ];
+    }
+
+    getStatsScopedCleaningRecords(records = [], statsCategoryKey = "") {
+        const normalizedCategoryKey = normalizeCleaningAhCategoryKey(statsCategoryKey);
+        if (!statsCategoryKey) {
+            return [...records];
+        }
+
+        if (!normalizedCategoryKey) {
+            const rawCategoryKey = normalizeKey(statsCategoryKey);
+            return records.filter((record) => {
+                return normalizeKey(record.categoryKey || record.category) === rawCategoryKey;
+            });
+        }
+
+        return records.filter((record) => {
+            return normalizeCleaningAhCategoryKey(record.categoryKey || record.category) === normalizedCategoryKey;
+        });
+    }
+
+    getStatsSelectedPropertyName(rows = []) {
+        const propertyMap = new Map(
+            rows.map((entry) => [normalizeKey(entry.label), entry.label])
+        );
+        const preferredValues = [
+            this.selectedPropertyName,
+            this.statsSelectedPropertyName
+        ];
+
+        for (const value of preferredValues) {
+            const normalizedValue = normalizeKey(value);
+            if (normalizedValue && propertyMap.has(normalizedValue)) {
+                return propertyMap.get(normalizedValue) || "";
+            }
+        }
+
+        return rows[0]?.label || "";
     }
 
     getLaundryLinkOptions(currentLinkedCleaningId = "", preferredPropertyName = "") {
@@ -679,7 +788,24 @@ export class CleaningAhManager {
         }) || null;
     }
 
+    getSuggestedPropertyGuestCleaningFee(propertyName, { categoryKey = "" } = {}) {
+        const normalizedPropertyName = normalizeKey(propertyName);
+        const normalizedCategoryKey = normalizeCleaningAhCategoryKey(categoryKey);
+        if (!normalizedPropertyName || normalizedCategoryKey !== CLEANING_AH_CATEGORY_KEYS.checkout) {
+            return null;
+        }
+
+        const property = this.findPropertyByName(propertyName);
+        const guestCleaningFee = toOptionalNumber(property?.guestCleaningFee);
+        return guestCleaningFee === null ? null : roundCurrency(guestCleaningFee);
+    }
+
     getSuggestedCleaningGuestAmount(propertyName, options = {}) {
+        const propertyFee = this.getSuggestedPropertyGuestCleaningFee(propertyName, options);
+        if (propertyFee !== null) {
+            return propertyFee;
+        }
+
         const record = this.getSuggestedCleaningRecord(propertyName, options);
         const guestAmount = toOptionalNumber(record?.guestAmount);
         return guestAmount === null ? null : roundCurrency(guestAmount);
@@ -1026,6 +1152,21 @@ export class CleaningAhManager {
         const visibleCleaningRegisterEntries = this.getVisibleCleaningRegisterEntries(derivedCleanings);
         const laundrySummary = summarizeLaundryRecords(filteredCleanings, filteredStandaloneLaundry);
         const visibleLaundryRegisterEntries = this.getVisibleLaundryRegisterEntries(laundrySummary.entries);
+        const statsCategoryOptions = this.getStatsCategoryOptions(cleaningSummary);
+        if (
+            this.statsCategoryKey
+            && !statsCategoryOptions.some((entry) => entry.key === this.statsCategoryKey)
+        ) {
+            this.statsCategoryKey = "";
+        }
+        const statsScopedCleanings = this.getStatsScopedCleaningRecords(derivedCleanings, this.statsCategoryKey);
+        const statsCleaningSummary = summarizeCleaningAhRecords(statsScopedCleanings, filteredStandaloneLaundry);
+        const statsPropertyRows = sortCleaningAhPropertyRows(
+            summarizeCleaningAhPropertyRows(statsCleaningSummary.records),
+            this.statsPropertySort
+        );
+        const selectedStatsPropertyName = this.getStatsSelectedPropertyName(statsPropertyRows);
+        const selectedStatsPropertyDetail = summarizeCleaningAhPropertyDetail(statsCleaningSummary.records, selectedStatsPropertyName);
 
         root.innerHTML = `
             ${this.renderStatusMessage()}
@@ -1047,7 +1188,17 @@ export class CleaningAhManager {
 
             ${this.renderFilters()}
             ${this.renderTabBar()}
-            ${this.renderActiveTab(visibleCleaningRegisterEntries, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries)}
+            ${this.renderActiveTab(
+                visibleCleaningRegisterEntries,
+                filteredStandaloneLaundry,
+                statsCleaningSummary,
+                laundrySummary,
+                visibleLaundryRegisterEntries,
+                statsPropertyRows,
+                statsCategoryOptions,
+                selectedStatsPropertyName,
+                selectedStatsPropertyDetail
+            )}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
         `;
 
@@ -1149,7 +1300,7 @@ export class CleaningAhManager {
         const monthOptions = this.getMonthOptions()
             .map((monthKey) => `<option value="${monthKey}" ${monthKey === this.selectedMonthKey ? "selected" : ""}>${this.formatMonthKey(monthKey)}</option>`)
             .join("");
-        const propertyOptions = this.getKnownPropertyNames()
+        const propertyOptions = this.getFilterPropertyNames()
             .map((propertyName) => `<option value="${escapeHtml(propertyName)}" ${normalizeKey(propertyName) === normalizeKey(this.selectedPropertyName) ? "selected" : ""}>${escapeHtml(propertyName)}</option>`)
             .join("");
         const categoryOptions = this.getKnownCategories()
@@ -1209,7 +1360,17 @@ export class CleaningAhManager {
         `;
     }
 
-    renderActiveTab(visibleCleaningRegisterEntries, filteredStandaloneLaundry, cleaningSummary, laundrySummary, visibleLaundryRegisterEntries) {
+    renderActiveTab(
+        visibleCleaningRegisterEntries,
+        filteredStandaloneLaundry,
+        cleaningSummary,
+        laundrySummary,
+        visibleLaundryRegisterEntries,
+        statsPropertyRows,
+        statsCategoryOptions,
+        selectedStatsPropertyName,
+        selectedStatsPropertyDetail
+    ) {
         if (this.activeTab === "cleanings") {
             return this.renderCleaningsTab(visibleCleaningRegisterEntries);
         }
@@ -1218,51 +1379,253 @@ export class CleaningAhManager {
             return this.renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries);
         }
 
-        return this.renderStatsTab(cleaningSummary, laundrySummary);
+        return this.renderStatsTab(
+            cleaningSummary,
+            statsPropertyRows,
+            statsCategoryOptions,
+            selectedStatsPropertyName,
+            selectedStatsPropertyDetail
+        );
     }
 
-    renderStatsTab(cleaningSummary, laundrySummary) {
+    renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail) {
         return `
-            <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[1.5fr_1fr]">
-                <div class="space-y-6">
-                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.overviewKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.overviewTitle"))}</h3>
-                            </div>
-                            <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
+            <section class="space-y-6">
+                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.overviewKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.overviewTitle"))}</h3>
+                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("stats.overviewDescription"))}</p>
                         </div>
-                        <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
-                            ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
-                            ${this.renderMetricCard(this.tr("metrics.ahBeforeLaundry"), this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
-                            ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
-                        </div>
-                    </section>
+                        <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
+                    </div>
+                    <div class="mt-5 flex flex-wrap gap-2">
+                        ${this.renderStatsCategorySwitcher(statsCategoryOptions)}
+                    </div>
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
+                        ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
+                        ${this.renderMetricCard(this.tr("metrics.ahBeforeLaundry"), this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
+                        ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
+                        ${this.renderMetricCard(this.tr("metrics.avgKgPerCleaning"), this.formatNumber(cleaningSummary.totals.averageLaundryKgPerCleaning))}
+                    </div>
+                </section>
+                <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[1.3fr_0.95fr]">
+                    ${this.renderStatsComparisonBlock(statsPropertyRows, selectedStatsPropertyName)}
+                    ${this.renderStatsPropertyFocus(selectedStatsPropertyDetail)}
+                </section>
+                <section class="grid grid-cols-1 gap-6 2xl:grid-cols-2">
                     ${this.renderFinancialSummaryTable(this.tr("stats.byMonth"), cleaningSummary.byMonth, [
-                        [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
-                        [this.tr("tables.count"), (entry) => String(entry.count)],
-                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                        [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
-                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
-                    ])}
-                    ${this.renderFinancialSummaryTable(this.tr("stats.topProperties"), cleaningSummary.byProperty.slice(0, 8), [
-                        [this.tr("tables.property"), (entry) => entry.label],
-                        [this.tr("tables.count"), (entry) => String(entry.count)],
-                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
-                    ])}
-                </div>
-                <div class="space-y-6">
+                            [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
+                            [this.tr("tables.count"), (entry) => String(entry.count)],
+                            [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
+                            [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
+                            [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                            [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
+                        ])}
                     ${this.renderFinancialSummaryTable(this.tr("stats.categories"), cleaningSummary.byCategory.slice(0, 8), [
-                        [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
-                        [this.tr("tables.count"), (entry) => String(entry.count)],
-                        [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                        [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
-                        [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
-                    ])}
-                    ${this.renderLaundrySummaryBlock(laundrySummary)}
+                            [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
+                            [this.tr("tables.count"), (entry) => String(entry.count)],
+                            [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
+                            [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
+                            [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                            [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
+                        ])}
+                </section>
+            </section>
+        `;
+    }
+
+    renderStatsComparisonBlock(statsPropertyRows, selectedStatsPropertyName) {
+        const sortOptions = this.getStatsPropertySortOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === this.statsPropertySort ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+        const selectedPropertyOptions = statsPropertyRows
+            .map((entry) => `<option value="${escapeHtml(entry.label)}" ${normalizeKey(entry.label) === normalizeKey(selectedStatsPropertyName) ? "selected" : ""}>${escapeHtml(entry.label)}</option>`)
+            .join("");
+
+        return `
+            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.compareKicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.compareTitle"))}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("stats.compareDescription"))}</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:min-w-[28rem]">
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("stats.sortLabel"))}</span>
+                            <select id="cleaning-ah-stats-property-sort" class="mt-2 w-full">
+                                ${sortOptions}
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("stats.focusLabel"))}</span>
+                            <select id="cleaning-ah-stats-selected-property" class="mt-2 w-full" ${statsPropertyRows.length ? "" : "disabled"}>
+                                ${selectedPropertyOptions}
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-5 overflow-x-auto">
+                    ${this.renderStatsComparisonTable(statsPropertyRows, selectedStatsPropertyName)}
+                </div>
+            </section>
+        `;
+    }
+
+    renderStatsCategorySwitcher(options = []) {
+        return options.map((entry) => `
+            <button
+                type="button"
+                data-stats-category="${escapeHtml(entry.key)}"
+                class="view-btn ${entry.key === this.statsCategoryKey ? "active" : ""}"
+            >${escapeHtml(entry.label)} (${escapeHtml(String(entry.count || 0))})</button>
+        `).join("");
+    }
+
+    renderStatsComparisonTable(statsPropertyRows, selectedStatsPropertyName) {
+        if (!statsPropertyRows.length) {
+            return `<p class="text-sm text-slate-500">${escapeHtml(this.tr("stats.empty"))}</p>`;
+        }
+
+        return `
+            <table class="min-w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.count"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.avgKg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.avgNet"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.lastEntry"))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${statsPropertyRows.map((entry) => {
+                        const isSelected = normalizeKey(entry.label) === normalizeKey(selectedStatsPropertyName);
+                        return `
+                            <tr class="border-b border-slate-100 ${isSelected ? "bg-sky-50" : ""}">
+                                <td class="px-3 py-3 align-top text-sm">
+                                    <button
+                                        type="button"
+                                        data-action="select-stats-property"
+                                        data-property-name="${escapeHtml(entry.label)}"
+                                        class="block w-full text-left font-semibold text-slate-900 hover:text-sky-700"
+                                    >${escapeHtml(entry.label)}</button>
+                                </td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(String(entry.count))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.guestAmount))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryAmount))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.laundryKg))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.averageLaundryKgPerCleaning))}</td>
+                                <td class="px-3 py-3 text-sm font-medium text-slate-900">${escapeHtml(this.formatCurrency(entry.totalToAh))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.averageTotalToAh))}</td>
+                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(entry.lastEntryDate ? this.formatDate(entry.lastEntryDate) : "—")}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+    renderStatsPropertyFocus(detail) {
+        if (!detail) {
+            return `
+                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("stats.focusKicker"))}</div>
+                    <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.focusTitle"))}</h3>
+                    <p class="mt-3 text-sm text-slate-500">${escapeHtml(this.tr("stats.focusEmpty"))}</p>
+                </section>
+            `;
+        }
+
+        return `
+            <section class="space-y-6">
+                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.focusKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(detail.propertyName)}</h3>
+                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("stats.focusDescription"))}</p>
+                        </div>
+                        <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(detail.totals.count))}</div>
+                    </div>
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(detail.totals.guestAmount))}
+                        ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(detail.totals.totalToAh))}
+                        ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(detail.totals.averageTotalToAh))}
+                        ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(detail.totals.laundryAmount))}
+                        ${this.renderMetricCard(this.tr("metrics.laundryKg"), this.formatNumber(detail.totals.laundryKg))}
+                        ${this.renderMetricCard(this.tr("metrics.avgKgPerCleaning"), this.formatNumber(detail.totals.averageLaundryKgPerCleaning))}
+                        ${this.renderMetricCard(this.tr("metrics.lastEntry"), detail.totals.lastEntryDate ? this.formatDate(detail.totals.lastEntryDate) : "—")}
+                    </div>
+                </section>
+                ${this.renderFinancialSummaryTable(this.tr("stats.focusByMonth"), detail.byMonth, [
+                    [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
+                    [this.tr("tables.count"), (entry) => String(entry.count)],
+                    [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
+                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                    [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
+                ])}
+                ${this.renderFinancialSummaryTable(this.tr("stats.focusByCategory"), detail.byCategory, [
+                    [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
+                    [this.tr("tables.count"), (entry) => String(entry.count)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
+                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                    [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
+                ])}
+                ${this.renderFinancialSummaryTable(this.tr("stats.focusByReservation"), detail.byReservationSource, [
+                    [this.tr("tables.reservation"), (entry) => this.getReservationSourceLabel(entry.key || entry.label)],
+                    [this.tr("tables.count"), (entry) => String(entry.count)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
+                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                    [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
+                ])}
+                ${this.renderStatsRecentEntries(detail.recentEntries)}
+            </section>
+        `;
+    }
+
+    renderStatsRecentEntries(entries = []) {
+        return `
+            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-lg font-semibold text-slate-900">${escapeHtml(this.tr("stats.recentEntries"))}</h3>
+                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(Math.min(entries.length, 6)))}</div>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${entries.length
+                                ? entries.slice(0, 6).map((entry) => `
+                                    <tr class="border-b border-slate-100">
+                                        <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(entry.date))}</td>
+                                        <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(entry.categoryKey || entry.category))}</td>
+                                        <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(entry)))}</td>
+                                        <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.guestAmount))}</td>
+                                        <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.effectiveLaundryAmount ?? entry.laundryAmount))}</td>
+                                        <td class="px-3 py-3 text-sm font-medium text-slate-900">${escapeHtml(this.formatCurrency(entry.effectiveTotalToAh ?? entry.totalToAh))}</td>
+                                    </tr>
+                                `).join("")
+                                : `<tr><td colspan="6" class="px-3 py-4 text-sm text-slate-500">${escapeHtml(this.tr("tables.noData"))}</td></tr>`}
+                        </tbody>
+                    </table>
                 </div>
             </section>
         `;
@@ -2172,6 +2535,26 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-category-filter")?.addEventListener("change", (event) => {
             this.selectedCategory = event.target.value || "";
             this.render();
+        });
+        document.getElementById("cleaning-ah-stats-property-sort")?.addEventListener("change", (event) => {
+            this.statsPropertySort = event.target.value || "net-desc";
+            this.render();
+        });
+        document.getElementById("cleaning-ah-stats-selected-property")?.addEventListener("change", (event) => {
+            this.statsSelectedPropertyName = event.target.value || "";
+            this.render();
+        });
+        document.querySelectorAll("[data-stats-category]").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.statsCategoryKey = button.dataset.statsCategory || "";
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='select-stats-property']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.statsSelectedPropertyName = button.dataset.propertyName || "";
+                this.render();
+            });
         });
         document.getElementById("cleaning-ah-cleaning-register-filter")?.addEventListener("change", (event) => {
             this.cleaningRegisterFilter = event.target.value || "all";

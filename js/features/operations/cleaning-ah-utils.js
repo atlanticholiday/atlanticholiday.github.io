@@ -2,7 +2,7 @@ export const CLEANING_AH_DEFAULTS = Object.freeze({
     platformCommissionRate: 0.155,
     vatRate: 0.22,
     vatMode: 'extract',
-    laundryRatePerKg: 2.6,
+    laundryRatePerKg: 2.3,
     suppliesCost: 0
 });
 
@@ -206,6 +206,10 @@ export function normalizeCleaningAhCategoryKey(value) {
         || normalizedValue === 'mid therm cleaning'
         || normalizedValue === 'limpeza mid term'
         || normalizedValue === 'limpeza mid-term'
+        || normalizedValue === 'limpeza intermedia'
+        || normalizedValue === 'limpeza intermediaria'
+        || normalizedValue === 'limpeza intermédia'
+        || normalizedValue === 'limpeza intermadiaria'
         || normalizedValue === 'limpeza meio da estadia'
     ) {
         return CLEANING_AH_CATEGORY_KEYS.midTerm;
@@ -527,24 +531,10 @@ function pushGroupedEntry(targetMap, key, label, record) {
     const existing = targetMap.get(key) || {
         key,
         label,
-        count: 0,
-        guestAmount: 0,
-        platformCommission: 0,
-        vatAmount: 0,
-        totalToAhWithoutLaundry: 0,
-        laundryAmount: 0,
-        suppliesCost: 0,
-        totalToAh: 0
+        ...createEmptyCleaningAggregate()
     };
 
-    existing.count += 1;
-    existing.guestAmount = roundCurrency(existing.guestAmount + toFiniteNumber(record.guestAmount, 0));
-    existing.platformCommission = roundCurrency(existing.platformCommission + toFiniteNumber(record.platformCommission, 0));
-    existing.vatAmount = roundCurrency(existing.vatAmount + toFiniteNumber(record.vatAmount, 0));
-    existing.totalToAhWithoutLaundry = roundCurrency(existing.totalToAhWithoutLaundry + toFiniteNumber(record.totalToAhWithoutLaundry, 0));
-    existing.laundryAmount = roundCurrency(existing.laundryAmount + toFiniteNumber(record.effectiveLaundryAmount ?? record.laundryAmount, 0));
-    existing.suppliesCost = roundCurrency(existing.suppliesCost + toFiniteNumber(record.suppliesCost, 0));
-    existing.totalToAh = roundCurrency(existing.totalToAh + toFiniteNumber(record.effectiveTotalToAh ?? record.totalToAh, 0));
+    applyCleaningAggregate(existing, record);
 
     targetMap.set(key, existing);
 }
@@ -565,6 +555,64 @@ function sortSummaryEntries(entries, sortByLabelAscending = false) {
 
         return left.label.localeCompare(right.label);
     });
+}
+
+function createEmptyCleaningAggregate() {
+    return {
+        count: 0,
+        guestAmount: 0,
+        platformCommission: 0,
+        vatAmount: 0,
+        totalToAhWithoutLaundry: 0,
+        laundryAmount: 0,
+        laundryKg: 0,
+        suppliesCost: 0,
+        totalToAh: 0,
+        cleaningsWithLaundry: 0,
+        platformCount: 0,
+        directCount: 0,
+        lastEntryDate: ''
+    };
+}
+
+function applyCleaningAggregate(target, record) {
+    const effectiveLaundryAmount = toFiniteNumber(record.effectiveLaundryAmount ?? record.laundryAmount, 0);
+    const effectiveLaundryKg = toFiniteNumber(record.effectiveLaundryKg ?? record.laundryKg ?? record.kg, 0);
+    const reservationSource = normalizeReservationSource(record.reservationSource);
+    const recordDate = String(record.date || '');
+
+    target.count += 1;
+    target.guestAmount = roundCurrency(target.guestAmount + toFiniteNumber(record.guestAmount, 0));
+    target.platformCommission = roundCurrency(target.platformCommission + toFiniteNumber(record.platformCommission, 0));
+    target.vatAmount = roundCurrency(target.vatAmount + toFiniteNumber(record.vatAmount, 0));
+    target.totalToAhWithoutLaundry = roundCurrency(target.totalToAhWithoutLaundry + toFiniteNumber(record.totalToAhWithoutLaundry, 0));
+    target.laundryAmount = roundCurrency(target.laundryAmount + effectiveLaundryAmount);
+    target.laundryKg = roundCurrency(target.laundryKg + effectiveLaundryKg);
+    target.suppliesCost = roundCurrency(target.suppliesCost + toFiniteNumber(record.suppliesCost, 0));
+    target.totalToAh = roundCurrency(target.totalToAh + toFiniteNumber(record.effectiveTotalToAh ?? record.totalToAh, 0));
+    if (effectiveLaundryAmount > 0) {
+        target.cleaningsWithLaundry += 1;
+    }
+    if (reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct) {
+        target.directCount += 1;
+    } else {
+        target.platformCount += 1;
+    }
+    if (recordDate && (!target.lastEntryDate || recordDate > target.lastEntryDate)) {
+        target.lastEntryDate = recordDate;
+    }
+}
+
+function finalizeCleaningAggregate(target) {
+    return {
+        ...target,
+        averageTotalToAh: target.count
+            ? roundCurrency(target.totalToAh / target.count)
+            : 0,
+        averageLaundryKgPerCleaning: target.count
+            ? roundCurrency(target.laundryKg / target.count)
+            : 0
+    };
 }
 
 function buildLinkedLaundryMap(standaloneLaundryRecords = []) {
@@ -625,31 +673,10 @@ export function summarizeCleaningAhRecords(records = [], standaloneLaundryRecord
     const monthGroups = new Map();
     const propertyGroups = new Map();
     const categoryGroups = new Map();
-
-    const totals = {
-        count: 0,
-        guestAmount: 0,
-        platformCommission: 0,
-        vatAmount: 0,
-        totalToAhWithoutLaundry: 0,
-        laundryAmount: 0,
-        suppliesCost: 0,
-        totalToAh: 0,
-        cleaningsWithLaundry: 0
-    };
+    const totals = createEmptyCleaningAggregate();
 
     derivedRecords.forEach((record) => {
-        totals.count += 1;
-        totals.guestAmount = roundCurrency(totals.guestAmount + toFiniteNumber(record.guestAmount, 0));
-        totals.platformCommission = roundCurrency(totals.platformCommission + toFiniteNumber(record.platformCommission, 0));
-        totals.vatAmount = roundCurrency(totals.vatAmount + toFiniteNumber(record.vatAmount, 0));
-        totals.totalToAhWithoutLaundry = roundCurrency(totals.totalToAhWithoutLaundry + toFiniteNumber(record.totalToAhWithoutLaundry, 0));
-        totals.laundryAmount = roundCurrency(totals.laundryAmount + toFiniteNumber(record.effectiveLaundryAmount, 0));
-        totals.suppliesCost = roundCurrency(totals.suppliesCost + toFiniteNumber(record.suppliesCost, 0));
-        totals.totalToAh = roundCurrency(totals.totalToAh + toFiniteNumber(record.effectiveTotalToAh, 0));
-        if (toFiniteNumber(record.effectiveLaundryAmount, 0) > 0) {
-            totals.cleaningsWithLaundry += 1;
-        }
+        applyCleaningAggregate(totals, record);
 
         pushGroupedEntry(monthGroups, record.monthKey || 'unknown', record.monthKey || 'Unknown', record);
         pushGroupedEntry(
@@ -660,9 +687,11 @@ export function summarizeCleaningAhRecords(records = [], standaloneLaundryRecord
         );
         pushGroupedEntry(
             categoryGroups,
-            record.categoryKey || normalizeGroupingKey(record.category) || 'unknown',
-            record.categoryKey
-                ? getCleaningAhCategoryLabel(record.categoryKey, record.category || 'Unknown')
+            normalizeCleaningAhCategoryKey(record.categoryKey || record.category)
+                || normalizeGroupingKey(record.category)
+                || 'unknown',
+            normalizeCleaningAhCategoryKey(record.categoryKey || record.category)
+                ? getCleaningAhCategoryLabel(record.categoryKey || record.category, record.category || 'Unknown')
                 : (record.category || 'Unknown'),
             {
                 ...record,
@@ -671,16 +700,194 @@ export function summarizeCleaningAhRecords(records = [], standaloneLaundryRecord
         );
     });
 
-    totals.averageTotalToAh = totals.count
-        ? roundCurrency(totals.totalToAh / totals.count)
-        : 0;
-
     return {
         records: derivedRecords,
-        totals,
-        byMonth: sortSummaryEntries(monthGroups.values(), true),
-        byProperty: sortSummaryEntries(propertyGroups.values()),
-        byCategory: sortSummaryEntries(categoryGroups.values())
+        totals: finalizeCleaningAggregate(totals),
+        byMonth: sortSummaryEntries([...monthGroups.values()].map(finalizeCleaningAggregate), true),
+        byProperty: sortSummaryEntries([...propertyGroups.values()].map(finalizeCleaningAggregate)),
+        byCategory: sortSummaryEntries([...categoryGroups.values()].map(finalizeCleaningAggregate))
+    };
+}
+
+export function summarizeCleaningAhPropertyRows(records = []) {
+    const propertyGroups = new Map();
+
+    records.forEach((record) => {
+        pushGroupedEntry(
+            propertyGroups,
+            normalizeGroupingKey(record.propertyName) || 'unknown',
+            record.propertyName || 'Unknown',
+            record
+        );
+    });
+
+    return [...propertyGroups.values()].map(finalizeCleaningAggregate);
+}
+
+function compareSummaryNumbers(left, right) {
+    return left - right;
+}
+
+function compareSummaryDates(left, right) {
+    return String(left || '').localeCompare(String(right || ''));
+}
+
+export function sortCleaningAhPropertyRows(rows = [], sort = 'net-desc') {
+    return [...rows].sort((left, right) => {
+        if (sort === 'property-asc') {
+            return left.label.localeCompare(right.label)
+                || compareSummaryDates(right.lastEntryDate, left.lastEntryDate);
+        }
+
+        if (sort === 'property-desc') {
+            return right.label.localeCompare(left.label)
+                || compareSummaryDates(right.lastEntryDate, left.lastEntryDate);
+        }
+
+        if (sort === 'count-desc') {
+            return compareSummaryNumbers(right.count, left.count)
+                || compareSummaryNumbers(right.totalToAh, left.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'count-asc') {
+            return compareSummaryNumbers(left.count, right.count)
+                || compareSummaryNumbers(left.totalToAh, right.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'guest-desc') {
+            return compareSummaryNumbers(right.guestAmount, left.guestAmount)
+                || compareSummaryNumbers(right.totalToAh, left.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'guest-asc') {
+            return compareSummaryNumbers(left.guestAmount, right.guestAmount)
+                || compareSummaryNumbers(left.totalToAh, right.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'avg-net-desc') {
+            return compareSummaryNumbers(right.averageTotalToAh, left.averageTotalToAh)
+                || compareSummaryNumbers(right.totalToAh, left.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'avg-net-asc') {
+            return compareSummaryNumbers(left.averageTotalToAh, right.averageTotalToAh)
+                || compareSummaryNumbers(left.totalToAh, right.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'laundry-desc') {
+            return compareSummaryNumbers(right.laundryAmount, left.laundryAmount)
+                || compareSummaryNumbers(right.totalToAh, left.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'laundry-asc') {
+            return compareSummaryNumbers(left.laundryAmount, right.laundryAmount)
+                || compareSummaryNumbers(left.totalToAh, right.totalToAh)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'kg-desc') {
+            return compareSummaryNumbers(right.laundryKg, left.laundryKg)
+                || compareSummaryNumbers(right.laundryAmount, left.laundryAmount)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'kg-asc') {
+            return compareSummaryNumbers(left.laundryKg, right.laundryKg)
+                || compareSummaryNumbers(left.laundryAmount, right.laundryAmount)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'last-entry-asc') {
+            return compareSummaryDates(left.lastEntryDate, right.lastEntryDate)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'last-entry-desc') {
+            return compareSummaryDates(right.lastEntryDate, left.lastEntryDate)
+                || left.label.localeCompare(right.label);
+        }
+
+        if (sort === 'net-asc') {
+            return compareSummaryNumbers(left.totalToAh, right.totalToAh)
+                || compareSummaryNumbers(left.count, right.count)
+                || left.label.localeCompare(right.label);
+        }
+
+        return compareSummaryNumbers(right.totalToAh, left.totalToAh)
+            || compareSummaryNumbers(right.count, left.count)
+            || left.label.localeCompare(right.label);
+    });
+}
+
+export function summarizeCleaningAhPropertyDetail(records = [], propertyName = '') {
+    const normalizedPropertyName = normalizeGroupingKey(propertyName);
+    if (!normalizedPropertyName) {
+        return null;
+    }
+
+    const matchingRecords = records.filter((record) => normalizeGroupingKey(record.propertyName) === normalizedPropertyName);
+    if (!matchingRecords.length) {
+        return null;
+    }
+
+    const monthGroups = new Map();
+    const categoryGroups = new Map();
+    const reservationGroups = new Map();
+    const totals = createEmptyCleaningAggregate();
+
+    matchingRecords.forEach((record) => {
+        applyCleaningAggregate(totals, record);
+        pushGroupedEntry(monthGroups, record.monthKey || 'unknown', record.monthKey || 'Unknown', record);
+        pushGroupedEntry(
+            categoryGroups,
+            normalizeCleaningAhCategoryKey(record.categoryKey || record.category)
+                || normalizeGroupingKey(record.category)
+                || 'unknown',
+            normalizeCleaningAhCategoryKey(record.categoryKey || record.category)
+                ? getCleaningAhCategoryLabel(record.categoryKey || record.category, record.category || 'Unknown')
+                : (record.category || 'Unknown'),
+            {
+                ...record,
+                categoryKey: record.categoryKey || normalizeCleaningAhCategoryKey(record.category)
+            }
+        );
+        pushGroupedEntry(
+            reservationGroups,
+            normalizeReservationSource(record.reservationSource),
+            normalizeReservationSource(record.reservationSource),
+            record
+        );
+    });
+
+    const recentEntries = [...matchingRecords].sort((left, right) => {
+        return compareSummaryDates(right.date, left.date)
+            || compareSummaryNumbers(
+                toFiniteNumber(right.effectiveTotalToAh ?? right.totalToAh, 0),
+                toFiniteNumber(left.effectiveTotalToAh ?? left.totalToAh, 0)
+            );
+    });
+
+    return {
+        propertyName: matchingRecords[0].propertyName || propertyName,
+        records: matchingRecords,
+        totals: finalizeCleaningAggregate(totals),
+        byMonth: sortSummaryEntries([...monthGroups.values()].map(finalizeCleaningAggregate), true),
+        byCategory: sortSummaryEntries([...categoryGroups.values()].map(finalizeCleaningAggregate)),
+        byReservationSource: [
+            CLEANING_AH_RESERVATION_SOURCES.platform,
+            CLEANING_AH_RESERVATION_SOURCES.direct
+        ]
+            .map((key) => reservationGroups.get(key))
+            .filter(Boolean)
+            .map(finalizeCleaningAggregate),
+        recentEntries
     };
 }
 

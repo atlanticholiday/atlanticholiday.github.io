@@ -12,6 +12,9 @@ import {
     filterLaundryRegisterEntries,
     parseCleaningAhCsv,
     summarizeCleaningAhRecords,
+    summarizeCleaningAhPropertyDetail,
+    summarizeCleaningAhPropertyRows,
+    sortCleaningAhPropertyRows,
     summarizeLaundryRecords
 } from "../../../../js/features/operations/cleaning-ah-utils.js";
 
@@ -25,8 +28,8 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.platformCommission, 18.6);
         assert.equal(result.vatAmount, 21.64);
         assert.equal(result.totalToAhWithoutLaundry, 79.76);
-        assert.equal(result.laundryAmount, 26);
-        assert.equal(result.totalToAh, 53.76);
+        assert.equal(result.laundryAmount, 23);
+        assert.equal(result.totalToAh, 56.76);
     });
 
     test("sets platform commission to zero for direct reservations", () => {
@@ -71,8 +74,8 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.platformCommission, 0);
         assert.equal(result.vatAmount, 0);
         assert.equal(result.totalToAhWithoutLaundry, 120);
-        assert.equal(result.laundryAmount, 26);
-        assert.equal(result.totalToAh, 94);
+        assert.equal(result.laundryAmount, 23);
+        assert.equal(result.totalToAh, 97);
         assert.equal(result.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
     });
 
@@ -141,9 +144,9 @@ describe("Cleaning AH utilities", () => {
 
         const derived = deriveCleaningAhRecords(records, standaloneLaundry);
 
-        assert.equal(derived[0].linkedLaundryAmount, 31.2);
-        assert.equal(derived[0].effectiveLaundryAmount, 31.2);
-        assert.equal(derived[0].effectiveTotalToAh, 48.56);
+        assert.equal(derived[0].linkedLaundryAmount, 27.6);
+        assert.equal(derived[0].effectiveLaundryAmount, 27.6);
+        assert.equal(derived[0].effectiveTotalToAh, 52.16);
     });
 
     test("creates standalone laundry records with a custom rate per kg", () => {
@@ -203,7 +206,132 @@ describe("Cleaning AH utilities", () => {
         assert.equal(summary.byMonth.length, 2);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
         assert.equal(summary.byCategory[0].key, CLEANING_AH_CATEGORY_KEYS.checkout);
-        assert.equal(summary.records[1].effectiveLaundryAmount, 31.2);
+        assert.equal(summary.records[1].effectiveLaundryAmount, 27.6);
+    });
+
+    test("builds sortable property comparison rows from derived cleaning records", () => {
+        const records = summarizeCleaningAhRecords([
+            createCleaningAhRecord({
+                date: "2025-11-11",
+                propertyName: "Acqua Beach",
+                category: "Limpeza check-out",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
+                guestAmount: 120,
+                laundryAmount: 0,
+                source: "manual"
+            }),
+            createCleaningAhRecord({
+                date: "2025-11-18",
+                propertyName: "Acqua Beach",
+                category: "Primeira Limpeza",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.direct,
+                guestAmount: 90,
+                laundryKg: 5,
+                laundryAmount: 11.5,
+                source: "manual"
+            }),
+            createCleaningAhRecord({
+                date: "2025-11-19",
+                propertyName: "Bravo",
+                category: "Limpeza check-out",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
+                guestAmount: 100,
+                laundryAmount: 0,
+                source: "manual"
+            })
+        ]).records;
+
+        const rows = summarizeCleaningAhPropertyRows(records);
+        const sortedRows = sortCleaningAhPropertyRows(rows, "count-desc");
+
+        assert.equal(rows.length, 2);
+        assert.equal(sortedRows[0].label, "Acqua Beach");
+        assert.equal(sortedRows[0].count, 2);
+        assert.equal(sortedRows[0].laundryKg, 5);
+        assert.equal(sortedRows[0].averageLaundryKgPerCleaning, 2.5);
+        assert.equal(sortedRows[0].platformCount, 1);
+        assert.equal(sortedRows[0].directCount, 1);
+        assert.equal(sortedRows[0].lastEntryDate, "2025-11-18");
+    });
+
+    test("summarizes detailed stats for one selected property", () => {
+        const records = summarizeCleaningAhRecords([
+            createCleaningAhRecord({
+                date: "2025-11-11",
+                propertyName: "Acqua Beach",
+                category: "Limpeza check-out",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
+                guestAmount: 120,
+                laundryAmount: 0,
+                source: "manual"
+            }),
+            createCleaningAhRecord({
+                date: "2025-12-01",
+                propertyName: "Acqua Beach",
+                category: "Primeira Limpeza",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.direct,
+                guestAmount: 90,
+                laundryKg: 5,
+                laundryAmount: 11.5,
+                source: "manual"
+            }),
+            createCleaningAhRecord({
+                date: "2025-12-02",
+                propertyName: "Bravo",
+                category: "Limpeza check-out",
+                reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
+                guestAmount: 100,
+                laundryAmount: 0,
+                source: "manual"
+            })
+        ]).records;
+
+        const detail = summarizeCleaningAhPropertyDetail(records, "Acqua Beach");
+
+        assert.equal(detail.propertyName, "Acqua Beach");
+        assert.equal(detail.totals.count, 2);
+        assert.equal(detail.totals.laundryKg, 5);
+        assert.equal(detail.totals.averageLaundryKgPerCleaning, 2.5);
+        assert.equal(detail.totals.platformCount, 1);
+        assert.equal(detail.totals.directCount, 1);
+        assert.equal(detail.byMonth.length, 2);
+        assert.equal(detail.byCategory[0].count, 1);
+        assert.equal(detail.byReservationSource.length, 2);
+        assert.equal(detail.recentEntries[0].date, "2025-12-01");
+    });
+
+    test("merges legacy and normalized category labels into one stats category", () => {
+        const summary = summarizeCleaningAhRecords([
+            createCleaningAhRecord({
+                date: "2025-11-11",
+                propertyName: "Acqua Beach",
+                categoryKey: CLEANING_AH_CATEGORY_KEYS.firstCleaning,
+                category: "Primeira limpeza",
+                guestAmount: 90,
+                source: "manual"
+            }),
+            createCleaningAhRecord({
+                date: "2025-11-12",
+                propertyName: "Acqua Beach",
+                category: "Primeira limpeza",
+                guestAmount: 80,
+                source: "import"
+            }),
+            createCleaningAhRecord({
+                date: "2025-11-13",
+                propertyName: "Bravo",
+                category: "Limpeza intermédia",
+                guestAmount: 70,
+                source: "import"
+            })
+        ]);
+
+        const firstCleaningGroup = summary.byCategory.find((entry) => entry.key === CLEANING_AH_CATEGORY_KEYS.firstCleaning);
+        const midTermGroup = summary.byCategory.find((entry) => entry.key === CLEANING_AH_CATEGORY_KEYS.midTerm);
+
+        assert.equal(summary.byCategory.length, 2);
+        assert.equal(firstCleaningGroup.count, 2);
+        assert.equal(midTermGroup.count, 1);
     });
 
     test("combines cleaning laundry with standalone laundry entries", () => {
@@ -243,7 +371,7 @@ describe("Cleaning AH utilities", () => {
         const summary = summarizeLaundryRecords(cleaningRecords, standaloneLaundry);
 
         assert.equal(summary.totals.count, 3);
-        assert.equal(summary.totals.amount, 61.6);
+        assert.equal(summary.totals.amount, 57.4);
         assert.equal(summary.byProperty[0].label, "Acqua Beach");
         assert.equal(summary.entries[0].date, "2025-11-13");
         assert.equal(summary.entries[0].id, "linked-laundry");

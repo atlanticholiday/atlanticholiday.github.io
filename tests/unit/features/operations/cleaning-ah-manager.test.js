@@ -93,7 +93,84 @@ describe("CleaningAhManager", () => {
 
     assert.equal(preview.count, 1);
     assert.equal(preview.kg, 5);
-    assert.equal(preview.amount, 13);
+    assert.equal(preview.amount, 11.5);
+
+    resetDom();
+  });
+
+  test("limits property filter options to names that have entries", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null, {
+      getProperties: () => [
+        { name: "Acqua Beach" },
+        { name: "No Entries Villa" }
+      ]
+    });
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        monthKey: "2026-04",
+        propertyName: "Acqua Beach",
+        category: "Limpeza check-out"
+      }
+    ];
+    manager.laundryRecords = [];
+
+    const propertyNames = manager.getFilterPropertyNames();
+
+    assert.deepEqual(propertyNames, ["Acqua Beach"]);
+
+    resetDom();
+  });
+
+  test("scopes stats records to the selected cleaning category", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const records = [
+      {
+        id: "cleaning-1",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+      },
+      {
+        id: "cleaning-2",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.firstCleaning
+      }
+    ];
+
+    const scopedRecords = manager.getStatsScopedCleaningRecords(records, CLEANING_AH_CATEGORY_KEYS.firstCleaning);
+
+    assert.equal(scopedRecords.length, 1);
+    assert.equal(scopedRecords[0].id, "cleaning-2");
+
+    resetDom();
+  });
+
+  test("scopes legacy raw category labels without falling back to all stats records", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const records = [
+      {
+        id: "cleaning-1",
+        propertyName: "Acqua Beach",
+        category: "Limpeza intermédia"
+      },
+      {
+        id: "cleaning-2",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+      }
+    ];
+
+    const scopedRecords = manager.getStatsScopedCleaningRecords(records, "Limpeza intermédia");
+
+    assert.equal(scopedRecords.length, 1);
+    assert.equal(scopedRecords[0].id, "cleaning-1");
 
     resetDom();
   });
@@ -148,6 +225,37 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("prefers the property guest cleaning fee over older cleaning history for checkout suggestions", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null, {
+      getProperties: () => [
+        {
+          id: "property-1",
+          name: "Acqua Beach",
+          guestCleaningFee: 175
+        }
+      ]
+    });
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-latest",
+        date: "2026-04-06",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        guestAmount: 150
+      }
+    ];
+
+    const suggestedAmount = manager.getSuggestedCleaningGuestAmount("Acqua Beach", {
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+    });
+
+    assert.equal(suggestedAmount, 175);
+
+    resetDom();
+  });
+
   test("includes optional laundry kg in cleaning single and batch previews", () => {
     resetDom();
 
@@ -176,8 +284,8 @@ describe("CleaningAhManager", () => {
         platformCommission: 23.25,
         vatAmount: 27.05,
         totalToAhWithoutLaundry: 99.7,
-        laundryAmount: 13,
-        totalToAh: 86.7
+        laundryAmount: 11.5,
+        totalToAh: 88.2
       },
       guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
         enableSuggestion: false
@@ -186,8 +294,8 @@ describe("CleaningAhManager", () => {
     const batchPreview = manager.getCleaningBatchPreview();
 
     assert.includes(previewRecord, 'name="laundryKg"');
-    assert.equal(batchPreview.laundryAmount, 13);
-    assert.equal(batchPreview.totalToAh, 86.7);
+    assert.equal(batchPreview.laundryAmount, 11.5);
+    assert.equal(batchPreview.totalToAh, 88.2);
 
     resetDom();
   });
@@ -260,8 +368,8 @@ describe("CleaningAhManager", () => {
         platformCommission: 0,
         vatAmount: 0,
         totalToAhWithoutLaundry: 150,
-        laundryAmount: 13,
-        totalToAh: 137
+        laundryAmount: 11.5,
+        totalToAh: 138.5
       },
       guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
         enableSuggestion: false
@@ -441,7 +549,7 @@ describe("CleaningAhManager", () => {
     manager.cleaningLaundryQuickDrafts["cleaning-1"] = manager.createCleaningQuickLaundryDraft({ id: "cleaning-1" }, {
       date: "2026-04-08",
       kg: "5",
-      laundryRatePerKg: "2.6",
+      laundryRatePerKg: "2.3",
       notes: ""
     });
 
@@ -523,8 +631,8 @@ describe("CleaningAhManager", () => {
         linkedCleaningDate: "",
         linkedCleaningCategory: "",
         kg: 5,
-        laundryRatePerKg: 2.6,
-        amount: 13,
+        laundryRatePerKg: 2.3,
+        amount: 11.5,
         notes: "",
         source: "standalone"
       }
@@ -539,8 +647,8 @@ describe("CleaningAhManager", () => {
         linkedCleaningDate: "",
         linkedCleaningCategory: "",
         kg: 5,
-        laundryRatePerKg: 2.6,
-        amount: 13,
+        laundryRatePerKg: 2.3,
+        amount: 11.5,
         notes: "",
         source: "standalone"
       }
@@ -554,8 +662,8 @@ describe("CleaningAhManager", () => {
         linkedCleaningDate: "2026-04-06",
         linkedCleaningCategory: "Limpeza check-out",
         kg: 5,
-        laundryRatePerKg: 2.6,
-        amount: 13,
+        laundryRatePerKg: 2.3,
+        amount: 11.5,
         notes: "",
         source: "cleaning"
       }
@@ -621,8 +729,8 @@ describe("CleaningAhManager", () => {
         id: "cleaning-with-laundry",
         date: "2026-04-07",
         propertyName: "Acqua Beach",
-        effectiveLaundryAmount: 13,
-        effectiveTotalToAh: 86.7
+        effectiveLaundryAmount: 11.5,
+        effectiveTotalToAh: 88.2
       },
       {
         id: "cleaning-waiting",

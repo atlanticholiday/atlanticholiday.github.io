@@ -683,13 +683,13 @@ document.addEventListener('DOMContentLoaded', () => {
         group.innerHTML = `
             <label class="form-label">
               <i class="fas fa-broom"></i>
-              <span>Guest Cleaning Fee (platform)</span>
+              <span>Charge to Guest per Cleaning</span>
             </label>
-            <input id="settings-guest-cleaning-fee" name="guestCleaningFee" type="number" step="0.01" min="0" class="form-input" placeholder="e.g. 60.00" />
+            <input id="settings-guest-cleaning-fee" name="guestCleaningFee" type="number" step="0.01" min="0" class="form-input" placeholder="e.g. 60.00 charged to the guest" />
         `;
-        if (anchor && anchor.parentElement && anchor.parentElement.parentElement) {
+        if (anchor && anchor.parentElement) {
             // Insert right after the anchor's form-group if available
-            anchor.parentElement.parentElement.insertAdjacentElement('afterend', group);
+            anchor.parentElement.insertAdjacentElement('afterend', group);
         } else if (basicGrid) {
             basicGrid.appendChild(group);
         } else {

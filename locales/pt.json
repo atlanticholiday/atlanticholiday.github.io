@@ -800,21 +800,21 @@
         "header": {
             "kicker": "Financeiro",
             "title": "Cleaning AH",
-            "subtitle": "Acompanhe a receita de check-out, os custos de lavandaria e metricas rapidas num unico sitio.",
+            "subtitle": "Acompanhe a receita de check-out, os custos de lavandaria e métricas rápidas num único sítio.",
             "restrictedKicker": "Restrito",
-            "restrictedTitle": "O Cleaning AH e apenas para gestores.",
-            "restrictedBody": "Esta pagina guarda dados de receita da empresa, por isso so esta visivel para admins e gestores."
+            "restrictedTitle": "O Cleaning AH é apenas para gestores.",
+            "restrictedBody": "Esta página guarda dados de receita da empresa, por isso só está visível para admins e gestores."
         },
         "landing": {
-            "description": "Receita de check-out, lavandaria e estatisticas importaveis."
+            "description": "Receita de check-out, lavandaria e estatísticas importáveis."
         },
         "formula": {
-            "kicker": "Formula",
+            "kicker": "Fórmula",
             "title": "Regras por categoria de limpeza.",
-            "body": "O check-out usa a regra normal de 22% de IVA extraido, com 15,5% de comissao apenas nas reservas de plataforma. Os check-outs do proprietario e as primeiras limpezas nao pagam comissao de plataforma, enquanto as limpezas mid-term registam poupanca sem comissao nem IVA. A lavandaria usa 2,60 EUR por kg quer a introduza logo na limpeza quer a adicione depois."
+            "body": "O check-out usa a regra normal de 22% de IVA extraído, com 15,5% de comissão apenas nas reservas de plataforma. Os check-outs do proprietário e as primeiras limpezas não pagam comissão de plataforma, enquanto as limpezas mid-term registam poupança sem comissão nem IVA. A lavandaria usa 2,30 EUR por kg, quer a introduza logo na limpeza quer a adicione depois."
         },
         "tabs": {
-            "stats": "Estatisticas",
+            "stats": "Estatísticas",
             "cleanings": "Limpezas",
             "laundry": "Lavandaria",
             "ariaLabel": "Separadores do Cleaning AH"
@@ -824,7 +824,7 @@
                 "label": "Check-out"
             },
             "owner-checkout": {
-                "label": "Check-out do proprietario"
+                "label": "Check-out do proprietário"
             },
             "first-cleaning": {
                 "label": "Primeira limpeza"
@@ -834,10 +834,10 @@
             }
         },
         "categoryRules": {
-            "checkout": "Plataforma ou Direta aplica-se apenas aos registos de check-out. O IVA e extraido e a lavandaria continua opcional.",
-            "ownerCheckout": "Os check-outs do proprietario nao pagam comissao de plataforma. Introduza o valor cobrado e adicione lavandaria apenas quando existir.",
-            "firstCleaning": "As primeiras limpezas nao pagam comissao de plataforma. O IVA continua a aplicar-se e a lavandaria so entra quando existir.",
-            "midTerm": "As limpezas mid-term usam o campo de valor como poupanca face a empresa de limpeza. Nao existe comissao de plataforma nem IVA, por isso so a lavandaria reduz o liquido final."
+            "checkout": "Plataforma ou Direta aplica-se apenas aos registos de check-out. O IVA é extraído e a lavandaria continua opcional.",
+            "ownerCheckout": "Os check-outs do proprietário não pagam comissão de plataforma. Introduza o valor cobrado e adicione lavandaria apenas quando existir.",
+            "firstCleaning": "As primeiras limpezas não pagam comissão de plataforma. O IVA continua a aplicar-se e a lavandaria só entra quando existir.",
+            "midTerm": "As limpezas mid-term usam o campo de valor como poupança face à empresa de limpeza. Não existe comissão de plataforma nem IVA, por isso só a lavandaria reduz o líquido final."
         },
         "filters": {
             "search": "Pesquisar",
@@ -851,49 +851,86 @@
         },
         "metrics": {
             "checkOuts": "Check-outs",
-            "guestTotal": "Total valor",
-            "platformFees": "Comissoes da plataforma",
+            "guestTotal": "Valor total",
+            "platformFees": "Comissões da plataforma",
             "vat": "IVA",
             "laundry": "Lavandaria",
-            "netToAh": "Liquido para a AH",
+            "netToAh": "Líquido para a AH",
             "ahBeforeLaundry": "AH antes da lavandaria",
-            "avgNetPerCleaning": "Media liquida / limpeza",
+            "avgNetPerCleaning": "Média líquida / limpeza",
             "kg": "Kg",
             "amount": "Valor",
             "rows": "Linhas",
             "type": "Tipo",
-            "commission": "Comissao",
+            "commission": "Comissão",
             "beforeLaundry": "Antes da lavandaria",
             "laundryPending": "Lavandaria pendente",
-            "currentNet": "Liquido atual",
-            "ratePerKg": "Preco / kg"
+            "currentNet": "Líquido atual",
+            "ratePerKg": "Preço / kg",
+            "laundryKg": "Kg lavandaria",
+            "lastEntry": "Último registo",
+            "avgKgPerCleaning": "Média kg / limpeza"
         },
         "stats": {
-            "byMonth": "Por mes",
+            "byMonth": "Por mês",
             "topProperties": "Principais propriedades",
-            "categories": "Por categoria"
+            "categories": "Por categoria",
+            "allCleaningTypes": "Todos os tipos de limpeza",
+            "overviewDescription": "Use a tabela de comparação para ordenar propriedades com registos e depois foque uma propriedade para ver o detalhe.",
+            "compareKicker": "Comparação",
+            "compareTitle": "Comparação de propriedades",
+            "compareDescription": "Aqui aparecem apenas propriedades com registos que correspondem aos filtros atuais. Ordene a tabela e depois escolha uma propriedade para aprofundar.",
+            "sortLabel": "Ordenar propriedades por",
+            "focusLabel": "Propriedade em foco",
+            "focusKicker": "Propriedade em foco",
+            "focusTitle": "Detalhe da propriedade",
+            "focusDescription": "Estas estatísticas respeitam os filtros atuais e atualizam quando afunila o conjunto de dados.",
+            "focusEmpty": "Escolha uma propriedade com registos para ver aqui o respetivo detalhe.",
+            "focusByMonth": "Propriedade selecionada por mês",
+            "focusByCategory": "Propriedade selecionada por categoria",
+            "focusByReservation": "Propriedade selecionada por reserva",
+            "recentEntries": "Registos recentes",
+            "empty": "Nenhuma propriedade com registos corresponde aos filtros atuais.",
+            "sortOptions": {
+                "netDesc": "Maior líquido",
+                "netAsc": "Menor líquido",
+                "countDesc": "Mais limpezas",
+                "countAsc": "Menos limpezas",
+                "guestDesc": "Maior valor",
+                "guestAsc": "Menor valor",
+                "avgNetDesc": "Maior média líquida",
+                "avgNetAsc": "Menor média líquida",
+                "laundryDesc": "Maior valor de lavandaria",
+                "laundryAsc": "Menor valor de lavandaria",
+                "kgDesc": "Maior kg de lavandaria",
+                "kgAsc": "Menor kg de lavandaria",
+                "lastEntryDesc": "Registo mais recente",
+                "lastEntryAsc": "Registo mais antigo",
+                "propertyAsc": "Propriedade A-Z",
+                "propertyDesc": "Propriedade Z-A"
+            }
         },
         "dashboard": {
             "overviewKicker": "Resumo",
             "overviewTitle": "Resumo da receita",
             "laundryKicker": "Lavandaria",
             "laundryTitle": "Totais da lavandaria",
-            "laundryByMonth": "Lavandaria por mes",
+            "laundryByMonth": "Lavandaria por mês",
             "laundryByProperty": "Lavandaria por propriedade"
         },
         "cleanings": {
-            "entryKicker": "Registo rapido",
+            "entryKicker": "Registo rápido",
             "editTitle": "Editar limpeza",
             "addTitle": "Adicionar limpeza",
             "description": "Escolha Plataforma ou Direta, guarde o check-out e, se quiser, introduza logo os kg da lavandaria. Continua a poder adicionar lavandaria associada depois nos Dados guardados ou no separador Lavandaria.",
-            "batchTitle": "Adicionar varias limpezas",
-            "batchDescription": "Use uma data, categoria e origem da reserva partilhadas para guardar varias linhas de check-out de uma vez. Cada linha tambem pode incluir kg de lavandaria, e o valor da propriedade e sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
+            "batchTitle": "Adicionar várias limpezas",
+            "batchDescription": "Use uma data, categoria e origem da reserva partilhadas para guardar várias linhas de check-out de uma vez. Cada linha também pode incluir kg de lavandaria, e o valor da propriedade é sugerido automaticamente a partir da limpeza mais recente dessa propriedade.",
             "batchDate": "Data para todas as linhas",
             "batchCategory": "Categoria para todas as linhas",
-            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas, o valor hospede e os kg de lavandaria em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
-            "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela tambem aparece no separador Lavandaria.",
+            "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas, o valor hóspede e os kg de lavandaria em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
+            "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela também aparece no separador Lavandaria.",
             "entryModes": {
-                "single": "Registo unico",
+                "single": "Registo único",
                 "batch": "Registo em lote"
             },
             "registerFilterLabel": "Mostrar",
@@ -908,40 +945,40 @@
                 "dateAsc": "Mais antigas primeiro",
                 "propertyAsc": "Propriedade A-Z",
                 "propertyDesc": "Propriedade Z-A",
-                "guestDesc": "Maior valor hospede",
-                "guestAsc": "Menor valor hospede",
+                "guestDesc": "Maior valor hóspede",
+                "guestAsc": "Menor valor hóspede",
                 "netDesc": "Maior liquido",
                 "netAsc": "Menor liquido"
             },
             "storedKicker": "Dados guardados",
             "storedTitle": "Limpezas",
-            "storedDescription": "Use Mostrar e Ordenar por para focar linhas que ja tem lavandaria associada ou que ainda estao a aguardar lavandaria.",
+            "storedDescription": "Use Mostrar e Ordenar por para focar linhas que já têm lavandaria associada ou que ainda estão a aguardar lavandaria.",
             "empty": "Nenhum registo de limpeza corresponde aos filtros atuais."
         },
         "laundryTab": {
             "entryKicker": "Lavandaria avulsa",
             "editTitle": "Editar registo de lavandaria",
             "addTitle": "Adicionar registo de lavandaria",
-            "description": "Use isto quando a lavandaria precisa de ser controlada separadamente de uma limpeza de check-out. O valor e calculado automaticamente como quilos multiplicados pelo preco definido abaixo.",
-            "vatNote": "Os precos e valores de lavandaria mostrados aqui nao incluem 22% de IVA.",
-            "batchTitle": "Adicionar varios registos de lavandaria",
-            "batchDescription": "Use uma data partilhada e um preco por kg partilhado para guardar varias linhas de lavandaria de uma vez. E mais rapido quando tem muitas propriedades no mesmo dia.",
+            "description": "Use isto quando a lavandaria precisa de ser controlada separadamente de uma limpeza de check-out. O valor é calculado automaticamente como quilos multiplicados pelo preço definido abaixo.",
+            "vatNote": "Os preços e valores de lavandaria mostrados aqui não incluem 22% de IVA.",
+            "batchTitle": "Adicionar vários registos de lavandaria",
+            "batchDescription": "Use uma data partilhada e um preço por kg partilhado para guardar várias linhas de lavandaria de uma vez. É mais rápido quando tem muitas propriedades no mesmo dia.",
             "batchDate": "Data para todas as linhas",
-            "batchRatePerKg": "Preco / kg para todas as linhas",
-            "batchHint": "Use o registo em lote para lavandaria do mesmo dia em varias propriedades. Se for preciso, pode associar as linhas as limpezas mais tarde.",
+            "batchRatePerKg": "Preço / kg para todas as linhas",
+            "batchHint": "Use o registo em lote para lavandaria do mesmo dia em várias propriedades. Se for preciso, pode associar as linhas às limpezas mais tarde.",
             "activityKicker": "Atividade de lavandaria",
             "activityTitle": "Registo combinado de lavandaria",
             "empty": "Nenhum registo de lavandaria corresponde aos filtros atuais.",
             "entryModes": {
-                "single": "Registo unico",
+                "single": "Registo único",
                 "batch": "Registo em lote"
             },
             "registerFilterLabel": "Mostrar",
             "registerSortLabel": "Ordenar por",
             "registerFilters": {
                 "all": "Todas as linhas",
-                "linked": "Associadas a limpeza",
-                "unlinked": "Nao associadas"
+                "linked": "Associadas à limpeza",
+                "unlinked": "Não associadas"
             },
             "registerSortOptions": {
                 "dateDesc": "Mais recentes primeiro",
@@ -960,30 +997,30 @@
             "propertyPlaceholder": "Escreva ou escolha uma propriedade",
             "category": "Categoria",
             "reservationSource": "Reserva",
-            "guestAmount": "Valor hospede",
+            "guestAmount": "Valor hóspede",
             "chargedAmount": "Valor cobrado",
             "savedAmount": "Valor poupado",
             "notesPlaceholder": "Nota opcional",
             "linkedCleaning": "Limpeza associada",
             "noLinkedCleaning": "Sem limpeza associada",
-            "linkedCleaningHint": "Associe a lavandaria a uma limpeza anterior para atualizar a receita liquida final quando os kg chegarem.",
+            "linkedCleaningHint": "Associe a lavandaria a uma limpeza anterior para atualizar a receita líquida final quando os kg chegarem.",
             "kg": "Kg",
-            "ratePerKg": "Preco / kg",
+            "ratePerKg": "Preço / kg",
             "csvFile": "Ficheiro CSV"
         },
         "preview": {
-            "title": "Pre-visualizacao"
+            "title": "Pré-visualização"
         },
         "import": {
             "kicker": "Importar",
-            "title": "Importar CSV historico",
-            "description": "Importe a folha de check-out existente, ignore duplicados por fingerprint e reveja divergencias antes de guardar.",
-            "clearPreview": "Limpar pre-visualizacao",
-            "empty": "Selecione um ficheiro CSV para pre-visualizar quantas linhas vao ser importadas e quantas serao ignoradas como duplicadas.",
-            "previewKicker": "Pre-visualizacao da importacao",
+            "title": "Importar CSV histórico",
+            "description": "Importe a folha de check-out existente, ignore duplicados por fingerprint e reveja divergências antes de guardar.",
+            "clearPreview": "Limpar pré-visualização",
+            "empty": "Selecione um ficheiro CSV para pré-visualizar quantas linhas vão ser importadas e quantas serão ignoradas como duplicadas.",
+            "previewKicker": "Pré-visualização da importação",
             "summary": "{{parsed}} analisadas, {{newRows}} novas, {{duplicates}} duplicadas ignoradas, {{warnings}} avisos.",
-            "mismatchWarning": "{{count}} linhas tem divergencias de formula. Serao importadas na mesma com os valores da folha preservados.",
-            "noNewRows": "Nao existem novas linhas para importar."
+            "mismatchWarning": "{{count}} linhas têm divergências de fórmula. Serão importadas na mesma com os valores da folha preservados.",
+            "noNewRows": "Não existem novas linhas para importar."
         },
         "tables": {
             "date": "Data",
@@ -999,9 +1036,12 @@
             "kg": "Kg",
             "ratePerKg": "Preco / kg",
             "amount": "Valor",
-            "month": "Mes",
+            "month": "Mês",
             "count": "Contagem",
             "rows": "Linhas",
+            "avgNet": "Média líquida",
+            "avgKg": "Média kg",
+            "lastEntry": "Ultimo registo",
             "noData": "Nao existem dados para os filtros atuais."
         },
         "reservationSources": {
