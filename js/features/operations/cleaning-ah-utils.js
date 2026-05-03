@@ -15,7 +15,8 @@ export const CLEANING_AH_CATEGORY_KEYS = Object.freeze({
     checkout: 'checkout',
     ownerCheckout: 'owner-checkout',
     firstCleaning: 'first-cleaning',
-    midTerm: 'mid-term'
+    midTerm: 'mid-term',
+    otherCleanings: 'other-cleanings'
 });
 
 const CLEANING_AH_CATEGORY_CONFIGS = Object.freeze({
@@ -42,6 +43,12 @@ const CLEANING_AH_CATEGORY_CONFIGS = Object.freeze({
         defaultLabel: 'Mid-term cleaning',
         appliesPlatformCommission: false,
         appliesVat: false
+    },
+    [CLEANING_AH_CATEGORY_KEYS.otherCleanings]: {
+        key: CLEANING_AH_CATEGORY_KEYS.otherCleanings,
+        defaultLabel: 'Other cleanings',
+        appliesPlatformCommission: false,
+        appliesVat: true
     }
 });
 
@@ -213,6 +220,19 @@ export function normalizeCleaningAhCategoryKey(value) {
         || normalizedValue === 'limpeza meio da estadia'
     ) {
         return CLEANING_AH_CATEGORY_KEYS.midTerm;
+    }
+
+    if (
+        normalizedValue === CLEANING_AH_CATEGORY_KEYS.otherCleanings
+        || normalizedValue === 'other cleanings'
+        || normalizedValue === 'other cleaning'
+        || normalizedValue === 'other'
+        || normalizedValue === 'outras limpezas'
+        || normalizedValue === 'outra limpeza'
+        || normalizedValue === 'limpezas extra'
+        || normalizedValue === 'limpeza extra'
+    ) {
+        return CLEANING_AH_CATEGORY_KEYS.otherCleanings;
     }
 
     return '';

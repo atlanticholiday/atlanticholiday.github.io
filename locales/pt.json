@@ -811,12 +811,13 @@
         "formula": {
             "kicker": "Fórmula",
             "title": "Regras por categoria de limpeza.",
-            "body": "O check-out usa a regra normal de 22% de IVA extraído, com 15,5% de comissão apenas nas reservas de plataforma. Os check-outs do proprietário e as primeiras limpezas não pagam comissão de plataforma, enquanto as limpezas mid-term registam poupança sem comissão nem IVA. A lavandaria usa 2,30 EUR por kg, quer a introduza logo na limpeza quer a adicione depois."
+            "body": "O check-out usa a regra normal de 22% de IVA extraído, com 15,5% de comissão apenas nas reservas de plataforma. Os check-outs do proprietário, as primeiras limpezas e as outras limpezas não pagam comissão de plataforma, enquanto as limpezas mid-term registam poupança sem comissão nem IVA. A lavandaria usa 2,30 EUR por kg, quer a introduza logo na limpeza quer a adicione depois."
         },
         "tabs": {
             "stats": "Estatísticas",
             "cleanings": "Limpezas",
             "laundry": "Lavandaria",
+            "specialCleanings": "Limpezas especiais",
             "ariaLabel": "Separadores do Cleaning AH"
         },
         "categories": {
@@ -827,17 +828,21 @@
                 "label": "Check-out do proprietário"
             },
             "first-cleaning": {
-                "label": "Primeira limpeza"
+                "label": "1ª Limpeza"
             },
             "mid-term": {
-                "label": "Limpeza mid-term"
+                "label": "Intermédia"
+            },
+            "other-cleanings": {
+                "label": "Outras limpezas"
             }
         },
         "categoryRules": {
             "checkout": "Plataforma ou Direta aplica-se apenas aos registos de check-out. O IVA é extraído e a lavandaria continua opcional.",
             "ownerCheckout": "Os check-outs do proprietário não pagam comissão de plataforma. Introduza o valor cobrado e adicione lavandaria apenas quando existir.",
             "firstCleaning": "As primeiras limpezas não pagam comissão de plataforma. O IVA continua a aplicar-se e a lavandaria só entra quando existir.",
-            "midTerm": "As limpezas mid-term usam o campo de valor como poupança face à empresa de limpeza. Não existe comissão de plataforma nem IVA, por isso só a lavandaria reduz o líquido final."
+            "midTerm": "As limpezas mid-term usam o campo de valor como poupança face à empresa de limpeza. Não existe comissão de plataforma nem IVA, por isso só a lavandaria reduz o líquido final.",
+            "otherCleanings": "As outras limpezas não pagam comissão de plataforma. O IVA continua a aplicar-se e a lavandaria só entra quando existir."
         },
         "filters": {
             "search": "Pesquisar",
@@ -876,6 +881,15 @@
             "topProperties": "Principais propriedades",
             "categories": "Por categoria",
             "allCleaningTypes": "Todos os tipos de limpeza",
+            "helpKicker": "Como ler este separador",
+            "helpTitle": "Instruções das estatísticas",
+            "helpDescription": "Todos os cartões e tabelas abaixo respeitam os filtros atuais de mês, propriedade, pesquisa e tipo de limpeza. Comece com uma vista geral e depois afunile os dados quando algo parecer estranho.",
+            "workflowTitle": "Ordem recomendada",
+            "metricHelpTitle": "O que significam as métricas de topo",
+            "categoryRulesTitle": "Regras por categoria",
+            "categoryRulesDescription": "Os botões de tipo de limpeza mudam toda a vista das estatísticas. Use estas notas para perceber qual fórmula está a ser aplicada antes de comparar propriedades ou meses.",
+            "activeTypeBadge": "Ativo",
+            "allTypesRule": "Aqui aparecem todas as categorias juntas, por isso os totais misturam check-outs, check-outs do proprietário, primeiras limpezas, limpezas mid-term e outras limpezas na mesma vista.",
             "overviewDescription": "Use a tabela de comparação para ordenar propriedades com registos e depois foque uma propriedade para ver o detalhe.",
             "compareKicker": "Comparação",
             "compareTitle": "Comparação de propriedades",
@@ -891,6 +905,18 @@
             "focusByReservation": "Propriedade selecionada por reserva",
             "recentEntries": "Registos recentes",
             "empty": "Nenhuma propriedade com registos corresponde aos filtros atuais.",
+            "workflow": {
+                "step1": "Escolha primeiro um tipo de limpeza se quiser comparações justas, porque cada categoria usa regras de receita diferentes.",
+                "step2": "Leia os cartões de topo como o resumo do conjunto atualmente filtrado e depois use a tabela de propriedades para encontrar diferenças fora do normal.",
+                "step3": "Clique numa propriedade para abrir o detalhe por mês, categoria, origem da reserva e registos recentes."
+            },
+            "metricHelp": {
+                "platformFees": "Só as linhas de check-out com reservas de Plataforma geram comissão de plataforma. Registos Diretos, do proprietário, de primeira limpeza, mid-term e outras limpezas não geram.",
+                "vat": "O IVA aparece apenas nas categorias que usam a regra de 22% de IVA extraído. As limpezas mid-term não adicionam IVA aqui.",
+                "ahBeforeLaundry": "Este valor mostra o que sobra para a AH depois da comissão e do IVA, mas antes de descontar a lavandaria.",
+                "avgNetPerCleaning": "Este valor é o líquido total para a AH dividido pelo número de limpezas na vista filtrada atual.",
+                "avgKgPerCleaning": "Este valor é o total de kg de lavandaria associados dividido pelo número de limpezas na vista filtrada atual."
+            },
             "sortOptions": {
                 "netDesc": "Maior líquido",
                 "netAsc": "Menor líquido",
@@ -991,6 +1017,26 @@
                 "amountAsc": "Menor valor"
             }
         },
+        "specialCleanings": {
+            "entryKicker": "Registo simples",
+            "addTitle": "Adicionar limpeza especial",
+            "editTitle": "Editar limpeza especial",
+            "description": "Use este separador para acompanhar limpezas de sofás, colchões e outros trabalhos pontuais sem misturar isso com os registos de receita de check-out.",
+            "registerKicker": "Dados guardados",
+            "registerTitle": "Limpezas especiais",
+            "registerDescription": "Um histórico simples de limpezas especiais por propriedade.",
+            "empty": "Nenhum registo de limpeza especial corresponde aos filtros atuais.",
+            "typeLabel": "Tipo",
+            "costLabel": "Custo",
+            "costHint": "Introduza aqui o custo do fornecedor sem IVA.",
+            "descriptionLabel": "Descrição",
+            "descriptionPlaceholder": "Descrição opcional, divisão ou item",
+            "types": {
+                "sofa": "Sofá",
+                "mattress": "Colchão",
+                "other": "Outro"
+            }
+        },
         "forms": {
             "date": "Data",
             "property": "Propriedade",
@@ -1066,6 +1112,7 @@
             "saveCleaningBatch": "Guardar todas as linhas",
             "saveLaundry": "Guardar lavandaria",
             "saveLaundryBatch": "Guardar todas as linhas",
+            "saveSpecialCleaning": "Guardar limpeza especial",
             "addLaundry": "Adicionar lavandaria",
             "addMoreLaundry": "Adicionar mais lavandaria",
             "saveLink": "Guardar associacao",
@@ -1126,12 +1173,19 @@
             "cleaningDeleted": "Registo de limpeza eliminado.",
             "cleaningDeleteFailed": "Nao foi possivel eliminar o registo de limpeza.",
             "laundryDeleted": "Registo de lavandaria eliminado.",
-            "laundryDeleteFailed": "Nao foi possivel eliminar o registo de lavandaria."
+            "laundryDeleteFailed": "Nao foi possivel eliminar o registo de lavandaria.",
+            "specialCleaningValidationError": "A data e a propriedade sao obrigatorias para um registo de limpeza especial.",
+            "specialCleaningUpdated": "Registo de limpeza especial atualizado.",
+            "specialCleaningSaved": "Registo de limpeza especial guardado.",
+            "specialCleaningSaveFailed": "Nao foi possivel guardar o registo de limpeza especial.",
+            "specialCleaningDeleted": "Registo de limpeza especial eliminado.",
+            "specialCleaningDeleteFailed": "Nao foi possivel eliminar o registo de limpeza especial."
         },
         "confirm": {
             "deleteCleaningWithLinked": "Eliminar este registo de limpeza? {{count}} linhas de lavandaria associadas vao ser mantidas e desassociadas.",
             "deleteCleaning": "Eliminar este registo de limpeza?",
-            "deleteLaundry": "Eliminar este registo de lavandaria?"
+            "deleteLaundry": "Eliminar este registo de lavandaria?",
+            "deleteSpecialCleaning": "Eliminar este registo de limpeza especial?"
         },
         "labels": {
             "unknown": "Desconhecido"

@@ -125,6 +125,102 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("renders the special cleanings tab and register labels", () => {
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+
+    i18n.translations = {
+      en: {
+        common: {
+          notes: "Notes",
+          edit: "Edit",
+          delete: "Delete"
+        },
+        cleaningAh: {
+          tabs: {
+            stats: "Stats",
+            cleanings: "Cleanings",
+            laundry: "Laundry",
+            specialCleanings: "Special cleanings",
+            ariaLabel: "Cleaning AH tabs"
+          },
+          specialCleanings: {
+            entryKicker: "Special cleaning tracker",
+            addTitle: "Add special cleaning",
+            editTitle: "Edit special cleaning",
+            description: "Track one-off work.",
+            registerKicker: "Stored data",
+            registerTitle: "Special cleanings",
+            registerDescription: "Simple history.",
+            empty: "No special cleaning records match the current filters.",
+            typeLabel: "Type",
+            costLabel: "Cost",
+            costHint: "Enter the supplier cost without VAT.",
+            descriptionLabel: "Description",
+            descriptionPlaceholder: "Optional description",
+            types: {
+              sofa: "Sofa",
+              mattress: "Mattress",
+              other: "Other"
+            }
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            notesPlaceholder: "Optional note"
+          },
+          actions: {
+            cancelEdit: "Cancel edit",
+            saveChanges: "Save changes",
+            saveSpecialCleaning: "Save special cleaning",
+            reset: "Reset"
+          },
+          tables: {
+            date: "Date",
+            property: "Property",
+            actions: "Actions"
+          },
+          counts: {
+            rows: {
+              one: "1 row",
+              other: "{{count}} rows"
+            }
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const manager = new CleaningAhManager(null);
+    manager.specialCleaningDraft = manager.createDefaultSpecialCleaningDraft();
+
+    const tabMarkup = manager.renderTabBar();
+    const specialMarkup = manager.renderSpecialCleaningsTab([
+      {
+        id: "special-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        specialType: "mattress",
+        cost: 45,
+        description: "Main bedroom",
+        notes: "Needs follow-up"
+      }
+    ]);
+
+    assert.match(tabMarkup, /Special cleanings/);
+    assert.match(specialMarkup, /Add special cleaning/);
+    assert.match(specialMarkup, /Mattress/);
+    assert.match(specialMarkup, /Cost/);
+    assert.match(specialMarkup, /without VAT/);
+    assert.match(specialMarkup, /Main bedroom/);
+    assert.match(specialMarkup, /Needs follow-up/);
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
   test("scopes stats records to the selected cleaning category", () => {
     resetDom();
 
@@ -172,6 +268,86 @@ describe("CleaningAhManager", () => {
     assert.equal(scopedRecords.length, 1);
     assert.equal(scopedRecords[0].id, "cleaning-1");
 
+    resetDom();
+  });
+
+  test("renders collapsible stats help and per-category hover guidance", () => {
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          metrics: {
+            platformFees: "Platform fees",
+            vat: "VAT",
+            ahBeforeLaundry: "AH before laundry",
+            avgNetPerCleaning: "Avg net / cleaning",
+            avgKgPerCleaning: "Avg kg / cleaning"
+          },
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Owner check-out" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
+          },
+          categoryRules: {
+            checkout: "Checkout rule",
+            ownerCheckout: "Owner rule",
+            firstCleaning: "First rule",
+            midTerm: "Mid-term rule",
+            otherCleanings: "Other rule"
+          },
+          stats: {
+            allCleaningTypes: "All cleaning types",
+            helpKicker: "How to read this tab",
+            helpTitle: "Stats instructions",
+            helpDescription: "Help description",
+            workflowTitle: "Recommended order",
+            allTypesRule: "All types rule",
+            workflow: {
+              step1: "Step 1",
+              step2: "Step 2",
+              step3: "Step 3"
+            }
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const manager = new CleaningAhManager(null);
+    manager.statsCategoryKey = CLEANING_AH_CATEGORY_KEYS.firstCleaning;
+
+    const helpMarkup = manager.renderStatsHelpDisclosure();
+    const switcherMarkup = manager.renderStatsCategorySwitcher([
+      { key: "", label: "All cleaning types", count: 8 },
+      { key: CLEANING_AH_CATEGORY_KEYS.checkout, label: "Check-out", count: 3 },
+      { key: CLEANING_AH_CATEGORY_KEYS.ownerCheckout, label: "Owner check-out", count: 2 },
+      { key: CLEANING_AH_CATEGORY_KEYS.firstCleaning, label: "First cleaning", count: 2 },
+      { key: CLEANING_AH_CATEGORY_KEYS.midTerm, label: "Mid-term cleaning", count: 1 },
+      { key: CLEANING_AH_CATEGORY_KEYS.otherCleanings, label: "Other cleanings", count: 1 }
+    ]);
+
+    assert.match(helpMarkup, /<details/);
+    assert.match(helpMarkup, /Stats instructions/);
+    assert.match(helpMarkup, /Help description/);
+    assert.match(helpMarkup, /Step 1/);
+    assert.match(helpMarkup, /Platform fees:/);
+    assert.match(helpMarkup, /All cleaning types:/);
+    assert.match(switcherMarkup, /All cleaning types/);
+    assert.match(switcherMarkup, /All types rule/);
+    assert.match(switcherMarkup, /Check-out/);
+    assert.match(switcherMarkup, /Owner check-out/);
+    assert.match(switcherMarkup, /First cleaning/);
+    assert.match(switcherMarkup, /Mid-term cleaning/);
+    assert.match(switcherMarkup, /Other cleanings/);
+    assert.match(switcherMarkup, /First rule/);
+    assert.match(switcherMarkup, /Other rule/);
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
     resetDom();
   });
 
@@ -313,10 +489,12 @@ describe("CleaningAhManager", () => {
             checkout: { label: "Check-out" },
             "owner-checkout": { label: "Check-out from property owner" },
             "first-cleaning": { label: "First cleaning" },
-            "mid-term": { label: "Mid-term cleaning" }
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
           },
           categoryRules: {
-            midTerm: "Mid-term cleanings use the amount field as saved cleaning-company cost."
+            midTerm: "Mid-term cleanings use the amount field as saved cleaning-company cost.",
+            otherCleanings: "Other cleanings use the charged amount field."
           },
           forms: {
             date: "Date",
@@ -379,6 +557,92 @@ describe("CleaningAhManager", () => {
     assert.includes(html, "Saved amount");
     assert.includes(html, "disabled");
     assert.includes(html, "Mid-term cleanings use the amount field as saved cleaning-company cost.");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("uses charged-amount rules for other cleanings forms", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Check-out from property owner" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
+          },
+          categoryRules: {
+            otherCleanings: "Other cleanings use the charged amount field."
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount",
+            chargedAmount: "Charged amount",
+            savedAmount: "Saved amount",
+            kg: "Kg",
+            notesPlaceholder: "Optional note"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          preview: {
+            title: "Preview"
+          },
+          metrics: {
+            commission: "Commission",
+            vat: "VAT",
+            beforeLaundry: "Before laundry",
+            laundry: "Laundry",
+            currentNet: "Current net"
+          }
+        },
+        common: {
+          notes: "Notes"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.otherCleanings,
+      reservationSource: "platform",
+      guestAmount: "150",
+      laundryKg: "5",
+      notes: ""
+    };
+
+    const html = manager.renderCleaningSingleForm({
+      draft: manager.cleaningDraft,
+      preview: {
+        platformCommission: 0,
+        vatAmount: 27.05,
+        totalToAhWithoutLaundry: 122.95,
+        laundryAmount: 11.5,
+        totalToAh: 111.45
+      },
+      guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
+        enableSuggestion: false
+      })
+    });
+
+    assert.includes(html, "Charged amount");
+    assert.equal(manager.getCleaningAmountLabel(CLEANING_AH_CATEGORY_KEYS.otherCleanings), "Charged amount");
+    assert.includes(html, "Other cleanings use the charged amount field.");
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;

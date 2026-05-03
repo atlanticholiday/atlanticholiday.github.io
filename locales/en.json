@@ -803,12 +803,13 @@
     "formula": {
       "kicker": "Formula",
       "title": "Category-based cleaning rules.",
-      "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs and first cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.30 EUR per kg whether you enter it on the cleaning or add it later."
+      "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs, first cleanings, and other cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.30 EUR per kg whether you enter it on the cleaning or add it later."
     },
     "tabs": {
       "stats": "Stats",
       "cleanings": "Cleanings",
       "laundry": "Laundry",
+      "specialCleanings": "Special cleanings",
       "ariaLabel": "Cleaning AH tabs"
     },
     "categories": {
@@ -823,13 +824,17 @@
       },
       "mid-term": {
         "label": "Mid-term cleaning"
+      },
+      "other-cleanings": {
+        "label": "Other cleanings"
       }
     },
     "categoryRules": {
       "checkout": "Platform or Direct applies only to check-out rows. VAT is extracted and laundry stays optional.",
       "ownerCheckout": "Owner check-outs skip platform commission. Enter the charged amount and add laundry only when needed.",
       "firstCleaning": "First cleanings skip platform commission. VAT still applies, and laundry can be added only when it exists.",
-      "midTerm": "Mid-term cleanings use the amount field as saved cleaning-company cost. There is no platform commission and no VAT, so only laundry reduces the final net."
+      "midTerm": "Mid-term cleanings use the amount field as saved cleaning-company cost. There is no platform commission and no VAT, so only laundry reduces the final net.",
+      "otherCleanings": "Other cleanings skip platform commission. VAT still applies, and laundry can be added only when it exists."
     },
     "filters": {
       "search": "Search",
@@ -868,6 +873,15 @@
       "topProperties": "Top properties",
       "categories": "By category",
       "allCleaningTypes": "All cleaning types",
+      "helpKicker": "How to read this tab",
+      "helpTitle": "Stats instructions",
+      "helpDescription": "Every card and table below respects the current month, property, search, and cleaning-type filters. Start broad, then narrow the data when something looks off.",
+      "workflowTitle": "Recommended order",
+      "metricHelpTitle": "What the top metrics mean",
+      "categoryRulesTitle": "Category rules",
+      "categoryRulesDescription": "The cleaning-type buttons change the whole stats view. Use these notes to understand which formula is applied before comparing properties or months.",
+      "activeTypeBadge": "Active",
+      "allTypesRule": "This shows every cleaning category together, so the totals mix check-outs, owner check-outs, first cleanings, mid-term cleanings, and other cleanings in one view.",
       "overviewDescription": "Use the comparison table to rank properties with entries, then focus one property for its own breakdown.",
       "compareKicker": "Comparison",
       "compareTitle": "Property comparison",
@@ -883,6 +897,18 @@
       "focusByReservation": "Selected property by reservation",
       "recentEntries": "Recent entries",
       "empty": "No properties with entries match the current filters.",
+      "workflow": {
+        "step1": "Pick a cleaning type first if you want like-for-like comparisons, because each category uses different revenue rules.",
+        "step2": "Read the top cards as the summary for the current filtered dataset, then use the property comparison table to spot outliers.",
+        "step3": "Click one property to open the focused breakdown by month, category, reservation source, and recent entries."
+      },
+      "metricHelp": {
+        "platformFees": "Only check-out rows with Platform reservations generate platform commission. Direct, owner, first-cleaning, mid-term, and other-cleanings rows do not.",
+        "vat": "VAT appears only on categories that use the extracted 22% VAT rule. Mid-term cleanings do not add VAT here.",
+        "ahBeforeLaundry": "This is the amount left for AH after commission and VAT, but before subtracting laundry costs.",
+        "avgNetPerCleaning": "This is total net to AH divided by the number of cleaning entries in the current filtered view.",
+        "avgKgPerCleaning": "This is total linked laundry kg divided by the number of cleaning entries in the current filtered view."
+      },
       "sortOptions": {
         "netDesc": "Highest net",
         "netAsc": "Lowest net",
@@ -983,6 +1009,26 @@
         "amountAsc": "Lowest amount"
       }
     },
+    "specialCleanings": {
+      "entryKicker": "Special cleaning tracker",
+      "addTitle": "Add special cleaning",
+      "editTitle": "Edit special cleaning",
+      "description": "Use this to track one-off sofa, mattress, or other deep-cleaning work without mixing it into the checkout revenue records.",
+      "registerKicker": "Stored data",
+      "registerTitle": "Special cleanings",
+      "registerDescription": "A simple history of sofa, mattress, and other special cleaning jobs by property.",
+      "empty": "No special cleaning records match the current filters.",
+      "typeLabel": "Type",
+      "costLabel": "Cost",
+      "costHint": "Enter the supplier cost without VAT.",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description, room, or item note",
+      "types": {
+        "sofa": "Sofa",
+        "mattress": "Mattress",
+        "other": "Other"
+      }
+    },
     "forms": {
       "date": "Date",
       "property": "Property",
@@ -1058,6 +1104,7 @@
       "saveCleaningBatch": "Save all rows",
       "saveLaundry": "Save laundry",
       "saveLaundryBatch": "Save all rows",
+      "saveSpecialCleaning": "Save special cleaning",
       "addLaundry": "Add laundry",
       "addMoreLaundry": "Add more laundry",
       "saveLink": "Save link",
@@ -1118,12 +1165,19 @@
       "cleaningDeleted": "Cleaning record deleted.",
       "cleaningDeleteFailed": "Cleaning record could not be deleted.",
       "laundryDeleted": "Laundry record deleted.",
-      "laundryDeleteFailed": "Laundry record could not be deleted."
+      "laundryDeleteFailed": "Laundry record could not be deleted.",
+      "specialCleaningValidationError": "Date and property are required for a special cleaning record.",
+      "specialCleaningUpdated": "Special cleaning record updated.",
+      "specialCleaningSaved": "Special cleaning record saved.",
+      "specialCleaningSaveFailed": "Special cleaning record could not be saved.",
+      "specialCleaningDeleted": "Special cleaning record deleted.",
+      "specialCleaningDeleteFailed": "Special cleaning record could not be deleted."
     },
     "confirm": {
       "deleteCleaningWithLinked": "Delete this cleaning record? {{count}} linked laundry rows will be kept and unlinked.",
       "deleteCleaning": "Delete this cleaning record?",
-      "deleteLaundry": "Delete this laundry record?"
+      "deleteLaundry": "Delete this laundry record?",
+      "deleteSpecialCleaning": "Delete this special cleaning record?"
     },
     "labels": {
       "unknown": "Unknown"

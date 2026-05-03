@@ -43,7 +43,7 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.reservationSource, "direct");
     });
 
-    test("skips platform commission for owner and first-cleaning categories", () => {
+    test("skips platform commission for owner, first-cleaning, and other-cleanings categories", () => {
         const ownerResult = computeCleaningAhAmounts({
             categoryKey: CLEANING_AH_CATEGORY_KEYS.ownerCheckout,
             guestAmount: 120,
@@ -54,13 +54,21 @@ describe("Cleaning AH utilities", () => {
             guestAmount: 120,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform
         });
+        const otherCleaningsResult = computeCleaningAhAmounts({
+            categoryKey: CLEANING_AH_CATEGORY_KEYS.otherCleanings,
+            guestAmount: 120,
+            reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform
+        });
 
         assert.equal(ownerResult.platformCommission, 0);
         assert.equal(ownerResult.vatAmount, 21.64);
         assert.equal(firstCleaningResult.platformCommission, 0);
         assert.equal(firstCleaningResult.vatAmount, 21.64);
+        assert.equal(otherCleaningsResult.platformCommission, 0);
+        assert.equal(otherCleaningsResult.vatAmount, 21.64);
         assert.equal(ownerResult.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
         assert.equal(firstCleaningResult.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
+        assert.equal(otherCleaningsResult.reservationSource, CLEANING_AH_RESERVATION_SOURCES.direct);
     });
 
     test("treats mid-term cleanings as saved amount without commission or VAT", () => {
