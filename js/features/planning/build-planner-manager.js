@@ -581,7 +581,7 @@ const ROADMAP_TRANSLATIONS_PT = {
 const UI_COPY = {
     en: {
         cardTitle: "Build Planner",
-        cardDescription: "Future system ideas, recommended order, and copy-ready prompts for Codex.",
+        cardDescription: "Future system ideas, recommended order, and copy-ready prompts for OpenCode.",
         headerKicker: "Roadmap",
         headerTitle: "Build Planner",
         headerSubtitle: "Keep future system upgrades inside the website, then ask for them only when you are ready.",
@@ -659,7 +659,7 @@ const UI_COPY = {
     },
     pt: {
         cardTitle: "Build Planner",
-        cardDescription: "Ideias futuras do sistema, ordem recomendada e prompts prontos para o Codex.",
+        cardDescription: "Ideias futuras do sistema, ordem recomendada e prompts prontos para o OpenCode.",
         headerKicker: "Roadmap",
         headerTitle: "Build Planner",
         headerSubtitle: "Guarda as futuras melhorias dentro do website e pede-as apenas quando estiveres pronto.",

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "serve": "node scripts/serve-static.mjs",
     "test:browser": "node tests/run-headless.mjs",
     "airbnb:download-invoices": "node scripts/airbnb/invoice-downloader.mjs",
     "airbnb:download-reservation-invoices": "node scripts/airbnb/reservation-invoice-downloader.mjs"
