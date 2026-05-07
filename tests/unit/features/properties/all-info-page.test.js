@@ -131,4 +131,56 @@ describe("all-info-page", () => {
     const firstRowName = document.querySelector("tbody tr .allinfo-property-cell").textContent;
     assert.equal(firstRowName, "Acanto");
   });
+
+  test("turns off edit modes when leaving the edit tools workspace", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    let bulkClicks = 0;
+    const restoreBulkApi = installGlobalProperty("AllInfoBulkEdit", {
+      isActive() {
+        return true;
+      }
+    });
+
+    try {
+      initializeAllInfoPage({
+        documentRef: document,
+        properties: [
+          { id: "property-1", name: "Acanto", location: "Funchal", type: "apartment", typology: "T1", rooms: 1 }
+        ]
+      });
+
+      const actionsBar = document.createElement("div");
+      actionsBar.id = "allinfo-actions-bar";
+
+      const bulkButton = document.createElement("button");
+      bulkButton.id = "allinfo-bulk-toggle-btn";
+      bulkButton.addEventListener("click", () => { bulkClicks += 1; });
+
+      const sequentialButton = document.createElement("button");
+      sequentialButton.id = "allinfo-seq-toggle-btn";
+      sequentialButton.setAttribute("data-active", "true");
+      sequentialButton.addEventListener("click", () => sequentialButton.setAttribute("data-active", "false"));
+
+      const accordionButton = document.createElement("button");
+      accordionButton.id = "allinfo-accordion-toggle-btn";
+      accordionButton.setAttribute("data-active", "true");
+      accordionButton.addEventListener("click", () => accordionButton.setAttribute("data-active", "false"));
+
+      actionsBar.append(bulkButton, sequentialButton, accordionButton);
+      document.getElementById("allinfo-filter-wrapper").appendChild(actionsBar);
+
+      document.querySelector('[data-workspace="missing"]').click();
+
+      assert.equal(bulkClicks, 1);
+      assert.equal(sequentialButton.getAttribute("data-active"), "false");
+      assert.equal(accordionButton.getAttribute("data-active"), "false");
+    } finally {
+      restoreBulkApi();
+    }
+  });
 });

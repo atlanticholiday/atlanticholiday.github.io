@@ -970,8 +970,29 @@ export function initializeAllInfoPage({
 
     let missingWorkbench = null;
 
+    const deactivateEditModes = () => {
+        const bulkButton = documentRef.getElementById('allinfo-bulk-toggle-btn');
+        if (bulkButton && window.AllInfoBulkEdit?.isActive?.()) {
+            bulkButton.click();
+        }
+
+        const sequentialButton = documentRef.getElementById('allinfo-seq-toggle-btn');
+        if (sequentialButton?.getAttribute('data-active') === 'true') {
+            sequentialButton.click();
+        }
+
+        const accordionButton = documentRef.getElementById('allinfo-accordion-toggle-btn');
+        if (accordionButton?.getAttribute('data-active') === 'true') {
+            accordionButton.click();
+        }
+    };
+
     const updateWorkspace = () => {
         const active = filterState.workspace;
+        if (active !== 'edit') {
+            deactivateEditModes();
+        }
+
         workspaceMenu.querySelectorAll('button').forEach((button) => {
             button.classList.toggle('active', button.dataset.workspace === active);
         });
