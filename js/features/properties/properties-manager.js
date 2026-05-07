@@ -1019,6 +1019,7 @@ export class PropertiesManager {
                 this.clearAllFilters();
             });
         }
+
         // Sync Sheet Button
         const syncSheetBtn = document.getElementById('sync-sheets-btn');
         if (syncSheetBtn) {
@@ -1307,4 +1308,4 @@ export class PropertiesManager {
             });
         });
     }
-} 
+}
