@@ -243,6 +243,19 @@
                     </div>
                 </button>
 
+                <button id="go-to-allinfo-btn" class="dashboard-card">
+                    <div class="card-icon bg-rose-500/10 text-rose-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <h3>All Info</h3>
+                        <p>See every property detail in one view.</p>
+                    </div>
+                </button>
+
                 <button id="go-to-airbnb-reservation-invoices-btn" class="dashboard-card">
                     <div class="card-icon bg-rose-500/10 text-rose-600">
                         <i class="fas fa-file-invoice"></i>
@@ -290,19 +303,6 @@
             <div id="more-tools-section" class="hidden">
                 <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2" data-i18n="landing.otherTools">Other Tools</h2>
                 <div id="other-tools-grid" class="dashboard-grid opacity-80 mb-12">
-                    <button id="go-to-allinfo-btn" class="dashboard-card">
-                        <div class="card-icon bg-rose-500/10 text-rose-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
-                            </svg>
-                        </div>
-                        <div class="card-body">
-                            <h3>All Info</h3>
-                            <p>See every property detail in one view.</p>
-                        </div>
-                    </button>
-
                     <button id="go-to-rnal-btn" class="dashboard-card">
                         <div class="card-icon bg-orange-500/10 text-orange-600">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2629,11 +2629,16 @@ Mountain Villa, Sintra Hills, V4"
                         onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
                         class="dashboard-logo dashboard-logo--xl" />
                     <div class="leading-tight">
-                        <div class="header-title brand-red">All Property Info</div>
-                        <div class="header-sub">View all property data in one place</div>
+                        <div class="header-title brand-red" data-i18n="allInfo.header.title">All Property Info</div>
+                        <div class="header-sub" data-i18n="allInfo.header.subtitle">View all property data in one place</div>
                     </div>
                 </div>
-                <div class="header-right"></div>
+                <div class="header-right">
+                    <div class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-sm">
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                    </div>
+                </div>
         </header>
         <!-- All Info Layout: Top-nav + Table -->
         <div class="container mx-auto px-4 py-8 max-w-7xl">

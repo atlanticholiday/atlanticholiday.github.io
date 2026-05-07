@@ -1,32 +1,285 @@
 import { LOCATIONS } from '../../shared/locations.js';
 import { getEnumOptions } from '../../shared/enums.js';
+import { i18n } from '../../core/i18n.js';
 import { compareAlojamentosProperties, parseAlojamentosRows } from './property-import-utils.js';
 
 const ALL_INFO_CATEGORIES = [
-    { title: 'Basic Information', slug: 'basic-info-edit', fields: ['location', 'type', 'typology', 'rooms', 'bathrooms', 'floor'], icon: 'fas fa-info-circle' },
-    { title: 'Maps & Location', slug: 'maps-location', fields: ['googleMapsLink', 'garbageLocationLink', 'garbageFloor'], icon: 'fas fa-map-marker-alt' },
-    { title: 'Access & Parking', slug: 'access-parking', fields: ['keyBoxCode', 'parkingSpot', 'parkingFloor'], icon: 'fas fa-parking' },
-    { title: 'Media & Content', slug: 'media-content', fields: ['checkinVideos', 'bookingDescriptionStatus', 'selfCheckinInstructions'], icon: 'fas fa-video' },
-    { title: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled', 'googleDriveLink', 'scannedDocsLink'], icon: 'fab fa-google-drive' },
-    { title: 'Recommendations', slug: 'recommendations', fields: ['recommendationsLink', 'recommendationsEditLink'], icon: 'fas fa-star' },
-    { title: 'Frames', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame'], icon: 'fas fa-border-all' },
-    { title: 'Signage', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'alAhSign', 'keysNotice', 'wcSign'], icon: 'fas fa-sign' },
-    { title: 'Equipment', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair'], icon: 'fas fa-toolbox' },
-    { title: 'Services & Extras', slug: 'services-extras', fields: ['breakfastBox', 'poolMaintenanceDay', 'poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
-    { title: 'Connectivity & Utilities', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
-    { title: 'Online Services', slug: 'online-services', fields: ['onlineComplaintBooksEnabled', 'onlineComplaintBooksEmail', 'onlineComplaintBooksPassword', 'airbnbLinksStatus'], icon: 'fas fa-globe' },
-    { title: 'Legal & Compliance', slug: 'legal-compliance', fields: ['contractsStatus', 'complaintBooksStatus', 'statisticsStatus', 'sefStatus', 'touristTaxInstructions'], icon: 'fas fa-gavel' },
-    { title: 'Safety Maintenance', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration', 'fireExtinguisherLocation', 'fireExtinguisherNotes', 'firstAidStatus', 'firstAidLastChecked', 'firstAidNotes'], icon: 'fas fa-shield-alt' },
-    { title: 'Owner', slug: 'owner', fields: ['ownerFirstName', 'ownerLastName', 'ownerVatNumber', 'ownerPropertyAddress', 'ownerContact'], icon: 'fas fa-user-tie' },
-    { title: 'Accounting', slug: 'accounting', fields: ['accountingName', 'accountingPhone', 'accountingEmail', 'accountingContact'], icon: 'fas fa-file-invoice-dollar' },
-    { title: 'Cleaning', slug: 'contacts', fields: ['cleaningCompanyContact', 'cleaningCompanyPrice', 'guestCleaningFee'], icon: 'fas fa-broom' },
-    { title: 'Condominium Information', slug: 'condominium-info', fields: ['condominiumName', 'condominiumEmail', 'condominiumPhone'], icon: 'fas fa-building' }
+    { title: 'Basic Information', titlePt: 'Informação básica', slug: 'basic-info-edit', fields: ['location', 'type', 'typology', 'rooms', 'bathrooms', 'floor'], icon: 'fas fa-info-circle' },
+    { title: 'Maps & Location', titlePt: 'Mapas e localização', slug: 'maps-location', fields: ['googleMapsLink', 'garbageLocationLink', 'garbageFloor'], icon: 'fas fa-map-marker-alt' },
+    { title: 'Access & Parking', titlePt: 'Acesso e estacionamento', slug: 'access-parking', fields: ['keyBoxCode', 'parkingSpot', 'parkingFloor'], icon: 'fas fa-parking' },
+    { title: 'Media & Content', titlePt: 'Media e conteúdo', slug: 'media-content', fields: ['checkinVideos', 'bookingDescriptionStatus', 'selfCheckinInstructions'], icon: 'fas fa-video' },
+    { title: 'Google Drive', titlePt: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled', 'googleDriveLink', 'scannedDocsLink'], icon: 'fab fa-google-drive' },
+    { title: 'Recommendations', titlePt: 'Recomendações', slug: 'recommendations', fields: ['recommendationsLink', 'recommendationsEditLink'], icon: 'fas fa-star' },
+    { title: 'Frames', titlePt: 'Molduras', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame'], icon: 'fas fa-border-all' },
+    { title: 'Signage', titlePt: 'Sinalética', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'alAhSign', 'keysNotice', 'wcSign'], icon: 'fas fa-sign' },
+    { title: 'Equipment', titlePt: 'Equipamento', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair'], icon: 'fas fa-toolbox' },
+    { title: 'Services & Extras', titlePt: 'Serviços e extras', slug: 'services-extras', fields: ['breakfastBox', 'poolMaintenanceDay', 'poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
+    { title: 'Connectivity & Utilities', titlePt: 'Internet e utilidades', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
+    { title: 'Online Services', titlePt: 'Serviços online', slug: 'online-services', fields: ['onlineComplaintBooksEnabled', 'onlineComplaintBooksEmail', 'onlineComplaintBooksPassword', 'airbnbLinksStatus'], icon: 'fas fa-globe' },
+    { title: 'Legal & Compliance', titlePt: 'Legal e conformidade', slug: 'legal-compliance', fields: ['contractsStatus', 'complaintBooksStatus', 'statisticsStatus', 'sefStatus', 'touristTaxInstructions'], icon: 'fas fa-gavel' },
+    { title: 'Safety Maintenance', titlePt: 'Segurança e manutenção', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration', 'fireExtinguisherLocation', 'fireExtinguisherNotes', 'firstAidStatus', 'firstAidLastChecked', 'firstAidNotes'], icon: 'fas fa-shield-alt' },
+    { title: 'Owner', titlePt: 'Proprietário', slug: 'owner', fields: ['ownerFirstName', 'ownerLastName', 'ownerVatNumber', 'ownerPropertyAddress', 'ownerContact'], icon: 'fas fa-user-tie' },
+    { title: 'Accounting', titlePt: 'Contabilidade', slug: 'accounting', fields: ['accountingName', 'accountingPhone', 'accountingEmail', 'accountingContact'], icon: 'fas fa-file-invoice-dollar' },
+    { title: 'Cleaning', titlePt: 'Limpeza', slug: 'contacts', fields: ['cleaningCompanyContact', 'cleaningCompanyPrice', 'guestCleaningFee'], icon: 'fas fa-broom' },
+    { title: 'Condominium Information', titlePt: 'Informação do condomínio', slug: 'condominium-info', fields: ['condominiumName', 'condominiumEmail', 'condominiumPhone'], icon: 'fas fa-building' }
 ];
 
+const COPY = {
+    en: {
+        propertyName: 'Property Name',
+        filterProperties: 'Filter properties',
+        filterPlaceholder: 'Filter properties...',
+        rows: 'Rows',
+        allRows: 'All rows',
+        needsInfo: 'Needs info',
+        complete: 'Complete',
+        field: 'Field',
+        allFields: 'All fields',
+        searchCategories: 'Search categories...',
+        workspace: {
+            table: 'Table',
+            missing: 'Missing data',
+            compare: 'Alojamentos check',
+            edit: 'Edit tools'
+        },
+        editToolsTitle: 'Choose an edit mode',
+        editToolsBody: 'Use Bulk Edit for many properties, Sequential Edit for one-by-one review, or Accordion Edit for full category forms.',
+        overview: {
+            properties: 'properties',
+            basicComplete: 'basic info complete',
+            missingFields: 'missing fields',
+            categoriesReview: 'categories need review'
+        },
+        missing: {
+            eyebrow: 'Missing data',
+            title: 'Quick fix queue',
+            empty: 'No missing fields in this view.',
+            summary: '{{count}} missing field{{plural}} found. Fill the values below and save one row or all filled rows.',
+            more: 'Showing {{shown}} of {{total}}. Use the field filter to narrow this queue.',
+            save: 'Save',
+            saveFilled: 'Save filled',
+            saving: 'Saving',
+            saved: 'Saved',
+            retry: 'Retry',
+            noManager: 'No manager'
+        },
+        compare: {
+            title: 'Alojamentos check',
+            description: 'Upload the AH workbook to compare the Alojamentos sheet against the properties already in the app.',
+            reading: 'Reading workbook...',
+            parserError: 'Excel parser is not available. Reload the page and try again.',
+            checked: 'Checked "{{sheet}}" from {{file}}. App currently has {{count}} properties.',
+            unreadRows: '{{count}} workbook rows could not be read.',
+            missingInApp: 'Missing in app',
+            onlyInApp: 'Only in app',
+            changedFields: 'Changed fields',
+            noMissing: 'No missing properties',
+            noExtra: 'No extra app properties',
+            noChanged: 'No location or typology differences',
+            error: 'Could not check this file: {{message}}',
+            workbook: 'Workbook',
+            matched: 'Matched',
+            changed: 'Changed'
+        },
+        table: {
+            visibleOf: '{{visible}} visible of {{total}} properties',
+            complete: 'complete',
+            missingFields: 'missing fields',
+            completeRows: 'complete rows',
+            actions: 'Actions',
+            missing: 'Missing',
+            save: 'Save',
+            saved: 'Saved',
+            saving: 'Saving',
+            retry: 'Retry',
+            noManager: 'No manager',
+            fullPage: 'Full page',
+            select: 'Select',
+            yes: 'Yes',
+            no: 'No'
+        }
+    },
+    pt: {
+        propertyName: 'Alojamento',
+        filterProperties: 'Filtrar alojamentos',
+        filterPlaceholder: 'Filtrar alojamentos...',
+        rows: 'Linhas',
+        allRows: 'Todas',
+        needsInfo: 'Com falta',
+        complete: 'Completas',
+        field: 'Campo',
+        allFields: 'Todos os campos',
+        searchCategories: 'Pesquisar categorias...',
+        workspace: {
+            table: 'Tabela',
+            missing: 'Dados em falta',
+            compare: 'Verificar Alojamentos',
+            edit: 'Ferramentas de edição'
+        },
+        editToolsTitle: 'Escolha um modo de edição',
+        editToolsBody: 'Use Edição em massa para vários alojamentos, Edição sequencial para rever um a um, ou Acordeão para formulários completos da categoria.',
+        overview: {
+            properties: 'alojamentos',
+            basicComplete: 'info. básica completa',
+            missingFields: 'campos em falta',
+            categoriesReview: 'categorias a rever'
+        },
+        missing: {
+            eyebrow: 'Dados em falta',
+            title: 'Fila de correção rápida',
+            empty: 'Não há campos em falta nesta vista.',
+            summary: '{{count}} campo{{plural}} em falta encontrado{{plural}}. Preencha os valores abaixo e grave uma linha ou todas as linhas preenchidas.',
+            more: 'A mostrar {{shown}} de {{total}}. Use o filtro de campo para reduzir a lista.',
+            save: 'Guardar',
+            saveFilled: 'Guardar preenchidos',
+            saving: 'A guardar',
+            saved: 'Guardado',
+            retry: 'Tentar novamente',
+            noManager: 'Sem gestor'
+        },
+        compare: {
+            title: 'Verificar Alojamentos',
+            description: 'Carregue o ficheiro AH para comparar a folha Alojamentos com os alojamentos já existentes na app.',
+            reading: 'A ler o ficheiro...',
+            parserError: 'O leitor de Excel não está disponível. Recarregue a página e tente novamente.',
+            checked: 'Verificada a folha "{{sheet}}" de {{file}}. A app tem atualmente {{count}} alojamentos.',
+            unreadRows: '{{count}} linhas do ficheiro não puderam ser lidas.',
+            missingInApp: 'Em falta na app',
+            onlyInApp: 'Só na app',
+            changedFields: 'Campos diferentes',
+            noMissing: 'Sem alojamentos em falta',
+            noExtra: 'Sem alojamentos extra na app',
+            noChanged: 'Sem diferenças de localização ou tipologia',
+            error: 'Não foi possível verificar este ficheiro: {{message}}',
+            workbook: 'Ficheiro',
+            matched: 'Correspondem',
+            changed: 'Diferentes'
+        },
+        table: {
+            visibleOf: '{{visible}} visíveis de {{total}} alojamentos',
+            complete: 'completo',
+            missingFields: 'campos em falta',
+            completeRows: 'linhas completas',
+            actions: 'Ações',
+            missing: 'Em falta',
+            save: 'Guardar',
+            saved: 'Guardado',
+            saving: 'A guardar',
+            retry: 'Tentar',
+            noManager: 'Sem gestor',
+            fullPage: 'Página completa',
+            select: 'Selecionar',
+            yes: 'Sim',
+            no: 'Não'
+        }
+    }
+};
+
+const FIELD_LABELS_PT = {
+    location: 'Localização',
+    type: 'Tipo',
+    typology: 'Tipologia',
+    rooms: 'Quartos',
+    bathrooms: 'Casas de banho',
+    floor: 'Andar',
+    googleMapsLink: 'Link Google Maps',
+    garbageLocationLink: 'Link do lixo',
+    garbageFloor: 'Andar do lixo',
+    keyBoxCode: 'Código da caixa',
+    parkingSpot: 'Lugar de estacionamento',
+    parkingFloor: 'Piso do estacionamento',
+    checkinVideos: 'Vídeos de check-in',
+    bookingDescriptionStatus: 'Estado da descrição Booking',
+    selfCheckinInstructions: 'Instruções self check-in',
+    googleDriveEnabled: 'Google Drive ativo',
+    googleDriveLink: 'Link Google Drive',
+    scannedDocsLink: 'Link documentos digitalizados',
+    recommendationsLink: 'Link recomendações',
+    recommendationsEditLink: 'Link editar recomendações',
+    wifiFrame: 'Moldura Wi-Fi',
+    recommendationsFrame: 'Moldura recomendações',
+    investmentFrame: 'Moldura investimento',
+    privateSign: 'Placa privado',
+    noSmokingSign: 'Placa não fumar',
+    noJunkMailSign: 'Placa publicidade',
+    alAhSign: 'Placa AL/AH',
+    keysNotice: 'Aviso chaves',
+    wcSign: 'Placa WC',
+    airConditioning: 'Ar condicionado',
+    fans: 'Ventoinhas',
+    heaters: 'Aquecedores',
+    crib: 'Berço',
+    cribMattress: 'Colchão berço',
+    babyChair: 'Cadeira bebé',
+    breakfastBox: 'Caixa pequeno-almoço',
+    poolMaintenanceDay: 'Dia manutenção piscina',
+    poolMaintenanceNotes: 'Notas manutenção piscina',
+    wifiSpeed: 'Velocidade Wi-Fi',
+    internetProvider: 'Fornecedor internet',
+    energySource: 'Fonte de energia',
+    onlineComplaintBooksEnabled: 'Livro reclamações online ativo',
+    onlineComplaintBooksEmail: 'Email livro reclamações',
+    onlineComplaintBooksPassword: 'Password livro reclamações',
+    airbnbLinksStatus: 'Estado links Airbnb',
+    contractsStatus: 'Estado contratos',
+    complaintBooksStatus: 'Estado livro reclamações',
+    statisticsStatus: 'Estado estatísticas',
+    sefStatus: 'Estado SEF',
+    touristTaxInstructions: 'Instruções taxa turística',
+    fireExtinguisherExpiration: 'Validade extintor',
+    fireExtinguisherLocation: 'Localização extintor',
+    fireExtinguisherNotes: 'Notas extintor',
+    firstAidStatus: 'Estado kit primeiros socorros',
+    firstAidLastChecked: 'Última verificação kit',
+    firstAidNotes: 'Notas kit primeiros socorros',
+    ownerFirstName: 'Nome proprietário',
+    ownerLastName: 'Apelido proprietário',
+    ownerVatNumber: 'NIF proprietário',
+    ownerPropertyAddress: 'Morada propriedade',
+    ownerContact: 'Contacto proprietário',
+    accountingName: 'Nome contabilidade',
+    accountingPhone: 'Telefone contabilidade',
+    accountingEmail: 'Email contabilidade',
+    accountingContact: 'Contacto contabilidade',
+    cleaningCompanyContact: 'Empresa limpeza',
+    cleaningCompanyPrice: 'Preço limpeza',
+    guestCleaningFee: 'Taxa limpeza hóspede',
+    condominiumName: 'Nome condomínio',
+    condominiumEmail: 'Email condomínio',
+    condominiumPhone: 'Telefone condomínio'
+};
+
+function activeLang() {
+    return i18n?.getCurrentLanguage?.() === 'pt' ? 'pt' : 'en';
+}
+
+function copy(path, replacements = {}) {
+    const table = COPY[activeLang()] || COPY.en;
+    let value = path.split('.').reduce((entry, key) => entry?.[key], table)
+        ?? path.split('.').reduce((entry, key) => entry?.[key], COPY.en)
+        ?? path;
+
+    Object.entries(replacements).forEach(([key, replacement]) => {
+        value = value.replace(new RegExp(`{{${key}}}`, 'g'), replacement);
+    });
+
+    return value;
+}
+
+function getCategoryTitle(category) {
+    return activeLang() === 'pt' ? (category.titlePt || category.title) : category.title;
+}
+
 function buildLabel(key) {
-    return key === 'name'
-        ? 'Property Name'
-        : key.replace(/([A-Z])/g, ' $1').replace(/^./, (first) => first.toUpperCase());
+    if (key === 'name') {
+        return copy('propertyName');
+    }
+
+    if (activeLang() === 'pt' && FIELD_LABELS_PT[key]) {
+        return FIELD_LABELS_PT[key];
+    }
+
+    return key.replace(/([A-Z])/g, ' $1').replace(/^./, (first) => first.toUpperCase());
 }
 
 function isMissingValue(value) {
@@ -124,8 +377,8 @@ function createInlineFieldControl(documentRef, field, value) {
         select.dataset.boolean = 'true';
         [
             ['', 'Select'],
-            ['true', 'Yes'],
-            ['false', 'No']
+            ['true', copy('table.yes')],
+            ['false', copy('table.no')]
         ].forEach(([optionValue, label]) => {
             const option = documentRef.createElement('option');
             option.value = optionValue;
@@ -141,7 +394,7 @@ function createInlineFieldControl(documentRef, field, value) {
         select.className = 'allinfo-inline-input';
         const blankOption = documentRef.createElement('option');
         blankOption.value = '';
-        blankOption.textContent = 'Select';
+        blankOption.textContent = copy('table.select');
         select.appendChild(blankOption);
 
         enumOptions.forEach((entry) => {
@@ -213,13 +466,13 @@ function createSearchBars(documentRef) {
     propertyFilterWrapper.className = 'allinfo-search-control flex-1';
 
     const propertyFilterLabel = documentRef.createElement('label');
-    propertyFilterLabel.textContent = 'Filter properties';
+    propertyFilterLabel.textContent = copy('filterProperties');
     propertyFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
 
     const propertyFilterInput = documentRef.createElement('input');
     propertyFilterInput.id = 'allinfo-filter';
     propertyFilterInput.type = 'text';
-    propertyFilterInput.placeholder = 'Filter properties...';
+    propertyFilterInput.placeholder = copy('filterPlaceholder');
     propertyFilterInput.className = 'px-3 py-2 border rounded-md w-full';
 
     propertyFilterWrapper.appendChild(propertyFilterLabel);
@@ -229,16 +482,16 @@ function createSearchBars(documentRef) {
     dataFilterWrapper.className = 'allinfo-compact-control';
 
     const dataFilterLabel = documentRef.createElement('label');
-    dataFilterLabel.textContent = 'Rows';
+    dataFilterLabel.textContent = copy('rows');
     dataFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
 
     const dataFilterSelect = documentRef.createElement('select');
     dataFilterSelect.id = 'allinfo-data-filter';
     dataFilterSelect.className = 'px-3 py-2 border rounded-md w-full';
     [
-        ['all', 'All rows'],
-        ['missing', 'Needs info'],
-        ['complete', 'Complete']
+        ['all', copy('allRows')],
+        ['missing', copy('needsInfo')],
+        ['complete', copy('complete')]
     ].forEach(([value, label]) => {
         const option = documentRef.createElement('option');
         option.value = value;
@@ -253,7 +506,7 @@ function createSearchBars(documentRef) {
     fieldFilterWrapper.className = 'allinfo-compact-control';
 
     const fieldFilterLabel = documentRef.createElement('label');
-    fieldFilterLabel.textContent = 'Field';
+    fieldFilterLabel.textContent = copy('field');
     fieldFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
 
     const fieldFilterSelect = documentRef.createElement('select');
@@ -269,7 +522,7 @@ function createSearchBars(documentRef) {
     const categorySearchInput = documentRef.createElement('input');
     categorySearchInput.id = 'allinfo-cat-search';
     categorySearchInput.type = 'text';
-    categorySearchInput.placeholder = 'Search categories...';
+    categorySearchInput.placeholder = copy('searchCategories');
 
     categorySearchWrapper.appendChild(categorySearchInput);
     searchBarsContainer.appendChild(propertyFilterWrapper);
@@ -354,22 +607,22 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
     const header = documentRef.createElement('div');
     header.className = 'flex flex-col lg:flex-row lg:items-end justify-between gap-4';
 
-    const copy = documentRef.createElement('div');
+    const copyBlock = documentRef.createElement('div');
     const title = documentRef.createElement('h3');
     title.className = 'text-base font-semibold text-gray-900';
-    title.textContent = 'Alojamentos check';
+    title.textContent = copy('compare.title');
     const description = documentRef.createElement('p');
     description.className = 'text-sm text-gray-600 mt-1';
-    description.textContent = 'Upload the AH workbook to compare the Alojamentos sheet against the properties already in the app.';
-    copy.appendChild(title);
-    copy.appendChild(description);
+    description.textContent = copy('compare.description');
+    copyBlock.appendChild(title);
+    copyBlock.appendChild(description);
 
     const input = documentRef.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx,.xls,.csv';
     input.className = 'w-full lg:w-80 text-sm text-gray-600 file:mr-3 file:px-4 file:py-2 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200';
 
-    header.appendChild(copy);
+    header.appendChild(copyBlock);
     header.appendChild(input);
     panel.appendChild(header);
 
@@ -387,12 +640,12 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
         if (!file) return;
 
         if (typeof XLSX === 'undefined') {
-            renderError('Excel parser is not available. Reload the page and try again.');
+            renderError(copy('compare.parserError'));
             return;
         }
 
         result.className = 'mt-4 text-sm text-gray-600';
-        result.textContent = 'Reading workbook...';
+        result.textContent = copy('compare.reading');
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -410,22 +663,22 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
 
             const metrics = documentRef.createElement('div');
             metrics.className = 'grid grid-cols-2 md:grid-cols-5 gap-3';
-            metrics.appendChild(createMetric(documentRef, 'Workbook', comparison.totals.imported, 'blue'));
-            metrics.appendChild(createMetric(documentRef, 'Matched', comparison.totals.matched, 'green'));
-            metrics.appendChild(createMetric(documentRef, 'Missing in app', comparison.totals.missingInApp, comparison.totals.missingInApp ? 'red' : 'gray'));
-            metrics.appendChild(createMetric(documentRef, 'Only in app', comparison.totals.extraInApp, comparison.totals.extraInApp ? 'orange' : 'gray'));
-            metrics.appendChild(createMetric(documentRef, 'Changed', comparison.totals.differences, comparison.totals.differences ? 'orange' : 'gray'));
+            metrics.appendChild(createMetric(documentRef, copy('compare.workbook'), comparison.totals.imported, 'blue'));
+            metrics.appendChild(createMetric(documentRef, copy('compare.matched'), comparison.totals.matched, 'green'));
+            metrics.appendChild(createMetric(documentRef, copy('compare.missingInApp'), comparison.totals.missingInApp, comparison.totals.missingInApp ? 'red' : 'gray'));
+            metrics.appendChild(createMetric(documentRef, copy('compare.onlyInApp'), comparison.totals.extraInApp, comparison.totals.extraInApp ? 'orange' : 'gray'));
+            metrics.appendChild(createMetric(documentRef, copy('compare.changed'), comparison.totals.differences, comparison.totals.differences ? 'orange' : 'gray'));
             result.appendChild(metrics);
 
             const source = documentRef.createElement('p');
             source.className = 'text-xs text-gray-500';
-            source.textContent = `Checked "${sheetName}" from ${file.name}. App currently has ${comparison.totals.existing} properties.`;
+            source.textContent = copy('compare.checked', { sheet: sheetName, file: file.name, count: comparison.totals.existing });
             result.appendChild(source);
 
             if (parsed.errors.length > 0) {
                 const warning = documentRef.createElement('div');
                 warning.className = 'rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700';
-                warning.textContent = `${parsed.errors.length} workbook rows could not be read.`;
+                warning.textContent = copy('compare.unreadRows', { count: parsed.errors.length });
                 result.appendChild(warning);
             }
 
@@ -434,30 +687,30 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
             renderSimpleList(
                 documentRef,
                 lists,
-                'Missing in app',
+                copy('compare.missingInApp'),
                 comparison.missingInApp,
                 (property) => `${property.name} - ${property.location} - ${property.typology}`,
-                'No missing properties'
+                copy('compare.noMissing')
             );
             renderSimpleList(
                 documentRef,
                 lists,
-                'Only in app',
+                copy('compare.onlyInApp'),
                 comparison.extraInApp,
                 (property) => `${property.name} - ${property.location || ''} - ${property.typology || property.type || ''}`,
-                'No extra app properties'
+                copy('compare.noExtra')
             );
             renderSimpleList(
                 documentRef,
                 lists,
-                'Changed fields',
+                copy('compare.changedFields'),
                 comparison.differences,
                 (entry) => `${entry.name}: ${entry.fields.map((field) => `${field.field} ${field.existing || '-'} -> ${field.imported || '-'}`).join(', ')}`,
-                'No location or typology differences'
+                copy('compare.noChanged')
             );
             result.appendChild(lists);
         } catch (error) {
-            renderError(`Could not check this file: ${error.message}`);
+            renderError(copy('compare.error', { message: error.message }));
         }
     });
 
@@ -478,12 +731,12 @@ function createMissingWorkbench({
     header.className = 'allinfo-missing-header';
     header.innerHTML = `
         <div>
-            <div class="allinfo-category-eyebrow">Missing data</div>
-            <h3>Quick fix queue</h3>
+            <div class="allinfo-category-eyebrow">${copy('missing.eyebrow')}</div>
+            <h3>${copy('missing.title')}</h3>
         </div>
         <div class="allinfo-missing-actions">
             <button type="button" id="allinfo-save-filled-missing" class="allinfo-missing-save-all" disabled>
-                <i class="fas fa-check-double"></i><span>Save filled</span>
+                <i class="fas fa-check-double"></i><span>${copy('missing.saveFilled')}</span>
             </button>
         </div>
     `;
@@ -533,22 +786,22 @@ function createMissingWorkbench({
 
         const manager = window.propertiesManager;
         if (!manager?.updateProperty) {
-            button.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>No manager</span>';
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('missing.noManager')}</span>`;
             return false;
         }
 
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Saving</span>';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${copy('missing.saving')}</span>`;
 
         try {
             await manager.updateProperty(property.id, { [field]: value });
             property[field] = value;
-            button.innerHTML = '<i class="fas fa-check"></i><span>Saved</span>';
+            button.innerHTML = `<i class="fas fa-check"></i><span>${copy('missing.saved')}</span>`;
             return true;
         } catch (error) {
             console.error('Missing value save failed', error);
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Retry</span>';
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('missing.retry')}</span>`;
             return false;
         }
     };
@@ -559,12 +812,12 @@ function createMissingWorkbench({
         const shownItems = items.slice(0, 80);
 
         body.innerHTML = '';
-        header.querySelector('h3').textContent = `${category.title} quick fix queue`;
+        header.querySelector('h3').textContent = `${getCategoryTitle(category)} - ${copy('missing.title')}`;
 
         if (items.length === 0) {
             const empty = documentRef.createElement('div');
             empty.className = 'allinfo-missing-empty';
-            empty.innerHTML = '<i class="fas fa-circle-check"></i><span>No missing fields in this view.</span>';
+            empty.innerHTML = `<i class="fas fa-circle-check"></i><span>${copy('missing.empty')}</span>`;
             body.appendChild(empty);
             updateSaveAllState();
             return;
@@ -572,7 +825,7 @@ function createMissingWorkbench({
 
         const summary = documentRef.createElement('div');
         summary.className = 'allinfo-missing-summary';
-        summary.textContent = `${items.length} missing field${items.length === 1 ? '' : 's'} found. Fill the values below and save one row or all filled rows.`;
+        summary.textContent = copy('missing.summary', { count: items.length, plural: items.length === 1 ? '' : 's' });
         body.appendChild(summary);
 
         const list = documentRef.createElement('div');
@@ -598,7 +851,7 @@ function createMissingWorkbench({
             const saveButton = documentRef.createElement('button');
             saveButton.type = 'button';
             saveButton.className = 'allinfo-missing-save';
-            saveButton.innerHTML = '<i class="fas fa-save"></i><span>Save</span>';
+            saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('missing.save')}</span>`;
             saveButton.addEventListener('click', async () => {
                 const saved = await saveInput(input, saveButton);
                 if (saved) {
@@ -615,7 +868,7 @@ function createMissingWorkbench({
         if (items.length > shownItems.length) {
             const more = documentRef.createElement('div');
             more.className = 'allinfo-missing-more';
-            more.textContent = `Showing ${shownItems.length} of ${items.length}. Use the field filter to narrow this queue.`;
+            more.textContent = copy('missing.more', { shown: shownItems.length, total: items.length });
             list.appendChild(more);
         }
 
@@ -634,7 +887,7 @@ function createMissingWorkbench({
 
         const manager = window.propertiesManager;
         if (!manager?.updatePropertiesBatchMixed) {
-            button.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>No manager</span>';
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('missing.noManager')}</span>`;
             return;
         }
 
@@ -645,7 +898,7 @@ function createMissingWorkbench({
         }));
 
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Saving</span>';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${copy('missing.saving')}</span>`;
 
         try {
             await manager.updatePropertiesBatchMixed(items.map((item) => ({
@@ -660,12 +913,12 @@ function createMissingWorkbench({
                 }
             });
 
-            button.innerHTML = '<i class="fas fa-check"></i><span>Saved</span>';
+            button.innerHTML = `<i class="fas fa-check"></i><span>${copy('missing.saved')}</span>`;
             onSaved?.();
         } catch (error) {
             console.error('Bulk missing value save failed', error);
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Retry</span>';
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('missing.retry')}</span>`;
         }
     });
 
@@ -693,13 +946,13 @@ function renderCategoryTable({
     categoryHeader.className = 'allinfo-category-header';
     categoryHeader.innerHTML = `
         <div>
-            <div class="allinfo-category-eyebrow">${properties.length} visible of ${allProperties.length} properties</div>
-            <h3>${category.title}</h3>
+            <div class="allinfo-category-eyebrow">${copy('table.visibleOf', { visible: properties.length, total: allProperties.length })}</div>
+            <h3>${getCategoryTitle(category)}</h3>
         </div>
         <div class="allinfo-category-kpis">
-            <div><strong>${stats.completion}%</strong><span>complete</span></div>
-            <div><strong>${stats.missingFields}</strong><span>missing fields</span></div>
-            <div><strong>${stats.completeProperties}</strong><span>complete rows</span></div>
+            <div><strong>${stats.completion}%</strong><span>${copy('table.complete')}</span></div>
+            <div><strong>${stats.missingFields}</strong><span>${copy('table.missingFields')}</span></div>
+            <div><strong>${stats.completeProperties}</strong><span>${copy('table.completeRows')}</span></div>
         </div>
     `;
     wrapper.appendChild(categoryHeader);
@@ -727,7 +980,7 @@ function renderCategoryTable({
 
     const actionsHeader = documentRef.createElement('th');
     actionsHeader.className = 'sticky top-0 z-10 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider bg-gray-900';
-    actionsHeader.textContent = 'Actions';
+    actionsHeader.textContent = copy('table.actions');
     headerRow.appendChild(actionsHeader);
 
     thead.appendChild(headerRow);
@@ -774,7 +1027,7 @@ function renderCategoryTable({
                     const saveButton = row.querySelector('.allinfo-inline-save-btn');
                     if (saveButton) {
                         saveButton.disabled = false;
-                        saveButton.innerHTML = '<i class="fas fa-save"></i><span>Save</span>';
+                        saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('table.save')}</span>`;
                     }
                 });
                 td.appendChild(input);
@@ -793,7 +1046,7 @@ function renderCategoryTable({
                     const saveButton = row.querySelector('.allinfo-inline-save-btn');
                     if (saveButton) {
                         saveButton.disabled = false;
-                        saveButton.innerHTML = '<i class="fas fa-save"></i><span>Save</span>';
+                        saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('table.save')}</span>`;
                     }
                 });
                 input.addEventListener('change', () => {
@@ -803,7 +1056,7 @@ function renderCategoryTable({
                     const saveButton = row.querySelector('.allinfo-inline-save-btn');
                     if (saveButton) {
                         saveButton.disabled = false;
-                        saveButton.innerHTML = '<i class="fas fa-save"></i><span>Save</span>';
+                        saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('table.save')}</span>`;
                     }
                 });
                 td.appendChild(input);
@@ -816,7 +1069,7 @@ function renderCategoryTable({
         actionsCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium';
 
         const saveButton = documentRef.createElement('button');
-        saveButton.innerHTML = '<i class="fas fa-check"></i><span>Saved</span>';
+        saveButton.innerHTML = `<i class="fas fa-check"></i><span>${copy('table.saved')}</span>`;
         saveButton.className = 'allinfo-inline-save-btn';
         saveButton.title = `Save changes for ${property.name}`;
         saveButton.disabled = true;
@@ -827,13 +1080,13 @@ function renderCategoryTable({
 
             const manager = window.propertiesManager;
             if (!manager?.updateProperty) {
-                saveButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>No manager</span>';
+                saveButton.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('table.noManager')}</span>`;
                 return;
             }
 
             const updates = { ...rowState.updates };
             saveButton.disabled = true;
-            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Saving</span>';
+            saveButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${copy('table.saving')}</span>`;
 
             try {
                 await manager.updateProperty(property.id, updates);
@@ -847,17 +1100,17 @@ function renderCategoryTable({
                         cell.classList.remove('allinfo-empty-cell');
                     }
                 });
-                saveButton.innerHTML = '<i class="fas fa-check"></i><span>Saved</span>';
+                saveButton.innerHTML = `<i class="fas fa-check"></i><span>${copy('table.saved')}</span>`;
             } catch (error) {
                 console.error('Inline property save failed', error);
                 saveButton.disabled = false;
-                saveButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Retry</span>';
+                saveButton.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('table.retry')}</span>`;
             }
         };
         actionsCell.appendChild(saveButton);
 
         const editButton = documentRef.createElement('button');
-        editButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span>Full page</span>';
+        editButton.innerHTML = `<i class="fas fa-external-link-alt"></i><span>${copy('table.fullPage')}</span>`;
         editButton.className = 'allinfo-row-edit-btn';
         editButton.title = `Open full settings for ${property.name}`;
         editButton.onclick = () => onEditProperty?.(property, category);
@@ -919,10 +1172,10 @@ export function initializeAllInfoPage({
     const workspaceMenu = documentRef.createElement('div');
     workspaceMenu.className = 'allinfo-workspace-menu';
     const workspaceItems = [
-        ['table', 'fas fa-table', 'Table'],
-        ['missing', 'fas fa-list-check', 'Missing data'],
-        ['compare', 'fas fa-file-excel', 'Alojamentos check'],
-        ['edit', 'fas fa-pen-to-square', 'Edit tools']
+        ['table', 'fas fa-table', copy('workspace.table')],
+        ['missing', 'fas fa-list-check', copy('workspace.missing')],
+        ['compare', 'fas fa-file-excel', copy('workspace.compare')],
+        ['edit', 'fas fa-pen-to-square', copy('workspace.edit')]
     ];
     workspaceItems.forEach(([key, icon, label]) => {
         const button = documentRef.createElement('button');
@@ -947,8 +1200,8 @@ export function initializeAllInfoPage({
     const editToolsIntro = documentRef.createElement('div');
     editToolsIntro.className = 'allinfo-edit-tools-intro';
     editToolsIntro.innerHTML = `
-        <strong>Choose an edit mode</strong>
-        <span>Use Bulk Edit for many properties, Sequential Edit for one-by-one review, or Accordion Edit for full category forms.</span>
+        <strong>${copy('editToolsTitle')}</strong>
+        <span>${copy('editToolsBody')}</span>
     `;
     editToolsPanel.appendChild(editToolsIntro);
 
@@ -1029,19 +1282,19 @@ export function initializeAllInfoPage({
         overview.innerHTML = `
             <div class="allinfo-overview-item">
                 <strong>${sortedProperties.length}</strong>
-                <span>properties</span>
+                <span>${copy('overview.properties')}</span>
             </div>
             <div class="allinfo-overview-item">
                 <strong>${basicStats.completion}%</strong>
-                <span>basic info complete</span>
+                <span>${copy('overview.basicComplete')}</span>
             </div>
             <div class="allinfo-overview-item ${totalMissing > 0 ? 'needs-attention' : ''}">
                 <strong>${totalMissing}</strong>
-                <span>missing fields</span>
+                <span>${copy('overview.missingFields')}</span>
             </div>
             <div class="allinfo-overview-item ${categoriesWithMissing > 0 ? 'needs-attention' : ''}">
                 <strong>${categoriesWithMissing}</strong>
-                <span>categories need review</span>
+                <span>${copy('overview.categoriesReview')}</span>
             </div>
         `;
     };
@@ -1052,7 +1305,7 @@ export function initializeAllInfoPage({
 
         const allOption = documentRef.createElement('option');
         allOption.value = '';
-        allOption.textContent = 'All fields';
+        allOption.textContent = copy('allFields');
         fieldFilterSelect.appendChild(allOption);
 
         category.fields.forEach((field) => {
@@ -1131,7 +1384,7 @@ export function initializeAllInfoPage({
         const button = documentRef.createElement('button');
         const stats = getCategoryStats(sortedProperties, category);
         const badgeClass = stats.missingFields > 0 ? 'allinfo-cat-badge needs-attention' : 'allinfo-cat-badge';
-        button.innerHTML = `<i class="${category.icon}"></i><span>${category.title}</span><strong class="${badgeClass}">${stats.missingFields}</strong>`;
+        button.innerHTML = `<i class="${category.icon}"></i><span>${getCategoryTitle(category)}</span><strong class="${badgeClass}">${stats.missingFields}</strong>`;
         button.className = 'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100';
         button.dataset.idx = String(categoryIndex);
 

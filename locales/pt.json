@@ -106,6 +106,12 @@
         "cleaningAh": "Cleaning AH",
         "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
     },
+    "allInfo": {
+        "header": {
+            "title": "Toda a Informação dos Alojamentos",
+            "subtitle": "Ver todos os dados dos alojamentos num só lugar"
+        }
+    },
     "vehicles": {
         "header": {
             "title": "Veículos",

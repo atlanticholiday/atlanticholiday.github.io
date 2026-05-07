@@ -27,6 +27,7 @@ export class PropertiesDashboardController {
 
         this.handleAllInfoPageOpened = this.handleAllInfoPageOpened.bind(this);
         this.handleOpenPropertyEdit = this.handleOpenPropertyEdit.bind(this);
+        this.handleLanguageChanged = this.handleLanguageChanged.bind(this);
     }
 
     init() {
@@ -79,6 +80,14 @@ export class PropertiesDashboardController {
     bindPropertyPageEvents() {
         this.documentRef.addEventListener('openPropertyEdit', this.handleOpenPropertyEdit);
         this.documentRef.addEventListener('allInfoPageOpened', this.handleAllInfoPageOpened);
+        this.windowRef.addEventListener?.('languageChanged', this.handleLanguageChanged);
+    }
+
+    handleLanguageChanged() {
+        const allInfoPage = this.getElement('allinfo-page');
+        if (allInfoPage && !allInfoPage.classList.contains('hidden')) {
+            this.handleAllInfoPageOpened();
+        }
     }
 
     handleOpenPropertyEdit(event) {

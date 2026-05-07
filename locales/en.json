@@ -106,6 +106,12 @@
     "cleaningAh": "Cleaning AH",
     "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
   },
+  "allInfo": {
+    "header": {
+      "title": "All Property Info",
+      "subtitle": "View all property data in one place"
+    }
+  },
   "vehicles": {
     "header": {
       "title": "Vehicles",
