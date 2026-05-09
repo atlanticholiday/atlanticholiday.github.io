@@ -122,4 +122,34 @@ describe("NavigationManager", () => {
     assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
     assert.ok(document.getElementById("build-planner-page").classList.contains("hidden"));
   });
+
+  test("routes to Nuki doors and back to landing", () => {
+    resetDom(`
+      <button id="go-to-nuki-doors-btn">Nuki Doors</button>
+      <button id="back-to-landing-from-nuki-doors-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="nuki-doors-page" class="hidden"></div>
+    `);
+
+    const navigationManager = new NavigationManager();
+    navigationManager.setupNavigationListeners();
+
+    let pageEventCount = 0;
+    document.addEventListener("nukiDoorsPageOpened", () => {
+      pageEventCount += 1;
+    }, { once: true });
+
+    document.getElementById("go-to-nuki-doors-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "nukiDoors");
+    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(!document.getElementById("nuki-doors-page").classList.contains("hidden"));
+    assert.equal(pageEventCount, 1);
+
+    document.getElementById("back-to-landing-from-nuki-doors-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "landing");
+    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(document.getElementById("nuki-doors-page").classList.contains("hidden"));
+  });
 });

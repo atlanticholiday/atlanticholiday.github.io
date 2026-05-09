@@ -1,6 +1,7 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 import { Config } from '../core/config.js';
 import { i18n, t } from '../core/i18n.js';
@@ -13,6 +14,7 @@ import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js
 import { CleaningBillsManager } from '../features/operations/cleaning-bills-manager.js';
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
 import { LaundryLogManager } from '../features/operations/laundry-log-manager.js';
+import { NukiDoorsManager } from '../features/operations/nuki-doors-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
 import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
@@ -41,7 +43,7 @@ import { getAppAccessOptionByButtonId, getAppAccessOptions } from '../shared/app
 import { canonicalizeEmail } from '../shared/email.js';
 
 // --- GLOBAL VARIABLES & CONFIG ---
-let db, auth, userId;
+let db, auth, functionsInstance, userId;
 let unsubscribe = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 let timeClockAutoOpenedForUser = false;
@@ -49,7 +51,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -303,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const app = initializeApp(Config.firebaseConfig);
         db = getFirestore(app);
+        functionsInstance = getFunctions(app);
         // Enable offline data persistence to cache Firestore data across page reloads
         enableIndexedDbPersistence(db).catch(err => {
             if (err.code === 'failed-precondition') {
@@ -414,6 +417,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();
         window.airbnbReservationInvoicesManager = airbnbReservationInvoicesManager;
         airbnbReservationInvoicesManager.init();
+        nukiDoorsManager = new NukiDoorsManager({
+            listDoors: httpsCallable(functionsInstance, 'nukiListDoors'),
+            doorAction: httpsCallable(functionsInstance, 'nukiDoorAction'),
+            listDevices: httpsCallable(functionsInstance, 'nukiListDevices'),
+            saveDoor: httpsCallable(functionsInstance, 'nukiSaveDoor'),
+            deleteDoor: httpsCallable(functionsInstance, 'nukiDeleteDoor')
+        });
+        window.nukiDoorsManager = nukiDoorsManager;
         operationalGuidelinesManager = new OperationalGuidelinesManager();
         window.operationalGuidelinesManager = operationalGuidelinesManager;
         operationalGuidelinesManager.init();
@@ -704,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #nuki-doors-sign-out-btn')) {
             signOut(auth);
         }
     });
@@ -858,6 +869,10 @@ function setupGlobalEventListeners() {
         if (staffManager) {
             staffManager.render();
         }
+    });
+
+    document.addEventListener('nukiDoorsPageOpened', () => {
+        nukiDoorsManager?.init();
     });
 
     propertyDashboardController?.init();

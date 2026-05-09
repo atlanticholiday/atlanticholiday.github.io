@@ -30,6 +30,7 @@ export class NavigationManager {
             cleaningBills: 'cleaning-bills-page',
             buildPlanner: 'build-planner-page',
             staff: 'staff-page',
+            nukiDoors: 'nuki-doors-page',
         };
     }
 
@@ -211,6 +212,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showNukiDoorsPage() {
+        this.showPage('nukiDoors');
+        const event = new CustomEvent('nukiDoorsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     showBuildPlannerPage() {
         this.showPage('buildPlanner');
         const event = new CustomEvent('buildPlannerPageOpened');
@@ -240,6 +247,7 @@ export class NavigationManager {
         const goToStaffBtn = document.getElementById('go-to-staff-btn');
         const goToTimeClockBtn = document.getElementById('go-to-time-clock-btn');
         const goToBuildPlannerBtn = document.getElementById('go-to-build-planner-btn');
+        const goToNukiDoorsBtn = document.getElementById('go-to-nuki-doors-btn');
 
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -354,6 +362,12 @@ export class NavigationManager {
             });
         }
 
+        if (goToNukiDoorsBtn) {
+            goToNukiDoorsBtn.addEventListener('click', () => {
+                this.showNukiDoorsPage();
+            });
+        }
+
         if (goToTimeClockBtn) {
             goToTimeClockBtn.addEventListener('click', () => {
                 this.showTimeClockPage();
@@ -435,6 +449,7 @@ export class NavigationManager {
         const backToLandingFromCommissionCalculatorBtn = document.getElementById('back-to-landing-from-commission-calculator-btn');
         const backToLandingFromTimeClockBtn = document.getElementById('back-to-landing-from-time-clock-btn');
         const backToLandingFromBuildPlannerBtn = document.getElementById('back-to-landing-from-build-planner-btn');
+        const backToLandingFromNukiDoorsBtn = document.getElementById('back-to-landing-from-nuki-doors-btn');
 
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -546,6 +561,12 @@ export class NavigationManager {
             });
         }
 
+        if (backToLandingFromNukiDoorsBtn) {
+            backToLandingFromNukiDoorsBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
         // Back from All Info
         const backToLandingFromAllInfoBtn = document.getElementById('back-to-landing-from-allinfo-btn');
         if (backToLandingFromAllInfoBtn) {
@@ -595,6 +616,7 @@ export class NavigationManager {
         const commissionCalculatorSignOutBtn = document.getElementById('commission-calculator-sign-out-btn');
         const staffSignOutBtn = document.getElementById('staff-sign-out-btn');
         const buildPlannerSignOutBtn = document.getElementById('build-planner-sign-out-btn');
+        const nukiDoorsSignOutBtn = document.getElementById('nuki-doors-sign-out-btn');
 
         if (landingSignOutBtn) {
             landingSignOutBtn.addEventListener('click', () => {
@@ -699,6 +721,13 @@ export class NavigationManager {
 
         if (buildPlannerSignOutBtn) {
             buildPlannerSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+
+        if (nukiDoorsSignOutBtn) {
+            nukiDoorsSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

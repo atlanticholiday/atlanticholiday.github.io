@@ -8,6 +8,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'main'
     },
     {
+        key: 'nukiDoors',
+        buttonId: 'go-to-nuki-doors-btn',
+        pageName: 'nukiDoors',
+        labelKey: 'userManagement.appAccess.options.nukiDoors',
+        fallbackLabel: 'Nuki Doors',
+        group: 'more'
+    },
+    {
         key: 'staff',
         buttonId: 'go-to-staff-btn',
         pageName: 'staff',
