@@ -82,14 +82,17 @@
     "unjustified": "Unjustified",
     "scheduledOff": "Scheduled Off"
   },
-  "landing": {
-    "welcome": "Welcome to your operations hub",
-    "subtitle": "Manage properties, schedules, safety and more - all in one beautiful place.",
-    "mainApps": "Main Apps",
-    "showMoreTools": "Show More Tools",
-    "hideMoreTools": "Hide More Tools",
-    "otherTools": "Other Tools"
-  },
+    "landing": {
+        "welcome": "Welcome to your operations hub",
+        "subtitle": "Manage properties, schedules, safety and more - all in one beautiful place.",
+        "mainApps": "Main Apps",
+        "dailyOperations": "Daily Operations",
+        "propertiesGuests": "Properties &amp; Guests",
+        "financeReports": "Finance &amp; Reports",
+        "showMoreTools": "Show More Tools",
+        "hideMoreTools": "Hide More Tools",
+        "otherTools": "Other Tools"
+    },
   "apps": {
     "workSchedule": "Work Schedule",
     "workScheduleDesc": "Plan staff schedules and holidays.",

@@ -164,24 +164,15 @@
             </div>
         </header>
 
-        <section class="dashboard-hero">
-            <div class="container mx-auto px-4 max-w-6xl">
-                <div class="hero-inner">
-                    <div class="hero-copy">
-                        <h2 id="landing-hero-title" class="hero-title">Welcome to your operations hub</h2>
-                        <p id="landing-hero-subtitle" class="hero-subtitle" data-i18n="landing.subtitle">Manage properties, schedules, safety and more — all in one beautiful
-                            place.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <div class="container mx-auto px-4 pt-4 pb-14 max-w-7xl">
+            <!-- Primary apps -->
+            <!-- Primary apps -->
+            <!-- Primary apps -->
+            <h2 class="text-xl font-semibold text-gray-800 mb-6 px-2" data-i18n="landing.mainApps">Main Apps</h2>
 
-        <div class="container mx-auto px-4 pt-8 pb-14 max-w-7xl">
-            <!-- Primary apps -->
-            <!-- Primary apps -->
-            <!-- Primary apps -->
-            <h2 class="text-xl font-semibold text-gray-800 mb-4 px-2" data-i18n="landing.mainApps">Main Apps</h2>
-            <div class="dashboard-grid mb-12">
+            <!-- Daily Operations -->
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.dailyOperations">Daily Operations</h3>
+            <div class="dashboard-grid mb-8">
                 <button id="go-to-time-clock-btn" class="dashboard-card">
                     <div class="card-icon bg-slate-900/10 text-slate-700">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,16 +199,6 @@
                     </div>
                 </button>
 
-                <button id="go-to-vehicles-btn" class="dashboard-card">
-                    <div class="card-icon bg-cyan-500/10 text-cyan-600">
-                        <i class="fas fa-car"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Vehicles</h3>
-                        <p>Manage fleet, insurance and inspections.</p>
-                    </div>
-                </button>
-
                 <button id="go-to-staff-btn" class="dashboard-card">
                     <div class="card-icon bg-purple-500/10 text-purple-600">
                         <i class="fas fa-users"></i>
@@ -228,8 +209,20 @@
                     </div>
                 </button>
 
+                <button id="go-to-vehicles-btn" class="dashboard-card">
+                    <div class="card-icon bg-cyan-500/10 text-cyan-600">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3>Vehicles</h3>
+                        <p>Manage fleet, insurance and inspections.</p>
+                    </div>
+                </button>
+            </div>
 
-
+            <!-- Properties & Guests -->
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.propertiesGuests">Properties &amp; Guests</h3>
+            <div class="dashboard-grid mb-8">
                 <button id="go-to-properties-btn" class="dashboard-card">
                     <div class="card-icon bg-blue-500/10 text-blue-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,29 +233,6 @@
                     <div class="card-body">
                         <h3>Properties</h3>
                         <p>Manage short rentals and full inventory.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-allinfo-btn" class="dashboard-card">
-                    <div class="card-icon bg-rose-500/10 text-rose-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>All Info</h3>
-                        <p>See every property detail in one view.</p>
-                    </div>
-                </button>
-
-                <button id="go-to-airbnb-reservation-invoices-btn" class="dashboard-card">
-                    <div class="card-icon bg-rose-500/10 text-rose-600">
-                        <i class="fas fa-file-invoice"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Airbnb VAT Invoices</h3>
-                        <p>Copy the command and export reservation invoices to PDF.</p>
                     </div>
                 </button>
 
@@ -283,6 +253,33 @@
                     <div class="card-body">
                         <h3 id="operational-guidelines-card-title">Operational Guide</h3>
                         <p id="operational-guidelines-card-description">Search guest-response protocols and copy approved replies.</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Finance & Reports -->
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.financeReports">Finance &amp; Reports</h3>
+            <div class="dashboard-grid mb-12">
+                <button id="go-to-airbnb-reservation-invoices-btn" class="dashboard-card">
+                    <div class="card-icon bg-rose-500/10 text-rose-600">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3>Airbnb VAT Invoices</h3>
+                        <p>Copy the command and export reservation invoices to PDF.</p>
+                    </div>
+                </button>
+
+                <button id="go-to-allinfo-btn" class="dashboard-card">
+                    <div class="card-icon bg-rose-500/10 text-rose-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 3h8v8H3V3zm10 0h8v8h-8V3zm-10 10h8v8H3v-8zm10 0h8v8h-8v-8z" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <h3>All Info</h3>
+                        <p>See every property detail in one view.</p>
                     </div>
                 </button>
             </div>
