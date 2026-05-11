@@ -1521,6 +1521,16 @@
             "exportCsv": "Exportar CSV",
             "vacationUsed": "Férias usadas",
             "vacationBalance": "Saldo de férias",
+            "yearStartDays": "Dias no inicio do ano",
+            "yearStartDaysShort": "Inicio",
+            "vacationLeft": "Dias restantes",
+            "totalVacationLeft": "Total dias restantes",
+            "vacationUsedShort": "Usados",
+            "previousYearUnused": "Nao usados no ano anterior",
+            "previousYearsTitle": "Anos anteriores",
+            "previousYearsDescription": "Ferias nao usadas sao calculadas a partir do saldo anual de cada colega menos os dias de ferias registados.",
+            "unusedDaysShort": "Nao usados",
+            "colleaguesWithUnused": "colegas com dias nao usados",
             "balanceAlerts": "Alertas de saldo"
         },
         "selfService": {

@@ -29,6 +29,7 @@ import "./unit/features/scheduling/employee-records.test.js";
 import "./unit/features/scheduling/holiday-calculator.test.js";
 import "./unit/features/scheduling/monthly-schedule-view.test.js";
 import "./unit/features/scheduling/navigation-manager.test.js";
+import "./unit/features/scheduling/schedule-view-helpers.test.js";
 import "./unit/features/scheduling/shift-hours.test.js";
 import "./unit/features/scheduling/staff-manager.test.js";
 import "./unit/features/scheduling/time-clock-controls.test.js";

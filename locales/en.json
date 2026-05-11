@@ -1518,8 +1518,18 @@
       "totalAbsentDays": "Total Absent Days",
       "totalExtraHours": "Total Extra Hours",
       "exportCsv": "Export CSV",
+      "yearStartDays": "Start of year days",
+      "yearStartDaysShort": "Start",
+      "vacationLeft": "Days left",
+      "totalVacationLeft": "Total days left",
       "vacationUsed": "Vacation Used",
+      "vacationUsedShort": "Used",
       "vacationBalance": "Vacation Balance",
+      "previousYearUnused": "Last year unused",
+      "previousYearsTitle": "Previous years",
+      "previousYearsDescription": "Unused leave is calculated from each colleague's yearly allowance minus recorded vacation days.",
+      "unusedDaysShort": "Unused",
+      "colleaguesWithUnused": "colleagues with unused days",
       "balanceAlerts": "Balance alerts"
     }
   },

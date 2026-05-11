@@ -41,6 +41,24 @@ export function calculateEmployeeVacationDaysForYear(employee, year) {
     return vacationDays;
 }
 
+export function getAnnualVacationAllowance(employee) {
+    const adjustment = Number(employee?.vacationAdjustment || 0);
+    return 22 + (Number.isFinite(adjustment) ? adjustment : 0);
+}
+
+export function calculateEmployeeLeaveBalanceForYear(employee, year) {
+    const vacationAllowance = getAnnualVacationAllowance(employee);
+    const vacationDays = calculateEmployeeVacationDaysForYear(employee, year);
+    const vacationBalance = vacationAllowance - vacationDays;
+
+    return {
+        vacationAllowance,
+        vacationDays,
+        vacationBalance,
+        unusedVacationDays: Math.max(vacationBalance, 0)
+    };
+}
+
 export function calculateEmployeeExtraHoursForYear(employee, year) {
     let extraHours = 0;
 
@@ -57,16 +75,57 @@ export function calculateEmployeeExtraHoursForYear(employee, year) {
 
 export function calculateTeamStats(dataManager, year) {
     return dataManager.getActiveEmployees().map((employee) => {
-        const vacationDays = calculateEmployeeVacationDaysForYear(employee, year);
-        const vacationBalance = 22 + Number(employee.vacationAdjustment || 0) - vacationDays;
+        const {
+            vacationAllowance,
+            vacationDays,
+            vacationBalance,
+            unusedVacationDays
+        } = calculateEmployeeLeaveBalanceForYear(employee, year);
+        const previousYearBalance = calculateEmployeeLeaveBalanceForYear(employee, year - 1);
         const extraHours = calculateEmployeeExtraHoursForYear(employee, year);
 
         return {
             id: employee.id,
             name: employee.name,
+            vacationAllowance,
             vacationDays,
             vacationBalance,
+            unusedVacationDays,
+            previousYearUnusedVacationDays: previousYearBalance.unusedVacationDays,
             extraHours
+        };
+    });
+}
+
+export function calculatePreviousYearLeaveStats(dataManager, currentYear, lookbackYears = 3) {
+    const employees = dataManager.getActiveEmployees();
+
+    return Array.from({ length: lookbackYears }, (_, index) => currentYear - index - 1).map((year) => {
+        const employeeRows = employees.map((employee) => {
+            const {
+                vacationAllowance,
+                vacationDays,
+                vacationBalance,
+                unusedVacationDays
+            } = calculateEmployeeLeaveBalanceForYear(employee, year);
+
+            return {
+                id: employee.id,
+                name: employee.name,
+                vacationAllowance,
+                vacationDays,
+                vacationBalance,
+                unusedVacationDays
+            };
+        });
+
+        return {
+            year,
+            vacationAllowance: employeeRows.reduce((sum, row) => sum + row.vacationAllowance, 0),
+            vacationDays: employeeRows.reduce((sum, row) => sum + row.vacationDays, 0),
+            unusedVacationDays: employeeRows.reduce((sum, row) => sum + row.unusedVacationDays, 0),
+            colleaguesWithUnusedDays: employeeRows.filter((row) => row.unusedVacationDays > 0).length,
+            employeeRows
         };
     });
 }

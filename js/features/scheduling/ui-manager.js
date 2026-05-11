@@ -2666,15 +2666,20 @@ export class UIManager {
             return;
         }
 
-        // CSV Header
-        let csv = 'Colleague,Vacation Used (days),Vacation Balance (days),Extra Hours\n';
+        let csv = 'Colleague,Vacation Start Allowance (days),Vacation Used (days),Vacation Left (days),Previous Year Unused (days),Extra Hours\n';
 
-        // CSV Rows
         this.currentStats.forEach(stat => {
-            csv += `"${stat.name}",${stat.vacationDays},${stat.vacationBalance},${stat.extraHours.toFixed(1)}\n`;
+            csv += `"${stat.name}",${stat.vacationAllowance},${stat.vacationDays},${stat.vacationBalance},${stat.previousYearUnusedVacationDays},${stat.extraHours.toFixed(1)}\n`;
         });
 
-        // Create blob and download
+        if (this.previousYearLeaveStats?.length) {
+            csv += '\nPrevious Years\n';
+            csv += 'Year,Vacation Start Allowance (days),Vacation Used (days),Unused Vacation (days),Colleagues With Unused Days\n';
+            this.previousYearLeaveStats.forEach(row => {
+                csv += `${row.year},${row.vacationAllowance},${row.vacationDays},${row.unusedVacationDays},${row.colleaguesWithUnusedDays}\n`;
+            });
+        }
+
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
