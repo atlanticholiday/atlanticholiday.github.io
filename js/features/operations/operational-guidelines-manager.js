@@ -224,11 +224,17 @@ export class OperationalGuidelinesManager {
         this.root.innerHTML = `
             <section class="operational-guide-shell">
                 <div class="operational-guide-search-panel">
-                    <div class="operational-guide-stat-row" aria-label="Manual summary">
-                        <span><strong>${items.length}</strong> ${escapeHtml(copy.protocolsCount)}</span>
-                        <span><strong>${OPERATIONAL_GUIDELINE_SECTIONS.length}</strong> ${escapeHtml(copy.sectionsCount)}</span>
+                    <div class="operational-guide-search-head">
+                        <div>
+                            <p class="operational-guide-section-kicker">${escapeHtml(copy.title)}</p>
+                            <h2>${escapeHtml(copy.askLabel)}</h2>
+                        </div>
+                        <div class="operational-guide-stat-row" aria-label="Manual summary">
+                            <span><strong>${items.length}</strong> ${escapeHtml(copy.protocolsCount)}</span>
+                            <span><strong>${OPERATIONAL_GUIDELINE_SECTIONS.length}</strong> ${escapeHtml(copy.sectionsCount)}</span>
+                        </div>
                     </div>
-                    <label class="operational-guide-search-label" for="operational-guidelines-search">${escapeHtml(copy.askLabel)}</label>
+                    <label class="operational-guide-search-label" for="operational-guidelines-search">${escapeHtml(copy.askPlaceholder)}</label>
                     <div class="operational-guide-search-box">
                         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                         <input id="operational-guidelines-search" type="search" value="${escapeHtml(this.query)}" placeholder="${escapeHtml(copy.askPlaceholder)}" autocomplete="off">
@@ -434,8 +440,10 @@ export class OperationalGuidelinesManager {
                 </button>
                 <div>
                     <p>${escapeHtml(item.response)}</p>
-                    <button type="button" data-guideline-copy="${escapeHtml(item.id)}">${escapeHtml(copy.copy)}</button>
-                    <button type="button" data-guideline-edit="${escapeHtml(item.id)}">${escapeHtml(copy.edit)}</button>
+                    <span class="operational-guide-protocol-actions">
+                        <button type="button" data-guideline-copy="${escapeHtml(item.id)}">${escapeHtml(copy.copy)}</button>
+                        <button type="button" data-guideline-edit="${escapeHtml(item.id)}">${escapeHtml(copy.edit)}</button>
+                    </span>
                 </div>
             </article>
         `;

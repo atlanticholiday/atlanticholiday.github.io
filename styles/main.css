@@ -4337,19 +4337,24 @@ header h1, header h2, header h3 {
 /* Operational Guidelines */
 .operational-guidelines-page {
     background:
-        radial-gradient(circle at top left, rgba(120, 113, 108, 0.14), transparent 30rem),
-        linear-gradient(180deg, #faf8f3 0%, #f1eee7 100%);
+        radial-gradient(circle at 12% 0%, rgba(161, 98, 7, 0.12), transparent 34rem),
+        linear-gradient(135deg, rgba(28, 25, 23, 0.035) 0 1px, transparent 1px) 0 0 / 34px 34px,
+        linear-gradient(180deg, #faf9f6 0%, #f1eee8 100%);
     color: #1c1917;
 }
 
 .operational-guidelines-shell-container {
-    max-width: 1240px;
+    max-width: 1680px;
 }
 
 .operational-guidelines-page-header {
-    background: rgba(250, 248, 243, 0.9);
+    background: rgba(250, 249, 246, 0.88);
     backdrop-filter: blur(18px);
     border-bottom: 1px solid rgba(120, 113, 108, 0.18);
+}
+
+.operational-guidelines-page-header .operational-guidelines-shell-container {
+    display: flex !important;
 }
 
 .operational-guidelines-header-actions {
@@ -4359,10 +4364,19 @@ header h1, header h2, header h3 {
     flex-wrap: wrap;
 }
 
+.operational-guidelines-page-header .flex.items-center.gap-3 {
+    width: 100%;
+}
+
+.operational-guidelines-page-header .leading-tight {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .operational-guide-shell {
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
-    gap: 1.25rem;
+    grid-template-columns: minmax(620px, 1.42fr) minmax(430px, 0.78fr);
+    gap: 1.5rem;
     align-items: start;
 }
 
@@ -4370,32 +4384,59 @@ header h1, header h2, header h3 {
 .operational-guide-answer-panel,
 .operational-guide-rules,
 .operational-guide-list {
-    border: 1px solid rgba(120, 113, 108, 0.18);
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: 0 24px 70px rgba(41, 37, 36, 0.08);
+    border: 1px solid rgba(87, 83, 78, 0.14);
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 20px 60px rgba(41, 37, 36, 0.06);
 }
 
 .operational-guide-search-panel {
-    border-radius: 30px;
-    padding: clamp(1.25rem, 3vw, 2rem);
+    border-radius: 18px;
+    padding: clamp(1.25rem, 2vw, 2rem);
+}
+
+.operational-guide-search-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1.2rem;
+}
+
+.operational-guide-search-head h2 {
+    max-width: 15ch;
+    margin: 0.25rem 0 0;
+    color: #292524;
+    font-size: clamp(2rem, 3vw, 4.25rem);
+    font-weight: 950;
+    letter-spacing: 0;
+    line-height: 0.95;
 }
 
 .operational-guide-answer-panel {
     position: sticky;
-    top: 1rem;
-    border-radius: 30px;
-    padding: clamp(1.25rem, 3vw, 2rem);
+    top: 1.25rem;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: clamp(1.25rem, 2vw, 2rem);
     background:
-        linear-gradient(135deg, rgba(28, 25, 23, 0.96), rgba(68, 64, 60, 0.92)),
+        linear-gradient(135deg, rgba(28, 25, 23, 0.98), rgba(68, 64, 60, 0.96)),
         #292524;
     color: #fff7ed;
 }
 
+.operational-guide-answer-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 5px;
+    background: linear-gradient(90deg, #fbbf24, #a16207);
+}
+
 .operational-guide-answer-panel h2 {
     margin: 0.4rem 0 1.25rem;
-    font-size: clamp(1.8rem, 4vw, 3.2rem);
-    line-height: 1;
-    letter-spacing: -0.05em;
+    font-size: clamp(2.1rem, 3vw, 4rem);
+    line-height: 0.96;
+    letter-spacing: 0;
 }
 
 .operational-guide-stat-row {
@@ -4409,12 +4450,13 @@ header h1, header h2, header h3 {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    border-radius: 999px;
+    border-radius: 12px;
     background: #f5f2eb;
     color: #57534e;
-    padding: 0.45rem 0.7rem;
+    padding: 0.55rem 0.75rem;
     font-size: 0.82rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .operational-guide-search-label {
@@ -4429,10 +4471,10 @@ header h1, header h2, header h3 {
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    border-radius: 22px;
+    border-radius: 14px;
     border: 1px solid rgba(120, 113, 108, 0.24);
     background: #fff;
-    padding: 0.9rem 1rem;
+    padding: 1rem 1.1rem;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
@@ -4454,7 +4496,7 @@ header h1, header h2, header h3 {
     outline: 0;
     background: transparent;
     color: #1c1917;
-    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-size: clamp(1.05rem, 1.2vw, 1.35rem);
     box-shadow: none;
 }
 
@@ -4483,7 +4525,7 @@ header h1, header h2, header h3 {
 .operational-guide-editor-header button,
 .operational-guide-editor-actions button {
     border: 0;
-    border-radius: 999px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 900;
     padding: 0.65rem 0.9rem;
@@ -4536,7 +4578,7 @@ header h1, header h2, header h3 {
 .operational-guide-answer-actions button,
 .operational-guide-protocol div button {
     border: 0;
-    border-radius: 999px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 800;
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
@@ -4577,7 +4619,7 @@ header h1, header h2, header h3 {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    border-radius: 18px;
+    border-radius: 12px;
     background: #f8f4ec;
     color: #292524;
     padding: 0.85rem 1rem;
@@ -4609,6 +4651,7 @@ header h1, header h2, header h3 {
     padding-left: 1rem;
     color: #fffbeb;
     line-height: 1.6;
+    white-space: pre-line;
 }
 
 .operational-guide-answer-block blockquote {
@@ -4626,6 +4669,7 @@ header h1, header h2, header h3 {
     background: #fbbf24;
     color: #292524;
     padding: 0.75rem 1rem;
+    min-width: 6rem;
 }
 
 .operational-guide-answer-actions button + button {
@@ -4644,7 +4688,7 @@ header h1, header h2, header h3 {
 .operational-guide-list,
 .operational-guide-editor {
     margin-top: 1.25rem;
-    border-radius: 30px;
+    border-radius: 18px;
     padding: clamp(1.1rem, 3vw, 1.6rem);
 }
 
@@ -4695,7 +4739,7 @@ header h1, header h2, header h3 {
 .operational-guide-editor-form textarea {
     width: 100%;
     border: 1px solid rgba(120, 113, 108, 0.24);
-    border-radius: 18px;
+    border-radius: 12px;
     background: #fff;
     color: #1c1917;
     padding: 0.75rem 0.9rem;
@@ -4720,8 +4764,8 @@ header h1, header h2, header h3 {
 
 .operational-guide-rules {
     display: grid;
-    grid-template-columns: 0.55fr 1.45fr;
-    gap: 1rem;
+    grid-template-columns: 0.4fr 1.6fr;
+    gap: 1.25rem;
 }
 
 .operational-guide-rules h3,
@@ -4735,12 +4779,12 @@ header h1, header h2, header h3 {
 
 .operational-guide-rule-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
 }
 
 .operational-guide-rule-list article {
-    border-radius: 20px;
+    border-radius: 14px;
     background: #f8f4ec;
     padding: 1rem;
 }
@@ -4776,23 +4820,30 @@ header h1, header h2, header h3 {
 
 .operational-guide-protocols {
     display: grid;
-    gap: 0.7rem;
+    gap: 0.55rem;
     margin-top: 0.9rem;
 }
 
 .operational-guide-protocol {
     display: grid;
-    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
-    gap: 0.9rem;
-    border-radius: 22px;
+    grid-template-columns: minmax(270px, 0.62fr) minmax(0, 1.38fr);
+    gap: 1rem;
+    border-radius: 14px;
     background: #fff;
-    padding: 0.75rem;
+    padding: 0.8rem 0.9rem;
     outline: 2px solid transparent;
-    transition: outline-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    transition: outline-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.operational-guide-protocol:hover {
+    background: #fffdf8;
+    box-shadow: 0 12px 34px rgba(41, 37, 36, 0.08);
+    transform: translateY(-1px);
 }
 
 .operational-guide-protocol.is-active {
     outline-color: rgba(161, 98, 7, 0.32);
+    background: #fffbeb;
 }
 
 .operational-guide-protocol.is-highlighted {
@@ -4803,6 +4854,7 @@ header h1, header h2, header h3 {
 .operational-guide-protocol > button {
     display: flex;
     gap: 0.75rem;
+    align-items: flex-start;
     width: 100%;
     text-align: left;
     background: transparent;
@@ -4840,6 +4892,13 @@ header h1, header h2, header h3 {
     margin: 0;
     color: #57534e;
     line-height: 1.5;
+    white-space: pre-line;
+}
+
+.operational-guide-protocol-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
 }
 
 .operational-guide-protocol div button {
@@ -4855,7 +4914,26 @@ header h1, header h2, header h3 {
     color: #78716c;
 }
 
+@media (max-width: 1320px) {
+    .operational-guide-shell {
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.7fr);
+    }
+
+    .operational-guide-rule-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 1023px) {
+    .operational-guidelines-page-header .operational-guidelines-shell-container {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+
+    .operational-guidelines-page-header .flex.items-center.gap-3 {
+        width: 100% !important;
+    }
+
     .operational-guide-shell,
     .operational-guide-rules,
     .operational-guide-protocol {
@@ -4868,9 +4946,18 @@ header h1, header h2, header h3 {
 }
 
 @media (max-width: 767px) {
+    .operational-guidelines-page-header .flex.items-center.gap-3,
+    .operational-guidelines-page-header .leading-tight {
+        min-width: 0;
+    }
+
     .operational-guidelines-header-actions {
         align-items: flex-start;
         justify-content: flex-start;
+    }
+
+    .operational-guide-search-head {
+        grid-template-columns: 1fr;
     }
 
     .operational-guide-rule-list {
