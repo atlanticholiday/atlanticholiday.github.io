@@ -106,7 +106,7 @@
         "staffDesc": "Gerir membros da equipa.",
         "properties": "Propriedades",
         "propertiesDesc": "Gerir alojamentos e inventário.",
-        "cleaningAh": "Cleaning AH",
+        "cleaningAh": "Limpeza AH",
         "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
     },
     "allInfo": {
@@ -808,10 +808,10 @@
     "cleaningAh": {
         "header": {
             "kicker": "Financeiro",
-            "title": "Cleaning AH",
+            "title": "Limpeza AH",
             "subtitle": "Acompanhe a receita de check-out, os custos de lavandaria e métricas rápidas num único sítio.",
             "restrictedKicker": "Restrito",
-            "restrictedTitle": "O Cleaning AH é apenas para gestores.",
+            "restrictedTitle": "A Limpeza AH é apenas para gestores.",
             "restrictedBody": "Esta página guarda dados de receita da empresa, por isso só está visível para admins e gestores."
         },
         "landing": {
@@ -827,7 +827,7 @@
             "cleanings": "Limpezas",
             "laundry": "Lavandaria",
             "specialCleanings": "Limpezas especiais",
-            "ariaLabel": "Separadores do Cleaning AH"
+            "ariaLabel": "Separadores do Limpeza AH"
         },
         "categories": {
             "checkout": {
@@ -1299,7 +1299,7 @@
                 "buildPlanner": "Build Planner",
                 "inventory": "Inventory",
                 "nukiDoors": "Portas Nuki",
-                "cleaningAh": "Cleaning AH"
+                "cleaningAh": "Limpeza AH"
             }
         },
         "goLive": {

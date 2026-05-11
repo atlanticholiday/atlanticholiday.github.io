@@ -431,7 +431,7 @@ export class CleaningAhManager {
             page.id = "cleaning-ah-page";
             page.className = "hidden min-h-screen bg-slate-50";
             page.innerHTML = `
-                <div id="cleaning-ah-shell" class="mx-auto w-full max-w-[1700px] px-4 py-6 xl:px-6 2xl:px-8">
+                <div id="cleaning-ah-shell" class="mx-auto w-full max-w-[2400px] px-4 py-6 xl:px-8 2xl:px-10">
                     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
                         <div class="flex items-center gap-3">
                             <button id="back-to-landing-from-cleaning-ah-btn" class="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center">
@@ -466,7 +466,7 @@ export class CleaningAhManager {
 
         const shell = document.getElementById("cleaning-ah-shell");
         if (shell) {
-            shell.className = "mx-auto w-full max-w-[1700px] px-4 py-6 xl:px-6 2xl:px-8";
+            shell.className = "mx-auto w-full max-w-[2400px] px-4 py-6 xl:px-8 2xl:px-10";
         }
 
         if (!document.getElementById("go-to-cleaning-ah-btn")) {
@@ -1261,7 +1261,7 @@ export class CleaningAhManager {
                     <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
                     ${this.activeTab === "stats" ? this.renderStatsHelpDisclosure() : ""}
                 </div>
-                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                     ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count), "compact")}
                     ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount), "compact")}
                     ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission), "compact")}
@@ -1495,7 +1495,7 @@ export class CleaningAhManager {
                     <div class="mt-5 flex flex-wrap gap-2">
                         ${this.renderStatsCategorySwitcher(statsCategoryOptions)}
                     </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                         ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
                         ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
                         ${this.renderMetricCard(this.tr("metrics.ahBeforeLaundry"), this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
@@ -1503,11 +1503,11 @@ export class CleaningAhManager {
                         ${this.renderMetricCard(this.tr("metrics.avgKgPerCleaning"), this.formatNumber(cleaningSummary.totals.averageLaundryKgPerCleaning))}
                     </div>
                 </section>
-                <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[1.3fr_0.95fr]">
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(28rem,0.8fr)]">
                     ${this.renderStatsComparisonBlock(statsPropertyRows, selectedStatsPropertyName)}
                     ${this.renderStatsPropertyFocus(selectedStatsPropertyDetail)}
                 </section>
-                <section class="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     ${this.renderFinancialSummaryTable(this.tr("stats.byMonth"), cleaningSummary.byMonth, [
                             [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
                             [this.tr("tables.count"), (entry) => String(entry.count)],
@@ -1824,7 +1824,7 @@ export class CleaningAhManager {
         const batchPreview = this.getCleaningBatchPreview();
 
         return `
-            <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.35fr)]">
+            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
                 <div class="space-y-6">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1961,7 +1961,7 @@ export class CleaningAhManager {
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:gap-3">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_150px_120px_minmax(14rem,1fr)_auto] lg:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
@@ -1975,24 +1975,24 @@ export class CleaningAhManager {
                                 categoryKey
                             });
                             return `
-                                <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_140px_110px_minmax(0,1fr)_auto] md:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
+                                <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_150px_120px_minmax(14rem,1fr)_auto] lg:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
                                         <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                                         <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
                                         <input type="number" name="laundryKg" class="w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(row.laundryKg))}" placeholder="0">
                                     </label>
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(t("common.notes"))}</span>
+                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(t("common.notes"))}</span>
                                         <input type="text" name="notes" class="w-full" value="${escapeHtml(row.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
                                     </label>
-                                    <div class="flex items-center justify-end md:pt-0.5">
+                                    <div class="flex items-center justify-end lg:pt-0.5">
                                         <button type="button" data-action="remove-cleaning-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(this.tr("actions.removeRow"))}</button>
                                     </div>
                                 </div>
@@ -2029,7 +2029,7 @@ export class CleaningAhManager {
             .join("");
 
         return `
-            <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.35fr)]">
+            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
                 <div class="space-y-6">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -2133,7 +2133,7 @@ export class CleaningAhManager {
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 md:grid md:grid-cols-[minmax(0,1.35fr)_120px_minmax(0,1fr)_auto] md:gap-3">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_130px_minmax(14rem,1fr)_auto] lg:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
@@ -2141,20 +2141,20 @@ export class CleaningAhManager {
                     </div>
                     <div class="divide-y divide-slate-200">
                         ${rows.map((row, index) => `
-                            <div class="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_120px_minmax(0,1fr)_auto] md:items-start" data-laundry-batch-row="${escapeHtml(row.rowId)}">
+                            <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_130px_minmax(14rem,1fr)_auto] lg:items-start" data-laundry-batch-row="${escapeHtml(row.rowId)}">
                                 <label class="block">
-                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
                                     <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
                                 </label>
                                 <label class="block">
-                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
                                     <input type="number" name="kg" class="w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(row.kg))}" placeholder="0">
                                 </label>
                                 <label class="block">
-                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 md:hidden">${escapeHtml(t("common.notes"))}</span>
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(t("common.notes"))}</span>
                                     <input type="text" name="notes" class="w-full" value="${escapeHtml(row.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
                                 </label>
-                                <div class="flex items-center justify-end md:pt-0.5">
+                                <div class="flex items-center justify-end lg:pt-0.5">
                                     <button type="button" data-action="remove-laundry-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(this.tr("actions.removeRow"))}</button>
                                 </div>
                             </div>
@@ -2178,7 +2178,7 @@ export class CleaningAhManager {
             .join("");
 
         return `
-            <section class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(24rem,0.9fr)_minmax(0,1.4fr)]">
+            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.78fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(32rem,0.72fr)_minmax(0,1.85fr)]">
                 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                         <div>
@@ -2714,7 +2714,7 @@ export class CleaningAhManager {
                     </div>
                     <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.totals.count))}</div>
                 </div>
-                <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
                     ${this.renderMetricCard(this.tr("metrics.kg"), this.formatNumber(laundrySummary.totals.kg))}
                     ${this.renderMetricCard(this.tr("metrics.amount"), this.formatCurrency(laundrySummary.totals.amount))}
                     ${this.renderMetricCard(this.tr("metrics.rows"), String(laundrySummary.totals.count))}

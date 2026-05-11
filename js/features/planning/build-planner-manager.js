@@ -354,7 +354,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide se a primeira fase e so leitura ou se no futuro precisas de write-back.",
             "Lista os campos de reserva que ainda vivem apenas em Google Sheets."
         ],
-        relatedApps: ["Reservas semanais", "Propriedades", "Cleaning AH"]
+        relatedApps: ["Reservas semanais", "Propriedades", "Limpeza AH"]
     },
     "task-engine": {
         title: "Motor de Tarefas por Reserva",
@@ -365,7 +365,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide quais tarefas sao obrigatorias e quais sao opcionais por tipo de propriedade.",
             "Diz quem deve ser o responsavel normal por cada tipo de tarefa."
         ],
-        relatedApps: ["Cleaning AH", "Welcome Packs", "Checklists", "Propriedades"]
+        relatedApps: ["Limpeza AH", "Welcome Packs", "Checklists", "Propriedades"]
     },
     "arrivals-board": {
         title: "Painel de Chegadas e Saidas",
@@ -376,7 +376,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide se o painel deve ser so por dia ou tambem agrupado por zona ou por responsavel.",
             "Lista as principais razoes pelas quais um turnaround falha ou atrasa hoje."
         ],
-        relatedApps: ["Reservas semanais", "Cleaning AH", "Staff", "Propriedades"]
+        relatedApps: ["Reservas semanais", "Limpeza AH", "Staff", "Propriedades"]
     },
     "housekeeping-mobile": {
         title: "Fluxo Mobile de Housekeeping",
@@ -420,7 +420,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Lista os documentos ou totais que os proprietarios esperam em cada periodo.",
             "Decide se a primeira versao e apenas interna ou tambem visivel para o proprietario."
         ],
-        relatedApps: ["Proprietarios", "Cleaning AH", "Propriedades"]
+        relatedApps: ["Proprietarios", "Limpeza AH", "Propriedades"]
     },
     "finance-reconciliation": {
         title: "Reconciliacao Financeira",
@@ -431,7 +431,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide se imports bancarios sao aceitaveis na primeira fase.",
             "Descreve qual e a discrepancia mais comum que hoje te obriga a verificar manualmente."
         ],
-        relatedApps: ["Cleaning AH", "Proprietarios", "Faturas IVA Airbnb"]
+        relatedApps: ["Limpeza AH", "Proprietarios", "Faturas IVA Airbnb"]
     },
     "property-profitability": {
         title: "Rentabilidade por Propriedade",
@@ -442,7 +442,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide se queres rentabilidade por mes, por estadia, ou por ambos.",
             "Lista custos fixos por propriedade que tenham de entrar no calculo."
         ],
-        relatedApps: ["Cleaning AH", "Proprietarios", "Propriedades", "Reservas semanais"]
+        relatedApps: ["Limpeza AH", "Proprietarios", "Propriedades", "Reservas semanais"]
     },
     "compliance-center": {
         title: "Centro de Compliance",
@@ -497,7 +497,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Diz que equipas precisam de routing primeiro: limpeza, inspecoes, manutencao, ou todas.",
             "Lista as restricoes que mais pesam: urgencia no mesmo dia, familiaridade com a area, tipo de viatura, e semelhantes."
         ],
-        relatedApps: ["Staff", "Veiculos", "Propriedades", "Cleaning AH"]
+        relatedApps: ["Staff", "Veiculos", "Propriedades", "Limpeza AH"]
     },
     "external-portals": {
         title: "Portais para Fornecedores e Proprietarios",
@@ -508,7 +508,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Define exatamente o que cada papel externo pode ver ou atualizar.",
             "Decide se a primeira versao e so leitura ou interativa."
         ],
-        relatedApps: ["Proprietarios", "Checklists", "Cleaning AH", "Staff"]
+        relatedApps: ["Proprietarios", "Checklists", "Limpeza AH", "Staff"]
     },
     "ai-search": {
         title: "Assistente IA e Pesquisa Global",
@@ -530,7 +530,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide que alertas sao criticos ao ponto de ficarem no topo todos os dias.",
             "Diz se os alertas devem ficar dentro da app primeiro ou se no futuro tambem devem ir por email ou WhatsApp."
         ],
-        relatedApps: ["Cleaning AH", "Safety", "Reservas semanais", "Horario"]
+        relatedApps: ["Limpeza AH", "Safety", "Reservas semanais", "Horario"]
     },
     "document-ingestion": {
         title: "Ingestao de Documentos e OCR",
@@ -552,7 +552,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Decide que papeis podem aprovar que tipo de acoes.",
             "Diz se historico apenas de leitura chega para o inicio ou se ja precisas de workflow de aprovacao."
         ],
-        relatedApps: ["Proprietarios", "Cleaning AH", "Gestao de utilizadores", "Time Clock"]
+        relatedApps: ["Proprietarios", "Limpeza AH", "Gestao de utilizadores", "Time Clock"]
     },
     "vendor-management": {
         title: "Gestao de Fornecedores",
@@ -563,7 +563,7 @@ const ROADMAP_TRANSLATIONS_PT = {
             "Escolhe os campos minimos de fornecedor: valor, area, especialidade, rapidez de resposta, e semelhantes.",
             "Decide se scoring ou historico de avaliacao interessam logo na primeira fase."
         ],
-        relatedApps: ["Proprietarios", "Veiculos", "Cleaning AH", "Propriedades"]
+        relatedApps: ["Proprietarios", "Veiculos", "Limpeza AH", "Propriedades"]
     },
     "background-jobs": {
         title: "Jobs de Fundo e Workers de Integracao",
