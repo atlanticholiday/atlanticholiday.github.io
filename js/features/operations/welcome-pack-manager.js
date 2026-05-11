@@ -1169,7 +1169,7 @@ export class WelcomePackManager {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <article class="welcome-pack-metric">
                         <span>${this.tr('dashboard.metrics.loggedCharges')}</span>
                         <strong>${logSummary.totals.count}</strong>
@@ -3180,7 +3180,7 @@ export class WelcomePackManager {
         this.propertyOptions = propertyOptions;
 
         container.innerHTML = `
-            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)] gap-6">
+            <div class="welcome-pack-log-layout">
                 <section class="welcome-pack-panel">
                     <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
                         <div>

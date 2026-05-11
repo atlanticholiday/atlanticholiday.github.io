@@ -1388,6 +1388,7 @@
       "madeiraHolidays": "Reference local public holidays and major island events while planning coverage."
     },
     "legend": {
+      "title": "Legend",
       "working": "Working",
       "holiday": "Holiday ★",
       "offWeekend": "Off/Weekend"

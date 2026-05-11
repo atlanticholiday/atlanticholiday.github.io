@@ -34,12 +34,12 @@ export function renderMonthlyCalendarView(uiManager) {
         dayCell.dataset.date = summary.dateKey;
         dayCell.title = getDayCellTitle(summary);
         dayCell.innerHTML = `
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <div class="text-[11px] font-semibold uppercase tracking-[0.16em] ${summary.isHoliday ? 'text-amber-700' : 'text-slate-400'}">${summary.weekdayLabel}</div>
-                    <div class="mt-2 text-3xl font-semibold ${summary.isHoliday ? 'text-amber-950' : 'text-slate-950'}">${summary.dayNumber}</div>
+            <div class="schedule-day-cell__top flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="schedule-day-cell__weekday text-[11px] font-semibold uppercase tracking-[0.16em] ${summary.isHoliday ? 'text-amber-700' : 'text-slate-400'}">${summary.weekdayLabel}</div>
+                    <div class="schedule-day-cell__number mt-2 text-3xl font-semibold ${summary.isHoliday ? 'text-amber-950' : 'text-slate-950'}">${summary.dayNumber}</div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="schedule-day-cell__signals flex items-center gap-2">
                     ${summary.dailyNote ? `
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-sky-600 shadow-sm" title="${summary.dailyNote}">
                             ${getNoteIconMarkup()}
@@ -55,18 +55,18 @@ export function renderMonthlyCalendarView(uiManager) {
                     </span>
                 </div>
             </div>
-            <div class="mt-5 flex-1">
+            <div class="schedule-day-cell__body mt-5 flex-1">
                 ${summary.holidayName ? `
                     <div class="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">
                         ${t('schedule.legend.holiday')}
                     </div>
-                    <div class="mt-3 text-sm font-medium text-amber-900">${truncateText(summary.holidayName, 32)}</div>
+                    <div class="schedule-day-cell__status mt-3 text-sm font-medium text-amber-900">${truncateText(summary.holidayName, 42)}</div>
                 ` : `
-                    <div class="text-sm font-medium text-slate-700">${summary.isWeekend ? t('schedule.legend.offWeekend') : t('schedule.calendar.working')}</div>
-                    <div class="mt-2 text-xs text-slate-500">${t('schedule.viewDescriptions.monthlyShort')}</div>
+                    <div class="schedule-day-cell__status text-sm font-medium text-slate-700">${summary.isWeekend ? t('schedule.legend.offWeekend') : t('schedule.calendar.working')}</div>
+                    <div class="schedule-day-cell__hint mt-2 text-xs text-slate-500">${t('schedule.viewDescriptions.monthlyShort')}</div>
                 `}
             </div>
-            <div class="mt-5 flex flex-wrap gap-2">
+            <div class="schedule-day-cell__badges mt-5 flex flex-wrap gap-2">
                 ${summary.absentCount > 0 ? `<span class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">${summary.absentCount} ${t('schedule.calendar.absent')}</span>` : ''}
                 ${summary.vacationCount > 0 ? `<span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">${summary.vacationCount} ${t('schedule.calendar.onVacation')}</span>` : ''}
                 ${summary.absentCount === 0 && summary.vacationCount === 0 ? `<span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">${t('schedule.workspace.clearDay')}</span>` : ''}
@@ -179,18 +179,18 @@ function getWeekdayOffset(date) {
 
 function getDayCellClassName(summary) {
     if (summary.isHoliday) {
-        return 'day-cell group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,235,1)_0%,rgba(254,243,199,0.8)_100%)] px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
+        return 'day-cell schedule-day-cell schedule-day-cell--holiday group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,235,1)_0%,rgba(254,243,199,0.8)_100%)] px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
     }
 
     if (summary.isSkeletonCrew) {
-        return 'day-cell group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-rose-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(255,241,242,1)_100%)] px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
+        return 'day-cell schedule-day-cell schedule-day-cell--alert group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-rose-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(255,241,242,1)_100%)] px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
     }
 
     if (summary.isWeekend) {
-        return 'day-cell group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-slate-50/90 px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md';
+        return 'day-cell schedule-day-cell schedule-day-cell--quiet group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-slate-50/90 px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md';
     }
 
-    return 'day-cell group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md';
+    return 'day-cell schedule-day-cell group relative flex min-h-[9rem] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white px-3.5 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md';
 }
 
 function getMobileDayCardClassName(summary) {

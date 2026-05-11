@@ -1389,6 +1389,7 @@
             "madeiraHolidays": "Consulte feriados locais e eventos importantes da ilha ao planear a cobertura."
         },
         "legend": {
+            "title": "Legenda",
             "working": "A Trabalhar",
             "holiday": "Feriado ★",
             "offWeekend": "Folga/Fim-de-semana"
