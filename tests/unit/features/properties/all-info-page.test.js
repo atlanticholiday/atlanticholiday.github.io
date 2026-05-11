@@ -132,6 +132,58 @@ describe("all-info-page", () => {
     assert.equal(firstRowName, "Acanto");
   });
 
+  test("renders an open link action beside URL fields", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    initializeAllInfoPage({
+      documentRef: document,
+      properties: [
+        {
+          id: "property-1",
+          name: "Acanto",
+          location: "Funchal",
+          googleMapsLink: "maps.google.com/example"
+        }
+      ]
+    });
+
+    document.querySelector('[data-idx="1"]').click();
+
+    const openLink = document.querySelector(".allinfo-link-open");
+    assert.ok(openLink);
+    assert.equal(openLink.getAttribute("target"), "_blank");
+    assert.equal(openLink.getAttribute("rel"), "noopener noreferrer");
+    assert.equal(openLink.href, "https://maps.google.com/example");
+  });
+
+  test("switches categories from the left category rail", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    initializeAllInfoPage({
+      documentRef: document,
+      properties: [
+        {
+          id: "property-1",
+          name: "Acanto",
+          location: "Funchal",
+          googleMapsLink: "https://maps.example.com"
+        }
+      ]
+    });
+
+    document.querySelector('[data-idx="1"]').click();
+
+    assert.ok(document.querySelector(".allinfo-category-header h3").textContent.includes("Maps"));
+  });
+
   test("turns off edit modes when leaving the edit tools workspace", () => {
     resetDom(`
       <div id="allinfo-filter-wrapper"></div>

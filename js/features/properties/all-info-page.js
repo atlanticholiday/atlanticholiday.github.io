@@ -337,6 +337,26 @@ function isBooleanField(field) {
     return /Enabled$/.test(field);
 }
 
+function isUrlField(field) {
+    return /(Link|Url)$/i.test(field);
+}
+
+function normalizeHref(value) {
+    const trimmed = String(value ?? '').trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    const withProtocol = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+    try {
+        const url = new URL(withProtocol);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch (error) {
+        return '';
+    }
+}
+
 function normalizeInlineValue(input) {
     let value = input.value;
 
@@ -409,13 +429,58 @@ function createInlineFieldControl(documentRef, field, value) {
 
     const input = documentRef.createElement('input');
     input.className = 'allinfo-inline-input';
-    input.type = isNumericField(field) ? 'number' : 'text';
+    input.type = isNumericField(field) ? 'number' : (isUrlField(field) ? 'url' : 'text');
     if (input.type === 'number') {
         input.step = '0.01';
     }
     input.value = currentValue;
     input.placeholder = buildLabel(field);
     return input;
+}
+
+function appendInlineFieldControl(documentRef, cell, input, field) {
+    if (!isUrlField(field) || input.tagName !== 'INPUT') {
+        cell.appendChild(input);
+        return;
+    }
+
+    const wrapper = documentRef.createElement('div');
+    wrapper.className = 'allinfo-link-control';
+
+    const openLink = documentRef.createElement('a');
+    openLink.className = 'allinfo-link-open';
+    openLink.target = '_blank';
+    openLink.rel = 'noopener noreferrer';
+    openLink.innerHTML = '<i class="fas fa-up-right-from-square"></i><span>Open</span>';
+
+    const updateOpenLink = () => {
+        const href = normalizeHref(input.value);
+        if (href) {
+            openLink.href = href;
+            openLink.title = href;
+            openLink.removeAttribute('aria-disabled');
+            openLink.removeAttribute('tabindex');
+        } else {
+            openLink.removeAttribute('href');
+            openLink.title = 'Add a link to open it';
+            openLink.setAttribute('aria-disabled', 'true');
+            openLink.setAttribute('tabindex', '-1');
+        }
+    };
+
+    openLink.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (!openLink.href) {
+            event.preventDefault();
+        }
+    });
+    input.addEventListener('input', updateOpenLink);
+    input.addEventListener('change', updateOpenLink);
+    updateOpenLink();
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(openLink);
+    cell.appendChild(wrapper);
 }
 
 function sortTable(table, columnIndex, ascending) {
@@ -516,24 +581,13 @@ function createSearchBars(documentRef) {
     fieldFilterWrapper.appendChild(fieldFilterLabel);
     fieldFilterWrapper.appendChild(fieldFilterSelect);
 
-    const categorySearchWrapper = documentRef.createElement('div');
-    categorySearchWrapper.id = 'allinfo-cat-search-wrapper';
-
-    const categorySearchInput = documentRef.createElement('input');
-    categorySearchInput.id = 'allinfo-cat-search';
-    categorySearchInput.type = 'text';
-    categorySearchInput.placeholder = copy('searchCategories');
-
-    categorySearchWrapper.appendChild(categorySearchInput);
     searchBarsContainer.appendChild(propertyFilterWrapper);
     searchBarsContainer.appendChild(dataFilterWrapper);
     searchBarsContainer.appendChild(fieldFilterWrapper);
-    searchBarsContainer.appendChild(categorySearchWrapper);
 
     return {
         searchBarsContainer,
         propertyFilterInput,
-        categorySearchInput,
         dataFilterSelect,
         fieldFilterSelect
     };
@@ -1030,7 +1084,7 @@ function renderCategoryTable({
                         saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('table.save')}</span>`;
                     }
                 });
-                td.appendChild(input);
+                appendInlineFieldControl(documentRef, td, input, fieldKey);
                 td.dataset.display = isNumeric ? currencyFormatter.format(numericValue) : '';
             } else {
                 const input = createInlineFieldControl(documentRef, fieldKey, property[fieldKey]);
@@ -1059,7 +1113,7 @@ function renderCategoryTable({
                         saveButton.innerHTML = `<i class="fas fa-save"></i><span>${copy('table.save')}</span>`;
                     }
                 });
-                td.appendChild(input);
+                appendInlineFieldControl(documentRef, td, input, fieldKey);
             }
 
             row.appendChild(td);
@@ -1161,7 +1215,6 @@ export function initializeAllInfoPage({
     const {
         searchBarsContainer,
         propertyFilterInput,
-        categorySearchInput,
         dataFilterSelect,
         fieldFilterSelect
     } = createSearchBars(documentRef);
@@ -1215,7 +1268,6 @@ export function initializeAllInfoPage({
     const filterState = {
         activeCategoryIndex: 0,
         propertySearch: '',
-        categorySearch: '',
         dataMode: 'all',
         fieldKey: '',
         workspace: 'table'
@@ -1399,28 +1451,6 @@ export function initializeAllInfoPage({
         };
 
         navigationElement.appendChild(button);
-    });
-
-    categorySearchInput.addEventListener('input', (event) => {
-        const searchTerm = event.target.value.toLowerCase();
-        filterState.categorySearch = searchTerm;
-
-        Array.from(navigationElement.children).forEach((button) => {
-            const categoryIndex = Number.parseInt(button.dataset.idx, 10);
-            const category = ALL_INFO_CATEGORIES[categoryIndex];
-            const matchesCategory = button.textContent.toLowerCase().includes(searchTerm)
-                || category.fields.some((field) => field.toLowerCase().includes(searchTerm));
-            button.style.display = matchesCategory ? '' : 'none';
-        });
-
-        const hasVisibleActiveButton = Array.from(navigationElement.children).some((button) => (
-            button.classList.contains('bg-gray-100') && button.style.display !== 'none'
-        ));
-
-        if (!hasVisibleActiveButton) {
-            const firstVisibleButton = Array.from(navigationElement.children).find((button) => button.style.display !== 'none');
-            firstVisibleButton?.click();
-        }
     });
 
     propertyFilterInput.addEventListener('input', (event) => {
