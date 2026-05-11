@@ -174,7 +174,7 @@ export class LaundryLogManager {
             page.id = "laundry-log-page";
             page.className = "hidden min-h-screen bg-stone-50";
             page.innerHTML = `
-                <div id="laundry-log-shell" class="mx-auto w-full max-w-[1500px] px-4 py-6 xl:px-6 2xl:px-8">
+                <div id="laundry-log-shell" class="mx-auto w-full max-w-[1920px] px-4 py-6 xl:px-8 2xl:px-10">
                     <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div class="flex items-center gap-3">
                             <button id="back-to-landing-from-laundry-log-btn" class="inline-flex items-center text-sm text-slate-600 hover:text-slate-900">
@@ -881,9 +881,9 @@ export class LaundryLogManager {
 
     renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey }) {
         return `
-            <section class="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
+            <section class="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
                 ${this.renderSectionNavigator()}
-                <div class="space-y-6">
+                <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.36fr)] 2xl:items-start">
                     <article id="laundry-log-form-card" class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -918,7 +918,7 @@ export class LaundryLogManager {
                             <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
                             <button type="button" data-laundry-action="workspace" data-workspace="returns" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.openReturns"))}</button>
                         </div>
-                        <div class="mt-6 space-y-4">
+                        <div class="mt-6 grid gap-4 2xl:grid-cols-2">
                             ${LAUNDRY_LOG_GROUPS.map((section) => {
                                 const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { delivered: 0, received: 0 };
                                 return this.renderSection(section, summary, this.draft.items);
@@ -934,7 +934,7 @@ export class LaundryLogManager {
                             <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
                         </div>
                     </article>
-                    <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 2xl:sticky 2xl:top-24">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(this.tr("views.pendingTitle"))}</div>
@@ -942,7 +942,7 @@ export class LaundryLogManager {
                             </div>
                             <button type="button" data-laundry-action="workspace" data-workspace="returns" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.viewAllReturns"))}</button>
                         </div>
-                        <div class="mt-5 grid gap-4 lg:grid-cols-2">
+                        <div class="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-1">
                             ${pendingRecords.length ? pendingRecords.map((record) => this.renderPendingCard(record)).join("") : `<p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">${escapeHtml(this.tr("empty.pending"))}</p>`}
                         </div>
                     </section>
