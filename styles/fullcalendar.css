@@ -1,46 +1,65 @@
 /* Custom FullCalendar Styling for Vacation Planner */
 #vacation-calendar {
-  --fc-border-color: transparent; /* remove default borders */
+  --fc-border-color: #e2e8f0;
+  --fc-page-bg-color: #ffffff;
+  --fc-small-font-size: 0.78rem;
+  min-height: 620px;
 }
 
 #vacation-calendar .fc-toolbar {
-  margin-bottom: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
 }
 
 #vacation-calendar .fc-toolbar-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--brand-color);
+  color: #0f172a;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
 #vacation-calendar .fc-button {
-  background: var(--gradient-brand);
-  border: none;
-  color: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-button);
-  padding: 0.45rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  color: #334155;
+  font-weight: 700;
+  padding: 0.48rem 0.8rem;
   transition: var(--transition-smooth);
 }
 
 #vacation-calendar .fc-button:hover,
 #vacation-calendar .fc-button:focus {
-  background: var(--brand-color-dark);
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
   transform: translateY(-1px);
 }
 
+#vacation-calendar .fc-button-primary:not(:disabled).fc-button-active {
+  border-color: #0f172a;
+  background: #0f172a;
+  color: #ffffff;
+}
+
 #vacation-calendar .fc-button:disabled {
-  background: rgba(233, 75, 90, 0.4);
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
 /* Event appearance */
 #vacation-calendar .vacation-event {
-  background: var(--gradient-brand) !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
   color: #ffffff !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-glass);
+  border-radius: 999px !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 0.12rem 0.25rem;
   transition: var(--transition-smooth);
 }
 
@@ -51,18 +70,71 @@
 
 /* Today cell highlight */
 #vacation-calendar .fc-day-today {
-  background: var(--gradient-brand-soft) !important;
+  background: #fff7ed !important;
 }
 
-/* Remove grid borders for a cleaner look */
 #vacation-calendar .fc-scrollgrid,
 #vacation-calendar .fc-scrollgrid td,
 #vacation-calendar .fc-col-header-cell {
-  border-color: transparent !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* Day number styling */
 #vacation-calendar .fc-daygrid-day-number {
-  font-weight: 500;
-  color: #374151;
+  color: #334155;
+  font-weight: 750;
+  padding: 0.45rem 0.55rem;
+}
+
+#vacation-calendar .fc-col-header-cell {
+  background: #f8fafc;
+}
+
+#vacation-calendar .fc-col-header-cell-cushion {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 0.8rem 0.35rem;
+  text-transform: uppercase;
+}
+
+#vacation-calendar .fc-daygrid-day-frame {
+  min-height: 104px;
+  padding: 0.2rem;
+}
+
+#vacation-calendar .fc-daygrid-day:hover {
+  background: #f8fafc;
+}
+
+#vacation-calendar .fc-daygrid-event {
+  margin-top: 0.22rem;
+}
+
+#vacation-calendar .fc-list {
+  border-color: #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+#vacation-calendar .fc-list-day-cushion {
+  background: #f8fafc !important;
+  color: #0f172a;
+}
+
+@media (max-width: 720px) {
+  #vacation-calendar {
+    min-height: 560px;
+  }
+
+  #vacation-calendar .fc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #vacation-calendar .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+  }
 }

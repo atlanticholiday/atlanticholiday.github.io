@@ -18,6 +18,32 @@ const ACTIONS = Object.freeze({
 const PRIVILEGED_ROLE_KEYS = new Set(["admin", "manager", "supervisor"]);
 const NUKI_APP_ACCESS_KEY = "nukiDoors";
 
+exports.createPasswordResetLink = onCall(async (request) => {
+  const access = await requirePrivilegedAccess(request);
+  const email = normalizeRawEmail(request.data?.email);
+
+  if (!email || !email.includes("@")) {
+    throw new HttpsError("invalid-argument", "A valid email address is required.");
+  }
+
+  try {
+    const resetLink = await admin.auth().generatePasswordResetLink(email);
+    await writeAudit({
+      email: access.email,
+      event: "password_reset_link_created",
+      targetEmail: email
+    });
+    return { resetLink };
+  } catch (error) {
+    if (error?.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "No Firebase Auth login exists for this email address.");
+    }
+
+    console.error("Failed to create password reset link:", error);
+    throw new HttpsError("internal", error?.message || "Failed to create password reset link.");
+  }
+});
+
 exports.nukiListDoors = onCall(async (request) => {
   const access = await requireNukiAccess(request);
   const doors = await getConfiguredDoors();
@@ -121,14 +147,9 @@ exports.nukiDeleteDoor = onCall(async (request) => {
 });
 
 async function requireNukiAccess(request) {
-  const email = request.auth?.token?.email;
-  if (!email) {
-    throw new HttpsError("unauthenticated", "Sign in before using Nuki doors.");
-  }
-
-  const accessEntry = await getAccessEntry(email);
-  const roles = Array.isArray(accessEntry?.roles) ? accessEntry.roles : [];
-  const allowedApps = Array.isArray(accessEntry?.allowedApps) ? accessEntry.allowedApps : [];
+  const access = await requireAuthenticatedAccess(request, "Sign in before using Nuki doors.");
+  const roles = Array.isArray(access.accessEntry?.roles) ? access.accessEntry.roles : [];
+  const allowedApps = Array.isArray(access.accessEntry?.allowedApps) ? access.accessEntry.allowedApps : [];
   const privileged = roles.some((role) => PRIVILEGED_ROLE_KEYS.has(normalizeRole(role)));
   const allowed = privileged || allowedApps.includes(NUKI_APP_ACCESS_KEY);
 
@@ -136,7 +157,29 @@ async function requireNukiAccess(request) {
     throw new HttpsError("permission-denied", "This account does not have Nuki door access.");
   }
 
-  return { email, privileged, roles, allowedApps };
+  return { email: access.email, privileged, roles, allowedApps };
+}
+
+async function requirePrivilegedAccess(request) {
+  const access = await requireAuthenticatedAccess(request, "Sign in before managing passwords.");
+  const roles = Array.isArray(access.accessEntry?.roles) ? access.accessEntry.roles : [];
+  const privileged = roles.some((role) => PRIVILEGED_ROLE_KEYS.has(normalizeRole(role)));
+
+  if (!privileged) {
+    throw new HttpsError("permission-denied", "Only privileged users can manage password reset links.");
+  }
+
+  return { email: access.email, roles };
+}
+
+async function requireAuthenticatedAccess(request, unauthenticatedMessage) {
+  const email = request.auth?.token?.email;
+  if (!email) {
+    throw new HttpsError("unauthenticated", unauthenticatedMessage);
+  }
+
+  const accessEntry = await getAccessEntry(email);
+  return { email, accessEntry };
 }
 
 async function getAccessEntry(email) {

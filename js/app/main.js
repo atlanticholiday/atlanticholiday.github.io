@@ -547,7 +547,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             accessManager,
             roleManager,
             createAuthUser: (email, password) => createSecondaryAuthUser(email, password),
-            sendPasswordReset: (email) => sendPasswordResetEmail(auth, email),
+            sendPasswordReset: async (email) => {
+                if (functionsInstance) {
+                    try {
+                        const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
+                        const result = await createPasswordResetLink({ email });
+                        return result.data || {};
+                    } catch (error) {
+                        if (error?.code !== 'functions/not-found' && error?.code !== 'functions/unavailable') {
+                            throw error;
+                        }
+                        console.warn('Password reset link function unavailable; falling back to Firebase email reset.', error);
+                    }
+                }
+
+                await sendPasswordResetEmail(auth, email);
+                return { emailRequested: true };
+            },
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
             ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload)
         });

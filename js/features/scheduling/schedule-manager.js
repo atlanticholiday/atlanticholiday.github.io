@@ -49,33 +49,11 @@ export class ScheduleManager {
         const container = document.getElementById('vacation-planner-container');
         if (!container) return;
 
-        // 1. Header & Controls
-        container.innerHTML = `
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-gradient">${t('schedule.vacation.title')}</h2>
-                    <p class="text-gray-600">${t('schedule.vacation.subtitle')}</p>
-                </div>
-                <button id="main-book-vacation-btn" class="btn-primary shadow-lg hover-lift px-6 py-2 rounded-full flex items-center gap-2" style="background: linear-gradient(135deg, #e94b5a 0%, #d3414f 100%) !important; color: white !important;">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    ${t('schedule.vacation.bookNew')}
-                </button>
-            </div>
-            <div id="vacation-calendar" class="bg-white rounded-xl shadow-lg p-4 min-h-[600px]"></div>
-            <div class="mt-6">
-                <h3 class="font-semibold text-lg mb-4">${t('schedule.vacation.upcomingList')}</h3>
-                <div id="vacation-list-view" class="space-y-3"></div>
-            </div>
-        `;
-
-        // 2. Setup Actions
-        document.getElementById('main-book-vacation-btn').addEventListener('click', () => this.openBookVacationModal());
-
-        // 3. Prepare Calendar Events
         const employees = this.dataManager.getActiveEmployees();
         const vacationEntries = this.dataManager.getSharedVacationEntries();
         const events = [];
         const employeeColors = {};
+        const todayKey = this.getLocalDateKey(new Date());
 
         // Generate consistent colors for employees
         const getEmployeeColor = (name) => {
@@ -107,7 +85,58 @@ export class ScheduleManager {
             });
         });
 
-        // 4. Initialize FullCalendar
+        const upcomingVacations = vacationEntries
+            .map((vacation) => ({
+                ...vacation,
+                employeeColor: employeeColors[vacation.employeeId]
+            }))
+            .filter((vacation) => vacation.endDate >= todayKey)
+            .sort((left, right) => left.startDate.localeCompare(right.startDate));
+        const awayTodayCount = vacationEntries.filter((vacation) => vacation.startDate <= todayKey && vacation.endDate >= todayKey).length;
+
+        container.innerHTML = `
+            <div class="vacation-planner-shell">
+                <section class="vacation-planner-hero">
+                    <div>
+                        <div class="vacation-planner-kicker">${t('schedule.views.vacationPlanner')}</div>
+                        <h2>${t('schedule.vacation.title')}</h2>
+                        <p>${t('schedule.vacation.subtitle')}</p>
+                    </div>
+                    <div class="vacation-planner-actions">
+                        <div class="vacation-planner-stat">
+                            <span>${t('schedule.board.summaryAwayToday')}</span>
+                            <strong>${awayTodayCount}</strong>
+                        </div>
+                        <div class="vacation-planner-stat">
+                            <span>${t('schedule.board.upcomingLabel')}</span>
+                            <strong>${upcomingVacations.length}</strong>
+                        </div>
+                        <button id="main-book-vacation-btn" class="vacation-planner-primary-btn" type="button">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            ${t('schedule.vacation.bookNew')}
+                        </button>
+                    </div>
+                </section>
+                <div class="vacation-planner-grid">
+                    <section class="vacation-calendar-panel">
+                        <div id="vacation-calendar"></div>
+                    </section>
+                    <aside class="vacation-upcoming-panel">
+                        <div class="vacation-upcoming-heading">
+                            <div>
+                                <span>${t('schedule.board.upcomingLabel')}</span>
+                                <h3>${t('schedule.vacation.upcomingList')}</h3>
+                            </div>
+                            <strong>${upcomingVacations.length}</strong>
+                        </div>
+                        <div id="vacation-list-view" class="vacation-list-view"></div>
+                    </aside>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('main-book-vacation-btn').addEventListener('click', () => this.openBookVacationModal());
+
         if (typeof FullCalendar !== 'undefined') {
             const calendarEl = document.getElementById('vacation-calendar');
             const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -119,6 +148,7 @@ export class ScheduleManager {
                 },
                 events: events,
                 selectable: true,
+                eventClassNames: ['vacation-event'],
                 select: (info) => {
                     this.openBookVacationModal(info.startStr, info.endStr ? new Date(new Date(info.endStr).setDate(new Date(info.endStr).getDate() - 1)).toISOString().split('T')[0] : info.startStr);
                 },
@@ -137,18 +167,8 @@ export class ScheduleManager {
             calendar.render();
         }
 
-        // 5. Render Simple List View (Optional but helpful)
         const listView = document.getElementById('vacation-list-view');
         if (listView) {
-            const todayKey = this.getLocalDateKey(new Date());
-            const upcomingVacations = vacationEntries
-                .map((vacation) => ({
-                    ...vacation,
-                    employeeColor: employeeColors[vacation.employeeId]
-                }))
-                .filter((vacation) => vacation.endDate >= todayKey)
-                .sort((left, right) => left.startDate.localeCompare(right.startDate));
-
             if (!upcomingVacations.length) {
                 listView.innerHTML = `
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
@@ -159,7 +179,7 @@ export class ScheduleManager {
                 listView.innerHTML = upcomingVacations.map((vacation) => `
                     <button
                         type="button"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md"
+                        class="vacation-list-item"
                         data-open-vacation
                         data-employee-id="${vacation.employeeId}"
                         data-vacation-id="${vacation.id}">
@@ -300,7 +320,7 @@ export class ScheduleManager {
             year: 'numeric'
         });
 
-        return `${dateFormat.format(new Date(startDate))} - ${dateFormat.format(new Date(endDate))}`;
+        return `${dateFormat.format(new Date(`${startDate}T00:00:00`))} - ${dateFormat.format(new Date(`${endDate}T00:00:00`))}`;
     }
 
     getVacationDurationLabel(startDate, endDate) {

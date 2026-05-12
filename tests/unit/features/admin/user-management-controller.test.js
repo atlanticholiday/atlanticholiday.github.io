@@ -517,4 +517,70 @@ describe("UserManagementController", () => {
     assert.includes(alerts[0], "If nothing arrives, check spam/quarantine");
     assert.ok(!alerts[0].includes("Password reset email sent"));
   });
+
+  test("shows generated reset links so admins are not blocked by email delivery", async () => {
+    createFixture();
+
+    const resetRequests = [];
+    const prompts = [];
+    const copiedLinks = [];
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["ana@example.com"];
+        },
+        async getRoles() {
+          return [];
+        },
+        async getAllowedApps() {
+          return [];
+        },
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      sendPasswordReset: async (email) => {
+        resetRequests.push(email);
+        return { resetLink: "https://example.com/reset?code=abc123" };
+      },
+      getEmployees: () => [],
+      windowRef: {
+        alert() {},
+        confirm() {
+          return true;
+        },
+        prompt(message, value) {
+          prompts.push({ message, value });
+        },
+        navigator: {
+          clipboard: {
+            async writeText(value) {
+              copiedLinks.push(value);
+            }
+          }
+        }
+      }
+    });
+
+    await controller.refreshUserList();
+
+    const resetButton = document.querySelector("#user-list li .user-management-button-secondary");
+    resetButton.click();
+    await flushAsyncWork();
+
+    assert.deepEqual(resetRequests, ["ana@example.com"]);
+    assert.deepEqual(copiedLinks, ["https://example.com/reset?code=abc123"]);
+    assert.equal(prompts.length, 1);
+    assert.includes(prompts[0].message, "Password reset link created for ana@example.com");
+    assert.includes(prompts[0].message, "copied to the clipboard");
+    assert.equal(prompts[0].value, "https://example.com/reset?code=abc123");
+  });
 });

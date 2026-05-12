@@ -702,19 +702,50 @@ export class UserManagementController {
         button.className = 'user-management-button user-management-button-secondary';
         button.addEventListener('click', async () => {
             try {
-                await this.sendPasswordReset(email);
-                this.window.alert(
-                    `Password reset requested for ${email}. `
-                    + `If this address is a Firebase email/password login and delivery is working, the email should arrive soon. `
-                    + `If nothing arrives, check spam/quarantine and verify the account plus email templates in Firebase Authentication.`
-                );
+                const result = await this.sendPasswordReset(email);
+                await this.presentPasswordResetResult(email, result);
             } catch (error) {
                 console.error(error);
-                this.window.alert(`Failed to send reset email: ${error.message}`);
+                this.window.alert(`Failed to create password reset link: ${error.message}`);
             }
         });
 
         return button;
+    }
+
+    async presentPasswordResetResult(email, result = {}) {
+        const resetLink = typeof result?.resetLink === 'string' ? result.resetLink : '';
+
+        if (resetLink) {
+            let copied = false;
+            const clipboard = this.window?.navigator?.clipboard;
+            if (typeof clipboard?.writeText === 'function') {
+                try {
+                    await clipboard.writeText(resetLink);
+                    copied = true;
+                } catch (error) {
+                    console.warn('Failed to copy password reset link:', error);
+                }
+            }
+
+            const message = copied
+                ? `Password reset link created for ${email}. It was copied to the clipboard. Send this link to the user so they can choose a new password.`
+                : `Password reset link created for ${email}. Copy this link and send it to the user so they can choose a new password.`;
+
+            if (typeof this.window.prompt === 'function') {
+                this.window.prompt(message, resetLink);
+                return;
+            }
+
+            this.window.alert(`${message}\n\n${resetLink}`);
+            return;
+        }
+
+        this.window.alert(
+            `Password reset requested for ${email}. `
+            + `If this address is a Firebase email/password login and delivery is working, the email should arrive soon. `
+            + `If nothing arrives, check spam/quarantine and verify the account plus email templates in Firebase Authentication.`
+        );
     }
 
     createDeleteAccessButton(email) {

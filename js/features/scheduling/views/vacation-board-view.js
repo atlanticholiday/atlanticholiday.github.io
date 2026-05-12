@@ -26,6 +26,35 @@ function formatRange(startDate, endDate, locale) {
     return `${formatter.format(new Date(`${startDate}T00:00:00`))} - ${formatter.format(new Date(`${endDate}T00:00:00`))}`;
 }
 
+function formatMonthLabel(year, monthIndex, locale, format = 'short') {
+    return new Intl.DateTimeFormat(locale, { month: format }).format(new Date(year, monthIndex, 1));
+}
+
+function renderVacationSegment(segment, row, year, monthIndex, locale) {
+    const isSingleDay = segment.startDay === segment.endDay;
+    const dayLabel = isSingleDay ? String(segment.startDay) : `${segment.startDay}-${segment.endDay}`;
+    const monthLabel = formatMonthLabel(year, monthIndex, locale, 'short');
+    const fullRange = formatRange(segment.startDate, segment.endDate, locale);
+    const toneClass = row.isCurrentUser
+        ? 'vacation-board-segment--current border-sky-200 bg-sky-50 text-sky-800'
+        : 'vacation-board-segment--team border-rose-200 bg-rose-50 text-rose-800';
+
+    return `
+        <div
+            title="${escapeAttribute(fullRange)}"
+            aria-label="${escapeAttribute(fullRange)}"
+            class="vacation-board-segment rounded-[16px] border px-2.5 py-2 shadow-sm ${toneClass}">
+            <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[13px] font-bold leading-none">${segment.continuesFromPrevious ? '&larr; ' : ''}${dayLabel}${segment.continuesToNext ? ' &rarr;' : ''}</span>
+                <span class="text-[10px] font-bold uppercase tracking-[0.14em] opacity-70">${monthLabel}</span>
+            </div>
+            <div class="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">
+                ${escapeAttribute(fullRange)}
+            </div>
+        </div>
+    `;
+}
+
 function renderMetric(label, value, accentClass = 'text-white') {
     return `
         <div class="border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
@@ -76,9 +105,9 @@ export function renderVacationBoardView(uiManager) {
     const isCurrentYear = year === new Date().getFullYear();
 
     container.innerHTML = `
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-            <section class="overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-                <div class="border-b border-slate-200 bg-[linear-gradient(135deg,rgba(15,23,42,1)_0%,rgba(30,41,59,1)_55%,rgba(59,130,246,0.88)_100%)] px-5 py-6 text-white lg:flex lg:items-start lg:justify-between lg:px-6">
+        <div class="vacation-board-layout grid gap-6 2xl:grid-cols-[minmax(0,1fr)_20rem]">
+            <section class="vacation-board-panel overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+                <div class="border-b border-slate-200 bg-slate-950 px-5 py-6 text-white lg:flex lg:items-start lg:justify-between lg:px-6">
                     <div class="max-w-2xl">
                         <div class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-100">
                             ${t('schedule.board.readOnly')}
@@ -101,7 +130,7 @@ export function renderVacationBoardView(uiManager) {
                     </div>
                 </div>
                 <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 lg:px-6">
-                    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px_auto]">
+                    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px_auto]">
                         <label class="block">
                             <span class="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">${t('schedule.board.searchLabel')}</span>
                             <input
@@ -124,25 +153,27 @@ export function renderVacationBoardView(uiManager) {
                         </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <div class="min-w-[1120px]">
-                        <div class="grid grid-cols-[240px_repeat(12,minmax(72px,1fr))] border-b border-slate-200 bg-slate-950 text-white">
-                            <div class="sticky left-0 z-10 border-r border-white/10 bg-slate-950 px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">${t('schedule.board.colleagueColumn')}</div>
+                <div class="vacation-board-scroll overflow-x-auto">
+                    <div class="vacation-board-table min-w-[1560px]">
+                        <div class="vacation-board-header grid grid-cols-[280px_repeat(12,minmax(100px,1fr))] border-b border-slate-200 bg-slate-950 text-white">
+                            <div class="sticky left-0 z-20 border-r border-white/10 bg-slate-950 px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">${t('schedule.board.colleagueColumn')}</div>
                             ${Array.from({ length: 12 }, (_, monthIndex) => {
-                                const label = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(year, monthIndex, 1));
+                                const label = formatMonthLabel(year, monthIndex, locale, 'short');
+                                const longLabel = formatMonthLabel(year, monthIndex, locale, 'long');
                                 const currentMonthClass = isCurrentYear && monthIndex === currentMonth
                                     ? 'bg-white/8 text-white'
                                     : 'text-slate-300';
 
                                 return `
-                                    <div class="border-r border-white/10 px-2 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.18em] ${currentMonthClass}">
-                                        ${label}
+                                    <div class="border-r border-white/10 px-3 py-4 text-center ${currentMonthClass}">
+                                        <div class="text-[12px] font-bold uppercase tracking-[0.16em]">${label}</div>
+                                        <div class="mt-1 text-[10px] font-medium normal-case tracking-normal text-slate-400">${longLabel}</div>
                                     </div>
                                 `;
                             }).join('')}
                         </div>
                         ${rows.length ? rows.map((row, rowIndex) => `
-                            <div class="grid grid-cols-[240px_repeat(12,minmax(72px,1fr))] border-b border-slate-200/80 last:border-b-0">
+                            <div class="vacation-board-row grid grid-cols-[280px_repeat(12,minmax(100px,1fr))] border-b border-slate-200/80 last:border-b-0">
                                 <div class="sticky left-0 z-[1] border-r px-4 py-4 ${row.isCurrentUser ? 'border-sky-200 bg-[linear-gradient(180deg,rgba(240,249,255,1)_0%,rgba(248,250,252,1)_100%)]' : `border-slate-200 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}">
                                     <div class="flex items-start gap-3">
                                         <div class="flex h-11 w-11 items-center justify-center rounded-2xl ${row.isCurrentUser ? 'bg-sky-700' : 'bg-slate-950'} text-sm font-semibold text-white shadow-sm">${getInitials(row.name)}</div>
@@ -166,15 +197,9 @@ export function renderVacationBoardView(uiManager) {
                                         : (row.isCurrentUser ? 'bg-sky-50/35' : '');
 
                                     return `
-                                        <div class="border-r border-slate-100 px-2 py-3 ${currentMonthCellClass}">
-                                            <div class="min-h-[88px] space-y-2 rounded-[22px] ${segments.length ? (row.isCurrentUser ? 'bg-sky-50/80 px-2 py-2' : 'bg-rose-50/50 px-2 py-2') : ''}">
-                                                ${segments.map((segment) => `
-                                                    <div
-                                                        title="${escapeAttribute(formatRange(segment.startDate, segment.endDate, locale))}"
-                                                        class="rounded-2xl border ${row.isCurrentUser ? 'border-sky-200 text-sky-700' : 'border-rose-200 text-rose-700'} bg-white px-2.5 py-2 text-[11px] font-semibold shadow-sm">
-                                                        <span class="opacity-80">${segment.continuesFromPrevious ? '&larr;' : ''}</span>${segment.label}<span class="opacity-80">${segment.continuesToNext ? '&rarr;' : ''}</span>
-                                                    </div>
-                                                `).join('')}
+                                        <div class="vacation-board-cell border-r border-slate-100 px-2.5 py-3 ${currentMonthCellClass}">
+                                            <div class="min-h-[104px] space-y-2 rounded-[18px] ${segments.length ? (row.isCurrentUser ? 'bg-sky-50/80 px-2 py-2' : 'bg-rose-50/45 px-2 py-2') : 'bg-slate-50/45'}">
+                                                ${segments.map((segment) => renderVacationSegment(segment, row, year, monthIndex, locale)).join('')}
                                             </div>
                                         </div>
                                     `;
