@@ -17,16 +17,27 @@ const ACTIONS = Object.freeze({
 
 const PRIVILEGED_ROLE_KEYS = new Set(["admin", "manager", "supervisor"]);
 const NUKI_APP_ACCESS_KEY = "nukiDoors";
+const CALLABLE_CORS_ORIGINS = [
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+  /^http:\/\/localhost:\d+$/,
+  "https://atlanticholiday.github.io"
+];
 
-exports.createPasswordResetLink = onCall(async (request) => {
-  const access = await requirePrivilegedAccess(request);
+exports.createPasswordResetLink = onCall({ cors: CALLABLE_CORS_ORIGINS }, async (request) => {
+  const access = await requireAdminAccess(request);
   const email = normalizeRawEmail(request.data?.email);
 
   if (!email || !email.includes("@")) {
     throw new HttpsError("invalid-argument", "A valid email address is required.");
   }
 
+  const targetAccessEntry = await getAccessEntry(email);
+  if (!targetAccessEntry) {
+    throw new HttpsError("not-found", "This email is not listed in User Management.");
+  }
+
   try {
+    await admin.auth().getUserByEmail(email);
     const resetLink = await admin.auth().generatePasswordResetLink(email);
     await writeAudit({
       email: access.email,
@@ -40,7 +51,10 @@ exports.createPasswordResetLink = onCall(async (request) => {
     }
 
     console.error("Failed to create password reset link:", error);
-    throw new HttpsError("internal", error?.message || "Failed to create password reset link.");
+    const mappedError = getPasswordResetLinkError(error);
+    throw new HttpsError(mappedError.code, mappedError.message, {
+      authCode: error?.code || null
+    });
   }
 });
 
@@ -160,13 +174,13 @@ async function requireNukiAccess(request) {
   return { email: access.email, privileged, roles, allowedApps };
 }
 
-async function requirePrivilegedAccess(request) {
+async function requireAdminAccess(request) {
   const access = await requireAuthenticatedAccess(request, "Sign in before managing passwords.");
   const roles = Array.isArray(access.accessEntry?.roles) ? access.accessEntry.roles : [];
-  const privileged = roles.some((role) => PRIVILEGED_ROLE_KEYS.has(normalizeRole(role)));
+  const isAdmin = roles.some((role) => normalizeRole(role) === "admin");
 
-  if (!privileged) {
-    throw new HttpsError("permission-denied", "Only privileged users can manage password reset links.");
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "Only administrators can manage password reset links.");
   }
 
   return { email: access.email, roles };
@@ -225,6 +239,29 @@ function canonicalizeEmail(value) {
 
 function normalizeRole(role) {
   return typeof role === "string" ? role.trim().toLowerCase() : "";
+}
+
+function getPasswordResetLinkError(error) {
+  const code = error?.code || "";
+  const knownFailures = new Set([
+    "auth/invalid-email",
+    "auth/invalid-continue-uri",
+    "auth/unauthorized-continue-uri",
+    "auth/missing-continue-uri",
+    "auth/invalid-dynamic-link-domain"
+  ]);
+
+  if (knownFailures.has(code)) {
+    return {
+      code: "failed-precondition",
+      message: `Firebase Auth rejected the password reset link settings (${code}).`
+    };
+  }
+
+  return {
+    code: "internal",
+    message: "Firebase Auth could not create a password reset link. Check the function logs for the exact Admin SDK error."
+  };
 }
 
 async function getConfiguredDoors() {

@@ -706,7 +706,7 @@ export class UserManagementController {
                 await this.presentPasswordResetResult(email, result);
             } catch (error) {
                 console.error(error);
-                this.window.alert(`Failed to create password reset link: ${error.message}`);
+                this.window.alert(`Failed to create password reset link: ${this.getPasswordResetErrorMessage(error)}`);
             }
         });
 
@@ -746,6 +746,19 @@ export class UserManagementController {
             + `If this address is a Firebase email/password login and delivery is working, the email should arrive soon. `
             + `If nothing arrives, check spam/quarantine and verify the account plus email templates in Firebase Authentication.`
         );
+    }
+
+    getPasswordResetErrorMessage(error) {
+        const authCode = error?.details?.authCode || error?.customData?._tokenResponse?.error?.message || '';
+        if (authCode && (!error?.message || error.message === 'internal')) {
+            return `Firebase Auth rejected the request (${authCode}).`;
+        }
+
+        if (error?.message) {
+            return error.message;
+        }
+
+        return 'Unknown error.';
     }
 
     createDeleteAccessButton(email) {
