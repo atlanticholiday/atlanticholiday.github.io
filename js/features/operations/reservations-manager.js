@@ -3,6 +3,7 @@ import {
     addDoc,
     doc,
     deleteDoc,
+    getDocs,
     onSnapshot,
     query,
     where,
@@ -65,6 +66,7 @@ export class ReservationsManager {
             search: ''
         };
         this.saveTimers = new Map();
+        this.isClearingReservations = false;
 
         this.restoreLocalImport();
     }
@@ -213,6 +215,7 @@ export class ReservationsManager {
         const reservationsRef = collection(this.db, 'reservations');
         const reservationsQuery = query(reservationsRef, where('userId', '==', this.userId));
         this.unsubscribe = onSnapshot(reservationsQuery, (snapshot) => {
+            if (this.isClearingReservations) return;
             this.savedRecords = snapshot.docs.map((entry) => normalizeRawReservationDocument({
                 id: entry.id,
                 ...entry.data()
@@ -713,7 +716,7 @@ export class ReservationsManager {
     }
 
     async clearImportPreview() {
-        const savedCount = this.savedRecords.length;
+        const savedCount = await this.countSavedReservationRecords();
         const importedCount = this.importedRecords.length;
         if (savedCount > 0) {
             const confirmed = window.confirm(
@@ -723,8 +726,13 @@ export class ReservationsManager {
         }
 
         if (savedCount > 0) {
+            this.isClearingReservations = true;
             this.showStatus(`Deleting ${savedCount} saved reservations...`, 'info');
-            await this.deleteSavedReservationRecords();
+            try {
+                await this.deleteSavedReservationRecords();
+            } finally {
+                this.isClearingReservations = false;
+            }
         }
 
         this.importedRecords = [];
@@ -737,15 +745,40 @@ export class ReservationsManager {
         const searchInput = document.getElementById('reservations-search-input');
         if (searchInput) searchInput.value = '';
         this.render();
-        this.showStatus('Import preview cleared.', 'success');
+        this.showStatus('Reservations cleared. You can import the PMS file now.', 'success');
+        if (!this.unsubscribe) {
+            this.subscribeToReservations();
+        }
+    }
+
+    async countSavedReservationRecords() {
+        if (!this.db || !this.userId) return this.savedRecords.length;
+        const snapshot = await getDocs(this.getCurrentUserReservationsQuery());
+        return snapshot.size;
     }
 
     async deleteSavedReservationRecords() {
-        if (!this.db || !this.savedRecords.length) return;
-        const recordsWithIds = this.savedRecords.filter((record) => record.id);
-        for (const record of recordsWithIds) {
-            await deleteDoc(doc(this.db, 'reservations', record.id));
+        if (!this.db || !this.userId) return;
+        this.unsubscribe?.();
+        this.unsubscribe = null;
+
+        let deletedCount = 0;
+        while (true) {
+            const snapshot = await getDocs(this.getCurrentUserReservationsQuery());
+            if (snapshot.empty) break;
+
+            const docs = snapshot.docs;
+            for (let index = 0; index < docs.length; index += 25) {
+                const chunk = docs.slice(index, index + 25);
+                await Promise.all(chunk.map((entry) => deleteDoc(entry.ref)));
+                deletedCount += chunk.length;
+                this.showStatus(`Deleted ${deletedCount} saved reservations...`, 'info');
+            }
         }
+    }
+
+    getCurrentUserReservationsQuery() {
+        return query(collection(this.db, 'reservations'), where('userId', '==', this.userId));
     }
 
     stopListening() {
