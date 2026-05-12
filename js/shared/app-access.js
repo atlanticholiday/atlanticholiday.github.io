@@ -109,7 +109,7 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         pageName: 'reservations',
         labelKey: 'userManagement.appAccess.options.reservations',
         fallbackLabel: 'Weekly Reservations',
-        group: 'more'
+        group: 'main'
     },
     {
         key: 'buildPlanner',

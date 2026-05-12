@@ -17,6 +17,7 @@ import "./unit/features/operations/commission-calculator-manager.test.js";
 import "./unit/features/operations/laundry-log-manager.test.js";
 import "./unit/features/operations/laundry-log-utils.test.js";
 import "./unit/features/operations/operational-guidelines-utils.test.js";
+import "./unit/features/operations/reservations-utils.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";
 import "./unit/features/planning/build-planner-manager.test.js";
 import "./unit/features/properties/all-info-page.test.js";

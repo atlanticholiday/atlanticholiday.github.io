@@ -1,839 +1,843 @@
-// Add Firestore imports
-import { collection, addDoc, onSnapshot, updateDoc, doc, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    collection,
+    addDoc,
+    doc,
+    deleteDoc,
+    onSnapshot,
+    query,
+    where,
+    updateDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+import {
+    buildReservationSummary,
+    filterReservations,
+    groupReservationsByDate,
+    isPmsReservationHeader,
+    isWeeklyReservationSheet,
+    normalizePmsReservationRow,
+    normalizeRawReservationDocument,
+    normalizeReservationRow,
+    normalizeText
+} from './reservations-utils.js';
+
+const ISSUE_OPTIONS = [
+    ['all', 'All reservations'],
+    ['pool', 'Pool follow-up'],
+    ['keybox', 'Key boxes missing'],
+    ['sef', 'SEF pending'],
+    ['arrival', 'Missing arrival'],
+    ['tax', 'Missing tax'],
+    ['long-stays', 'Long stays'],
+    ['owner', 'Owner stays'],
+    ['invalid', 'Validation issues']
+];
+
+const MANUAL_FIELDS = [
+    { field: 'arrivalInfo', label: 'Arrival info', type: 'text', placeholder: 'Flight arrival, already in Madeira...' },
+    { field: 'flightNumber', label: 'Flight', type: 'text', placeholder: 'TP1685' },
+    { field: 'checkInTime', label: 'Check-in hour', type: 'text', placeholder: '16h00' },
+    { field: 'safeCode', label: 'Safe / keybox', type: 'text', placeholder: 'Code' },
+    { field: 'firstMessageStatus', label: 'First message', type: 'select', options: ['', 'Enviada', 'Enviado', 'Criado', '-'] },
+    { field: 'sefStatus', label: 'SEF', type: 'select', options: ['', 'À espera', 'Validado', 'Pendente'] },
+    { field: 'heatedPool', label: 'Heated pool', type: 'select', options: ['', 'sim', 'não', 'pago', 'a espera', 'não respondeu', '???', 'n funciona'] },
+    { field: 'poolPaidAmount', label: 'Pool paid', type: 'text', placeholder: 'Amount, paid, waiting...' },
+    { field: 'poolAvantioAmount', label: 'Avantio pool', type: 'text', placeholder: 'Amount or note' },
+    { field: 'touristTaxPaidBy', label: 'Tax paid by', type: 'text', placeholder: 'Airbnb, Booking, Transf...' },
+    { field: 'responsible', label: 'Responsible', type: 'text', placeholder: 'Team member' },
+    { field: 'checkInPerson', label: 'Check-in person', type: 'text', placeholder: 'Team member' },
+    { field: 'asanaStatus', label: 'Asana', type: 'select', options: ['', 'Criada', 'Pendente', 'Feita'] },
+    { field: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Operational notes' }
+];
 
 export class ReservationsManager {
     constructor(db, userId) {
         this.db = db;
         this.userId = userId;
-        this.subscribedData = [];       // persisted Firestore data
-        this.loadedRecords = [];        // records loaded from XLSX file
+        this.savedRecords = [];
+        this.importedRecords = [];
+        this.currentImportName = '';
         this.unsubscribe = null;
-        this.currentDatasetName = '';
-        this.changeHistory = [];        // Track changes for history tab
-        this.autoSaveTimeout = null;    // Debounce auto-save
-        this.currentSearchTerm = '';    // Search functionality
-        this.currentSortColumn = null;  // Sorting functionality
-        this.currentSortDirection = 'asc';
-        
-        // Restore backup from localStorage if exists
-        try {
-            const backup = localStorage.getItem('reservations_backup');
-            if (backup) {
-                const parsed = JSON.parse(backup);
-                this.currentDatasetName = parsed.name || '';
-                this.loadedRecords = parsed.records || [];
-                this.changeHistory = parsed.changeHistory || [];
-                console.log('[ReservationsManager] Loaded backup from localStorage', this.currentDatasetName, this.loadedRecords.length);
-            }
-        } catch (e) {
-            console.warn('[ReservationsManager] Failed to parse local backup', e);
-        }
-    }
-    // Compute ISO week string (YYYY-Www) from date string
-    getWeekNumber(dateStr) {
-        // Return null for empty or invalid date strings
-        if (!dateStr) return null;
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return null;
-        const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        const dayNum = target.getUTCDay() || 7;
-        target.setUTCDate(target.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-        const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
-        return `${target.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
-    }
-    // Populate week select options based on both persisted and loaded data
-    renderWeekOptions() {
-        console.log("[ReservationsManager] renderWeekOptions called");
-        const select = document.getElementById('reservations-week-select');
-        if (!select) return;
-        // If records just loaded from the current upload, show dataset name only
-        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            select.innerHTML = '';
-            const opt = document.createElement('option');
-            opt.value = this.currentDatasetName;
-            opt.textContent = this.currentDatasetName;
-            select.appendChild(opt);
-            return;
-        }
-        // Initialize with a disabled placeholder; actual weeks populated after user selection
-        select.innerHTML = '<option value="" disabled selected>Select a Week</option>';
-        const allWeeks = [];
-        this.subscribedData.forEach(r => { if (r._week) allWeeks.push(r._week); });
-        this.loadedRecords.forEach(r => { if (r._week) allWeeks.push(r._week); });
-        const weeks = [...new Set(allWeeks)].sort();
-        console.log("[ReservationsManager] Available weeks:", weeks);
-        weeks.forEach(w => {
-            const opt = document.createElement('option'); opt.value = w; opt.textContent = w;
-            select.appendChild(opt);
-        });
-    }
-    // Listen for saved reservations in Firestore
-    subscribeToReservations() {
-        const colRef = collection(this.db, 'reservations');
-        const q = query(colRef, where('userId', '==', this.userId));
-        // Initial fetch fallback to retrieve persisted data via HTTP
-        getDocs(q).then(snapshot => {
-            this.subscribedData = snapshot.docs.map(d => {
-                const rec = { id: d.id, ...d.data() };
-                // Determine date string for week auto-detection
-                let weekDateStr = rec['Check-in'] || rec['check-in'] || rec.checkIn || '';
-                if (!weekDateStr) {
-                    for (const [key, value] of Object.entries(rec)) {
-                        const dVal = new Date(value);
-                        if (value && !isNaN(dVal.getTime())) {
-                            weekDateStr = value;
-                            console.log('[ReservationsManager] Auto-detected date field from column', key, 'value', value);
-                            break;
-                        }
-                    }
-                }
-                rec._week = this.getWeekNumber(weekDateStr);
-                return rec;
-            });
-            this.renderWeekOptions();
-            this.renderTable();
-        }).catch(error => console.error('Error fetching reservations via getDocs:', error));
-        this.unsubscribe = onSnapshot(q, snapshot => {
-            this.subscribedData = snapshot.docs.map(d => {
-                const rec = { id: d.id, ...d.data() };
-                // Determine date string for week auto-detection
-                let weekDateStr = rec['Check-in'] || rec['check-in'] || rec.checkIn || '';
-                if (!weekDateStr) {
-                    for (const [key, value] of Object.entries(rec)) {
-                        const dVal = new Date(value);
-                        if (value && !isNaN(dVal.getTime())) {
-                            weekDateStr = value;
-                            console.log('[ReservationsManager] Auto-detected date field from column', key, 'value', value);
-                            break;
-                        }
-                    }
-                }
-                rec._week = this.getWeekNumber(weekDateStr);
-                return rec;
-            });
-            this.renderWeekOptions();
-            this.renderTable();
-        }, error => console.error('Reservations listener error:', error));
+        this.filters = {
+            week: 'all',
+            issue: 'all',
+            search: ''
+        };
+        this.saveTimers = new Map();
+
+        this.restoreLocalImport();
     }
 
-    // Read binary file as ArrayBuffer for XLSX parsing
+    initializeEventListeners() {
+        this.decorateControls();
+        this.bindControls();
+        this.subscribeToReservations();
+        this.render();
+    }
+
+    decorateControls() {
+        const controls = document.getElementById('reservations-controls');
+        if (!controls || controls.dataset.enhanced === 'true') return;
+
+        controls.dataset.enhanced = 'true';
+        controls.className = 'reservations-ops-controls';
+        controls.innerHTML = `
+            <div class="reservations-ops-controls__grid">
+                <label class="reservations-field">
+                    <span>Week</span>
+                    <select id="reservations-week-select">
+                        <option value="all">All weeks</option>
+                    </select>
+                </label>
+                <label class="reservations-field">
+                    <span>Worklist</span>
+                    <select id="reservations-issue-select">
+                        ${ISSUE_OPTIONS.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="reservations-field reservations-field--search">
+                    <span>Search</span>
+                    <input id="reservations-search-input" type="search" placeholder="Guest, property, phone, flight">
+                </label>
+                <div class="reservations-actions">
+                    <input type="file" id="reservations-file-input" accept=".xlsx,.xls" hidden>
+                    <button id="load-reservations-btn" class="reservations-action reservations-action--primary" type="button">
+                        <i class="fas fa-file-excel"></i>
+                        Import workbook
+                    </button>
+                    <button id="save-reservations-week-btn" class="reservations-action" type="button" disabled>
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        Save import
+                    </button>
+                </div>
+            </div>
+            <div class="reservations-import-strip">
+                <span id="dataset-name-display">No import loaded</span>
+                <button id="edit-dataset-name-btn" type="button">Rename</button>
+                    <button id="clear-reservations-import-btn" class="reservations-clear-import" type="button">Clear import</button>
+                <span id="reservations-import-status"></span>
+            </div>
+        `;
+    }
+
+    bindControls() {
+        const fileInput = document.getElementById('reservations-file-input');
+        const uploadBtn = document.getElementById('load-reservations-btn');
+        const saveBtn = document.getElementById('save-reservations-week-btn');
+        const weekSelect = document.getElementById('reservations-week-select');
+        const issueSelect = document.getElementById('reservations-issue-select');
+        const searchInput = document.getElementById('reservations-search-input');
+        const renameBtn = document.getElementById('edit-dataset-name-btn');
+        const clearImportBtn = document.getElementById('clear-reservations-import-btn');
+
+        uploadBtn?.addEventListener('click', () => fileInput?.click());
+
+        fileInput?.addEventListener('change', async () => {
+            const file = fileInput.files?.[0];
+            if (!file) return;
+            if (!/\.xlsx?$/i.test(file.name)) {
+                this.showStatus('Please select a valid Excel workbook.', 'error');
+                return;
+            }
+
+            try {
+                await this.handleFileUpload(file);
+            } catch (error) {
+                console.error('Reservation import failed:', error);
+                this.showStatus(`Import failed: ${error.message || error}`, 'error');
+            } finally {
+                fileInput.value = '';
+            }
+        });
+
+        saveBtn?.addEventListener('click', () => this.saveImportedRecords());
+        weekSelect?.addEventListener('change', (event) => {
+            this.filters.week = event.target.value || 'all';
+            this.render();
+        });
+        issueSelect?.addEventListener('change', (event) => {
+            this.filters.issue = event.target.value || 'all';
+            this.render();
+        });
+        searchInput?.addEventListener('input', (event) => {
+            this.filters.search = event.target.value || '';
+            this.render();
+        });
+        renameBtn?.addEventListener('click', () => {
+            const nextName = prompt('Import name:', this.currentImportName || 'Reservations import');
+            if (!nextName) return;
+            this.currentImportName = nextName.trim();
+            this.updateImportUi();
+            this.persistLocalImport();
+        });
+        clearImportBtn?.addEventListener('click', async () => {
+            await this.clearImportPreview();
+        });
+        document.addEventListener('click', async (event) => {
+            if (event.target?.id === 'clear-reservations-import-btn') {
+                event.preventDefault();
+                await this.clearImportPreview();
+            }
+        });
+
+        const reservationsTable = document.getElementById('reservations-table');
+        reservationsTable?.addEventListener('input', (event) => {
+            const control = event.target.closest('[data-reservation-field]');
+            if (!control) return;
+            this.handleManualFieldChange(control);
+        });
+        reservationsTable?.addEventListener('change', (event) => {
+            const control = event.target.closest('[data-reservation-field]');
+            if (!control) return;
+            this.handleManualFieldChange(control);
+        });
+        reservationsTable?.addEventListener('click', (event) => {
+            const resetAction = event.target.closest('[data-reservations-reset-filters]');
+            if (resetAction) {
+                this.resetFilters();
+                return;
+            }
+
+            const quickAction = event.target.closest('[data-reservations-quick-filter]');
+            if (!quickAction) return;
+            this.filters.issue = quickAction.dataset.reservationsQuickFilter || 'all';
+            this.filters.week = 'all';
+            this.filters.search = '';
+            this.render();
+        });
+    }
+
+    subscribeToReservations() {
+        if (!this.db || !this.userId || this.unsubscribe) return;
+        const reservationsRef = collection(this.db, 'reservations');
+        const reservationsQuery = query(reservationsRef, where('userId', '==', this.userId));
+        this.unsubscribe = onSnapshot(reservationsQuery, (snapshot) => {
+            this.savedRecords = snapshot.docs.map((entry) => normalizeRawReservationDocument({
+                id: entry.id,
+                ...entry.data()
+            }));
+            this.renderWeekOptions();
+            this.render();
+        }, (error) => {
+            console.error('Reservations listener error:', error);
+            this.showStatus('Could not load saved reservations.', 'error');
+        });
+    }
+
+    async handleFileUpload(file) {
+        this.showStatus('Reading workbook...');
+        const arrayBuffer = await this.readFileAsArrayBuffer(file);
+        const workbook = XLSX.read(arrayBuffer, {
+            type: 'array',
+            cellDates: true,
+            cellText: false
+        });
+
+        const records = this.parseWorkbook(workbook, file.name);
+        this.currentImportName = file.name.replace(/\.xlsx?$/i, '');
+        this.importedRecords = records;
+        this.filters.week = 'all';
+        this.filters.issue = records.some((record) => record.validationIssues.length) ? 'invalid' : 'all';
+        this.persistLocalImport();
+        this.renderWeekOptions();
+        this.updateImportUi();
+        this.render();
+        this.showStatus(`Imported ${records.length} cleaned reservations from ${this.countWorkbookSheets(workbook)} sheet(s).`, 'success');
+    }
+
+    parseWorkbook(workbook, importName = '') {
+        const records = [];
+        workbook.SheetNames.forEach((sheetName) => {
+            const sheet = workbook.Sheets[sheetName];
+            const matrix = XLSX.utils.sheet_to_json(sheet, {
+                header: 1,
+                defval: '',
+                raw: true
+            });
+            const pmsHeaderIndex = matrix.findIndex((row) => isPmsReservationHeader(row));
+
+            if (pmsHeaderIndex >= 0) {
+                const headers = matrix[pmsHeaderIndex].map(normalizeText);
+                matrix.slice(pmsHeaderIndex + 1).forEach((values, index) => {
+                    const row = objectFromHeaders(headers, values);
+                    const normalized = normalizePmsReservationRow(row, {
+                        sheetName,
+                        rowNumber: pmsHeaderIndex + index + 2,
+                        importName
+                    });
+                    if (normalized.checkIn && normalized.propertyName) {
+                        records.push(normalized);
+                    }
+                });
+                return;
+            }
+
+            if (isWeeklyReservationSheet(sheetName)) {
+                const rows = XLSX.utils.sheet_to_json(sheet, {
+                    defval: '',
+                    raw: true
+                });
+                rows.forEach((row) => {
+                    const normalized = normalizeReservationRow(row, {
+                        sheetName,
+                        rowNumber: Number(row.__rowNum__ || 0) + 1,
+                        importName
+                    });
+                    if (normalized.checkIn && normalized.propertyName) {
+                        records.push(normalized);
+                    }
+                });
+            }
+        });
+
+        return records;
+    }
+
+    countWorkbookSheets(workbook) {
+        return workbook.SheetNames.length;
+    }
+
     readFileAsArrayBuffer(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(reader.error);
+            reader.onerror = () => reject(reader.error || new Error('Could not read file'));
             reader.readAsArrayBuffer(file);
         });
     }
 
-    // Load and parse only XLSX files, storing to loadedRecords
-    async handleFileUpload(file) {
-        console.log("[ReservationsManager] handleFileUpload called with file:", file && file.name);
-        const arrayBuffer = await this.readFileAsArrayBuffer(file);
-        console.log("[ReservationsManager] ArrayBuffer loaded, size:", arrayBuffer.byteLength);
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        console.log("[ReservationsManager] Workbook sheets:", workbook.SheetNames);
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const records = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-        console.log("[ReservationsManager] Parsed records count:", records.length);
-        // Compute week and store in loadedRecords
-        this.loadedRecords = records.map(rec => {
-            // Determine date string for week auto-detection
-            let weekDateStr = rec['Check-in'] || rec.checkIn || rec['check-in'] || '';
-            if (!weekDateStr) {
-                for (const [key, value] of Object.entries(rec)) {
-                    const dVal = new Date(value);
-                    if (value && !isNaN(dVal.getTime())) {
-                        weekDateStr = value;
-                        console.log('[ReservationsManager] Auto-detected date field from column', key, 'value', value);
-                        break;
-                    }
-                }
-            }
-            rec._week = this.getWeekNumber(weekDateStr);
-            return rec;
-        });
-        // Save backup to localStorage to persist across reload
-        try {
-            localStorage.setItem('reservations_backup', JSON.stringify({ name: this.currentDatasetName, records: this.loadedRecords }));
-            console.log('[ReservationsManager] Saved backup to localStorage');
-        } catch (e) {
-            console.warn('[ReservationsManager] Failed to save backup to localStorage', e);
+    async saveImportedRecords() {
+        if (!this.importedRecords.length) {
+            this.showStatus('No imported reservations to save.', 'error');
+            return;
         }
-        this.renderWeekOptions();
-        // Automatically select the first available week to show a preview immediately
-        const select = document.getElementById('reservations-week-select');
-        if (select && select.options.length > 1) {
-            select.value = select.options[1].value;
+        if (!this.db || !this.userId) {
+            this.showStatus('Sign in before saving reservations.', 'error');
+            return;
         }
-        this.renderTable();
-    }
 
-    initializeEventListeners() {
-        const fileInput = document.getElementById('reservations-file-input');
-        const uploadBtn = document.getElementById('load-reservations-btn');
-        uploadBtn.addEventListener('click', () => {
-            console.log("[ReservationsManager] Upload button clicked");
-            const name = prompt('Enter a name for this import batch:');
-            console.log("[ReservationsManager] Dataset name entered:", name);
-            if (!name) {
-                console.log("[ReservationsManager] Dataset name missing, aborting upload");
-                alert('Dataset name is required before uploading.');
-                return;
-            }
-            this.currentDatasetName = name;
-            fileInput.click();
-        });
-        fileInput.addEventListener('change', async () => {
-            console.log("[ReservationsManager] File input change event triggered");
-            const file = fileInput.files[0];
-            console.log("[ReservationsManager] Selected file:", file && file.name);
-            if (!file || !file.name.match(/\.xls[x]?$/i)) {
-                console.log("[ReservationsManager] Invalid file or extension", file && file.name);
-                alert('Please select a valid Excel (.xlsx or .xls) file.');
-                return;
-            }
-            try {
-                await this.handleFileUpload(file);
-                // Attempt to auto-save to Firestore
-                console.log(`[ReservationsManager] Auto-saving ${this.loadedRecords.length} uploaded records`);
-                const savedRecords = [];
-                for (const rec of this.loadedRecords) {
-                    try {
-                        const docRef = await addDoc(collection(this.db, 'reservations'), { userId: this.userId, ...rec });
-                        rec.id = docRef.id;
-                        this.subscribedData.push(rec);
-                        savedRecords.push(rec);
-                    } catch (e) {
-                        console.warn('[ReservationsManager] Firestore write failed for record, keeping in local backup', e);
-                    }
-                }
-                console.log(`[ReservationsManager] Auto-saved ${savedRecords.length} records to Firestore`);
-                // Remove savedRecords from backup
-                const remaining = this.loadedRecords.filter(r => !savedRecords.includes(r));
-                this.loadedRecords = remaining;
-                if (savedRecords.length === this.loadedRecords.length + savedRecords.length) {
-                    // All records saved, clear backup
-                    localStorage.removeItem('reservations_backup');
-                    console.log('[ReservationsManager] Cleared localStorage backup after successful save');
-                } else {
-                    // Some records remain, update backup
-                    localStorage.setItem('reservations_backup', JSON.stringify({ name: this.currentDatasetName, records: this.loadedRecords }));
-                    console.log('[ReservationsManager] Updated localStorage backup with remaining records');
-                }
-                // Ensure subscription to Firestore persisted data
-                if (!this.unsubscribe) {
-                    this.subscribeToReservations();
-                }
-                // Re-render with persisted and local data
-                this.renderWeekOptions();
-                this.renderTable();
-            } catch (error) {
-                console.log("[ReservationsManager] Error in handleFileUpload or auto-save:", error);
-                console.error('File upload error:', error);
-                alert('Failed to load reservations: ' + (error.message || error));
-            }
-        });
-        // Allow editing the dataset name
-        const editNameBtn = document.getElementById('edit-dataset-name-btn');
-        if (editNameBtn) {
-            editNameBtn.addEventListener('click', () => {
-                const newName = prompt('Edit dataset name:', this.currentDatasetName);
-                if (newName) {
-                    this.currentDatasetName = newName;
-                    const dsDisplay = document.getElementById('dataset-name-display');
-                    if (dsDisplay) dsDisplay.textContent = newName;
-                }
-            });
-        }
-        // Restore UI from local backup if records exist
-        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            console.log('[ReservationsManager] Restoring UI from localStorage backup');
-            // Update dataset name display
-            const dsDisplay = document.getElementById('dataset-name-display');
-            if (dsDisplay) dsDisplay.textContent = this.currentDatasetName;
-            // Render selector and table for backup data
-            this.renderWeekOptions();
-            this.renderTable();
-        }
         const saveBtn = document.getElementById('save-reservations-week-btn');
-        saveBtn.addEventListener('click', async () => {
-            const sel = document.getElementById('reservations-week-select');
-            const weekVal = sel ? sel.value : 'all';
-            const toSave = this.loadedRecords.filter(r => weekVal === 'all' || r._week === weekVal);
-            if (toSave.length === 0) {
-                alert('No records to save for selected week.');
-                return;
-            }
-            try {
-                for (const rec of toSave) {
-                    const docRef = await addDoc(collection(this.db, 'reservations'), { userId: this.userId, ...rec });
-                    rec.id = docRef.id;
-                    this.subscribedData.push(rec);
-                }
-                alert(`Saved ${toSave.length} reservations.`);
-                this.loadedRecords = [];
-                this.renderWeekOptions();
-                this.renderTable();
-            } catch (e) {
-                console.error('Error saving reservations:', e);
-                alert('Error saving reservations: ' + (e.message || e));
-            }
-        });
-        const weekSelect = document.getElementById('reservations-week-select');
-        if (weekSelect) {
-            weekSelect.addEventListener('change', () => {
-                // On first valid week selection, start listening for persisted reservations
-                if (!this.unsubscribe) {
-                    this.subscribeToReservations();
-                }
-                this.renderTable();
-            });
-        }
-        // Subscription delayed until after user selects a week
-    }
+        const existingFingerprints = new Set(this.savedRecords.map((record) => record.fingerprint).filter(Boolean));
+        const recordsToSave = this.importedRecords.filter((record) => !existingFingerprints.has(record.fingerprint));
 
-    // Auto-save with debounce
-    scheduleAutoSave(recordId, field, value, oldValue) {
-        if (this.autoSaveTimeout) {
-            clearTimeout(this.autoSaveTimeout);
+        if (!recordsToSave.length) {
+            this.showStatus('All imported reservations are already saved.', 'success');
+            return;
         }
-        
-        // Track change in history
-        this.addToChangeHistory(recordId, field, oldValue, value);
-        
-        this.autoSaveTimeout = setTimeout(async () => {
-            try {
-                if (recordId) {
-                    await this.updateReservationField(recordId, field, value);
-                    this.showSaveStatus('Auto-saved', 'success');
-                }
-            } catch (error) {
-                console.error('Auto-save failed:', error);
-                this.showSaveStatus('Auto-save failed', 'error');
-            }
-        }, 1000); // 1 second debounce
-    }
 
-    // Add change to history
-    addToChangeHistory(recordId, field, oldValue, newValue) {
-        if (oldValue === newValue) return;
-        
-        const change = {
-            id: Date.now() + Math.random(),
-            recordId,
-            field,
-            oldValue,
-            newValue,
-            timestamp: new Date().toISOString(),
-            user: this.userId
-        };
-        
-        this.changeHistory.unshift(change);
-        
-        // Keep only last 100 changes
-        if (this.changeHistory.length > 100) {
-            this.changeHistory = this.changeHistory.slice(0, 100);
-        }
-        
-        // Update backup
-        this.updateBackup();
-        
-        // Update history tab if visible
-        if (document.querySelector('.history-tab.active')) {
-            this.renderHistoryTab();
-        }
-    }
+        saveBtn.disabled = true;
+        this.showStatus(`Saving ${recordsToSave.length} reservations...`);
 
-    // Show save status
-    showSaveStatus(message, type = 'success') {
-        let statusEl = document.getElementById('save-status');
-        if (!statusEl) {
-            statusEl = document.createElement('div');
-            statusEl.id = 'save-status';
-            statusEl.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300';
-            document.body.appendChild(statusEl);
-        }
-        
-        statusEl.textContent = message;
-        statusEl.className = `fixed top-4 right-4 px-4 py-2 rounded-lg z-50 transition-all duration-300 ${
-            type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-        }`;
-        
-        setTimeout(() => {
-            statusEl.style.opacity = '0';
-            setTimeout(() => statusEl.remove(), 300);
-        }, 2000);
-    }
-
-    // Update backup with change history
-    updateBackup() {
         try {
-            localStorage.setItem('reservations_backup', JSON.stringify({
-                name: this.currentDatasetName,
-                records: this.loadedRecords,
-                changeHistory: this.changeHistory
-            }));
-        } catch (e) {
-            console.warn('[ReservationsManager] Failed to update backup', e);
+            for (const record of recordsToSave) {
+                await addDoc(collection(this.db, 'reservations'), {
+                    ...record,
+                    userId: this.userId,
+                    importName: this.currentImportName || record.importName || 'Reservations import',
+                    importedAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            }
+            this.importedRecords = [];
+            this.clearLocalImport();
+            this.updateImportUi();
+            this.render();
+            this.showStatus(`Saved ${recordsToSave.length} new reservations.`, 'success');
+        } catch (error) {
+            console.error('Error saving reservations:', error);
+            this.showStatus(`Save failed: ${error.message || error}`, 'error');
+        } finally {
+            saveBtn.disabled = this.importedRecords.length === 0;
         }
     }
 
-    // Enhanced renderTable with better styling and features
-    renderTable() {
-        console.log("[ReservationsManager] renderTable called");
+    getVisibleRecords() {
+        const source = this.importedRecords.length ? this.importedRecords : this.savedRecords;
+        return filterReservations(source, this.filters);
+    }
+
+    handleManualFieldChange(control) {
+        const recordKey = control.dataset.recordKey;
+        const field = control.dataset.reservationField;
+        const value = control.value;
+        const source = this.importedRecords.length ? this.importedRecords : this.savedRecords;
+        const record = source.find((entry) => this.getRecordKey(entry) === recordKey);
+        if (!record || !field) return;
+
+        record[field] = value;
+        const normalized = normalizeRawReservationDocument(record);
+        Object.assign(record, normalized);
+
+        if (this.importedRecords.length) {
+            this.persistLocalImport();
+            this.showStatus('Import preview updated. Save import when ready.', 'info');
+            return;
+        }
+
+        if (!record.id || !this.db) return;
+        this.scheduleFieldSave(record, field, value);
+    }
+
+    scheduleFieldSave(record, field, value) {
+        const recordId = record.id;
+        const timerKey = `${recordId}:${field}`;
+        if (this.saveTimers.has(timerKey)) {
+            clearTimeout(this.saveTimers.get(timerKey));
+        }
+
+        this.showStatus('Saving manual change...');
+        const timeoutId = setTimeout(async () => {
+            try {
+                await updateDoc(doc(this.db, 'reservations', recordId), {
+                    [field]: value,
+                    firstMessageState: record.firstMessageState || '',
+                    sefState: record.sefState || '',
+                    poolState: record.poolState || '',
+                    poolPaidAmountValue: record.poolPaidAmountValue ?? null,
+                    poolAvantioAmountValue: record.poolAvantioAmountValue ?? null,
+                    validationIssues: record.validationIssues || [],
+                    updatedAt: serverTimestamp()
+                });
+                this.showStatus('Manual change saved.', 'success');
+            } catch (error) {
+                console.error('Manual reservation update failed:', error);
+                this.showStatus(`Manual save failed: ${error.message || error}`, 'error');
+            } finally {
+                this.saveTimers.delete(timerKey);
+            }
+        }, 700);
+        this.saveTimers.set(timerKey, timeoutId);
+    }
+
+    render() {
+        this.renderWeekOptions();
+        this.updateImportUi();
+
         const container = document.getElementById('reservations-table');
-        
-        // Create enhanced container structure
+        if (!container) return;
+
+        container.className = 'reservations-workspace';
+        const source = this.importedRecords.length ? this.importedRecords : this.savedRecords;
+        if (!source.length) {
+            container.innerHTML = this.renderEmptyState();
+            return;
+        }
+
+        const visibleRecords = this.getVisibleRecords();
+        const sourceSummary = buildReservationSummary(source);
+        const summary = buildReservationSummary(visibleRecords);
+        const grouped = groupReservationsByDate(visibleRecords);
+        const activeMode = this.importedRecords.length ? 'Import preview' : 'Saved reservations';
+
         container.innerHTML = `
-            <div class="reservations-table-enhanced">
-                <div class="table-header">
-                    <div class="table-controls">
-                        <div class="tab-controls">
-                            <button class="tab-btn active table-tab" data-tab="table">
-                                <i class="fas fa-table mr-2"></i>Table View
-                            </button>
-                            <button class="tab-btn history-tab" data-tab="history">
-                                <i class="fas fa-history mr-2"></i>Change History
-                                <span class="history-badge">${this.changeHistory.length}</span>
-                            </button>
+            <div class="reservations-workspace-grid">
+                <div class="reservations-workspace-main">
+                    <section class="reservations-summary">
+                        <div>
+                            <p class="reservations-kicker">${escapeHtml(activeMode)}</p>
+                            <h2>${summary.total} reservations</h2>
                         </div>
-                        <div class="table-actions">
-                            <div class="search-container">
-                                <i class="fas fa-search search-icon"></i>
-                                <input type="text" id="table-search" placeholder="Search reservations..." class="search-input">
-                            </div>
-                            <button id="export-btn" class="action-btn">
-                                <i class="fas fa-download mr-2"></i>Export
-                            </button>
-                        </div>
-                    </div>
+                        ${this.renderMetric('Today', summary.checkInsToday)}
+                        ${this.renderMetric('Pool follow-up', summary.poolFollowUps)}
+                        ${this.renderMetric('SEF pending', summary.sefWaiting)}
+                        ${this.renderMetric('Missing arrival', summary.missingArrival)}
+                        ${this.renderMetric('Long stays', summary.longStays)}
+                    </section>
+                    ${visibleRecords.length ? this.renderReservationGroups(grouped) : this.renderNoMatches()}
                 </div>
-                <div class="table-content">
-                    <div id="table-view" class="tab-content active">
-                        <div id="actual-table-container"></div>
-                    </div>
-                    <div id="history-view" class="tab-content">
-                        <div id="history-container"></div>
-                    </div>
-                </div>
+                <aside class="reservations-workspace-side">
+                    ${this.renderQuickAccess(sourceSummary)}
+                </aside>
             </div>
         `;
-
-        this.setupTabControls();
-        this.setupSearchControls();
-        this.renderTableContent();
     }
 
-    // Setup tab controls
-    setupTabControls() {
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabName = btn.dataset.tab;
-                
-                // Update active states
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                btn.classList.add('active');
-                document.getElementById(`${tabName}-view`).classList.add('active');
-                
-                if (tabName === 'history') {
-                    this.renderHistoryTab();
-                }
-            });
-        });
-    }
+    renderQuickAccess(summary) {
+        const items = [
+            {
+                issue: 'pool',
+                label: 'Heated pools',
+                value: summary.poolFollowUps,
+                hint: 'Waiting, review, or payment missing'
+            },
+            {
+                issue: 'keybox',
+                label: 'Key boxes',
+                value: summary.missingKeybox,
+                hint: 'Missing safe or office keybox code'
+            },
+            {
+                issue: 'tax',
+                label: 'Taxes missing',
+                value: summary.missingTax,
+                hint: 'Tourist tax amount not filled'
+            },
+            {
+                issue: 'long-stays',
+                label: 'Long stays',
+                value: summary.longStays,
+                hint: '14 nights or more'
+            }
+        ];
 
-    // Setup search controls
-    setupSearchControls() {
-        const searchInput = document.getElementById('table-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.currentSearchTerm = e.target.value.toLowerCase();
-                this.renderTableContent();
-            });
-        }
-
-        // Setup export button
-        const exportBtn = document.getElementById('export-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                this.exportData();
-            });
-        }
-    }
-
-    // Render actual table content
-    renderTableContent() {
-        const container = document.getElementById('actual-table-container');
-        const sel = document.getElementById('reservations-week-select');
-        const weekVal = sel ? sel.value : '';
-        
-        let rows;
-        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            // Show all loaded records, don't filter by week for uploaded data
-            rows = [...this.loadedRecords];
-            console.log('[ReservationsManager] Showing loaded records:', rows.length);
-        } else {
-            rows = this.subscribedData.filter(r => !weekVal || weekVal === 'all' || r._week === weekVal);
-            console.log('[ReservationsManager] Showing filtered data:', rows.length);
-        }
-
-        // Show welcome message if no data at all
-        if (this.loadedRecords.length === 0 && this.subscribedData.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-table empty-icon"></i>
-                    <h3>Welcome to Weekly Reservations</h3>
-                    <p>Upload an Excel file to get started, or your saved reservations will appear here.</p>
+        return `
+            <section class="reservations-quick-access" aria-label="Quick access">
+                <div class="reservations-quick-access__header">
+                    <div>
+                        <p class="reservations-kicker">Quick access</p>
+                        <h2>Jump to the work that needs checking</h2>
+                    </div>
+                    <button type="button" data-reservations-reset-filters>Reset filters</button>
                 </div>
-            `;
-            return;
-        }
+                <div class="reservations-quick-access__actions">
+                    ${items.map((item) => `
+                        <button
+                            class="reservations-quick-card ${this.filters.issue === item.issue ? 'is-active' : ''}"
+                            type="button"
+                            data-reservations-quick-filter="${escapeHtml(item.issue)}"
+                        >
+                            <span>${escapeHtml(item.label)}</span>
+                            <strong>${item.value}</strong>
+                            <small>${escapeHtml(item.hint)}</small>
+                        </button>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+    }
 
-        // Apply search filter
-        if (this.currentSearchTerm) {
-            rows = rows.filter(row => 
-                Object.values(row).some(value => 
-                    String(value).toLowerCase().includes(this.currentSearchTerm)
-                )
+    resetFilters() {
+        this.filters.issue = 'all';
+        this.filters.week = 'all';
+        this.filters.search = '';
+        this.render();
+    }
+
+    renderMetric(label, value) {
+        return `
+            <div class="reservations-metric">
+                <span>${escapeHtml(label)}</span>
+                <strong>${value}</strong>
+            </div>
+        `;
+    }
+
+    renderReservationGroups(groups) {
+        return `
+            <section class="reservations-list">
+                ${groups.map((group) => `
+                    <div class="reservations-day">
+                        <div class="reservations-day__header">
+                            <time>${escapeHtml(formatDisplayDate(group.date))}</time>
+                            <span>${group.entries.length} ${group.entries.length === 1 ? 'reservation' : 'reservations'}</span>
+                        </div>
+                        <div class="reservations-day__rows">
+                            ${group.entries.map((record) => this.renderReservationRow(record)).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </section>
+        `;
+    }
+
+    renderReservationRow(record) {
+        const issueCount = record.validationIssues.length;
+        const recordKey = this.getRecordKey(record);
+        return `
+            <details class="reservation-row ${issueCount ? 'reservation-row--attention' : ''}">
+                <summary>
+                    <div class="reservation-row__main">
+                        <strong>${escapeHtml(record.propertyName || 'Unknown property')}</strong>
+                        <span>${escapeHtml(record.guestName || 'Guest missing')}</span>
+                    </div>
+                    <div class="reservation-row__timing">
+                        <span>${escapeHtml(record.checkInTime || record.arrivalInfo || 'Arrival missing')}</span>
+                        <span>${escapeHtml(record.checkOut ? `Out ${formatDisplayDate(record.checkOut)}` : 'Checkout missing')}</span>
+                    </div>
+                    <div class="reservation-row__chips">
+                        ${this.renderChip(record.portal || 'No portal', 'neutral')}
+                        ${this.renderChip(sefLabel(record.sefState), record.sefState === 'validated' ? 'good' : 'warn')}
+                        ${this.renderChip(messageLabel(record.firstMessageState), record.firstMessageState === 'sent' ? 'good' : 'warn')}
+                        ${record.poolState ? this.renderChip(poolLabel(record.poolState), record.poolState === 'requested' ? 'pool' : 'warn') : ''}
+                        ${issueCount ? this.renderChip(`${issueCount} issue${issueCount === 1 ? '' : 's'}`, 'bad') : ''}
+                    </div>
+                </summary>
+                <div class="reservation-row__details">
+                    <div class="reservation-edit-grid">
+                        ${MANUAL_FIELDS.map((config) => this.renderManualField(config, record, recordKey)).join('')}
+                    </div>
+                    <div class="reservation-static-grid">
+                        ${this.renderDetail('Reference', record.pmsReference || record.intermediaryReference || record.reference)}
+                        ${this.renderDetail('Status', record.status)}
+                        ${this.renderDetail('Dates', `${formatDisplayDate(record.checkIn)} - ${formatDisplayDate(record.checkOut)}${record.nightsCount ? ` / ${record.nightsCount} nights` : ''}`)}
+                        ${this.renderDetail('Property', [record.propertyName, record.municipality].filter(Boolean).join(' / '))}
+                        ${this.renderDetail('Guests', formatGuests(record))}
+                        ${this.renderDetail('Guest contact', [record.phone, record.customerEmail].filter(Boolean).join(' / '))}
+                        ${this.renderDetail('Portal', record.portal)}
+                        ${this.renderDetail('PMS value', formatMoney(record.totalWithTax, record.portal))}
+                        ${this.renderDetail('Online check-in', record.sefStatus)}
+                        ${this.renderDetail('PMS comments', record.pmsNotes || record.pmsGuestComments)}
+                        ${this.renderDetail('Source', [record.sourceSheet, record.sourceRow ? `row ${record.sourceRow}` : ''].filter(Boolean).join(' / '))}
+                    </div>
+                    ${record.validationIssues.length ? `<div class="reservation-row__issues">${record.validationIssues.map((issue) => `<span>${escapeHtml(issueLabel(issue))}</span>`).join('')}</div>` : ''}
+                </div>
+            </details>
+        `;
+    }
+
+    renderManualField(config, record, recordKey) {
+        const value = record[config.field] ?? '';
+        const common = `data-record-key="${escapeHtml(recordKey)}" data-reservation-field="${escapeHtml(config.field)}"`;
+        const input = config.type === 'textarea'
+            ? `<textarea ${common} placeholder="${escapeHtml(config.placeholder || '')}">${escapeHtml(value)}</textarea>`
+            : config.type === 'select'
+                ? `<select ${common}>${config.options.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === option ? 'selected' : ''}>${escapeHtml(option || '-')}</option>`).join('')}</select>`
+                : `<input ${common} type="${config.type}" value="${escapeHtml(value)}" placeholder="${escapeHtml(config.placeholder || '')}" ${config.type === 'number' ? 'step="0.01" min="0"' : ''}>`;
+
+        return `
+            <label class="reservation-manual-field ${config.type === 'textarea' ? 'reservation-manual-field--wide' : ''}">
+                <span>${escapeHtml(config.label)}</span>
+                ${input}
+            </label>
+        `;
+    }
+
+    renderChip(label, tone) {
+        return `<span class="reservation-chip reservation-chip--${tone}">${escapeHtml(label)}</span>`;
+    }
+
+    renderDetail(label, value) {
+        return `
+            <div class="reservation-detail">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value || '-')}</strong>
+            </div>
+        `;
+    }
+
+    getRecordKey(record) {
+        return record.id || record.fingerprint || `${record.sourceSheet}:${record.sourceRow}:${record.propertyName}:${record.guestName}`;
+    }
+
+    renderEmptyState() {
+        return `
+            <section class="reservations-empty">
+                <p class="reservations-kicker">Reservations operations</p>
+                <h2>Import the 2026 workbook to build the weekly worklist.</h2>
+                <p>The importer reads every weekly tab, normalizes the PMS details, and highlights pool, SEF, arrival, tax, and long-stay follow-ups.</p>
+            </section>
+        `;
+    }
+
+    renderNoMatches() {
+        return `
+            <section class="reservations-empty reservations-empty--small">
+                <h2>No reservations match these filters.</h2>
+                <p>Clear the worklist filter or search term to return to the full import.</p>
+            </section>
+        `;
+    }
+
+    renderWeekOptions() {
+        const select = document.getElementById('reservations-week-select');
+        if (!select) return;
+        const current = this.filters.week || 'all';
+        const source = this.importedRecords.length ? this.importedRecords : this.savedRecords;
+        const weeks = [...new Set(source.map((record) => record.week).filter(Boolean))].sort();
+        select.innerHTML = [
+            '<option value="all">All weeks</option>',
+            ...weeks.map((week) => `<option value="${escapeHtml(week)}">${escapeHtml(week)}</option>`)
+        ].join('');
+        select.value = weeks.includes(current) ? current : 'all';
+        this.filters.week = select.value;
+    }
+
+    updateImportUi() {
+        const datasetDisplay = document.getElementById('dataset-name-display');
+        const saveBtn = document.getElementById('save-reservations-week-btn');
+        const issueSelect = document.getElementById('reservations-issue-select');
+        const searchInput = document.getElementById('reservations-search-input');
+
+        if (datasetDisplay) {
+            datasetDisplay.textContent = this.currentImportName
+                ? `${this.currentImportName} (${this.importedRecords.length} unsaved)`
+                : 'No import loaded';
+        }
+        if (saveBtn) saveBtn.disabled = this.importedRecords.length === 0;
+        const clearBtn = document.getElementById('clear-reservations-import-btn');
+        if (clearBtn) clearBtn.disabled = false;
+        if (issueSelect) issueSelect.value = this.filters.issue;
+        if (searchInput && searchInput.value !== this.filters.search) searchInput.value = this.filters.search;
+    }
+
+    showStatus(message, type = 'info') {
+        const status = document.getElementById('reservations-import-status');
+        if (!status) return;
+        status.textContent = message;
+        status.dataset.type = type;
+    }
+
+    persistLocalImport() {
+        try {
+            localStorage.setItem('reservations_import_preview', JSON.stringify({
+                name: this.currentImportName,
+                records: this.importedRecords
+            }));
+        } catch (error) {
+            console.warn('[ReservationsManager] Could not persist import preview', error);
+        }
+    }
+
+    restoreLocalImport() {
+        try {
+            const payload = JSON.parse(localStorage.getItem('reservations_import_preview') || 'null');
+            if (!payload?.records?.length) return;
+            this.currentImportName = normalizeText(payload.name);
+            this.importedRecords = payload.records.map(normalizeRawReservationDocument);
+        } catch (error) {
+            console.warn('[ReservationsManager] Could not restore import preview', error);
+        }
+    }
+
+    clearLocalImport() {
+        this.currentImportName = '';
+        const keysToRemove = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (key && key.toLowerCase().startsWith('reservations')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+    }
+
+    async clearImportPreview() {
+        const savedCount = this.savedRecords.length;
+        const importedCount = this.importedRecords.length;
+        if (savedCount > 0) {
+            const confirmed = window.confirm(
+                `This will delete ${savedCount} saved reservation records from the database and clear ${importedCount} unsaved imported records. Continue?`
             );
+            if (!confirmed) return;
         }
 
-        // Apply sorting
-        if (this.currentSortColumn) {
-            rows = this.sortData([...rows], this.currentSortColumn, this.currentSortDirection);
+        if (savedCount > 0) {
+            this.showStatus(`Deleting ${savedCount} saved reservations...`, 'info');
+            await this.deleteSavedReservationRecords();
         }
 
-        if (rows.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-calendar-times empty-icon"></i>
-                    <h3>No reservations found</h3>
-                    <p>Try adjusting your search or select a different week.</p>
-                </div>
-            `;
-            return;
+        this.importedRecords = [];
+        this.savedRecords = [];
+        this.currentImportName = '';
+        this.filters.issue = 'all';
+        this.filters.week = 'all';
+        this.filters.search = '';
+        this.clearLocalImport();
+        const searchInput = document.getElementById('reservations-search-input');
+        if (searchInput) searchInput.value = '';
+        this.render();
+        this.showStatus('Import preview cleared.', 'success');
+    }
+
+    async deleteSavedReservationRecords() {
+        if (!this.db || !this.savedRecords.length) return;
+        const recordsWithIds = this.savedRecords.filter((record) => record.id);
+        for (const record of recordsWithIds) {
+            await deleteDoc(doc(this.db, 'reservations', record.id));
         }
-
-        // Create enhanced table
-        const tableWrapper = document.createElement('div');
-        tableWrapper.className = 'table-wrapper';
-        
-        const table = document.createElement('table');
-        table.className = 'enhanced-reservations-table';
-        
-        // Create header
-        const thead = table.createTHead();
-        const headerRow = thead.insertRow();
-        
-        const columns = Object.keys(rows[0]).filter(k => k !== '_week');
-        columns.forEach((key, index) => {
-            const th = document.createElement('th');
-            th.style.width = this.getColumnWidth(key);
-            th.innerHTML = `
-                <div class="header-content" data-column="${key}">
-                    <span class="header-text">${this.formatColumnName(key)}</span>
-                    <div class="sort-icons">
-                        <i class="fas fa-caret-up sort-up ${this.currentSortColumn === key && this.currentSortDirection === 'asc' ? 'active' : ''}"></i>
-                        <i class="fas fa-caret-down sort-down ${this.currentSortColumn === key && this.currentSortDirection === 'desc' ? 'active' : ''}"></i>
-                    </div>
-                </div>
-            `;
-            th.addEventListener('click', () => this.sortTable(key));
-            headerRow.appendChild(th);
-        });
-
-        // Create body with optimized rendering
-        const tbody = table.createTBody();
-        
-        // Use document fragment for better performance
-        const fragment = document.createDocumentFragment();
-        
-        rows.forEach((record, rowIndex) => {
-            const row = document.createElement('tr');
-            row.className = 'table-row';
-            
-            columns.forEach(key => {
-                const td = document.createElement('td');
-                td.className = 'table-cell';
-                td.style.width = this.getColumnWidth(key);
-                
-                const cellWrapper = document.createElement('div');
-                cellWrapper.className = 'cell-wrapper';
-                
-                const input = document.createElement('input');
-                input.type = this.getInputType(key);
-                input.value = record[key] || '';
-                input.className = 'cell-input';
-                input.placeholder = this.getShortPlaceholder(key);
-                
-                // Use debounced event handling for better performance
-                let inputTimeout;
-                input.addEventListener('focus', () => {
-                    input.dataset.originalValue = input.value;
-                    cellWrapper.classList.add('focused');
-                });
-                
-                input.addEventListener('blur', () => {
-                    cellWrapper.classList.remove('focused');
-                });
-                
-                input.addEventListener('input', () => {
-                    cellWrapper.classList.add('modified');
-                    
-                    // Clear previous timeout
-                    if (inputTimeout) clearTimeout(inputTimeout);
-                    
-                    // Debounce the auto-save for better performance
-                    inputTimeout = setTimeout(() => {
-                        const oldValue = input.dataset.originalValue || '';
-                        this.scheduleAutoSave(record.id, key, input.value, oldValue);
-                        
-                        // Update local data
-                        record[key] = input.value;
-                    }, 500); // Increased debounce time
-                });
-                
-                cellWrapper.appendChild(input);
-                td.appendChild(cellWrapper);
-                row.appendChild(td);
-            });
-            
-            fragment.appendChild(row);
-        });
-        
-        tbody.appendChild(fragment);
-
-        tableWrapper.appendChild(table);
-        container.innerHTML = '';
-        container.appendChild(tableWrapper);
     }
 
-    // Render history tab
-    renderHistoryTab() {
-        const container = document.getElementById('history-container');
-        
-        if (this.changeHistory.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-history empty-icon"></i>
-                    <h3>No changes yet</h3>
-                    <p>Changes to your reservations will appear here.</p>
-                </div>
-            `;
-            return;
+    stopListening() {
+        this.saveTimers.forEach((timerId) => clearTimeout(timerId));
+        this.saveTimers.clear();
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
         }
-
-        const historyList = document.createElement('div');
-        historyList.className = 'history-list';
-        
-        this.changeHistory.forEach(change => {
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            
-            const timeAgo = this.getTimeAgo(change.timestamp);
-            
-            historyItem.innerHTML = `
-                <div class="history-header">
-                    <div class="change-info">
-                        <span class="field-name">${this.formatColumnName(change.field)}</span>
-                        <span class="change-type">modified</span>
-                    </div>
-                    <span class="change-time">${timeAgo}</span>
-                </div>
-                <div class="history-content">
-                    <div class="value-change">
-                        <span class="old-value">${change.oldValue || '(empty)'}</span>
-                        <i class="fas fa-arrow-right change-arrow"></i>
-                        <span class="new-value">${change.newValue || '(empty)'}</span>
-                    </div>
-                </div>
-            `;
-            
-            historyList.appendChild(historyItem);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(historyList);
     }
+}
 
-    // Utility functions
-    formatColumnName(key) {
-        return key.replace(/([A-Z])/g, ' $1')
-                 .replace(/^./, str => str.toUpperCase())
-                 .replace(/[-_]/g, ' ');
-    }
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+}
 
-    getInputType(key) {
-        const lowerKey = key.toLowerCase();
-        if (lowerKey.includes('email')) return 'email';
-        if (lowerKey.includes('phone') || lowerKey.includes('tel')) return 'tel';
-        if (lowerKey.includes('date') || lowerKey.includes('check')) return 'date';
-        if (lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount')) return 'number';
-        return 'text';
-    }
+function objectFromHeaders(headers, values) {
+    return headers.reduce((record, header, index) => {
+        if (header) record[header] = values[index] ?? '';
+        return record;
+    }, {});
+}
 
-    getTimeAgo(timestamp) {
-        const now = new Date();
-        const changeDate = new Date(timestamp);
-        const diffMs = now - changeDate;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-        
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return changeDate.toLocaleDateString();
-    }
+function formatDisplayDate(value) {
+    if (!value) return '';
+    const date = new Date(`${value}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' });
+}
 
-    // Get appropriate column width based on content type
-    getColumnWidth(key) {
-        const lowerKey = key.toLowerCase();
-        
-        // Date columns
-        if (lowerKey.includes('date') || lowerKey.includes('check')) return '110px';
-        
-        // Time columns
-        if (lowerKey.includes('time') || lowerKey.includes('hora')) return '80px';
-        
-        // Status columns
-        if (lowerKey.includes('estado') || lowerKey.includes('status')) return '100px';
-        
-        // Name/location columns
-        if (lowerKey.includes('nome') || lowerKey.includes('name') || lowerKey.includes('alojamento')) return '150px';
-        
-        // Property/room columns
-        if (lowerKey.includes('voo') || lowerKey.includes('resp') || lowerKey.includes('cofre')) return '90px';
-        
-        // Default width
-        return '120px';
-    }
+function formatGuests(record) {
+    const adults = record.adultsCount ?? record.adults;
+    const children = record.childrenCount ?? record.children;
+    const nights = record.nightsCount ?? record.nights;
+    return `${adults || 0} A / ${children || 0} C${nights ? ` / ${nights} nights` : ''}`;
+}
 
-    // Get short placeholder text
-    getShortPlaceholder(key) {
-        const lowerKey = key.toLowerCase();
-        
-        if (lowerKey.includes('nome') || lowerKey.includes('name')) return 'Name';
-        if (lowerKey.includes('estado') || lowerKey.includes('status')) return 'Status';
-        if (lowerKey.includes('check')) return 'Date';
-        if (lowerKey.includes('time') || lowerKey.includes('hora')) return 'Time';
-        if (lowerKey.includes('voo')) return 'Flight';
-        if (lowerKey.includes('resp')) return 'Person';
-        if (lowerKey.includes('cofre')) return 'Safe';
-        if (lowerKey.includes('chegada')) return 'Arrival';
-        if (lowerKey.includes('alojamento')) return 'Property';
-        
-        return '';
-    }
+function formatMoney(amount, paidBy) {
+    if (amount === null || amount === undefined) return paidBy || '-';
+    return `${amount.toFixed(2)} EUR${paidBy ? ` / ${paidBy}` : ''}`;
+}
 
-    sortTable(column) {
-        if (this.currentSortColumn === column) {
-            this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            this.currentSortColumn = column;
-            this.currentSortDirection = 'asc';
-        }
-        this.renderTableContent();
-    }
+function formatPool(record) {
+    const parts = [
+        record.heatedPool,
+        record.poolPaidAmountValue !== null && record.poolPaidAmountValue !== undefined ? `${record.poolPaidAmountValue.toFixed(2)} EUR paid` : '',
+        record.poolAvantioAmountValue !== null && record.poolAvantioAmountValue !== undefined ? `${record.poolAvantioAmountValue.toFixed(2)} EUR Avantio` : '',
+        record.poolStatus
+    ].filter(Boolean);
+    return parts.join(' / ');
+}
 
-    // Sort data array by column
-    sortData(rows, column, direction) {
-        return rows.sort((a, b) => {
-            let aVal = a[column] || '';
-            let bVal = b[column] || '';
-            
-            // Try to parse as numbers for numeric sorting
-            const aNum = parseFloat(aVal);
-            const bNum = parseFloat(bVal);
-            
-            if (!isNaN(aNum) && !isNaN(bNum)) {
-                return direction === 'asc' ? aNum - bNum : bNum - aNum;
-            }
-            
-            // Try to parse as dates
-            const aDate = new Date(aVal);
-            const bDate = new Date(bVal);
-            
-            if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-                return direction === 'asc' ? aDate - bDate : bDate - aDate;
-            }
-            
-            // Default to string comparison
-            aVal = String(aVal).toLowerCase();
-            bVal = String(bVal).toLowerCase();
-            
-            if (direction === 'asc') {
-                return aVal.localeCompare(bVal);
-            } else {
-                return bVal.localeCompare(aVal);
-            }
-        });
-    }
+function sefLabel(value) {
+    if (value === 'validated') return 'SEF valid';
+    if (value === 'waiting') return 'SEF waiting';
+    if (value === 'pending') return 'SEF pending';
+    return 'SEF missing';
+}
 
-    // Export table data
-    exportData() {
-        const sel = document.getElementById('reservations-week-select');
-        const weekVal = sel ? sel.value : '';
-        
-        let rows;
-        if (this.loadedRecords.length > 0 && this.currentDatasetName) {
-            rows = this.loadedRecords;
-        } else {
-            rows = this.subscribedData.filter(r => weekVal === 'all' || r._week === weekVal);
-        }
+function messageLabel(value) {
+    if (value === 'sent') return 'Message sent';
+    if (value === 'created') return 'Message created';
+    return 'Message missing';
+}
 
-        // Apply search filter
-        if (this.currentSearchTerm) {
-            rows = rows.filter(row => 
-                Object.values(row).some(value => 
-                    String(value).toLowerCase().includes(this.currentSearchTerm)
-                )
-            );
-        }
+function poolLabel(value) {
+    if (value === 'requested') return 'Pool requested';
+    if (value === 'not-requested') return 'No pool';
+    if (value === 'waiting') return 'Pool waiting';
+    if (value === 'unavailable') return 'Pool unavailable';
+    return 'Pool review';
+}
 
-        if (rows.length === 0) {
-            alert('No data to export');
-            return;
-        }
-
-        // Create CSV content
-        const columns = Object.keys(rows[0]).filter(k => k !== '_week' && k !== 'id');
-        const csvContent = [
-            columns.map(col => this.formatColumnName(col)).join(','),
-            ...rows.map(row => 
-                columns.map(col => {
-                    const value = row[col] || '';
-                    // Escape quotes and wrap in quotes if contains comma
-                    return value.toString().includes(',') 
-                        ? `"${value.toString().replace(/"/g, '""')}"` 
-                        : value;
-                }).join(',')
-            )
-        ].join('\n');
-
-        // Download CSV
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `reservations_${weekVal || 'all'}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // Update a field in Firestore
-    async updateReservationField(id, field, value) {
-        const ref = doc(this.db, 'reservations', id);
-        await updateDoc(ref, { [field]: value });
-    }
-} 
+function issueLabel(issue) {
+    return {
+        'missing-property': 'Missing property',
+        'missing-guest': 'Missing guest',
+        'missing-check-in': 'Missing check-in',
+        'missing-check-out': 'Missing check-out',
+        'checkout-before-checkin': 'Checkout before check-in',
+        'missing-portal': 'Missing portal',
+        'missing-phone': 'Missing phone',
+        'missing-first-message': 'Missing first message',
+        'missing-sef': 'Missing SEF',
+        'missing-arrival': 'Missing arrival',
+        'missing-keybox': 'Missing keybox',
+        'pool-follow-up': 'Pool follow-up',
+        'pool-payment-missing': 'Pool payment missing',
+        'missing-tax': 'Missing tourist tax'
+    }[issue] || issue;
+}
