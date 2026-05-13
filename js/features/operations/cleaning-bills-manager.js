@@ -145,7 +145,6 @@ export class CleaningBillsManager {
 
     // Landing button card
     if (!document.getElementById('go-to-cleaning-bills-btn')) {
-      // Prioritize Other Tools grid
       const otherToolsGrid = document.getElementById('other-tools-grid');
       let parent = otherToolsGrid;
       let refNode = null;
@@ -164,11 +163,11 @@ export class CleaningBillsManager {
         card.className = 'dashboard-card'; // Force standard class
         card.innerHTML = `
             <div class="card-icon bg-emerald-500/10 text-emerald-600">
-             <span class="text-2xl">🧹</span>
+             <i class="fas fa-broom"></i>
             </div>
             <div class="card-body">
-              <h3>Cleaning Bills</h3>
-              <p>Calculate cleaning fees.</p>
+              <h3 data-i18n="apps.cleaningBills">Cleaning Bills</h3>
+              <p data-i18n="apps.cleaningBillsDesc">Cleaning fees.</p>
             </div>
         `;
 
@@ -179,6 +178,8 @@ export class CleaningBillsManager {
         }
 
         parent.appendChild(card);
+        parent.closest('.landing-category')?.classList.remove('hidden');
+        window.i18n?.updateUI?.();
       } else {
         const landing = document.getElementById('landing-page');
         if (landing) {

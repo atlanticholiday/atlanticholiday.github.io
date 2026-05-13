@@ -87,27 +87,63 @@
         "subtitle": "Manage properties, schedules, safety and more - all in one beautiful place.",
         "mainApps": "Main Apps",
         "dailyOperations": "Daily Operations",
-        "propertiesGuests": "Properties &amp; Guests",
-        "financeReports": "Finance &amp; Reports",
+        "propertiesGuests": "Properties & Guests",
+        "financeReports": "Finance & Reports",
+        "teamScheduling": "Team & Scheduling",
+        "reservationsGuests": "Reservations & Guests",
+        "propertiesData": "Properties & Data",
+        "servicesLogistics": "Services & Logistics",
+        "financeOwners": "Finance & Owners",
+        "adminCompliance": "Admin & Compliance",
         "showMoreTools": "Show More Tools",
         "hideMoreTools": "Hide More Tools",
         "otherTools": "Other Tools"
     },
   "apps": {
     "workSchedule": "Work Schedule",
-    "workScheduleDesc": "Plan staff schedules and holidays.",
+    "workScheduleDesc": "Schedules and holidays.",
     "vehicles": "Vehicles",
-    "vehiclesDesc": "Manage fleet, insurance and inspections.",
+    "vehiclesDesc": "Fleet and checks.",
     "welcomePacks": "Welcome Packs",
-    "welcomePacksDesc": "Manage stocks and packs delivered.",
+    "welcomePacksDesc": "Stock and deliveries.",
     "laundryLog": "Laundry Log",
-    "laundryLogDesc": "Track linen out to the laundry and back per property.",
+    "laundryLogDesc": "Linen by property.",
     "staff": "Staff",
-    "staffDesc": "Manage team members and details.",
+    "staffDesc": "Team details.",
     "properties": "Properties",
-    "propertiesDesc": "Manage short rentals and full inventory.",
+    "propertiesDesc": "Units and inventory.",
     "cleaningAh": "Cleaning AH",
-    "cleaningAhDesc": "Checkout revenue, laundry, and importable stats."
+    "cleaningAhDesc": "Cleanings and revenue.",
+    "reservations": "Weekly Reservations",
+    "reservationsDesc": "Weekly guest work.",
+    "operationalGuidelines": "Operational Guide",
+    "operationalGuidelinesDesc": "Approved protocols.",
+    "nukiDoors": "Nuki Doors",
+    "nukiDoorsDesc": "Smart locks.",
+    "allInfo": "All Info",
+    "allInfoDesc": "Property data.",
+    "inventory": "Inventory",
+    "inventoryDesc": "Essentials lists.",
+    "airbnbReservationInvoices": "Airbnb VAT Invoices",
+    "airbnbReservationInvoicesDesc": "Invoice PDFs.",
+    "owners": "Owners",
+    "ownersDesc": "Owners and payments.",
+    "rnal": "RNAL",
+    "rnalDesc": "RNAL data.",
+    "checklists": "Checklists",
+    "checklistsDesc": "Cleaning checks.",
+    "safety": "Safety",
+    "safetyDesc": "Safety checks.",
+    "userManagement": "User Management",
+    "userManagementDesc": "Access and roles.",
+    "buildPlanner": "Build Planner",
+    "buildPlannerDesc": "System roadmap.",
+    "visits": "Visits",
+    "visitsDesc": "Monthly visits.",
+    "cleaningBills": "Cleaning Bills",
+    "cleaningBillsDesc": "Cleaning fees.",
+    "commissionCalculator": "Commission Calculator",
+    "commissionCalculatorDesc": "Fees and VAT."
   },
   "allInfo": {
     "header": {
@@ -214,7 +250,7 @@
       "subtitle": "Track what goes out to the laundry and what comes back for each property."
     },
     "landing": {
-      "description": "Phone-first linen and towel handoff tracking by property."
+      "description": "Linen by property."
     },
     "views": {
       "entryWorkspace": "Entry",
@@ -807,7 +843,7 @@
       "restrictedBody": "This page stores company revenue data, so it is only visible to admins and managers."
     },
     "landing": {
-      "description": "Checkout revenue, laundry, and importable stats."
+      "description": "Cleanings and revenue."
     },
     "formula": {
       "kicker": "Formula",
@@ -1604,7 +1640,7 @@
   },
   "timeClock": {
     "cardTitle": "Time Clock",
-    "cardDescription": "Clock in, take breaks and clock out.",
+    "cardDescription": "Clock in and out.",
     "pageTitle": "Digital Time Clock",
     "pageSubtitle": "Attendance, breaks and weekly review",
     "landing": {

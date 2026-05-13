@@ -470,7 +470,8 @@ export class CleaningAhManager {
         }
 
         if (!document.getElementById("go-to-cleaning-ah-btn")) {
-            const parent = document.getElementById("go-to-properties-btn")?.parentElement
+            const parent = document.getElementById("services-logistics-grid")
+                || document.getElementById("go-to-properties-btn")?.parentElement
                 || document.getElementById("other-tools-grid");
 
             if (parent) {
@@ -487,6 +488,7 @@ export class CleaningAhManager {
                     </div>
                 `;
                 parent.appendChild(card);
+                parent.closest(".landing-category")?.classList.remove("hidden");
             }
         }
 

@@ -63,8 +63,8 @@ export class CommissionCalculatorManager {
           <span class="text-2xl">%</span>
         </div>
         <div class="card-body">
-          <h3>Commission Calculator</h3>
-          <p>Check platform fee, VAT, and net amount quickly.</p>
+          <h3 data-i18n="apps.commissionCalculator">Commission Calculator</h3>
+          <p data-i18n="apps.commissionCalculatorDesc">Fees and VAT.</p>
         </div>
       `;
     }
@@ -76,6 +76,8 @@ export class CommissionCalculatorManager {
       if (landingButton.parentElement !== parent) {
         parent.appendChild(landingButton);
       }
+      parent.closest('.landing-category')?.classList.remove('hidden');
+      window.i18n?.updateUI?.();
     }
   }
 

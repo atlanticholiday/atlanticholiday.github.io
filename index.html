@@ -165,14 +165,11 @@
         </header>
 
         <div class="container mx-auto px-4 pt-4 pb-14 max-w-7xl">
-            <!-- Primary apps -->
-            <!-- Primary apps -->
-            <!-- Primary apps -->
             <h2 class="text-xl font-semibold text-gray-800 mb-6 px-2" data-i18n="landing.mainApps">Main Apps</h2>
 
-            <!-- Daily Operations -->
-            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.dailyOperations">Daily Operations</h3>
-            <div class="dashboard-grid mb-8">
+            <section class="landing-category">
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.teamScheduling">Team &amp; Scheduling</h3>
+            <div id="team-scheduling-grid" class="dashboard-grid mb-6">
                 <button id="go-to-time-clock-btn" class="dashboard-card">
                     <div class="card-icon bg-slate-900/10 text-slate-700">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,46 +201,23 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="card-body">
-                        <h3>Staff</h3>
-                        <p>Manage team members and details.</p>
+                        <h3 data-i18n="apps.staff">Staff</h3>
+                        <p data-i18n="apps.staffDesc">Team details.</p>
                     </div>
                 </button>
+            </div>
+            </section>
 
-                <button id="go-to-vehicles-btn" class="dashboard-card">
-                    <div class="card-icon bg-cyan-500/10 text-cyan-600">
-                        <i class="fas fa-car"></i>
-                    </div>
-                    <div class="card-body">
-                        <h3>Vehicles</h3>
-                        <p>Manage fleet, insurance and inspections.</p>
-                    </div>
-                </button>
-
+            <section class="landing-category">
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.reservationsGuests">Reservations &amp; Guests</h3>
+            <div id="reservations-guests-grid" class="dashboard-grid mb-6">
                 <button id="go-to-reservations-btn" class="dashboard-card">
                     <div class="card-icon bg-indigo-500/10 text-indigo-600">
                         <i class="fas fa-calendar-week"></i>
                     </div>
                     <div class="card-body">
-                        <h3>Weekly Reservations</h3>
-                        <p>Clean PMS exports and complete guest operations.</p>
-                    </div>
-                </button>
-
-            </div>
-
-            <!-- Properties & Guests -->
-            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.propertiesGuests">Properties &amp; Guests</h3>
-            <div class="dashboard-grid mb-8">
-                <button id="go-to-properties-btn" class="dashboard-card">
-                    <div class="card-icon bg-blue-500/10 text-blue-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
-                        </svg>
-                    </div>
-                    <div class="card-body">
-                        <h3>Properties</h3>
-                        <p>Manage short rentals and full inventory.</p>
+                        <h3 data-i18n="apps.reservations">Weekly Reservations</h3>
+                        <p data-i18n="apps.reservationsDesc">Weekly guest work.</p>
                     </div>
                 </button>
 
@@ -253,7 +227,7 @@
                     </div>
                     <div class="card-body">
                         <h3 data-i18n="apps.welcomePacks">Welcome Packs</h3>
-                        <p data-i18n="apps.welcomePacksDesc">Manage stocks and packs delivered.</p>
+                        <p data-i18n="apps.welcomePacksDesc">Stock and deliveries.</p>
                     </div>
                 </button>
 
@@ -263,21 +237,26 @@
                     </div>
                     <div class="card-body">
                         <h3 id="operational-guidelines-card-title">Operational Guide</h3>
-                        <p id="operational-guidelines-card-description">Search guest-response protocols and copy approved replies.</p>
+                        <p id="operational-guidelines-card-description">Approved protocols.</p>
                     </div>
                 </button>
-            </div>
 
-            <!-- Finance & Reports -->
-            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.financeReports">Finance &amp; Reports</h3>
-            <div class="dashboard-grid mb-12">
-                <button id="go-to-airbnb-reservation-invoices-btn" class="dashboard-card">
-                    <div class="card-icon bg-rose-500/10 text-rose-600">
-                        <i class="fas fa-file-invoice"></i>
+            </div>
+            </section>
+
+            <section class="landing-category">
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.propertiesData">Properties &amp; Data</h3>
+            <div id="properties-data-grid" class="dashboard-grid mb-6">
+                <button id="go-to-properties-btn" class="dashboard-card">
+                    <div class="card-icon bg-blue-500/10 text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m5 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h1a1 1 0 011 1v2m-4 0h4" />
+                        </svg>
                     </div>
                     <div class="card-body">
-                        <h3>Airbnb VAT Invoices</h3>
-                        <p>Copy the command and export reservation invoices to PDF.</p>
+                        <h3 data-i18n="apps.properties">Properties</h3>
+                        <p data-i18n="apps.propertiesDesc">Units and inventory.</p>
                     </div>
                 </button>
 
@@ -289,13 +268,46 @@
                         </svg>
                     </div>
                     <div class="card-body">
-                        <h3>All Info</h3>
-                        <p>See every property detail in one view.</p>
+                        <h3 data-i18n="apps.allInfo">All Info</h3>
+                        <p data-i18n="apps.allInfoDesc">Property data.</p>
                     </div>
                 </button>
-            </div>
 
-            <!-- More Tools Toggle -->
+            </div>
+            </section>
+
+            <section class="landing-category">
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.servicesLogistics">Services &amp; Logistics</h3>
+            <div id="services-logistics-grid" class="dashboard-grid mb-6">
+                <button id="go-to-vehicles-btn" class="dashboard-card">
+                    <div class="card-icon bg-cyan-500/10 text-cyan-600">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3 data-i18n="apps.vehicles">Vehicles</h3>
+                        <p data-i18n="apps.vehiclesDesc">Fleet and checks.</p>
+                    </div>
+                </button>
+
+            </div>
+            </section>
+
+            <section class="landing-category">
+            <h3 class="text-sm font-medium uppercase tracking-wider text-gray-400 mb-3 px-2" data-i18n="landing.financeOwners">Finance &amp; Owners</h3>
+            <div id="finance-owners-grid" class="dashboard-grid mb-6">
+                <button id="go-to-airbnb-reservation-invoices-btn" class="dashboard-card">
+                    <div class="card-icon bg-rose-500/10 text-rose-600">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3 data-i18n="apps.airbnbReservationInvoices">Airbnb VAT Invoices</h3>
+                        <p data-i18n="apps.airbnbReservationInvoicesDesc">Invoice PDFs.</p>
+                    </div>
+                </button>
+
+            </div>
+            </section>
+
             <div class="mb-4 px-2">
                 <button id="toggle-more-tools-btn"
                     class="flex items-center text-gray-500 hover:text-brand transition-colors text-sm font-medium">
@@ -307,7 +319,6 @@
                 </button>
             </div>
 
-            <!-- More Tools Section (Hidden by default) -->
             <div id="more-tools-section" class="hidden">
                 <h2 class="text-xl font-semibold text-gray-400 mb-4 px-2" data-i18n="landing.otherTools">Other Tools</h2>
                 <div id="other-tools-grid" class="dashboard-grid opacity-80 mb-12">
@@ -319,8 +330,8 @@
                             </svg>
                         </div>
                         <div class="card-body">
-                            <h3>RNAL</h3>
-                            <p>Process and manage RNAL data.</p>
+                            <h3 data-i18n="apps.rnal">RNAL</h3>
+                            <p data-i18n="apps.rnalDesc">RNAL data.</p>
                         </div>
                     </button>
 
@@ -329,8 +340,8 @@
                             <i class="fas fa-clipboard-check"></i>
                         </div>
                         <div class="card-body">
-                            <h3>Checklists</h3>
-                            <p>Standardize cleaning and property checks.</p>
+                            <h3 data-i18n="apps.checklists">Checklists</h3>
+                            <p data-i18n="apps.checklistsDesc">Cleaning checks.</p>
                         </div>
                     </button>
 
@@ -339,8 +350,8 @@
                             <i class="fas fa-user-tie"></i>
                         </div>
                         <div class="card-body">
-                            <h3>Owners</h3>
-                            <p>Owner information and payments.</p>
+                            <h3 data-i18n="apps.owners">Owners</h3>
+                            <p data-i18n="apps.ownersDesc">Owners and payments.</p>
                         </div>
                     </button>
 
@@ -352,8 +363,8 @@
                             </svg>
                         </div>
                         <div class="card-body">
-                            <h3>Safety</h3>
-                            <p>Fire extinguishers and first aid kits.</p>
+                            <h3 data-i18n="apps.safety">Safety</h3>
+                            <p data-i18n="apps.safetyDesc">Safety checks.</p>
                         </div>
                     </button>
 
@@ -362,8 +373,8 @@
                             <i class="fas fa-user-cog"></i>
                         </div>
                         <div class="card-body">
-                            <h3>User Management</h3>
-                            <p>Access control and roles.</p>
+                            <h3 data-i18n="apps.userManagement">User Management</h3>
+                            <p data-i18n="apps.userManagementDesc">Access and roles.</p>
                         </div>
                     </button>
 
@@ -376,7 +387,7 @@
                         </div>
                         <div class="card-body">
                             <h3 id="build-planner-card-title">Build Planner</h3>
-                            <p id="build-planner-card-description">Future system ideas, recommended order, and copy-ready prompts for OpenCode.</p>
+                            <p id="build-planner-card-description">System roadmap.</p>
                         </div>
                     </button>
 
@@ -385,8 +396,8 @@
                             <i class="fas fa-door-open"></i>
                         </div>
                         <div class="card-body">
-                            <h3>Nuki Doors</h3>
-                            <p>Open configured smart locks from the website.</p>
+                            <h3 data-i18n="apps.nukiDoors">Nuki Doors</h3>
+                            <p data-i18n="apps.nukiDoorsDesc">Smart locks.</p>
                         </div>
                     </button>
 
@@ -396,8 +407,8 @@
                             <i class="fas fa-list-check"></i>
                         </div>
                         <div class="card-body">
-                            <h3>Inventory</h3>
-                            <p>Generate essentials lists for properties.</p>
+                            <h3 data-i18n="apps.inventory">Inventory</h3>
+                            <p data-i18n="apps.inventoryDesc">Essentials lists.</p>
                         </div>
                     </button>
                 </div>
@@ -416,9 +427,12 @@
                         : window.i18n.t('landing.hideMoreTools');
                 }
 
-                document.getElementById('toggle-more-tools-btn').addEventListener('click', function () {
+                document.getElementById('toggle-more-tools-btn')?.addEventListener('click', function () {
                     const section = document.getElementById('more-tools-section');
                     const icon = document.getElementById('more-tools-icon');
+                    if (!section || !icon) {
+                        return;
+                    }
 
                     if (section.classList.contains('hidden')) {
                         section.classList.remove('hidden');

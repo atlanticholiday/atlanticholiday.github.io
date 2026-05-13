@@ -248,6 +248,8 @@ function syncAccessModeUi() {
         moreToolsSection.classList.add('hidden');
     }
 
+    syncLandingCategoryVisibility();
+
     const heroTitle = document.getElementById('landing-hero-title') || document.querySelector('#landing-page .hero-title');
     const heroSubtitle = document.getElementById('landing-hero-subtitle') || document.querySelector('#landing-page .hero-subtitle');
     if (heroTitle) {
@@ -281,6 +283,14 @@ function syncAccessModeUi() {
         navigationManager.showTimeClockPage();
         timeClockAutoOpenedForUser = true;
     }
+}
+
+function syncLandingCategoryVisibility() {
+    document.querySelectorAll('#landing-page .landing-category').forEach((section) => {
+        const hasVisibleCard = Array.from(section.querySelectorAll('.dashboard-card'))
+            .some((card) => !card.classList.contains('hidden'));
+        section.classList.toggle('hidden', !hasVisibleCard);
+    });
 }
 
 function routeCurrentUserAccess() {

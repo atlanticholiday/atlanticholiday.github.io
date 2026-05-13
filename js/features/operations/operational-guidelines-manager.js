@@ -18,7 +18,7 @@ const STORAGE_KEY = "operational-guidelines-edits-v1";
 const COPY = {
     en: {
         cardTitle: "Operational Guide",
-        cardDescription: "Search guest-response protocols and copy approved replies.",
+        cardDescription: "Approved protocols.",
         kicker: "Team manual",
         title: "Operational Guide",
         subtitle: "Ask what happened, jump to the right protocol, and copy the approved guest reply.",
@@ -60,7 +60,7 @@ const COPY = {
     },
     pt: {
         cardTitle: "Guia Operacional",
-        cardDescription: "Pesquisa protocolos de resposta e copia mensagens aprovadas.",
+        cardDescription: "Protocolos aprovados.",
         kicker: "Manual da equipa",
         title: "Guia Operacional",
         subtitle: "Escreve o que aconteceu, salta para o protocolo certo e copia a resposta aprovada ao hóspede.",

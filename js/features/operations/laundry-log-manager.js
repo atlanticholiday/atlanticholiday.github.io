@@ -208,7 +208,8 @@ export class LaundryLogManager {
         }
 
         if (!document.getElementById("go-to-laundry-log-btn")) {
-            const parent = document.getElementById("go-to-welcome-packs-btn")?.parentElement
+            const parent = document.getElementById("services-logistics-grid")
+                || document.getElementById("go-to-welcome-packs-btn")?.parentElement
                 || document.getElementById("go-to-properties-btn")?.parentElement
                 || document.getElementById("other-tools-grid");
 
@@ -226,6 +227,7 @@ export class LaundryLogManager {
                     </div>
                 `;
                 parent.appendChild(card);
+                parent.closest(".landing-category")?.classList.remove("hidden");
             }
         }
 

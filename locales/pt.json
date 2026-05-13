@@ -89,25 +89,61 @@
         "dailyOperations": "Operações Diárias",
         "propertiesGuests": "Propriedades e Hóspedes",
         "financeReports": "Finanças e Relatórios",
+        "teamScheduling": "Equipa e Horários",
+        "reservationsGuests": "Reservas e Hóspedes",
+        "propertiesData": "Propriedades e Dados",
+        "servicesLogistics": "Serviços e Logística",
+        "financeOwners": "Finanças e Proprietários",
+        "adminCompliance": "Administração e Conformidade",
         "showMoreTools": "Mostrar Mais Ferramentas",
         "hideMoreTools": "Ocultar Ferramentas",
         "otherTools": "Outras Ferramentas"
     },
     "apps": {
         "workSchedule": "Horário de Trabalho",
-        "workScheduleDesc": "Planear horários e férias da equipa.",
+        "workScheduleDesc": "Horários e férias.",
         "vehicles": "Veículos",
-        "vehiclesDesc": "Gerir frota, seguros e inspeções.",
+        "vehiclesDesc": "Frota e inspeções.",
         "welcomePacks": "Welcome Pack",
-        "welcomePacksDesc": "Gerir stock e entregas de welcome pack.",
+        "welcomePacksDesc": "Stock e entregas.",
         "laundryLog": "Registo de Lavandaria",
-        "laundryLogDesc": "Controlar roupa enviada e recebida por propriedade.",
+        "laundryLogDesc": "Roupa por alojamento.",
         "staff": "Equipa",
-        "staffDesc": "Gerir membros da equipa.",
+        "staffDesc": "Dados da equipa.",
         "properties": "Propriedades",
-        "propertiesDesc": "Gerir alojamentos e inventário.",
+        "propertiesDesc": "Alojamentos e inventário.",
         "cleaningAh": "Limpeza AH",
-        "cleaningAhDesc": "Receita de check-out, lavandaria e estatisticas importaveis."
+        "cleaningAhDesc": "Limpezas e receitas.",
+        "reservations": "Reservas Semanais",
+        "reservationsDesc": "Operação semanal.",
+        "operationalGuidelines": "Guia Operacional",
+        "operationalGuidelinesDesc": "Protocolos aprovados.",
+        "nukiDoors": "Portas Nuki",
+        "nukiDoorsDesc": "Fechaduras Nuki.",
+        "allInfo": "Toda a Informação",
+        "allInfoDesc": "Dados dos alojamentos.",
+        "inventory": "Inventário",
+        "inventoryDesc": "Listas essenciais.",
+        "airbnbReservationInvoices": "Faturas IVA Airbnb",
+        "airbnbReservationInvoicesDesc": "Faturas em PDF.",
+        "owners": "Proprietários",
+        "ownersDesc": "Dados e pagamentos.",
+        "rnal": "RNAL",
+        "rnalDesc": "Dados RNAL.",
+        "checklists": "Checklists",
+        "checklistsDesc": "Limpezas e vistorias.",
+        "safety": "Segurança",
+        "safetyDesc": "Segurança e kits.",
+        "userManagement": "Gestão de Utilizadores",
+        "userManagementDesc": "Acessos e perfis.",
+        "buildPlanner": "Build Planner",
+        "buildPlannerDesc": "Roadmap do sistema.",
+        "visits": "Visitas",
+        "visitsDesc": "Visitas mensais.",
+        "cleaningBills": "Contas de Limpeza",
+        "cleaningBillsDesc": "Taxas de limpeza.",
+        "commissionCalculator": "Calculadora de Comissões",
+        "commissionCalculatorDesc": "Comissões e IVA."
     },
     "allInfo": {
         "header": {
@@ -214,7 +250,7 @@
             "subtitle": "Controlar o que sai para a lavandaria e o que regressa em cada propriedade."
         },
         "landing": {
-            "description": "Registo simples no telemóvel para roupa de cama e toalhas por propriedade."
+            "description": "Roupa por alojamento."
         },
         "views": {
             "entryWorkspace": "Entrada",
@@ -815,7 +851,7 @@
             "restrictedBody": "Esta página guarda dados de receita da empresa, por isso só está visível para admins e gestores."
         },
         "landing": {
-            "description": "Receita de check-out, lavandaria e estatísticas importáveis."
+            "description": "Limpezas e receitas."
         },
         "formula": {
             "kicker": "Fórmula",
@@ -1290,7 +1326,7 @@
             "options": {
                 "airbnbReservationInvoices": "Faturas IVA Airbnb",
                 "operationalGuidelines": "Guia Operacional",
-                "allinfo": "All Info",
+                "allinfo": "Toda a Informação",
                 "rnal": "RNAL",
                 "checklists": "Checklists",
                 "owners": "Owners",
@@ -1611,10 +1647,10 @@
         "vacationAdjustment": "Ajuste de Férias"
     },
     "timeClock": {
-        "cardTitle": "Relogio de Ponto",
-        "cardDescription": "Registe entrada, pausas e saida.",
-        "pageTitle": "Relogio de Ponto Digital",
-        "pageSubtitle": "Assiduidade, pausas e revisao semanal",
+        "cardTitle": "Relógio de Ponto",
+        "cardDescription": "Entrada e saída.",
+        "pageTitle": "Relógio de Ponto Digital",
+        "pageSubtitle": "Assiduidade, pausas e revisão semanal",
         "landing": {
             "stationTitle": "Estacao partilhada de ponto",
             "stationSubtitle": "Use o tablet partilhado para escolher qualquer colega e registar turnos, pausas e saidas.",

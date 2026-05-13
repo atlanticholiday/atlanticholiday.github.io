@@ -134,7 +134,6 @@ export class VisitsManager {
 
     // Landing button card
     if (!document.getElementById('go-to-visits-btn')) {
-      // Prioritize Other Tools grid
       const otherToolsGrid = document.getElementById('other-tools-grid');
       let parent = otherToolsGrid;
       let refNode = null;
@@ -153,11 +152,11 @@ export class VisitsManager {
         card.className = 'dashboard-card'; // Force standard class
         card.innerHTML = `
             <div class="card-icon bg-blue-500/10 text-blue-600">
-             <span class="text-2xl">👀</span> 
+             <i class="fas fa-eye"></i>
             </div>
             <div class="card-body">
-              <h3>Visits</h3>
-              <p>Track monthly visits.</p>
+              <h3 data-i18n="apps.visits">Visits</h3>
+              <p data-i18n="apps.visitsDesc">Monthly visits.</p>
             </div>
         `;
 
@@ -169,6 +168,8 @@ export class VisitsManager {
         }
 
         parent.appendChild(card);
+        parent.closest('.landing-category')?.classList.remove('hidden');
+        window.i18n?.updateUI?.();
       } else {
         // Fallback: append a simple link inside landing page
         const landing = document.getElementById('landing-page');
