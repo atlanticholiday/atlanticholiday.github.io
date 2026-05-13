@@ -722,6 +722,31 @@
     padding: 5px 9px;
 }
 
+.reservations-view-tabs {
+    display: inline-flex;
+    gap: 4px;
+    margin-top: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    padding: 4px;
+}
+
+.reservations-view-tabs button {
+    min-height: 34px;
+    border-radius: 6px;
+    padding: 0 12px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.reservations-view-tabs button:hover,
+.reservations-view-tabs button.is-active {
+    background: #b4232f;
+    color: #fff;
+}
+
 #reservations-import-status[data-type="success"] {
     color: #047857;
 }
@@ -753,6 +778,183 @@
 .reservations-workspace-side {
     position: sticky;
     top: 118px;
+}
+
+.reservations-pools-view {
+    display: grid;
+    gap: 16px;
+}
+
+.reservations-pools-view__header {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 16px;
+}
+
+.reservations-pools-view__header h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 28px;
+    font-weight: 850;
+    line-height: 1.1;
+}
+
+.reservations-pools-view__header p:last-child {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 13px;
+}
+
+.reservations-pools-view__stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.reservations-pool-stat {
+    min-width: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 7px;
+    background: #fff;
+    padding: 10px;
+}
+
+.reservations-pool-stat span {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.reservations-pool-stat strong {
+    display: block;
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.1;
+}
+
+.reservations-pools-table-wrap {
+    overflow: auto;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.reservations-pools-table {
+    width: 100%;
+    min-width: 1480px;
+    border-collapse: collapse;
+}
+
+.reservations-pools-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 1px solid #dbeafe;
+    background: #eff6ff;
+    color: #1e3a8a;
+    padding: 10px 8px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.reservations-pools-table td {
+    border-bottom: 1px solid #eef2f7;
+    padding: 8px;
+    vertical-align: top;
+    color: #111827;
+    font-size: 13px;
+}
+
+.reservations-pools-table tr:hover td {
+    background: #f8fbff;
+}
+
+.reservations-pools-table__identity {
+    min-width: 190px;
+}
+
+.reservations-pools-table__identity strong,
+.reservations-pools-table__identity span,
+.reservations-pools-table__identity small {
+    display: block;
+}
+
+.reservations-pools-table__identity strong {
+    color: #111827;
+    font-size: 13px;
+}
+
+.reservations-pools-table__identity span,
+.reservations-pools-table__identity small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.reservations-pool-input {
+    width: 100%;
+    min-width: 96px;
+    min-height: 34px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #111827;
+    padding: 6px 8px;
+    font-size: 13px;
+}
+
+.reservations-pool-input:focus {
+    outline: 2px solid #93c5fd;
+    outline-offset: 1px;
+}
+
+.reservations-pool-history {
+    display: grid;
+    gap: 5px;
+    min-width: 150px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reservations-pool-history li {
+    display: grid;
+    gap: 1px;
+}
+
+.reservations-pool-history strong,
+.reservations-pool-history span,
+.reservations-pool-history small,
+.reservations-pool-history-empty {
+    display: block;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.reservations-pool-history strong {
+    color: #1e3a8a;
+}
+
+.reservations-pool-history span {
+    color: #111827;
+    overflow-wrap: anywhere;
+}
+
+.reservations-pool-history small,
+.reservations-pool-history-empty {
+    color: #64748b;
 }
 
 .reservations-quick-access {
@@ -1029,6 +1231,72 @@
     padding: 4px 18px 18px;
 }
 
+.reservation-pool-control {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 14px;
+    margin: 4px 0 12px;
+}
+
+.reservation-pool-control h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.reservation-pool-control__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.reservation-pool-metric {
+    min-width: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 7px;
+    background: #fff;
+    padding: 9px 10px;
+}
+
+.reservation-pool-metric span {
+    display: block;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.reservation-pool-metric strong {
+    display: block;
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.reservation-edit-section {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.reservation-edit-section h3 {
+    margin: 0;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .reservation-edit-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1167,6 +1435,10 @@
     .reservations-workspace-grid,
     .reservations-quick-access,
     .reservations-summary,
+    .reservations-pools-view__header,
+    .reservations-pools-view__stats,
+    .reservation-pool-control,
+    .reservation-pool-control__metrics,
     .reservation-row summary,
     .reservation-edit-grid,
     .reservation-static-grid {
@@ -1203,6 +1475,10 @@
     .reservations-quick-access,
     .reservations-quick-access__actions,
     .reservations-summary,
+    .reservations-pools-view__header,
+    .reservations-pools-view__stats,
+    .reservation-pool-control,
+    .reservation-pool-control__metrics,
     .reservation-row summary,
     .reservation-edit-grid,
     .reservation-static-grid {

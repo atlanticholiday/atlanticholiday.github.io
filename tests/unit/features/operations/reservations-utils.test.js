@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+  applyPoolControlsToReservations,
   calculateTouristTaxAmount,
   filterReservations,
   getIsoWeek,
@@ -8,6 +9,7 @@ import {
   normalizePortal,
   normalizePmsReservationRow,
   normalizeReservationRow,
+  parsePoolControlMatrix,
   parseNumber,
   parseReservationDate
 } from "../../../../js/features/operations/reservations-utils.js";
@@ -29,6 +31,7 @@ describe("reservations-utils", () => {
       "Hora in": "16h00",
       Cofre: "3",
       "Piscina Aq.": "pago",
+      "Cobrar Piscina": "Cobrar: 45 EUR",
       Pago: "405,00 €",
       "1ª Mensagem": "Enviada",
       Número: "491736682567",
@@ -48,7 +51,9 @@ describe("reservations-utils", () => {
     assert.equal(record.checkOut, "2026-05-18");
     assert.equal(record.portal, "Airbnb");
     assert.equal(record.poolState, "requested");
+    assert.equal(record.poolChargeAmountValue, 45);
     assert.equal(record.poolPaidAmountValue, 405);
+    assert.equal(record.poolPaymentState, "paid");
     assert.equal(record.firstMessageState, "sent");
     assert.equal(record.sefState, "validated");
     assert.equal(record.week, "2026-W19");
@@ -186,6 +191,46 @@ describe("reservations-utils", () => {
     assert.equal(filterReservations(records, { issue: "keybox" }).length, 1);
     assert.equal(filterReservations(records, { issue: "sef" }).length, 1);
     assert.equal(filterReservations(records, { search: "acqua" }).length, 1);
+  });
+
+  test("parses pool control sheets and merges matching reservations", () => {
+    const poolControls = parsePoolControlMatrix([
+      ["", "Alojamentos", "", "", "", ""],
+      ["", "Villa Alegria", "", "", "", ""],
+      ["", "Cobrar: 45 EUR", "", "Pago", "Avantio - 35 EUR", ""],
+      ["", "Piscina Ligada 7/5", "", "", "", ""],
+      ["", "Sim", "9/5 - 18/5", "Sim", "Sim", ""],
+      ["", "Nao", "18/5 - 25/5", "Nao", "Nao", ""]
+    ]);
+
+    assert.equal(poolControls.propertySettings.length, 1);
+    assert.equal(poolControls.propertySettings[0].poolChargeAmountValue, 45);
+    assert.equal(poolControls.propertySettings[0].poolHeatingState, "on");
+    assert.equal(poolControls.reservationControls.length, 2);
+    assert.equal(poolControls.reservationControls[0].checkIn, "2026-05-09");
+
+    const records = [
+      normalizeReservationRow({
+        Estado: "Paga",
+        In: "9/5",
+        "Nome alojamento": "Villa Alegria",
+        Out: "18/5",
+        Nome: "Pool Guest",
+        Portal: "Airbnb",
+        SEF: "Validado",
+        "1Âª Mensagem": "Enviada",
+        Cofre: "3",
+        NÃºmero: "123"
+      })
+    ];
+
+    const [merged] = applyPoolControlsToReservations(records, poolControls);
+    assert.equal(merged.heatedPool, "Sim");
+    assert.equal(merged.poolPaymentState, "paid");
+    assert.equal(merged.poolChargeAmountValue, 45);
+    assert.equal(merged.poolAvantioAmountValue, 35);
+    assert.equal(merged.poolHeatingState, "on");
+    assert.equal(merged.validationIssues.includes("pool-payment-missing"), false);
   });
 
   test("parses short dates and ISO weeks", () => {

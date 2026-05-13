@@ -12,6 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import {
+    applyPoolControlsToReservations,
     buildReservationSummary,
     filterReservations,
     groupReservationsByDate,
@@ -20,7 +21,8 @@ import {
     normalizePmsReservationRow,
     normalizeRawReservationDocument,
     normalizeReservationRow,
-    normalizeText
+    normalizeText,
+    parsePoolControlMatrix
 } from './reservations-utils.js';
 
 const ISSUE_OPTIONS = [
@@ -50,6 +52,38 @@ const MANUAL_FIELDS = [
     { field: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Operational notes' }
 ];
 
+const MANUAL_FIELD_SECTIONS = [
+    {
+        title: 'Arrival and guest',
+        fields: [
+            { field: 'arrivalInfo', label: 'Arrival info', type: 'text', placeholder: 'Flight arrival, already in Madeira...' },
+            { field: 'flightNumber', label: 'Flight', type: 'text', placeholder: 'TP1685' },
+            { field: 'checkInTime', label: 'Check-in hour', type: 'text', placeholder: '16h00' },
+            { field: 'safeCode', label: 'Safe / keybox', type: 'text', placeholder: 'Code' },
+            { field: 'firstMessageStatus', label: 'First message', type: 'select', options: ['', 'Enviada', 'Enviado', 'Criado', '-'] },
+            { field: 'sefStatus', label: 'Online check-in', type: 'select', options: ['', 'A espera', 'Validado', 'Pendente'] }
+        ]
+    },
+    {
+        title: 'Heated pool control',
+        fields: [
+            { field: 'heatedPool', label: 'Guest requested', type: 'select', options: ['', 'sim', 'nao', 'pago', 'a espera', 'nao respondeu', '???', 'n funciona'] },
+            { field: 'poolChargeAmount', label: 'Guest charge', type: 'text', placeholder: 'Cobrar: 45 EUR' },
+            { field: 'poolPaidAmount', label: 'Guest paid', type: 'text', placeholder: 'Sim, Nao, amount, waiting...' },
+            { field: 'poolAvantioAmount', label: 'Avantio amount', type: 'text', placeholder: 'Avantio - 35 EUR' },
+            { field: 'poolHeatingStatus', label: 'Heating status', type: 'select', options: ['', 'Pool on', 'Pool off', 'Always on', 'Remote on', 'Scheduled', 'Unavailable'] }
+        ]
+    },
+    {
+        title: 'Tax and notes',
+        fields: [
+            { field: 'touristTaxAmount', label: 'Tax value', type: 'text', placeholder: 'Auto: 2 EUR per guest/night, max 7 nights' },
+            { field: 'touristTaxPaidBy', label: 'Tax paid by', type: 'text', placeholder: 'Airbnb, Booking, Transf...' },
+            { field: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Operational notes' }
+        ]
+    }
+];
+
 export class ReservationsManager {
     constructor(db, userId) {
         this.db = db;
@@ -63,10 +97,12 @@ export class ReservationsManager {
             issue: 'all',
             search: ''
         };
+        this.viewMode = 'reservations';
         this.saveTimers = new Map();
         this.isClearingReservations = false;
         this.controlsBound = false;
         this.openReservationKeys = new Set();
+        this.lastParsedPoolControls = { propertySettings: [], reservationControls: [] };
 
         this.restoreLocalImport();
     }
@@ -103,7 +139,7 @@ export class ReservationsManager {
                     <input id="reservations-search-input" type="search" placeholder="Guest, property, phone, flight">
                 </label>
                 <div class="reservations-actions">
-                    <input type="file" id="reservations-file-input" accept=".xlsx,.xls" hidden>
+                    <input type="file" id="reservations-file-input" accept=".xlsx,.xls,.csv" hidden>
                     <button id="load-reservations-btn" class="reservations-action reservations-action--primary" type="button">
                         <i class="fas fa-file-excel"></i>
                         Import workbook
@@ -113,6 +149,14 @@ export class ReservationsManager {
                         Save import
                     </button>
                 </div>
+            </div>
+            <div class="reservations-view-tabs" role="tablist" aria-label="Reservation views">
+                <button id="reservations-tab-all" class="is-active" type="button" data-reservations-view="reservations">
+                    All reservations
+                </button>
+                <button id="reservations-tab-pools" type="button" data-reservations-view="pools">
+                    Heated pools
+                </button>
             </div>
             <div class="reservations-import-strip">
                 <span id="dataset-name-display">No import loaded</span>
@@ -145,8 +189,8 @@ export class ReservationsManager {
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files?.[0];
             if (!file) return;
-            if (!/\.xlsx?$/i.test(file.name)) {
-                this.showStatus('Please select a valid Excel workbook.', 'error');
+            if (!/\.(xlsx?|csv)$/i.test(file.name)) {
+                this.showStatus('Please select a valid Excel workbook or CSV file.', 'error');
                 return;
             }
 
@@ -210,8 +254,17 @@ export class ReservationsManager {
             const quickAction = event.target.closest('[data-reservations-quick-filter]');
             if (!quickAction) return;
             this.filters.issue = quickAction.dataset.reservationsQuickFilter || 'all';
+            if (this.filters.issue === 'pool') this.viewMode = 'pools';
             this.filters.week = 'all';
             this.filters.search = '';
+            this.render();
+        });
+        document.addEventListener('click', (event) => {
+            const viewAction = event.target.closest('[data-reservations-view]');
+            if (!viewAction) return;
+            this.viewMode = viewAction.dataset.reservationsView === 'pools' ? 'pools' : 'reservations';
+            if (this.viewMode === 'pools' && this.filters.issue === 'all') this.filters.issue = 'pool';
+            if (this.viewMode === 'reservations' && this.filters.issue === 'pool') this.filters.issue = 'all';
             this.render();
         });
         reservationsTable.addEventListener('toggle', (event) => {
@@ -245,15 +298,21 @@ export class ReservationsManager {
 
     async handleFileUpload(file) {
         this.showStatus('Reading workbook...');
-        const arrayBuffer = await this.readFileAsArrayBuffer(file);
-        const workbook = XLSX.read(arrayBuffer, {
-            type: 'array',
+        const isCsv = /\.csv$/i.test(file.name);
+        const input = isCsv ? await this.readFileAsText(file) : await this.readFileAsArrayBuffer(file);
+        const workbook = XLSX.read(input, {
+            type: isCsv ? 'string' : 'array',
             cellDates: true,
             cellText: false
         });
 
         const records = this.parseWorkbook(workbook, file.name);
-        this.currentImportName = file.name.replace(/\.xlsx?$/i, '');
+        const poolControlCount = this.lastParsedPoolControls.propertySettings.length + this.lastParsedPoolControls.reservationControls.length;
+        if (!records.length && poolControlCount) {
+            await this.applyPoolControlImport(file.name);
+            return;
+        }
+        this.currentImportName = file.name.replace(/\.(xlsx?|csv)$/i, '');
         this.importedRecords = records;
         this.filters.week = 'all';
         this.filters.issue = records.some((record) => record.validationIssues.length) ? 'invalid' : 'all';
@@ -270,6 +329,10 @@ export class ReservationsManager {
 
     parseWorkbook(workbook, importName = '') {
         const records = [];
+        const poolControls = {
+            propertySettings: [],
+            reservationControls: []
+        };
         workbook.SheetNames.forEach((sheetName) => {
             const sheet = workbook.Sheets[sheetName];
             const matrix = XLSX.utils.sheet_to_json(sheet, {
@@ -277,6 +340,11 @@ export class ReservationsManager {
                 defval: '',
                 raw: true
             });
+            const parsedPoolControls = parsePoolControlMatrix(matrix);
+            if (parsedPoolControls.propertySettings.length || parsedPoolControls.reservationControls.length) {
+                poolControls.propertySettings.push(...parsedPoolControls.propertySettings);
+                poolControls.reservationControls.push(...parsedPoolControls.reservationControls);
+            }
             const pmsHeaderIndex = matrix.findIndex((row) => isPmsReservationHeader(row));
 
             if (pmsHeaderIndex >= 0) {
@@ -313,11 +381,75 @@ export class ReservationsManager {
             }
         });
 
-        return records;
+        this.lastParsedPoolControls = poolControls;
+        return applyPoolControlsToReservations(records, poolControls);
     }
 
     countWorkbookSheets(workbook) {
         return workbook.SheetNames.length;
+    }
+
+    async applyPoolControlImport(fileName) {
+        const source = this.importedRecords.length ? this.importedRecords : this.savedRecords;
+        if (!source.length) {
+            this.showStatus('Pool control file read. Import or load weekly reservations before applying it.', 'info');
+            return;
+        }
+
+        const merged = applyPoolControlsToReservations(source, this.lastParsedPoolControls);
+        const changedRecords = merged.filter((record, index) => poolStorageChanged(source[index], record));
+
+        if (!changedRecords.length) {
+            this.showStatus('Pool control file read, but no matching reservations needed updates.', 'info');
+            return;
+        }
+
+        if (this.importedRecords.length) {
+            this.importedRecords = merged;
+            this.currentImportName = this.currentImportName || fileName.replace(/\.(xlsx?|csv)$/i, '');
+            this.persistLocalImport();
+            this.render();
+            this.showStatus(`Applied pool controls to ${changedRecords.length} imported reservations.`, 'success');
+            return;
+        }
+
+        this.savedRecords = merged;
+        this.render();
+
+        if (!this.db || !this.userId) {
+            this.showStatus(`Applied pool controls to ${changedRecords.length} reservations in this browser. Sign in to save them.`, 'info');
+            return;
+        }
+
+        this.showStatus(`Saving pool controls on ${changedRecords.length} reservations...`, 'info');
+        try {
+            await Promise.all(changedRecords
+                .filter((record) => record.id)
+                .map((record) => updateDoc(doc(this.db, 'reservations', record.id), {
+                    heatedPool: record.heatedPool || '',
+                    poolChargeAmount: record.poolChargeAmount || '',
+                    poolPaidAmount: record.poolPaidAmount || '',
+                    poolAvantioAmount: record.poolAvantioAmount || '',
+                    poolHeatingStatus: record.poolHeatingStatus || '',
+                    poolTurnedOnAt: record.poolTurnedOnAt || '',
+                    poolTurnedOffAt: record.poolTurnedOffAt || '',
+                    poolNotes: record.poolNotes || '',
+                    poolHistory: record.poolHistory || [],
+                    poolStatus: record.poolStatus || '',
+                    poolState: record.poolState || '',
+                    poolPaymentState: record.poolPaymentState || '',
+                    poolHeatingState: record.poolHeatingState || '',
+                    poolChargeAmountValue: record.poolChargeAmountValue ?? null,
+                    poolPaidAmountValue: record.poolPaidAmountValue ?? null,
+                    poolAvantioAmountValue: record.poolAvantioAmountValue ?? null,
+                    validationIssues: record.validationIssues || [],
+                    updatedAt: serverTimestamp()
+                })));
+            this.showStatus(`Applied and saved pool controls from ${fileName}.`, 'success');
+        } catch (error) {
+            console.error('Pool control update failed:', error);
+            this.showStatus(`Pool control save failed: ${error.message || error}`, 'error');
+        }
     }
 
     readFileAsArrayBuffer(file) {
@@ -326,6 +458,15 @@ export class ReservationsManager {
             reader.onload = () => resolve(reader.result);
             reader.onerror = () => reject(reader.error || new Error('Could not read file'));
             reader.readAsArrayBuffer(file);
+        });
+    }
+
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+            reader.readAsText(file, 'utf-8');
         });
     }
 
@@ -414,9 +555,13 @@ export class ReservationsManager {
         const record = source.find((entry) => this.getRecordKey(entry) === recordKey);
         if (!record || !field) return;
 
+        const previousValue = record[field] ?? '';
         record[field] = value;
         const normalized = normalizeRawReservationDocument(record);
         Object.assign(record, normalized);
+        if (isPoolField(field)) {
+            record.poolHistory = buildPoolHistory(record.poolHistory, field, previousValue, value);
+        }
 
         if (this.importedRecords.length) {
             this.persistLocalImport();
@@ -443,6 +588,13 @@ export class ReservationsManager {
                     firstMessageState: record.firstMessageState || '',
                     sefState: record.sefState || '',
                     poolState: record.poolState || '',
+                    poolPaymentState: record.poolPaymentState || '',
+                    poolHeatingState: record.poolHeatingState || '',
+                    poolTurnedOnAt: record.poolTurnedOnAt || '',
+                    poolTurnedOffAt: record.poolTurnedOffAt || '',
+                    poolNotes: record.poolNotes || '',
+                    poolHistory: record.poolHistory || [],
+                    poolChargeAmountValue: record.poolChargeAmountValue ?? null,
                     poolPaidAmountValue: record.poolPaidAmountValue ?? null,
                     poolAvantioAmountValue: record.poolAvantioAmountValue ?? null,
                     validationIssues: record.validationIssues || [],
@@ -480,6 +632,16 @@ export class ReservationsManager {
         const grouped = groupReservationsByDate(visibleRecords);
         const activeMode = this.importedRecords.length ? 'Import preview' : 'Saved reservations';
 
+        if (this.viewMode === 'pools') {
+            const poolSource = filterReservations(source, {
+                week: this.filters.week,
+                search: this.filters.search,
+                issue: 'all'
+            });
+            container.innerHTML = this.renderPoolsView(poolSource, activeMode);
+            return;
+        }
+
         container.innerHTML = `
             <div class="reservations-workspace-grid">
                 <div class="reservations-workspace-main">
@@ -489,10 +651,10 @@ export class ReservationsManager {
                             <h2>${summary.total} reservations</h2>
                         </div>
                         ${this.renderMetric('Today', summary.checkInsToday)}
-                        ${this.renderMetric('Pool follow-up', summary.poolFollowUps)}
+                        ${this.renderMetric('Pool requests', summary.poolRequests)}
+                        ${this.renderMetric('Heating on', summary.poolHeatingOn)}
                         ${this.renderMetric('Online check-in pending', summary.sefWaiting)}
                         ${this.renderMetric('Missing arrival', summary.missingArrival)}
-                        ${this.renderMetric('Long stays', summary.longStays)}
                     </section>
                     ${visibleRecords.length ? this.renderReservationGroups(grouped) : this.renderNoMatches()}
                 </div>
@@ -500,6 +662,140 @@ export class ReservationsManager {
                     ${this.renderQuickAccess(sourceSummary)}
                 </aside>
             </div>
+        `;
+    }
+
+    renderPoolsView(records, activeMode) {
+        const poolRecords = this.getPoolRecords(records);
+        const totalCharge = sumMoney(poolRecords, 'poolChargeAmountValue');
+        const totalAvantio = sumMoney(poolRecords, 'poolAvantioAmountValue');
+        const paidCount = poolRecords.filter((record) => record.poolPaymentState === 'paid').length;
+        const heatingOnCount = poolRecords.filter((record) => record.poolHeatingState === 'on').length;
+
+        return `
+            <section class="reservations-pools-view">
+                <div class="reservations-pools-view__header">
+                    <div>
+                        <p class="reservations-kicker">${escapeHtml(activeMode)}</p>
+                        <h2>Heated pools</h2>
+                        <p>One row per reservation for pool-capable properties. Changes save automatically.</p>
+                    </div>
+                    <div class="reservations-pools-view__stats">
+                        ${this.renderPoolStat('Reservations', poolRecords.length)}
+                        ${this.renderPoolStat('Paid', paidCount)}
+                        ${this.renderPoolStat('Heating on', heatingOnCount)}
+                        ${this.renderPoolStat('Charge', `${totalCharge.toFixed(2)} EUR`)}
+                        ${this.renderPoolStat('Avantio', `${totalAvantio.toFixed(2)} EUR`)}
+                    </div>
+                </div>
+                ${poolRecords.length ? this.renderPoolsTable(poolRecords) : this.renderPoolsEmpty()}
+            </section>
+        `;
+    }
+
+    getPoolRecords(records) {
+        return records
+            .filter((record) => record.poolChargeAmount
+                || record.poolAvantioAmount
+                || record.poolHeatingStatus
+                || record.poolState === 'requested'
+                || record.poolState === 'waiting'
+                || record.poolPaymentState
+                || record.poolHeatingState)
+            .sort((a, b) => `${a.checkIn}${a.propertyName}${a.guestName}`.localeCompare(`${b.checkIn}${b.propertyName}${b.guestName}`));
+    }
+
+    renderPoolStat(label, value) {
+        return `
+            <div class="reservations-pool-stat">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value)}</strong>
+            </div>
+        `;
+    }
+
+    renderPoolsTable(records) {
+        return `
+            <div class="reservations-pools-table-wrap">
+                <table class="reservations-pools-table">
+                    <thead>
+                        <tr>
+                            <th>Reservation</th>
+                            <th>Dates</th>
+                            <th>Charge guest</th>
+                            <th>Avantio</th>
+                            <th>Requested</th>
+                            <th>Paid</th>
+                            <th>Pool</th>
+                            <th>Turned on</th>
+                            <th>Turned off</th>
+                            <th>Notes</th>
+                            <th>History</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${records.map((record) => this.renderPoolTableRow(record)).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    renderPoolTableRow(record) {
+        const recordKey = this.getRecordKey(record);
+        return `
+            <tr>
+                <td class="reservations-pools-table__identity">
+                    <strong>${escapeHtml(record.propertyName || 'Unknown property')}</strong>
+                    <span>${escapeHtml(record.guestName || 'Guest missing')}</span>
+                    <small>${escapeHtml(record.portal || '')}</small>
+                </td>
+                <td>${escapeHtml(`${formatDisplayDate(record.checkIn)} - ${formatDisplayDate(record.checkOut)}`)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolChargeAmount', type: 'text', placeholder: '45 EUR' }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolAvantioAmount', type: 'text', placeholder: '35 EUR' }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'heatedPool', type: 'select', options: ['', 'sim', 'nao', 'a espera', 'pago', 'n funciona'] }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolPaidAmount', type: 'select', options: ['', 'Sim', 'Nao', 'A espera', 'Devolvido'] }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolHeatingStatus', type: 'select', options: ['', 'Pool on', 'Pool off', 'Always on', 'Remote on', 'Scheduled', 'Unavailable'] }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolTurnedOnAt', type: 'date' }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolTurnedOffAt', type: 'date' }, record, recordKey)}</td>
+                <td>${this.renderPoolInlineField({ field: 'poolNotes', type: 'text', placeholder: 'Pool note' }, record, recordKey)}</td>
+                <td>${this.renderPoolHistory(record)}</td>
+            </tr>
+        `;
+    }
+
+    renderPoolInlineField(config, record, recordKey) {
+        const value = record[config.field] ?? '';
+        const common = `data-record-key="${escapeHtml(recordKey)}" data-reservation-field="${escapeHtml(config.field)}"`;
+        if (config.type === 'select') {
+            const options = value && !config.options.includes(String(value)) ? [String(value), ...config.options] : config.options;
+            return `<select class="reservations-pool-input" ${common}>${options.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === option ? 'selected' : ''}>${escapeHtml(option || '-')}</option>`).join('')}</select>`;
+        }
+        return `<input class="reservations-pool-input" ${common} type="${escapeHtml(config.type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(config.placeholder || '')}">`;
+    }
+
+    renderPoolHistory(record) {
+        const history = Array.isArray(record.poolHistory) ? record.poolHistory.slice(-3).reverse() : [];
+        if (!history.length) return '<span class="reservations-pool-history-empty">No changes</span>';
+        return `
+            <ul class="reservations-pool-history">
+                ${history.map((entry) => `
+                    <li>
+                        <strong>${escapeHtml(poolFieldLabel(entry.field))}</strong>
+                        <span>${escapeHtml(entry.next || '-')}</span>
+                        <small>${escapeHtml(formatHistoryTime(entry.at))}</small>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    renderPoolsEmpty() {
+        return `
+            <section class="reservations-empty reservations-empty--small">
+                <h2>No pool-capable reservation rows yet.</h2>
+                <p>Import the Piscinas CSV after loading weekly reservations. The app will mark those properties as heated-pool capable and show them here.</p>
+            </section>
         `;
     }
 
@@ -611,13 +907,14 @@ export class ReservationsManager {
                         ${this.renderChip(sefLabel(record.sefState), record.sefState === 'validated' ? 'good' : 'warn')}
                         ${this.renderChip(messageLabel(record.firstMessageState), record.firstMessageState === 'sent' ? 'good' : 'warn')}
                         ${record.poolState ? this.renderChip(poolLabel(record.poolState), record.poolState === 'requested' ? 'pool' : 'warn') : ''}
+                        ${record.poolPaymentState ? this.renderChip(poolPaymentLabel(record.poolPaymentState), record.poolPaymentState === 'paid' ? 'good' : 'warn') : ''}
+                        ${record.poolHeatingState ? this.renderChip(poolHeatingLabel(record.poolHeatingState), record.poolHeatingState === 'on' ? 'pool' : 'neutral') : ''}
                         ${issueCount ? this.renderChip(`${issueCount} issue${issueCount === 1 ? '' : 's'}`, 'bad') : ''}
                     </div>
                 </summary>
                 <div class="reservation-row__details">
-                    <div class="reservation-edit-grid">
-                        ${MANUAL_FIELDS.map((config) => this.renderManualField(config, record, recordKey)).join('')}
-                    </div>
+                    ${this.renderPoolControl(record)}
+                    ${this.renderManualSections(record, recordKey)}
                     <div class="reservation-static-grid">
                         ${this.renderDetail('Reference', record.pmsReference || record.intermediaryReference || record.reference)}
                         ${this.renderDetail('Status', record.status)}
@@ -626,6 +923,7 @@ export class ReservationsManager {
                         ${this.renderDetail('Guests', formatGuests(record))}
                         ${this.renderDetail('Guest contact', [record.phone, record.customerEmail].filter(Boolean).join(' / '))}
                         ${this.renderDetail('Portal', record.portal)}
+                        ${this.renderDetail('Pool control', formatPool(record))}
                         ${this.renderDetail('PMS value', formatMoney(record.totalWithTax, record.portal))}
                         ${this.renderTaxDetail(record)}
                         ${this.renderDetail('PMS comments', record.pmsNotes || record.pmsGuestComments)}
@@ -649,13 +947,63 @@ export class ReservationsManager {
         });
     }
 
+    renderPoolControl(record) {
+        const price = record.poolChargeAmountValue !== null && record.poolChargeAmountValue !== undefined
+            ? `${record.poolChargeAmountValue.toFixed(2)} EUR`
+            : record.poolChargeAmount || '-';
+        const paid = record.poolPaidAmountValue !== null && record.poolPaidAmountValue !== undefined
+            ? `${record.poolPaidAmountValue.toFixed(2)} EUR`
+            : record.poolPaidAmount || poolPaymentLabel(record.poolPaymentState);
+        const avantio = record.poolAvantioAmountValue !== null && record.poolAvantioAmountValue !== undefined
+            ? `${record.poolAvantioAmountValue.toFixed(2)} EUR`
+            : record.poolAvantioAmount || '-';
+
+        return `
+            <section class="reservation-pool-control" aria-label="Heated pool control">
+                <div>
+                    <p class="reservations-kicker">Heated pool</p>
+                    <h3>${escapeHtml(poolLabel(record.poolState || ''))}</h3>
+                </div>
+                <div class="reservation-pool-control__metrics">
+                    ${this.renderPoolMetric('Charge', price)}
+                    ${this.renderPoolMetric('Guest paid', paid || '-')}
+                    ${this.renderPoolMetric('Avantio', avantio)}
+                    ${this.renderPoolMetric('Heating', poolHeatingLabel(record.poolHeatingState) || record.poolHeatingStatus || '-')}
+                </div>
+            </section>
+        `;
+    }
+
+    renderPoolMetric(label, value) {
+        return `
+            <div class="reservation-pool-metric">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value || '-')}</strong>
+            </div>
+        `;
+    }
+
+    renderManualSections(record, recordKey) {
+        return MANUAL_FIELD_SECTIONS.map((section) => `
+            <section class="reservation-edit-section">
+                <h3>${escapeHtml(section.title)}</h3>
+                <div class="reservation-edit-grid">
+                    ${section.fields.map((config) => this.renderManualField(config, record, recordKey)).join('')}
+                </div>
+            </section>
+        `).join('');
+    }
+
     renderManualField(config, record, recordKey) {
         const value = record[config.field] ?? '';
         const common = `data-record-key="${escapeHtml(recordKey)}" data-reservation-field="${escapeHtml(config.field)}"`;
+        const selectOptions = config.type === 'select' && value && !config.options.includes(String(value))
+            ? [String(value), ...config.options]
+            : config.options;
         const input = config.type === 'textarea'
             ? `<textarea ${common} placeholder="${escapeHtml(config.placeholder || '')}">${escapeHtml(value)}</textarea>`
             : config.type === 'select'
-                ? `<select ${common}>${config.options.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === option ? 'selected' : ''}>${escapeHtml(option || '-')}</option>`).join('')}</select>`
+                ? `<select ${common}>${selectOptions.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === option ? 'selected' : ''}>${escapeHtml(option || '-')}</option>`).join('')}</select>`
                 : `<input ${common} type="${config.type}" value="${escapeHtml(value)}" placeholder="${escapeHtml(config.placeholder || '')}" ${config.type === 'number' ? 'step="0.01" min="0"' : ''}>`;
 
         return `
@@ -746,6 +1094,8 @@ export class ReservationsManager {
         const saveBtn = document.getElementById('save-reservations-week-btn');
         const issueSelect = document.getElementById('reservations-issue-select');
         const searchInput = document.getElementById('reservations-search-input');
+        const allTab = document.getElementById('reservations-tab-all');
+        const poolsTab = document.getElementById('reservations-tab-pools');
 
         if (datasetDisplay) {
             datasetDisplay.textContent = this.currentImportName
@@ -757,6 +1107,8 @@ export class ReservationsManager {
         if (clearBtn) clearBtn.disabled = false;
         if (issueSelect) issueSelect.value = this.filters.issue;
         if (searchInput && searchInput.value !== this.filters.search) searchInput.value = this.filters.search;
+        allTab?.classList.toggle('is-active', this.viewMode !== 'pools');
+        poolsTab?.classList.toggle('is-active', this.viewMode === 'pools');
     }
 
     showStatus(message, type = 'info') {
@@ -904,6 +1256,82 @@ function objectFromHeaders(headers, values) {
     }, {});
 }
 
+function poolStorageChanged(before = {}, after = {}) {
+    return [
+        'heatedPool',
+        'poolChargeAmount',
+        'poolPaidAmount',
+        'poolAvantioAmount',
+        'poolHeatingStatus',
+        'poolTurnedOnAt',
+        'poolTurnedOffAt',
+        'poolNotes',
+        'poolHistory',
+        'poolStatus',
+        'poolState',
+        'poolPaymentState',
+        'poolHeatingState',
+        'poolChargeAmountValue',
+        'poolPaidAmountValue',
+        'poolAvantioAmountValue'
+    ].some((field) => (before[field] ?? null) !== (after[field] ?? null));
+}
+
+function isPoolField(field) {
+    return [
+        'heatedPool',
+        'poolChargeAmount',
+        'poolPaidAmount',
+        'poolAvantioAmount',
+        'poolHeatingStatus',
+        'poolTurnedOnAt',
+        'poolTurnedOffAt',
+        'poolNotes'
+    ].includes(field);
+}
+
+function buildPoolHistory(history, field, previous, next) {
+    if (String(previous ?? '') === String(next ?? '')) return Array.isArray(history) ? history : [];
+    return [
+        ...(Array.isArray(history) ? history : []),
+        {
+            at: new Date().toISOString(),
+            field,
+            previous: String(previous ?? ''),
+            next: String(next ?? '')
+        }
+    ].slice(-50);
+}
+
+function sumMoney(records, field) {
+    return records.reduce((total, record) => total + (Number(record[field]) || 0), 0);
+}
+
+function poolFieldLabel(field) {
+    return {
+        heatedPool: 'Requested',
+        poolChargeAmount: 'Charge',
+        poolPaidAmount: 'Paid',
+        poolAvantioAmount: 'Avantio',
+        poolHeatingStatus: 'Pool',
+        poolTurnedOnAt: 'Turned on',
+        poolTurnedOffAt: 'Turned off',
+        poolNotes: 'Notes'
+    }[field] || field;
+}
+
+function formatHistoryTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function formatDisplayDate(value) {
     if (!value) return '';
     const date = new Date(`${value}T00:00:00Z`);
@@ -926,8 +1354,10 @@ function formatMoney(amount, paidBy) {
 function formatPool(record) {
     const parts = [
         record.heatedPool,
+        record.poolChargeAmountValue !== null && record.poolChargeAmountValue !== undefined ? `${record.poolChargeAmountValue.toFixed(2)} EUR charge` : '',
         record.poolPaidAmountValue !== null && record.poolPaidAmountValue !== undefined ? `${record.poolPaidAmountValue.toFixed(2)} EUR paid` : '',
         record.poolAvantioAmountValue !== null && record.poolAvantioAmountValue !== undefined ? `${record.poolAvantioAmountValue.toFixed(2)} EUR Avantio` : '',
+        record.poolHeatingStatus,
         record.poolStatus
     ].filter(Boolean);
     return parts.join(' / ');
@@ -947,11 +1377,29 @@ function messageLabel(value) {
 }
 
 function poolLabel(value) {
+    if (!value) return 'No pool info';
     if (value === 'requested') return 'Pool requested';
     if (value === 'not-requested') return 'No pool';
     if (value === 'waiting') return 'Pool waiting';
     if (value === 'unavailable') return 'Pool unavailable';
     return 'Pool review';
+}
+
+function poolPaymentLabel(value) {
+    if (value === 'paid') return 'Pool paid';
+    if (value === 'not-paid') return 'Pool not paid';
+    if (value === 'waiting') return 'Payment waiting';
+    if (value === 'needs-review') return 'Payment review';
+    return '';
+}
+
+function poolHeatingLabel(value) {
+    if (value === 'on') return 'Heating on';
+    if (value === 'off') return 'Heating off';
+    if (value === 'scheduled') return 'Heating scheduled';
+    if (value === 'unavailable') return 'Heating unavailable';
+    if (value === 'needs-review') return 'Heating review';
+    return '';
 }
 
 function issueLabel(issue) {

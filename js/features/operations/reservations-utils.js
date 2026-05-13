@@ -16,8 +16,10 @@ export const RESERVATION_COLUMNS = [
     ['safeCode', 'Cofre'],
     ['checkInTime', 'Hora in'],
     ['heatedPool', 'Piscina Aq.'],
+    ['poolChargeAmount', 'Cobrar Piscina'],
     ['poolPaidAmount', 'Pago'],
     ['poolAvantioAmount', 'Avantio'],
+    ['poolHeatingStatus', 'Piscina Ligada'],
     ['infoStatus', 'Info'],
     ['firstMessageStatus', '1ª Mensagem'],
     ['phone', 'Número'],
@@ -88,6 +90,8 @@ export const PMS_COLUMN_MAP = {
 };
 
 const TRUE_POOL_VALUES = new Set(['sim', 's', 'yes', 'pago', 'paid', 'aquecida']);
+const POOL_ON_VALUES = new Set(['ligada', 'ligado', 'on', 'sim', 'sempre ligada', 'sempre ligado', 'liga remotamente']);
+const POOL_OFF_VALUES = new Set(['desligada', 'desligado', 'off', 'nao', 'nao', 'no']);
 const FALSE_POOL_VALUES = new Set(['nao', 'não', 'no', 'n', '-', 'nao quer', 'não quer', 'nao funciona', 'não funciona']);
 const WAITING_POOL_VALUES = new Set(['???', '?', 'a espera', 'à espera', 'espera', 'nao respondeu', 'não respondeu', 'nao responde', 'não responde']);
 
@@ -124,6 +128,7 @@ export function parseNumber(value) {
     if (value === null || value === undefined || value === '') return null;
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     const cleaned = String(value)
+        .replace(/\s+-\s+/g, ' ')
         .replace(/\s/g, '')
         .replace(/[€]/g, '')
         .replace(/\.(?=\d{3}(?:\D|$))/g, '')
@@ -227,6 +232,32 @@ export function normalizePoolStatus(value) {
     return 'needs-review';
 }
 
+export function normalizePoolPaymentStatus(value) {
+    const text = normalizeText(value);
+    const lookup = normalizeLookupText(text);
+    if (!lookup) return '';
+    if (TRUE_POOL_VALUES.has(lookup) || lookup.includes('pago') || lookup.includes('devolvido')) return 'paid';
+    if (WAITING_POOL_VALUES.has(lookup) || lookup.includes('espera')) return 'waiting';
+    if (FALSE_POOL_VALUES.has(lookup)) return 'not-paid';
+    if (parseNumber(text) !== null) return 'paid';
+    return 'needs-review';
+}
+
+export function normalizePoolHeatingStatus(value) {
+    const text = normalizeText(value);
+    const lookup = normalizeLookupText(text);
+    if (!lookup) return '';
+    if (lookup.includes('pool on') || lookup.includes('always on') || lookup.includes('remote on')) return 'on';
+    if (lookup.includes('pool off')) return 'off';
+    if (lookup.includes('desliagdo') || lookup.includes('desligad')) return 'off';
+    if (lookup.includes('ligad') || lookup.includes('remotamente')) return 'on';
+    if (POOL_ON_VALUES.has(lookup)) return 'on';
+    if (POOL_OFF_VALUES.has(lookup)) return 'off';
+    if (lookup.includes('informado') || lookup.includes('pedido')) return 'scheduled';
+    if (lookup.includes('nao funciona') || lookup.includes('n funciona')) return 'unavailable';
+    return 'needs-review';
+}
+
 export function calculateTouristTaxAmount(record = {}) {
     const adults = Math.max(0, parseNumber(record.adults ?? record.adultsCount) || 0);
     const children = Math.max(0, parseNumber(record.children ?? record.childrenCount) || 0);
@@ -322,8 +353,10 @@ export function normalizePmsReservationRow(row, context = {}) {
         flightNumber: '',
         safeCode: '',
         heatedPool: '',
+        poolChargeAmount: '',
         poolPaidAmount: '',
         poolAvantioAmount: '',
+        poolHeatingStatus: '',
         infoStatus: '',
         firstMessageStatus: '',
         notes: '',
@@ -341,6 +374,8 @@ export function normalizePmsReservationRow(row, context = {}) {
 export function deriveReservationFields(record, fallbackYear = 2026) {
     const manualTouristTaxAmount = parseNumber(record.touristTaxAmount);
     const calculatedTouristTaxAmount = calculateTouristTaxAmount(record);
+    const poolHeatingState = normalizePoolHeatingStatus(record.poolHeatingStatus || record.poolStatus);
+    const poolHeatingDate = parsePoolHeatingChangeDate(record.poolHeatingStatus || record.poolStatus, fallbackYear);
     const derived = {
         ...record,
         status: normalizeText(record.status),
@@ -350,6 +385,11 @@ export function deriveReservationFields(record, fallbackYear = 2026) {
         firstMessageState: normalizeMessageStatus(record.firstMessageStatus),
         sefState: normalizeSefStatus(record.sefStatus),
         poolState: normalizePoolStatus(record.heatedPool || record.poolStatus),
+        poolPaymentState: normalizePoolPaymentStatus(record.poolPaidAmount),
+        poolHeatingState,
+        poolTurnedOnAt: record.poolTurnedOnAt || (poolHeatingState === 'on' ? poolHeatingDate : ''),
+        poolTurnedOffAt: record.poolTurnedOffAt || (poolHeatingState === 'off' ? poolHeatingDate : ''),
+        poolChargeAmountValue: parseNumber(record.poolChargeAmount),
         poolPaidAmountValue: parseNumber(record.poolPaidAmount),
         poolAvantioAmountValue: parseNumber(record.poolAvantioAmount),
         touristTaxAmountValue: manualTouristTaxAmount,
@@ -381,7 +421,7 @@ export function getReservationIssues(record) {
     if (!record.arrivalInfo && !record.checkInTime) issues.push('missing-arrival');
     if (!record.safeCode) issues.push('missing-keybox');
     if (record.poolState === 'waiting' || record.poolState === 'needs-review') issues.push('pool-follow-up');
-    if (record.heatedPool && record.poolState === 'requested' && record.poolPaidAmountValue === null) issues.push('pool-payment-missing');
+    if (record.heatedPool && record.poolState === 'requested' && record.poolPaymentState !== 'paid' && record.poolPaidAmountValue === null) issues.push('pool-payment-missing');
     if (record.touristTaxDisplayAmountValue === null && normalizeLookupText(record.status) !== 'de proprietario') issues.push('missing-tax');
     if (record.touristTaxNeedsChildAgeCheck) issues.push('tax-child-age-check');
     return issues;
@@ -402,13 +442,15 @@ export function buildReservationSummary(records) {
     const total = records.length;
     const checkInsToday = countByPredicate(records, (record) => record.checkIn === todayIso());
     const poolFollowUps = countByPredicate(records, (record) => record.validationIssues.includes('pool-follow-up') || record.validationIssues.includes('pool-payment-missing'));
+    const poolRequests = countByPredicate(records, (record) => record.poolState === 'requested');
+    const poolHeatingOn = countByPredicate(records, (record) => record.poolHeatingState === 'on');
     const sefWaiting = countByPredicate(records, (record) => record.sefState === 'waiting' || record.sefState === 'pending' || !record.sefState);
     const missingArrival = countByPredicate(records, (record) => record.validationIssues.includes('missing-arrival'));
     const missingKeybox = countByPredicate(records, (record) => record.validationIssues.includes('missing-keybox'));
     const missingTax = countByPredicate(records, (record) => record.validationIssues.includes('missing-tax'));
     const ownerStays = countByPredicate(records, (record) => normalizeLookupText(record.status).includes('proprietario'));
     const longStays = countByPredicate(records, (record) => Number(record.nightsCount || 0) >= 14);
-    return { total, checkInsToday, poolFollowUps, sefWaiting, missingArrival, missingKeybox, missingTax, ownerStays, longStays };
+    return { total, checkInsToday, poolFollowUps, poolRequests, poolHeatingOn, sefWaiting, missingArrival, missingKeybox, missingTax, ownerStays, longStays };
 }
 
 export function countByPredicate(records, predicate) {
@@ -456,7 +498,142 @@ export function filterReservations(records, filters = {}) {
             record.phone,
             record.notes,
             record.arrivalInfo,
-            record.flightNumber
+            record.flightNumber,
+            record.heatedPool,
+            record.poolChargeAmount,
+            record.poolPaidAmount,
+            record.poolAvantioAmount,
+            record.poolHeatingStatus
         ].some((value) => normalizeLookupText(value).includes(search));
     });
+}
+
+export function parsePoolControlMatrix(matrix, options = {}) {
+    const fallbackYear = options.fallbackYear || 2026;
+    const propertySettings = [];
+    const reservationControls = [];
+
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+        if (normalizeLookupText(matrix[rowIndex]?.[1]) !== 'alojamentos') continue;
+
+        const propertyRow = matrix[rowIndex + 1] || [];
+        const priceRow = matrix[rowIndex + 2] || [];
+        const statusRow = matrix[rowIndex + 3] || [];
+        const nextBlockIndex = findNextPoolBlock(matrix, rowIndex + 1);
+        const groupStarts = propertyRow
+            .map((cell, columnIndex) => ({ cell: normalizeText(cell), columnIndex }))
+            .filter((entry) => entry.columnIndex > 0 && entry.cell);
+
+        groupStarts.forEach((group, groupIndex) => {
+            const endColumn = groupStarts[groupIndex + 1]?.columnIndex ?? propertyRow.length;
+            const setting = {
+                propertyName: group.cell,
+                poolChargeAmount: normalizeText(priceRow[group.columnIndex]),
+                poolAvantioAmount: firstTextInRange(priceRow, group.columnIndex + 1, endColumn, /avantio/i),
+                poolHeatingStatus: normalizeText(statusRow[group.columnIndex]),
+                sourceType: 'pool-control-sheet'
+            };
+            const settingHeatingState = normalizePoolHeatingStatus(setting.poolHeatingStatus);
+            const settingHeatingDate = parsePoolHeatingChangeDate(setting.poolHeatingStatus, fallbackYear);
+
+            propertySettings.push({
+                ...setting,
+                poolTurnedOnAt: settingHeatingState === 'on' ? settingHeatingDate : '',
+                poolTurnedOffAt: settingHeatingState === 'off' ? settingHeatingDate : '',
+                poolChargeAmountValue: parseNumber(setting.poolChargeAmount),
+                poolAvantioAmountValue: parseNumber(setting.poolAvantioAmount),
+                poolHeatingState: settingHeatingState
+            });
+
+            for (let entryRowIndex = rowIndex + 4; entryRowIndex < nextBlockIndex; entryRowIndex += 1) {
+                const row = matrix[entryRowIndex] || [];
+                const dateRange = normalizeText(row[group.columnIndex + 1]);
+                const range = parsePoolDateRange(dateRange, fallbackYear);
+                const heatedPool = normalizeText(row[group.columnIndex]);
+                const poolPaidAmount = normalizeText(row[group.columnIndex + 2]);
+                const poolAvantioReservationAmount = normalizeText(row[group.columnIndex + 3]);
+
+                if (!range && !heatedPool && !poolPaidAmount && !poolAvantioReservationAmount) continue;
+
+                reservationControls.push({
+                    ...setting,
+                    checkIn: range?.checkIn || '',
+                    checkOut: range?.checkOut || '',
+                    heatedPool,
+                    poolPaidAmount,
+                    poolAvantioAmount: poolAvantioReservationAmount || setting.poolAvantioAmount,
+                    poolStatus: normalizeText(row[group.columnIndex + 4]),
+                    sourceRow: entryRowIndex + 1
+                });
+            }
+        });
+    }
+
+    return { propertySettings, reservationControls };
+}
+
+export function applyPoolControlsToReservations(records, poolControls = {}) {
+    const propertySettings = new Map((poolControls.propertySettings || []).map((setting) => [
+        normalizeLookupText(setting.propertyName),
+        setting
+    ]));
+    const reservationControls = poolControls.reservationControls || [];
+
+    return records.map((record) => {
+        const propertyKey = normalizeLookupText(record.propertyName);
+        const setting = propertySettings.get(propertyKey);
+        const match = reservationControls.find((control) => {
+            if (normalizeLookupText(control.propertyName) !== propertyKey) return false;
+            if (!control.checkIn || !control.checkOut) return false;
+            return control.checkIn === record.checkIn && control.checkOut === record.checkOut;
+        });
+
+        if (!setting && !match) return record;
+
+        return deriveReservationFields({
+            ...record,
+            poolChargeAmount: record.poolChargeAmount || match?.poolChargeAmount || setting?.poolChargeAmount || '',
+            poolHeatingStatus: record.poolHeatingStatus || match?.poolHeatingStatus || setting?.poolHeatingStatus || '',
+            poolTurnedOnAt: record.poolTurnedOnAt || match?.poolTurnedOnAt || setting?.poolTurnedOnAt || '',
+            poolTurnedOffAt: record.poolTurnedOffAt || match?.poolTurnedOffAt || setting?.poolTurnedOffAt || '',
+            heatedPool: record.heatedPool || match?.heatedPool || '',
+            poolPaidAmount: record.poolPaidAmount || match?.poolPaidAmount || '',
+            poolAvantioAmount: record.poolAvantioAmount
+                || (parseNumber(match?.poolAvantioAmount) !== null ? match.poolAvantioAmount : '')
+                || setting?.poolAvantioAmount
+                || '',
+            poolStatus: record.poolStatus || match?.poolStatus || ''
+        });
+    });
+}
+
+export function parsePoolDateRange(value, fallbackYear = 2026) {
+    const text = normalizeText(value).replaceAll('//', '/');
+    if (!text) return null;
+    const parts = text.split(/\s*-\s*/).filter(Boolean);
+    if (parts.length !== 2) return null;
+    const checkIn = parseReservationDate(parts[0], fallbackYear);
+    const checkOut = parseReservationDate(parts[1], fallbackYear);
+    return checkIn && checkOut ? { checkIn, checkOut } : null;
+}
+
+export function parsePoolHeatingChangeDate(value, fallbackYear = 2026) {
+    const text = normalizeText(value).replaceAll('//', '/');
+    const match = text.match(/(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/);
+    return match ? parseReservationDate(match[0], fallbackYear) : '';
+}
+
+function findNextPoolBlock(matrix, startIndex) {
+    for (let index = startIndex; index < matrix.length; index += 1) {
+        if (normalizeLookupText(matrix[index]?.[1]) === 'alojamentos') return index;
+    }
+    return matrix.length;
+}
+
+function firstTextInRange(row, startColumn, endColumn, matcher) {
+    for (let columnIndex = startColumn; columnIndex < endColumn; columnIndex += 1) {
+        const value = normalizeText(row[columnIndex]);
+        if (value && matcher.test(value)) return value;
+    }
+    return '';
 }
