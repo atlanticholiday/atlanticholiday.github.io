@@ -27,7 +27,7 @@ const ISSUE_OPTIONS = [
     ['all', 'All reservations'],
     ['pool', 'Pool follow-up'],
     ['keybox', 'Key boxes missing'],
-    ['sef', 'SEF pending'],
+    ['sef', 'Online check-in pending'],
     ['arrival', 'Missing arrival'],
     ['tax', 'Missing tax'],
     ['long-stays', 'Long stays'],
@@ -41,14 +41,12 @@ const MANUAL_FIELDS = [
     { field: 'checkInTime', label: 'Check-in hour', type: 'text', placeholder: '16h00' },
     { field: 'safeCode', label: 'Safe / keybox', type: 'text', placeholder: 'Code' },
     { field: 'firstMessageStatus', label: 'First message', type: 'select', options: ['', 'Enviada', 'Enviado', 'Criado', '-'] },
-    { field: 'sefStatus', label: 'SEF', type: 'select', options: ['', 'À espera', 'Validado', 'Pendente'] },
+    { field: 'sefStatus', label: 'Online check-in', type: 'select', options: ['', 'À espera', 'Validado', 'Pendente'] },
     { field: 'heatedPool', label: 'Heated pool', type: 'select', options: ['', 'sim', 'não', 'pago', 'a espera', 'não respondeu', '???', 'n funciona'] },
     { field: 'poolPaidAmount', label: 'Pool paid', type: 'text', placeholder: 'Amount, paid, waiting...' },
     { field: 'poolAvantioAmount', label: 'Avantio pool', type: 'text', placeholder: 'Amount or note' },
+    { field: 'touristTaxAmount', label: 'Tax value', type: 'text', placeholder: 'Auto: 2 EUR per guest/night, max 7 nights' },
     { field: 'touristTaxPaidBy', label: 'Tax paid by', type: 'text', placeholder: 'Airbnb, Booking, Transf...' },
-    { field: 'responsible', label: 'Responsible', type: 'text', placeholder: 'Team member' },
-    { field: 'checkInPerson', label: 'Check-in person', type: 'text', placeholder: 'Team member' },
-    { field: 'asanaStatus', label: 'Asana', type: 'select', options: ['', 'Criada', 'Pendente', 'Feita'] },
     { field: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Operational notes' }
 ];
 
@@ -67,6 +65,8 @@ export class ReservationsManager {
         };
         this.saveTimers = new Map();
         this.isClearingReservations = false;
+        this.controlsBound = false;
+        this.openReservationKeys = new Set();
 
         this.restoreLocalImport();
     }
@@ -124,6 +124,8 @@ export class ReservationsManager {
     }
 
     bindControls() {
+        if (this.controlsBound) return;
+
         const fileInput = document.getElementById('reservations-file-input');
         const uploadBtn = document.getElementById('load-reservations-btn');
         const saveBtn = document.getElementById('save-reservations-week-btn');
@@ -132,10 +134,15 @@ export class ReservationsManager {
         const searchInput = document.getElementById('reservations-search-input');
         const renameBtn = document.getElementById('edit-dataset-name-btn');
         const clearImportBtn = document.getElementById('clear-reservations-import-btn');
+        const reservationsTable = document.getElementById('reservations-table');
 
-        uploadBtn?.addEventListener('click', () => fileInput?.click());
+        if (!fileInput || !uploadBtn || !saveBtn || !reservationsTable) return;
 
-        fileInput?.addEventListener('change', async () => {
+        this.controlsBound = true;
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', async () => {
             const file = fileInput.files?.[0];
             if (!file) return;
             if (!/\.xlsx?$/i.test(file.name)) {
@@ -153,7 +160,7 @@ export class ReservationsManager {
             }
         });
 
-        saveBtn?.addEventListener('click', () => this.saveImportedRecords());
+        saveBtn.addEventListener('click', () => this.saveImportedRecords());
         weekSelect?.addEventListener('change', (event) => {
             this.filters.week = event.target.value || 'all';
             this.render();
@@ -183,18 +190,17 @@ export class ReservationsManager {
             }
         });
 
-        const reservationsTable = document.getElementById('reservations-table');
-        reservationsTable?.addEventListener('input', (event) => {
+        reservationsTable.addEventListener('input', (event) => {
             const control = event.target.closest('[data-reservation-field]');
             if (!control) return;
             this.handleManualFieldChange(control);
         });
-        reservationsTable?.addEventListener('change', (event) => {
+        reservationsTable.addEventListener('change', (event) => {
             const control = event.target.closest('[data-reservation-field]');
             if (!control) return;
             this.handleManualFieldChange(control);
         });
-        reservationsTable?.addEventListener('click', (event) => {
+        reservationsTable.addEventListener('click', (event) => {
             const resetAction = event.target.closest('[data-reservations-reset-filters]');
             if (resetAction) {
                 this.resetFilters();
@@ -208,6 +214,15 @@ export class ReservationsManager {
             this.filters.search = '';
             this.render();
         });
+        reservationsTable.addEventListener('toggle', (event) => {
+            const row = event.target.closest?.('.reservation-row[data-record-key]');
+            if (!row) return;
+            if (row.open) {
+                this.openReservationKeys.add(row.dataset.recordKey);
+            } else {
+                this.openReservationKeys.delete(row.dataset.recordKey);
+            }
+        }, true);
     }
 
     subscribeToReservations() {
@@ -247,6 +262,10 @@ export class ReservationsManager {
         this.updateImportUi();
         this.render();
         this.showStatus(`Imported ${records.length} cleaned reservations from ${this.countWorkbookSheets(workbook)} sheet(s).`, 'success');
+
+        if (records.length) {
+            await this.saveImportedRecords({ automatic: true });
+        }
     }
 
     parseWorkbook(workbook, importName = '') {
@@ -310,48 +329,75 @@ export class ReservationsManager {
         });
     }
 
-    async saveImportedRecords() {
+    async saveImportedRecords({ automatic = false } = {}) {
         if (!this.importedRecords.length) {
             this.showStatus('No imported reservations to save.', 'error');
             return;
         }
         if (!this.db || !this.userId) {
-            this.showStatus('Sign in before saving reservations.', 'error');
+            this.showStatus(automatic
+                ? 'Imported preview only. Sign in before saving reservations.'
+                : 'Sign in before saving reservations.', 'error');
             return;
         }
 
         const saveBtn = document.getElementById('save-reservations-week-btn');
+        await this.refreshSavedRecordsOnce();
         const existingFingerprints = new Set(this.savedRecords.map((record) => record.fingerprint).filter(Boolean));
-        const recordsToSave = this.importedRecords.filter((record) => !existingFingerprints.has(record.fingerprint));
+        const nextFingerprints = new Set(existingFingerprints);
+        const recordsToSave = [];
+
+        for (const record of this.importedRecords) {
+            const fingerprint = record.fingerprint || this.getRecordKey(record);
+            if (fingerprint && nextFingerprints.has(fingerprint)) continue;
+            if (fingerprint) nextFingerprints.add(fingerprint);
+            recordsToSave.push(record);
+        }
 
         if (!recordsToSave.length) {
+            this.importedRecords = [];
+            this.clearLocalImport();
+            this.updateImportUi();
+            this.render();
             this.showStatus('All imported reservations are already saved.', 'success');
             return;
         }
 
-        saveBtn.disabled = true;
-        this.showStatus(`Saving ${recordsToSave.length} reservations...`);
+        if (saveBtn) saveBtn.disabled = true;
+        this.showStatus(`${automatic ? 'Auto-saving' : 'Saving'} ${recordsToSave.length} reservations...`);
 
         try {
+            const savedNow = [];
             for (const record of recordsToSave) {
-                await addDoc(collection(this.db, 'reservations'), {
+                const savedRecord = {
                     ...record,
                     userId: this.userId,
                     importName: this.currentImportName || record.importName || 'Reservations import',
                     importedAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
-                });
+                };
+                const docRef = await addDoc(collection(this.db, 'reservations'), savedRecord);
+                savedNow.push(normalizeRawReservationDocument({
+                    ...savedRecord,
+                    id: docRef.id,
+                    importedAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }));
             }
+            this.savedRecords = [
+                ...this.savedRecords,
+                ...savedNow.filter((record) => !existingFingerprints.has(record.fingerprint))
+            ];
             this.importedRecords = [];
             this.clearLocalImport();
             this.updateImportUi();
             this.render();
-            this.showStatus(`Saved ${recordsToSave.length} new reservations.`, 'success');
+            this.showStatus(`${automatic ? 'Import saved automatically' : 'Saved'} ${recordsToSave.length} new reservations.`, 'success');
         } catch (error) {
             console.error('Error saving reservations:', error);
-            this.showStatus(`Save failed: ${error.message || error}`, 'error');
+            this.showStatus(`${automatic ? 'Auto-save failed' : 'Save failed'}: ${error.message || error}`, 'error');
         } finally {
-            saveBtn.disabled = this.importedRecords.length === 0;
+            if (saveBtn) saveBtn.disabled = this.importedRecords.length === 0;
         }
     }
 
@@ -414,6 +460,7 @@ export class ReservationsManager {
     }
 
     render() {
+        this.captureOpenReservationRows();
         this.renderWeekOptions();
         this.updateImportUi();
 
@@ -443,7 +490,7 @@ export class ReservationsManager {
                         </div>
                         ${this.renderMetric('Today', summary.checkInsToday)}
                         ${this.renderMetric('Pool follow-up', summary.poolFollowUps)}
-                        ${this.renderMetric('SEF pending', summary.sefWaiting)}
+                        ${this.renderMetric('Online check-in pending', summary.sefWaiting)}
                         ${this.renderMetric('Missing arrival', summary.missingArrival)}
                         ${this.renderMetric('Long stays', summary.longStays)}
                     </section>
@@ -547,8 +594,9 @@ export class ReservationsManager {
     renderReservationRow(record) {
         const issueCount = record.validationIssues.length;
         const recordKey = this.getRecordKey(record);
+        const isOpen = this.openReservationKeys.has(recordKey);
         return `
-            <details class="reservation-row ${issueCount ? 'reservation-row--attention' : ''}">
+            <details class="reservation-row ${issueCount ? 'reservation-row--attention' : ''}" data-record-key="${escapeHtml(recordKey)}" ${isOpen ? 'open' : ''}>
                 <summary>
                     <div class="reservation-row__main">
                         <strong>${escapeHtml(record.propertyName || 'Unknown property')}</strong>
@@ -579,14 +627,26 @@ export class ReservationsManager {
                         ${this.renderDetail('Guest contact', [record.phone, record.customerEmail].filter(Boolean).join(' / '))}
                         ${this.renderDetail('Portal', record.portal)}
                         ${this.renderDetail('PMS value', formatMoney(record.totalWithTax, record.portal))}
-                        ${this.renderDetail('Online check-in', record.sefStatus)}
+                        ${this.renderTaxDetail(record)}
                         ${this.renderDetail('PMS comments', record.pmsNotes || record.pmsGuestComments)}
-                        ${this.renderDetail('Source', [record.sourceSheet, record.sourceRow ? `row ${record.sourceRow}` : ''].filter(Boolean).join(' / '))}
                     </div>
                     ${record.validationIssues.length ? `<div class="reservation-row__issues">${record.validationIssues.map((issue) => `<span>${escapeHtml(issueLabel(issue))}</span>`).join('')}</div>` : ''}
                 </div>
             </details>
         `;
+    }
+
+    captureOpenReservationRows() {
+        const container = document.getElementById('reservations-table');
+        if (!container) return;
+
+        container.querySelectorAll('.reservation-row[data-record-key]').forEach((row) => {
+            if (row.open) {
+                this.openReservationKeys.add(row.dataset.recordKey);
+            } else {
+                this.openReservationKeys.delete(row.dataset.recordKey);
+            }
+        });
     }
 
     renderManualField(config, record, recordKey) {
@@ -615,6 +675,31 @@ export class ReservationsManager {
             <div class="reservation-detail">
                 <span>${escapeHtml(label)}</span>
                 <strong>${escapeHtml(value || '-')}</strong>
+            </div>
+        `;
+    }
+
+    renderTaxDetail(record) {
+        const taxValue = record.touristTaxDisplayAmountValue;
+        const manualValue = record.touristTaxAmountValue;
+        const calculatedValue = record.calculatedTouristTaxAmountValue;
+        const source = manualValue !== null && manualValue !== undefined ? 'manual override' : 'calculated';
+        const value = taxValue !== null && taxValue !== undefined
+            ? `${taxValue.toFixed(2)} EUR (${source})${record.touristTaxPaidBy ? ` / ${record.touristTaxPaidBy}` : ''}`
+            : record.touristTaxPaidBy || '-';
+        const formula = calculatedValue !== null && calculatedValue !== undefined
+            ? `Formula: 2 EUR x ${Number(record.adultsCount || 0) + Number(record.childrenCount || 0)} guests x ${Math.min(Number(record.nightsCount || 0), 7)} nights = ${calculatedValue.toFixed(2)} EUR.`
+            : 'Formula: 2 EUR per person per night, capped at 7 nights.';
+        const childNote = record.touristTaxNeedsChildAgeCheck
+            ? '<em>CHECK CHILD AGES: children are counted as 13+ in this estimate. Children 12 and under do not pay tourist tax.</em>'
+            : '';
+
+        return `
+            <div class="reservation-detail reservation-detail--wide reservation-detail--tax">
+                <span>Tax value</span>
+                <strong>${escapeHtml(value)}</strong>
+                <small>${escapeHtml(formula)}</small>
+                ${childNote}
             </div>
         `;
     }
@@ -757,6 +842,19 @@ export class ReservationsManager {
         return snapshot.size;
     }
 
+    async refreshSavedRecordsOnce() {
+        if (!this.db || !this.userId) return;
+        try {
+            const snapshot = await getDocs(this.getCurrentUserReservationsQuery());
+            this.savedRecords = snapshot.docs.map((entry) => normalizeRawReservationDocument({
+                id: entry.id,
+                ...entry.data()
+            }));
+        } catch (error) {
+            console.warn('[ReservationsManager] Could not refresh saved reservations before saving import', error);
+        }
+    }
+
     async deleteSavedReservationRecords() {
         if (!this.db || !this.userId) return;
         this.unsubscribe?.();
@@ -836,10 +934,10 @@ function formatPool(record) {
 }
 
 function sefLabel(value) {
-    if (value === 'validated') return 'SEF valid';
-    if (value === 'waiting') return 'SEF waiting';
-    if (value === 'pending') return 'SEF pending';
-    return 'SEF missing';
+    if (value === 'validated') return 'Online check-in valid';
+    if (value === 'waiting') return 'Online check-in waiting';
+    if (value === 'pending') return 'Online check-in pending';
+    return 'Online check-in missing';
 }
 
 function messageLabel(value) {
@@ -866,11 +964,12 @@ function issueLabel(issue) {
         'missing-portal': 'Missing portal',
         'missing-phone': 'Missing phone',
         'missing-first-message': 'Missing first message',
-        'missing-sef': 'Missing SEF',
+        'missing-sef': 'Missing online check-in',
         'missing-arrival': 'Missing arrival',
         'missing-keybox': 'Missing keybox',
         'pool-follow-up': 'Pool follow-up',
         'pool-payment-missing': 'Pool payment missing',
-        'missing-tax': 'Missing tourist tax'
+        'missing-tax': 'Missing tourist tax',
+        'tax-child-age-check': 'Check child ages for tourist tax'
     }[issue] || issue;
 }

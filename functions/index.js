@@ -17,13 +17,8 @@ const ACTIONS = Object.freeze({
 
 const PRIVILEGED_ROLE_KEYS = new Set(["admin", "manager", "supervisor"]);
 const NUKI_APP_ACCESS_KEY = "nukiDoors";
-const CALLABLE_CORS_ORIGINS = [
-  /^http:\/\/127\.0\.0\.1:\d+$/,
-  /^http:\/\/localhost:\d+$/,
-  "https://atlanticholiday.github.io"
-];
 
-exports.createPasswordResetLink = onCall({ cors: CALLABLE_CORS_ORIGINS }, async (request) => {
+exports.createPasswordResetLink = onCall({ cors: true }, async (request) => {
   const access = await requireAdminAccess(request);
   const email = normalizeRawEmail(request.data?.email);
 

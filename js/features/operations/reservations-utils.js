@@ -227,6 +227,16 @@ export function normalizePoolStatus(value) {
     return 'needs-review';
 }
 
+export function calculateTouristTaxAmount(record = {}) {
+    const adults = Math.max(0, parseNumber(record.adults ?? record.adultsCount) || 0);
+    const children = Math.max(0, parseNumber(record.children ?? record.childrenCount) || 0);
+    const nights = parseNumber(record.nights ?? record.nightsCount);
+    if (nights === null) return null;
+
+    const taxableNights = Math.min(Math.max(0, nights), 7);
+    return (adults + children) * taxableNights * 2;
+}
+
 export function makeReservationFingerprint(record) {
     return [
         record.propertyName,
@@ -329,6 +339,8 @@ export function normalizePmsReservationRow(row, context = {}) {
 }
 
 export function deriveReservationFields(record, fallbackYear = 2026) {
+    const manualTouristTaxAmount = parseNumber(record.touristTaxAmount);
+    const calculatedTouristTaxAmount = calculateTouristTaxAmount(record);
     const derived = {
         ...record,
         status: normalizeText(record.status),
@@ -340,12 +352,15 @@ export function deriveReservationFields(record, fallbackYear = 2026) {
         poolState: normalizePoolStatus(record.heatedPool || record.poolStatus),
         poolPaidAmountValue: parseNumber(record.poolPaidAmount),
         poolAvantioAmountValue: parseNumber(record.poolAvantioAmount),
-        touristTaxAmountValue: parseNumber(record.touristTaxAmount),
+        touristTaxAmountValue: manualTouristTaxAmount,
+        calculatedTouristTaxAmountValue: calculatedTouristTaxAmount,
+        touristTaxDisplayAmountValue: manualTouristTaxAmount ?? calculatedTouristTaxAmount,
         adultsCount: parseNumber(record.adults),
         childrenCount: parseNumber(record.children),
         babiesCount: parseNumber(record.babies),
         nightsCount: parseNumber(record.nights)
     };
+    derived.touristTaxNeedsChildAgeCheck = Number(derived.childrenCount || 0) > 0;
     derived.week = getIsoWeek(derived.checkIn);
     derived.fingerprint = makeReservationFingerprint(derived);
     derived.validationIssues = getReservationIssues(derived);
@@ -367,7 +382,8 @@ export function getReservationIssues(record) {
     if (!record.safeCode) issues.push('missing-keybox');
     if (record.poolState === 'waiting' || record.poolState === 'needs-review') issues.push('pool-follow-up');
     if (record.heatedPool && record.poolState === 'requested' && record.poolPaidAmountValue === null) issues.push('pool-payment-missing');
-    if (record.touristTaxAmountValue === null && normalizeLookupText(record.status) !== 'de proprietario') issues.push('missing-tax');
+    if (record.touristTaxDisplayAmountValue === null && normalizeLookupText(record.status) !== 'de proprietario') issues.push('missing-tax');
+    if (record.touristTaxNeedsChildAgeCheck) issues.push('tax-child-age-check');
     return issues;
 }
 

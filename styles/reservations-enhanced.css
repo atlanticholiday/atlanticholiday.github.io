@@ -1103,6 +1103,31 @@
     font-weight: 650;
 }
 
+.reservation-detail--wide {
+    grid-column: 1 / -1;
+}
+
+.reservation-detail small,
+.reservation-detail em {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.reservation-detail small {
+    color: #4b5563;
+}
+
+.reservation-detail em {
+    border-radius: 6px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-style: normal;
+    font-weight: 800;
+    padding: 8px 10px;
+}
+
 .reservation-row__issues {
     display: flex;
     flex-wrap: wrap;

@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+  calculateTouristTaxAmount,
   filterReservations,
   getIsoWeek,
   isPmsReservationHeader,
@@ -51,7 +52,36 @@ describe("reservations-utils", () => {
     assert.equal(record.firstMessageState, "sent");
     assert.equal(record.sefState, "validated");
     assert.equal(record.week, "2026-W19");
+    assert.equal(record.calculatedTouristTaxAmountValue, 28);
+    assert.equal(record.touristTaxDisplayAmountValue, 28);
     assert.equal(record.validationIssues.length, 0);
+  });
+
+  test("calculates tourist tax at 2 EUR per taxable guest per night capped at 7 nights", () => {
+    assert.equal(calculateTouristTaxAmount({ adults: "2", children: "1", nights: "9" }), 42);
+    assert.equal(calculateTouristTaxAmount({ adults: "2", children: "0", nights: "3" }), 12);
+
+    const record = normalizeReservationRow({
+      Estado: "Paga",
+      In: "9/5",
+      "Nome alojamento": "Villa Alegria",
+      Out: "18/5",
+      A: "2",
+      C: "1",
+      Nome: "Guest With Child",
+      Portal: "Airbnb",
+      SEF: "Validado",
+      Noites: "9",
+      "1ª Mensagem": "Enviada",
+      Cofre: "3",
+      Número: "123"
+    });
+
+    assert.equal(record.calculatedTouristTaxAmountValue, 42);
+    assert.equal(record.touristTaxDisplayAmountValue, 42);
+    assert.equal(record.touristTaxNeedsChildAgeCheck, true);
+    assert.ok(record.validationIssues.includes("tax-child-age-check"));
+    assert.equal(record.validationIssues.includes("missing-tax"), false);
   });
 
   test("flags operational issues that need follow-up", () => {
