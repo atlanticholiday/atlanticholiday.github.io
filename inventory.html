@@ -40,10 +40,36 @@
                     <i class="fas fa-history mr-1"></i> Saved Lists
                 </button>
             </div>
+            <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
+                <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100"
+                    data-lang-option="en" title="English">EN</button>
+                <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100"
+                    data-lang-option="pt" title="Português">PT</button>
+            </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-8 max-w-5xl">
+    <main class="container mx-auto px-4 py-8 max-w-[1920px] 2xl:px-8">
+        <div class="mb-6 flex flex-col gap-3 border-b border-slate-200 md:flex-row md:items-end md:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Inventory</p>
+                <h1 class="text-2xl font-semibold text-slate-900">Essentials and PlenoHotel</h1>
+            </div>
+            <div class="inline-flex w-full rounded-lg bg-slate-100 p-1 text-sm font-medium text-slate-600 md:w-auto">
+                <button id="inventory-tab-essentials" type="button"
+                    class="inventory-tab flex-1 rounded-md bg-white px-4 py-2 text-slate-900 shadow-sm md:flex-none"
+                    data-inventory-tab="essentials">
+                    Essentials generator
+                </button>
+                <button id="inventory-tab-plenohotel" type="button"
+                    class="inventory-tab flex-1 rounded-md px-4 py-2 hover:text-slate-900 md:flex-none"
+                    data-inventory-tab="plenohotel">
+                    PlenoHotel
+                </button>
+            </div>
+        </div>
+
+        <section id="essentials-panel" data-inventory-panel="essentials">
 
         <!-- Setup / CSV Warning -->
         <div id="csv-warning" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-md shadow-sm">
@@ -202,6 +228,12 @@
         </div>
         </div>
         </div>
+
+        </section>
+
+        <section id="plenohotel-panel" data-inventory-panel="plenohotel" class="hidden">
+            <div id="plenohotel-root" class="min-h-[720px]"></div>
+        </section>
 
         <!-- Saved Lists Modal -->
         <div id="saved-lists-modal"
