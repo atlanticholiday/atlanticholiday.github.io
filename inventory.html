@@ -8,14 +8,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="styles/main.css">
 </head>
 
 <body class="bg-gray-50 text-gray-800">
 
-    <header class="dashboard-header sticky top-0 z-10 bg-white/90 backdrop-blur-md shadow-sm">
+    <header class="dashboard-header inventory-header sticky top-0 z-10 bg-white/90 backdrop-blur-md shadow-sm">
         <div class="container mx-auto px-4 py-4 max-w-7xl flex justify-between items-center">
             <div class="flex items-center gap-4">
                 <a href="index.html" class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift"
@@ -34,13 +35,13 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div class="inventory-header-actions">
                 <button id="load-saved-btn"
                     class="text-sm font-medium text-gray-600 hover:text-brand transition-colors">
                     <i class="fas fa-history mr-1"></i> Saved Lists
                 </button>
             </div>
-            <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
+            <div class="inventory-lang-switcher inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100"
                     data-lang-option="en" title="English">EN</button>
                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100"
@@ -172,7 +173,7 @@
                         <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                             <i class="fas fa-list-check text-brand"></i> Essentials List
                         </h2>
-                        <div class="flex gap-2" id="action-buttons">
+                        <div class="flex flex-wrap justify-end gap-2" id="action-buttons">
                             <button id="save-list-btn"
                                 class="hidden text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors">
                                 <i class="fas fa-save mr-1"></i> Save

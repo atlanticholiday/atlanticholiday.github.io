@@ -87,6 +87,11 @@ function setupPlenoHotel() {
         enableIndexedDbPersistence(db).catch(() => {});
         const auth = getAuth(app);
         onAuthStateChanged(auth, (user) => {
+            if (user) {
+                InventoryManager.connectFirestore(db);
+            } else {
+                InventoryManager.disconnectFirestore();
+            }
             if (!window.plenoHotelManager) {
                 window.plenoHotelManager = new PlenoHotelManager(user ? db : null, user ? storage : null);
                 window.plenoHotelManager.init();
