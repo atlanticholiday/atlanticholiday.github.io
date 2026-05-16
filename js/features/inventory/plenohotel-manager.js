@@ -92,6 +92,9 @@ const PLENOHOTEL_COPY = {
             export: "Export",
             propertyTracker: "Property tracker",
             trackerDescription: "Shared PlenoHotel status by property name.",
+            workflowQueue: "Workflow queue",
+            workflowDescription: "Filter properties by their current PlenoHotel stage.",
+            allProperties: "All properties",
             searchPlaceholder: "Search property, quote, notes",
             allStages: "All stages",
             noRecords: "No PlenoHotel records match the current filters.",
@@ -116,13 +119,14 @@ const PLENOHOTEL_COPY = {
             saveAddAnother: "Save & add another",
             prepareEmail: "Prepare email",
             hideEmailTools: "Hide email tools",
+            formSectionsHelp: "Open the section you need. Collapsed sections keep their saved values.",
             noOpenReminders: "No open reminders for this property.",
             reminders: "Reminders",
             propertyAndBeds: "Property and beds",
             propertyName: "Property name",
             location: "Location",
             bedSizesOnePerLine: "Bed sizes, one per line",
-            bedPlaceholder: "1 - 160x200cm",
+            bedPlaceholder: "Use one line per bed type or room.\nStart with quantity, then mattress size in centimeters.\n\nExamples:\n1 - 160x200cm\n2 - 90x200cm\n1 - 140x200cm sofa bed\n\nIf sizes are not known yet, leave this empty or partial and keep \"Bed sizes known?\" as Pending, Partial, Ask, or Unknown.",
             workflow: "Workflow",
             needed: "Needed?",
             ownerAsked: "Owner asked?",
@@ -227,6 +231,9 @@ const PLENOHOTEL_COPY = {
             export: "Exportar",
             propertyTracker: "Acompanhamento por alojamento",
             trackerDescription: "Estado PlenoHotel partilhado por nome do alojamento.",
+            workflowQueue: "Fila de trabalho",
+            workflowDescription: "Filtre os alojamentos pelo estado atual PlenoHotel.",
+            allProperties: "Todos os alojamentos",
             searchPlaceholder: "Pesquisar alojamento, or\u00e7amento, notas",
             allStages: "Todos os estados",
             noRecords: "Nenhum registo PlenoHotel corresponde aos filtros atuais.",
@@ -251,13 +258,14 @@ const PLENOHOTEL_COPY = {
             saveAddAnother: "Guardar e adicionar outro",
             prepareEmail: "Preparar email",
             hideEmailTools: "Ocultar ferramentas de email",
+            formSectionsHelp: "Abra apenas a sec\u00e7\u00e3o que precisa. As sec\u00e7\u00f5es fechadas mant\u00eam os valores guardados.",
             noOpenReminders: "Sem lembretes em aberto para este alojamento.",
             reminders: "Lembretes",
             propertyAndBeds: "Alojamento e camas",
             propertyName: "Nome do alojamento",
             location: "Localiza\u00e7\u00e3o",
             bedSizesOnePerLine: "Tamanhos das camas, um por linha",
-            bedPlaceholder: "1 - 160x200cm",
+            bedPlaceholder: "Use uma linha por tipo de cama ou quarto.\nComece pela quantidade e depois o tamanho do colch\u00e3o em cent\u00edmetros.\n\nExemplos:\n1 - 160x200cm\n2 - 90x200cm\n1 - sof\u00e1-cama 140x200cm\n\nSe ainda n\u00e3o souber os tamanhos, deixe vazio ou parcial e mantenha \"Tamanhos das camas conhecidos?\" como Pendente, Parcial, Perguntar ou Desconhecido.",
             workflow: "Fluxo de trabalho",
             needed: "Necess\u00e1rio?",
             ownerAsked: "Propriet\u00e1rio questionado?",
@@ -483,6 +491,7 @@ export class PlenoHotelManager {
             }
 
             if (action === "new") this.createNewDraft();
+            if (action === "stage") this.setStage(event.target.closest("[data-plenohotel-stage]")?.dataset.plenohotelStage || "all");
             if (action === "save") this.saveSelectedRecord();
             if (action === "save-add") this.saveSelectedRecord({ addAnother: true });
             if (action === "delete") this.deleteSelectedRecord();
@@ -497,6 +506,18 @@ export class PlenoHotelManager {
     setStatus(message, tone = "info") {
         this.statusMessage = message;
         this.statusTone = tone;
+        this.render();
+    }
+
+    setStage(stage) {
+        this.stage = stage || "all";
+        const firstMatch = filterPlenoHotelRecords(this.records, {
+            query: this.query,
+            stage: this.stage
+        })[0];
+        if (firstMatch && !this.records.some((record) => record.id === this.selectedId && (this.stage === "all" || record.workflowStage === this.stage))) {
+            this.selectedId = firstMatch.id;
+        }
         this.render();
     }
 
@@ -815,36 +836,38 @@ export class PlenoHotelManager {
         const summary = summarizePlenoHotelRecords(this.records);
         const selected = this.getSelectedRecord() || this.createBlankRecord();
         this.root.innerHTML = `
-            <div class="space-y-5">
+            <div class="space-y-4">
                 ${this.renderToolbar(summary)}
                 ${this.renderStatus()}
-                <div class="grid items-start gap-5 xl:grid-cols-[minmax(640px,1fr)_minmax(680px,820px)] 2xl:grid-cols-[minmax(760px,1fr)_minmax(780px,920px)]">
-                    <div class="min-w-0 space-y-4">
-                        ${this.renderStageSummary(summary)}
-                        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                            <div class="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+                <div class="grid items-start gap-4 xl:grid-cols-[260px_minmax(420px,0.9fr)_minmax(540px,1fr)] 2xl:grid-cols-[280px_minmax(520px,0.95fr)_minmax(700px,1fr)]">
+                    <aside class="min-w-0 xl:sticky xl:top-24">
+                        ${this.renderWorkflowNav(summary)}
+                    </aside>
+                    <section class="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        <div class="flex flex-col gap-3 border-b border-slate-200 p-4">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div>
                                     <h2 class="text-base font-semibold text-slate-900">${this.tr("ui", "propertyTracker")}</h2>
                                     <p class="text-sm text-slate-500">${this.tr("ui", "trackerDescription")}</p>
                                 </div>
-                                <div class="flex flex-col gap-2 sm:flex-row">
-                                    <input id="plenohotel-search" value="${escapeHtml(this.query)}" placeholder="${escapeHtml(this.tr("ui", "searchPlaceholder"))}"
-                                        class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-light sm:w-64">
-                                    <select id="plenohotel-stage-filter"
-                                        class="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-light">
-                                        <option value="all" ${this.stage === "all" ? "selected" : ""}>${this.tr("ui", "allStages")}</option>
-                                        ${Object.values(PLENOHOTEL_WORKFLOW_STAGES).sort((a, b) => a.order - b.order).map((stage) => `
-                                            <option value="${stage.key}" ${this.stage === stage.key ? "selected" : ""}>${this.stageLabel(stage.key)}</option>
-                                        `).join("")}
-                                    </select>
-                                </div>
                             </div>
-                            <div id="plenohotel-records-list">
-                                ${this.renderRecordsTable()}
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <input id="plenohotel-search" value="${escapeHtml(this.query)}" placeholder="${escapeHtml(this.tr("ui", "searchPlaceholder"))}"
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-light">
+                                <select id="plenohotel-stage-filter"
+                                    class="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-light xl:hidden">
+                                    <option value="all" ${this.stage === "all" ? "selected" : ""}>${this.tr("ui", "allStages")}</option>
+                                    ${Object.values(PLENOHOTEL_WORKFLOW_STAGES).sort((a, b) => a.order - b.order).map((stage) => `
+                                        <option value="${stage.key}" ${this.stage === stage.key ? "selected" : ""}>${this.stageLabel(stage.key)}</option>
+                                    `).join("")}
+                                </select>
                             </div>
                         </div>
-                    </div>
-                    <aside class="min-w-0">
+                        <div id="plenohotel-records-list">
+                            ${this.renderRecordsTable()}
+                        </div>
+                    </section>
+                    <aside class="min-w-0 xl:sticky xl:top-24">
                         ${this.renderDetailPanel(selected, { isBlank: !this.getSelectedRecord() })}
                     </aside>
                 </div>
@@ -892,27 +915,46 @@ export class PlenoHotelManager {
         return `<div class="rounded-md border px-4 py-3 text-sm ${classes}">${escapeHtml(this.statusMessage)}</div>`;
     }
 
-    renderStageSummary(summary) {
+    renderWorkflowNav(summary) {
+        const allActive = this.stage === "all";
+        const allClass = allActive
+            ? "border-brand bg-rose-50 text-brand shadow-sm"
+            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
         const stageItems = Object.values(PLENOHOTEL_WORKFLOW_STAGES)
             .sort((a, b) => a.order - b.order)
             .map((stage) => `
-                <button type="button" class="rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${stageToneClass(stage.key)}"
-                    onclick="document.getElementById('plenohotel-stage-filter').value='${stage.key}'; document.getElementById('plenohotel-stage-filter').dispatchEvent(new Event('change', { bubbles: true }))">
-                    <div class="text-2xl font-semibold">${summary.stages[stage.key] || 0}</div>
-                    <div class="mt-1 text-xs font-semibold uppercase tracking-wide">${this.stageLabel(stage.key)}</div>
+                <button type="button" data-plenohotel-action="stage" data-plenohotel-stage="${stage.key}"
+                    class="flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left transition ${this.stage === stage.key ? `${stageToneClass(stage.key)} shadow-sm` : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}">
+                    <span class="min-w-0 text-sm font-medium">${this.stageLabel(stage.key)}</span>
+                    <span class="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-slate-700">${summary.stages[stage.key] || 0}</span>
                 </button>
             `).join("");
 
         return `
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                ${stageItems}
-                <div class="rounded-lg border border-slate-200 bg-white p-3 text-slate-800">
-                    <div class="text-2xl font-semibold">${summary.needsBedSizes}</div>
-                    <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">${this.tr("ui", "needBedSizes")}</div>
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+                <div class="px-1 pb-3">
+                    <h2 class="text-sm font-semibold text-slate-950">${this.tr("ui", "workflowQueue")}</h2>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">${this.tr("ui", "workflowDescription")}</p>
                 </div>
-                <div class="rounded-lg border border-slate-200 bg-white p-3 text-slate-800">
-                    <div class="text-2xl font-semibold">${formatCurrency(summary.totalCommission)}</div>
-                    <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">${this.tr("ui", "commissionTracked")}</div>
+                <button type="button" data-plenohotel-action="stage" data-plenohotel-stage="all"
+                    class="mb-2 flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left transition ${allClass}">
+                    <span class="text-sm font-semibold">${this.tr("ui", "allProperties")}</span>
+                    <span class="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-slate-700">${summary.total}</span>
+                </button>
+                <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                    ${stageItems}
+                </div>
+                <div class="mt-4 border-t border-slate-200 pt-4">
+                    <div class="grid grid-cols-2 gap-3 xl:grid-cols-1 2xl:grid-cols-2">
+                        <div>
+                            <div class="text-xl font-semibold text-slate-950">${summary.needsBedSizes}</div>
+                            <div class="text-xs font-medium text-slate-500">${this.tr("ui", "needBedSizes")}</div>
+                        </div>
+                        <div>
+                            <div class="text-xl font-semibold text-slate-950">${formatCurrency(summary.totalCommission)}</div>
+                            <div class="text-xs font-medium text-slate-500">${this.tr("ui", "commissionTracked")}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -937,21 +979,8 @@ export class PlenoHotelManager {
         }
 
         return `
-            <div class="max-h-[620px] overflow-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th class="px-4 py-3 text-left">${this.tr("ui", "property")}</th>
-                            <th class="px-4 py-3 text-left">${this.tr("ui", "stage")}</th>
-                            <th class="px-4 py-3 text-left">${this.tr("ui", "quote")}</th>
-                            <th class="px-4 py-3 text-left">${this.tr("ui", "bedSizesColumn")}</th>
-                            <th class="px-4 py-3 text-right">${this.tr("ui", "ownerCharge")}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        ${records.map((record) => this.renderRecordRow(record)).join("")}
-                    </tbody>
-                </table>
+            <div class="max-h-[calc(100vh-260px)] min-h-[420px] divide-y divide-slate-100 overflow-auto">
+                ${records.map((record) => this.renderRecordRow(record)).join("")}
             </div>
         `;
     }
@@ -960,22 +989,32 @@ export class PlenoHotelManager {
         const selected = record.id === this.selectedId;
         const reminders = this.getLocalizedReminders(record);
         const stage = PLENOHOTEL_WORKFLOW_STAGES[record.workflowStage] || PLENOHOTEL_WORKFLOW_STAGES.needsQuestion;
+        const propertyName = record.propertyName || this.tr("ui", "manualEntry");
         return `
-            <tr data-record-id="${escapeHtml(record.id)}" class="cursor-pointer ${selected ? "bg-rose-50/70" : "hover:bg-slate-50"}">
-                <td class="px-4 py-3">
-                    <div class="font-medium text-slate-900">${escapeHtml(record.propertyName)}</div>
-                    <div class="text-xs text-slate-500">${escapeHtml(record.location || this.tr("ui", "noLocation"))} ${reminders.length ? `· ${reminders.length} ${reminders.length === 1 ? this.tr("ui", "reminderSingle") : this.tr("ui", "reminderPlural")}` : ""}</div>
-                </td>
-                <td class="px-4 py-3">
-                    <span class="inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${stageToneClass(stage.key)}">${this.stageLabel(stage.key)}</span>
-                </td>
-                <td class="px-4 py-3 text-slate-700">
-                    <div>${escapeHtml(record.quoteNumber || this.tr("ui", "noQuote"))}</div>
-                    <div class="text-xs text-slate-500">${escapeHtml(record.quoteDate || "")}</div>
-                </td>
-                <td class="px-4 py-3 text-slate-700">${record.bedSizes.length ? `${record.bedSizes.length} ${this.tr("ui", "entries")}` : this.tr("ui", "missing")}</td>
-                <td class="px-4 py-3 text-right font-medium text-slate-900">${record.ownerChargeTotal ? formatCurrency(record.ownerChargeTotal) : "-"}</td>
-            </tr>
+            <button type="button" data-record-id="${escapeHtml(record.id)}"
+                class="block w-full px-4 py-3 text-left transition ${selected ? "bg-rose-50/80 ring-1 ring-inset ring-rose-200" : "hover:bg-slate-50"}">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="truncate font-medium text-slate-950">${escapeHtml(propertyName)}</div>
+                        <div class="mt-0.5 truncate text-xs text-slate-500">${escapeHtml(record.location || this.tr("ui", "noLocation"))}${reminders.length ? ` · ${reminders.length} ${reminders.length === 1 ? this.tr("ui", "reminderSingle") : this.tr("ui", "reminderPlural")}` : ""}</div>
+                    </div>
+                    <span class="shrink-0 rounded-full border px-2 py-1 text-xs font-semibold ${stageToneClass(stage.key)}">${this.stageLabel(stage.key)}</span>
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                        <div class="font-medium text-slate-500">${this.tr("ui", "quote")}</div>
+                        <div class="mt-0.5 truncate text-slate-800">${escapeHtml(record.quoteNumber || this.tr("ui", "noQuote"))}</div>
+                    </div>
+                    <div>
+                        <div class="font-medium text-slate-500">${this.tr("ui", "bedSizesColumn")}</div>
+                        <div class="mt-0.5 text-slate-800">${record.bedSizes.length ? `${record.bedSizes.length} ${this.tr("ui", "entries")}` : this.tr("ui", "missing")}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-medium text-slate-500">${this.tr("ui", "ownerCharge")}</div>
+                        <div class="mt-0.5 font-semibold text-slate-950">${record.ownerChargeTotal ? formatCurrency(record.ownerChargeTotal) : "-"}</div>
+                    </div>
+                </div>
+            </button>
         `;
     }
 
@@ -997,7 +1036,6 @@ export class PlenoHotelManager {
 
     renderDetailPanel(record, { isBlank = false } = {}) {
         const normalized = normalizePlenoHotelRecord(record);
-        const reminders = this.getLocalizedReminders(normalized);
         const stage = PLENOHOTEL_WORKFLOW_STAGES[normalized.workflowStage];
         return `
             <div class="space-y-4">
@@ -1029,38 +1067,39 @@ export class PlenoHotelManager {
                             </div>
                         </div>
                     </div>
-                    <div class="space-y-5 p-4">
-                        ${this.renderReminderBlock(reminders)}
-                        ${this.renderIdentityFields(normalized)}
-                        ${this.renderStatusFields(normalized)}
-                        ${this.renderQuoteFields(normalized)}
-                        ${this.renderCommissionFields(normalized)}
-                        ${this.renderAttachmentFields(normalized)}
-                        ${this.emailComposerOpen ? this.renderEmailComposer(normalized) : this.renderEmailCollapsed()}
+                    <div class="space-y-3 p-4">
+                        <p class="text-xs leading-5 text-slate-500">${this.tr("ui", "formSectionsHelp")}</p>
+                        ${this.renderDetailSection(this.tr("ui", "propertyAndBeds"), this.renderIdentityFields(normalized), { open: true })}
+                        ${this.renderDetailSection(this.tr("ui", "workflow"), this.renderStatusFields(normalized), { open: true })}
+                        ${this.renderDetailSection(this.tr("ui", "quoteAndNotes"), this.renderQuoteFields(normalized))}
+                        ${this.renderDetailSection(this.tr("ui", "ownerChargeAndCommission"), this.renderCommissionFields(normalized))}
+                        ${this.renderDetailSection(this.tr("ui", "quotationsAndInvoices"), this.renderAttachmentFields(normalized))}
+                        ${this.emailComposerOpen
+                            ? this.renderDetailSection(this.tr("ui", "emailPreparation"), this.renderEmailComposer(normalized), { open: true })
+                            : this.renderEmailCollapsed()}
                     </div>
                 </form>
             </div>
         `;
     }
 
-    renderReminderBlock(reminders) {
-        if (!reminders.length) {
-            return `<div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">${this.tr("ui", "noOpenReminders")}</div>`;
-        }
+    renderDetailSection(title, body, { open = false } = {}) {
         return `
-            <div class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                <div class="font-semibold">${this.tr("ui", "reminders")}</div>
-                <ul class="mt-2 list-disc space-y-1 pl-5">
-                    ${reminders.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-                </ul>
-            </div>
+            <details class="plenohotel-detail-section rounded-md border border-slate-200 bg-white" ${open ? "open" : ""}>
+                <summary class="flex cursor-pointer items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-950">
+                    <span>${title}</span>
+                    <i class="fas fa-chevron-down plenohotel-detail-chevron text-xs text-slate-400 transition-transform"></i>
+                </summary>
+                <div class="border-t border-slate-100 p-3">
+                    ${body}
+                </div>
+            </details>
         `;
     }
 
     renderIdentityFields(record) {
         return `
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "propertyAndBeds")}</h3>
                 <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                     <label class="text-sm">
                         <span class="mb-1 block text-slate-600">${this.tr("ui", "propertyName")}</span>
@@ -1073,7 +1112,7 @@ export class PlenoHotelManager {
                 </div>
                 <label class="text-sm">
                     <span class="mb-1 block text-slate-600">${this.tr("ui", "bedSizesOnePerLine")}</span>
-                    <textarea name="bedSizes" rows="4" class="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="${this.tr("ui", "bedPlaceholder")}">${escapeHtml(bedSizesToText(record.bedSizes))}</textarea>
+                    <textarea name="bedSizes" rows="8" class="w-full rounded-md border border-slate-300 px-3 py-2" placeholder="${escapeHtml(this.tr("ui", "bedPlaceholder"))}">${escapeHtml(bedSizesToText(record.bedSizes))}</textarea>
                 </label>
             </section>
         `;
@@ -1092,7 +1131,6 @@ export class PlenoHotelManager {
         ];
         return `
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "workflow")}</h3>
                 <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                     ${fields.map(([name, label]) => `
                         <label class="text-sm">
@@ -1108,7 +1146,6 @@ export class PlenoHotelManager {
     renderQuoteFields(record) {
         return `
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "quoteAndNotes")}</h3>
                 <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                     <label class="text-sm">
                         <span class="mb-1 block text-slate-600">${this.tr("ui", "emailSent")}</span>
@@ -1142,7 +1179,6 @@ export class PlenoHotelManager {
     renderCommissionFields(record) {
         return `
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "ownerChargeAndCommission")}</h3>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="text-sm">
                         <span class="mb-1 block text-slate-600">${this.tr("ui", "plenoSubtotal")}</span>
@@ -1168,7 +1204,6 @@ export class PlenoHotelManager {
     renderAttachmentFields(record) {
         return `
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "quotationsAndInvoices")}</h3>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="text-sm">
                         <span class="mb-1 block text-slate-600">${this.tr("ui", "quotationLinks")}</span>
@@ -1198,8 +1233,7 @@ export class PlenoHotelManager {
     renderEmailComposer(record) {
         return `
             <section class="space-y-3">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-sm font-semibold text-slate-900">${this.tr("ui", "emailPreparation")}</h3>
+                <div class="flex justify-end">
                     <button type="button" data-plenohotel-action="generate-email" class="text-sm font-medium text-brand hover:underline">${this.tr("ui", "generate")}</button>
                 </div>
                 <div class="grid gap-3 sm:grid-cols-2">

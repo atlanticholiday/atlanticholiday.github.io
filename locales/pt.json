@@ -118,6 +118,8 @@
         "reservationsDesc": "Operação semanal.",
         "operationalGuidelines": "Guia Operacional",
         "operationalGuidelinesDesc": "Protocolos aprovados.",
+        "heatedPools": "Piscinas Aquecidas",
+        "heatedPoolsDesc": "Tarefas de aquecimento.",
         "nukiDoors": "Portas Nuki",
         "nukiDoorsDesc": "Fechaduras Nuki.",
         "allInfo": "Toda a Informação",
@@ -149,6 +151,12 @@
         "header": {
             "title": "Toda a Informação dos Alojamentos",
             "subtitle": "Ver todos os dados dos alojamentos num só lugar"
+        }
+    },
+    "heatedPools": {
+        "header": {
+            "title": "Piscinas Aquecidas",
+            "subtitle": "Gerir pedidos de aquecimento e tarefas diarias dentro da app"
         }
     },
     "vehicles": {
@@ -1326,6 +1334,7 @@
             "options": {
                 "airbnbReservationInvoices": "Faturas IVA Airbnb",
                 "operationalGuidelines": "Guia Operacional",
+                "heatedPools": "Piscinas Aquecidas",
                 "allinfo": "Toda a Informação",
                 "rnal": "RNAL",
                 "checklists": "Checklists",

@@ -64,6 +64,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'main'
     },
     {
+        key: 'heatedPools',
+        buttonId: 'go-to-heated-pools-btn',
+        pageName: 'heatedPools',
+        labelKey: 'userManagement.appAccess.options.heatedPools',
+        fallbackLabel: 'Heated Pools',
+        group: 'main'
+    },
+    {
         key: 'allinfo',
         buttonId: 'go-to-allinfo-btn',
         pageName: 'allinfo',

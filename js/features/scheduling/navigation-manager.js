@@ -12,6 +12,7 @@ export class NavigationManager {
             laundryLog: 'laundry-log-page',
             airbnbReservationInvoices: 'airbnb-reservation-invoices-page',
             operationalGuidelines: 'operational-guidelines-page',
+            heatedPools: 'heated-pools-page',
             schedule: 'app-content',
             reservations: 'reservations-page',
             login: 'login-screen',
@@ -131,6 +132,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showHeatedPoolsPage() {
+        this.showPage('heatedPools');
+        const event = new CustomEvent('heatedPoolsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     showSchedulePage() {
         this.showPage('schedule');
     }
@@ -236,6 +243,7 @@ export class NavigationManager {
         const goToLaundryLogBtn = document.getElementById('go-to-laundry-log-btn');
         const goToAirbnbReservationInvoicesBtn = document.getElementById('go-to-airbnb-reservation-invoices-btn');
         const goToOperationalGuidelinesBtn = document.getElementById('go-to-operational-guidelines-btn');
+        const goToHeatedPoolsBtn = document.getElementById('go-to-heated-pools-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
@@ -288,6 +296,12 @@ export class NavigationManager {
         if (goToOperationalGuidelinesBtn) {
             goToOperationalGuidelinesBtn.addEventListener('click', () => {
                 this.showOperationalGuidelinesPage();
+            });
+        }
+
+        if (goToHeatedPoolsBtn) {
+            goToHeatedPoolsBtn.addEventListener('click', () => {
+                this.showHeatedPoolsPage();
             });
         }
 
@@ -437,6 +451,7 @@ export class NavigationManager {
         const backToLandingFromLaundryLogBtn = document.getElementById('back-to-landing-from-laundry-log-btn');
         const backToLandingFromAirbnbReservationInvoicesBtn = document.getElementById('back-to-landing-from-airbnb-reservation-invoices-btn');
         const backToLandingFromOperationalGuidelinesBtn = document.getElementById('back-to-landing-from-operational-guidelines-btn');
+        const backToLandingFromHeatedPoolsBtn = document.getElementById('back-to-landing-from-heated-pools-btn');
         const backToLandingFromReservationsBtn = document.getElementById('back-to-landing-from-reservations-btn');
         const backToLandingFromOperationsBtn = document.getElementById('back-to-landing-from-operations-btn');
         const backToLandingFromScheduleBtn = document.getElementById('back-to-landing-from-schedule-btn');
@@ -483,6 +498,12 @@ export class NavigationManager {
 
         if (backToLandingFromOperationalGuidelinesBtn) {
             backToLandingFromOperationalGuidelinesBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromHeatedPoolsBtn) {
+            backToLandingFromHeatedPoolsBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }
@@ -609,6 +630,7 @@ export class NavigationManager {
         const vehiclesSignOutBtn = document.getElementById('vehicles-sign-out-btn');
         const ownersSignOutBtn = document.getElementById('owners-sign-out-btn');
         const operationalGuidelinesSignOutBtn = document.getElementById('operational-guidelines-sign-out-btn');
+        const heatedPoolsSignOutBtn = document.getElementById('heated-pools-sign-out-btn');
         const laundryLogSignOutBtn = document.getElementById('laundry-log-sign-out-btn');
         const visitsSignOutBtn = document.getElementById('visits-sign-out-btn');
         const cleaningAhSignOutBtn = document.getElementById('cleaning-ah-sign-out-btn');
@@ -672,6 +694,12 @@ export class NavigationManager {
         }
         if (operationalGuidelinesSignOutBtn) {
             operationalGuidelinesSignOutBtn.addEventListener('click', () => {
+                const event = new CustomEvent('signOutRequested');
+                document.dispatchEvent(event);
+            });
+        }
+        if (heatedPoolsSignOutBtn) {
+            heatedPoolsSignOutBtn.addEventListener('click', () => {
                 const event = new CustomEvent('signOutRequested');
                 document.dispatchEvent(event);
             });

@@ -833,6 +833,9 @@ export class DataManager {
 
         const allowedApps = this.getCurrentUserAllowedApps();
         if (Array.isArray(allowedApps)) {
+            if (appKey === 'heatedPools' && allowedApps.includes('reservations')) {
+                return true;
+            }
             return allowedApps.includes(appKey);
         }
 

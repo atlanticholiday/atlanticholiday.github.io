@@ -118,6 +118,8 @@
     "reservationsDesc": "Weekly guest work.",
     "operationalGuidelines": "Operational Guide",
     "operationalGuidelinesDesc": "Approved protocols.",
+    "heatedPools": "Heated Pools",
+    "heatedPoolsDesc": "Pool heating tasks.",
     "nukiDoors": "Nuki Doors",
     "nukiDoorsDesc": "Smart locks.",
     "allInfo": "All Info",
@@ -149,6 +151,12 @@
     "header": {
       "title": "All Property Info",
       "subtitle": "View all property data in one place"
+    }
+  },
+  "heatedPools": {
+    "header": {
+      "title": "Heated Pools",
+      "subtitle": "Manage pool heating requests and daily actions inside the app"
     }
   },
   "vehicles": {
@@ -1318,6 +1326,7 @@
       "options": {
         "airbnbReservationInvoices": "Airbnb VAT Invoices",
         "operationalGuidelines": "Operational Guide",
+        "heatedPools": "Heated Pools",
         "allinfo": "All Info",
         "rnal": "RNAL",
         "checklists": "Checklists",

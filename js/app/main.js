@@ -13,6 +13,7 @@ import { ChecklistsManager } from '../features/operations/checklists-manager.js'
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
 import { CleaningBillsManager } from '../features/operations/cleaning-bills-manager.js';
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
+import { HeatedPoolsManager } from '../features/operations/heated-pools-manager.js';
 import { LaundryLogManager } from '../features/operations/laundry-log-manager.js';
 import { NukiDoorsManager } from '../features/operations/nuki-doors-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
@@ -51,7 +52,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -463,6 +464,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         cleaningBillsManager = new CleaningBillsManager(); // Reverted to original
         window.cleaningBillsManager = cleaningBillsManager;
         try { cleaningBillsManager.ensureDomScaffold?.(); } catch { }
+        heatedPoolsManager = new HeatedPoolsManager(db);
+        window.heatedPoolsManager = heatedPoolsManager;
         // Initialize Commission Calculator early to inject page and landing button before nav listeners are wired
         commissionCalculatorManager = new CommissionCalculatorManager();
         window.commissionCalculatorManager = commissionCalculatorManager;
@@ -717,6 +720,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cleaningAhManager) {
                     try { cleaningAhManager.stopListening(); } catch { }
                 }
+                if (heatedPoolsManager) {
+                    try { heatedPoolsManager.stopListening(); } catch { }
+                }
             }
         });
 
@@ -741,7 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #nuki-doors-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn')) {
             signOut(auth);
         }
     });
@@ -899,6 +905,10 @@ function setupGlobalEventListeners() {
 
     document.addEventListener('nukiDoorsPageOpened', () => {
         nukiDoorsManager?.init();
+    });
+
+    document.addEventListener('heatedPoolsPageOpened', () => {
+        heatedPoolsManager?.init();
     });
 
     propertyDashboardController?.init();

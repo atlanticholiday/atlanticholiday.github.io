@@ -221,6 +221,16 @@
                     </div>
                 </button>
 
+                <button id="go-to-heated-pools-btn" class="dashboard-card">
+                    <div class="card-icon bg-cyan-500/10 text-cyan-700">
+                        <i class="fas fa-water"></i>
+                    </div>
+                    <div class="card-body">
+                        <h3 data-i18n="apps.heatedPools">Heated Pools</h3>
+                        <p data-i18n="apps.heatedPoolsDesc">Pool heating tasks.</p>
+                    </div>
+                </button>
+
                 <button id="go-to-welcome-packs-btn" class="dashboard-card">
                     <div class="card-icon bg-pink-500/10 text-pink-600">
                         <i class="fas fa-gift"></i>
@@ -2723,6 +2733,267 @@ Mountain Villa, Sintra Hills, V4"
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="heated-pools-page" class="heated-pools-page hidden min-h-screen bg-slate-50">
+        <header class="dashboard-header">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
+                <div class="header-left">
+                    <button id="back-to-landing-from-heated-pools-btn"
+                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="header-brand">
+                    <img src="assets/atlantic-holiday-logo.png"
+                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
+                        class="dashboard-logo dashboard-logo--xl" />
+                    <div class="leading-tight">
+                        <div class="header-title brand-red" data-i18n="heatedPools.header.title">Heated Pools</div>
+                        <div class="header-sub" data-i18n="heatedPools.header.subtitle">Manage pool heating requests and daily actions inside the app</div>
+                    </div>
+                </div>
+                <div class="header-right items-center gap-4">
+                    <button id="heated-pools-sign-out-btn"
+                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
+                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto px-4 py-8 max-w-7xl">
+            <section class="heated-pools-controls">
+                <div>
+                    <p class="heated-pools-eyebrow">Shared operations board</p>
+                    <h2>Keep heated pool status, requests, payments, and actions in one place</h2>
+                    <p>Planning date: <span id="heated-pools-planning-date-label"></span></p>
+                </div>
+                <div class="heated-pools-controls__actions">
+                    <label class="heated-pools-date">
+                        <span>Planning date</span>
+                        <input type="date" id="heated-pools-today">
+                    </label>
+                    <label class="heated-pools-filter">
+                        <span>Search property</span>
+                        <input id="heated-pools-search" type="search" placeholder="Filter tasks and properties...">
+                    </label>
+                </div>
+                <div id="heated-pools-status" class="heated-pools-status" data-status="info">Records save automatically.</div>
+            </section>
+
+            <button id="heated-pools-help-btn" class="heated-pools-help-bubble" type="button" aria-expanded="false" aria-controls="heated-pools-help-panel">
+                <i class="fas fa-question"></i>
+                <span>How to use</span>
+            </button>
+
+            <aside id="heated-pools-help-panel" class="heated-pools-help-panel hidden" aria-label="Heated Pools tutorial">
+                <div class="heated-pools-help-panel__header">
+                    <div>
+                        <p class="heated-pools-eyebrow">Quick tutorial</p>
+                        <h3>How Heated Pools works</h3>
+                    </div>
+                    <button id="heated-pools-help-close-btn" type="button" aria-label="Close tutorial">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <ol class="heated-pools-tutorial">
+                    <li>
+                        <strong>Add each property once.</strong>
+                        Use <span>Add property</span> for every accommodation with a heated pool. Set current pool status, last changed date, guest charge, and how many days it needs to heat.
+                    </li>
+                    <li>
+                        <strong>Add every reservation request.</strong>
+                        Use <span>Add reservation request</span> when a guest asks for heating, refuses it, or when payment is still waiting.
+                    </li>
+                    <li>
+                        <strong>Work from the action lanes.</strong>
+                        The app calculates when to switch pools on and off. Overdue, Today, and Next 14 days are the daily control list.
+                    </li>
+                    <li>
+                        <strong>Confirm work directly there.</strong>
+                        Click <span>Mark done</span> after switching a pool on/off. Click <span>Mark paid</span> after the payment is confirmed.
+                    </li>
+                    <li>
+                        <strong>Keep corrections inline.</strong>
+                        If someone notices the pool status, payment, Avantio status, or notes are wrong, edit the table cell. It saves automatically.
+                    </li>
+                </ol>
+                <div class="heated-pools-help-note">
+                    No CSV or Excel is needed. This board becomes the live record for the team.
+                </div>
+            </aside>
+
+            <section class="heated-pools-forms">
+                <form id="heated-pools-property-form" class="heated-pools-form">
+                    <div class="heated-pools-section-heading">
+                        <h3>Add property</h3>
+                        <p>Create one record per property with a heated pool.</p>
+                    </div>
+                    <div class="heated-pools-form-grid">
+                        <label>
+                            <span>Property</span>
+                            <input name="propertyName" required placeholder="Villa Ocean Haven">
+                        </label>
+                        <label>
+                            <span>Pool status</span>
+                            <select name="poolState">
+                                <option value="unknown">Unknown</option>
+                                <option value="off">Off</option>
+                                <option value="on">On</option>
+                                <option value="always_on">Always on</option>
+                                <option value="unavailable">Unavailable</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Last changed</span>
+                            <input name="lastChangeDate" type="date">
+                        </label>
+                        <label>
+                            <span>Heat-up days</span>
+                            <input name="heatUpDays" type="number" min="1" max="5" value="1">
+                        </label>
+                        <label>
+                            <span>Guest charge EUR</span>
+                            <input name="chargeAmount" type="number" step="0.01" placeholder="45">
+                        </label>
+                        <label>
+                            <span>Owner cost EUR</span>
+                            <input name="ownerCostAmount" type="number" step="0.01" placeholder="35">
+                        </label>
+                        <label class="heated-pools-form-wide">
+                            <span>Status note</span>
+                            <input name="poolNote" placeholder="Pool switched off 10/5">
+                        </label>
+                        <label class="heated-pools-form-wide">
+                            <span>Notes</span>
+                            <textarea name="notes" rows="2" placeholder="Remote control, owner contact, heating delay..."></textarea>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary px-5 py-3 rounded-md">Add property</button>
+                </form>
+
+                <form id="heated-pools-reservation-form" class="heated-pools-form">
+                    <div class="heated-pools-section-heading">
+                        <h3>Add reservation request</h3>
+                        <p>Use this when a guest requests or refuses pool heating.</p>
+                    </div>
+                    <div class="heated-pools-form-grid">
+                        <label class="heated-pools-form-wide">
+                            <span>Property</span>
+                            <select name="propertyId" id="heated-pools-reservation-property" required>
+                                <option value="">Choose property</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Check-in</span>
+                            <input name="startDate" type="date" required>
+                        </label>
+                        <label>
+                            <span>Check-out</span>
+                            <input name="endDate" type="date" required>
+                        </label>
+                        <label>
+                            <span>Heating requested</span>
+                            <select name="heatingRequested">
+                                <option value="blank">Not filled</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Payment</span>
+                            <select name="paymentStatus">
+                                <option value="blank">Not filled</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                                <option value="waiting">Waiting</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Avantio</span>
+                            <select name="avantioStatus">
+                                <option value="blank">Not filled</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                                <option value="waiting">Waiting</option>
+                            </select>
+                        </label>
+                        <label class="heated-pools-form-wide">
+                            <span>Reservation notes</span>
+                            <input name="reservationNotes" placeholder="Guest waiting for confirmation, refunded, special instruction...">
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary px-5 py-3 rounded-md">Add reservation</button>
+                </form>
+            </section>
+
+            <section id="heated-pools-empty" class="heated-pools-empty">
+                <i class="fas fa-water"></i>
+                <h3>No heated pool records yet</h3>
+                <p>Add the first property above. After that, add reservation requests and the app will build the action list automatically.</p>
+            </section>
+
+            <section id="heated-pools-workspace" class="hidden">
+                <div id="heated-pools-summary" class="heated-pools-summary"></div>
+
+                <div id="heated-pools-task-lanes" class="heated-pools-task-lanes"></div>
+
+                <section class="heated-pools-table-section">
+                    <div class="heated-pools-section-heading">
+                        <h3>Property status</h3>
+                        <p>Current pool note, next reservation, next required action, and charge amount.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="heated-pools-table">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Pool</th>
+                                    <th>Last changed</th>
+                                    <th>Heat days</th>
+                                    <th>Status note</th>
+                                    <th>Next reservation</th>
+                                    <th>Next action</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="heated-pools-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="heated-pools-table-section">
+                    <div class="heated-pools-section-heading">
+                        <h3>Reservations</h3>
+                        <p>Recent and upcoming reservations with heating, payment, and Avantio status.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="heated-pools-table">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Heating</th>
+                                    <th>Payment</th>
+                                    <th>Avantio</th>
+                                    <th>Notes</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="heated-pools-reservations-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+        </main>
     </div>
 
     <!-- All Info Page Container -->
