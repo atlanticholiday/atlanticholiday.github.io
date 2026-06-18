@@ -271,6 +271,148 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("renders the fast registration tab with queue actions and laundry state", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          tabs: {
+            register: "To register",
+            stats: "Stats",
+            cleanings: "Cleanings",
+            laundry: "Laundry",
+            specialCleanings: "Special cleanings",
+            ariaLabel: "Cleaning AH tabs"
+          },
+          register: {
+            entryKicker: "Fast register",
+            entryTitle: "Register today's work",
+            entryDescription: "Compact form",
+            queueKicker: "Today and pending",
+            queueTitle: "To register",
+            queueDescription: "Pending rows",
+            emptyQueue: "No rows"
+          },
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Check-out from property owner" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
+          },
+          categoryRules: {
+            checkout: "Checkout rule"
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount",
+            kg: "Kg",
+            amount: "Amount",
+            notesPlaceholder: "Optional note"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          tables: {
+            guest: "Amount",
+            laundry: "Laundry"
+          },
+          actions: {
+            saveCleaning: "Save cleaning",
+            saveAndNext: "Save and next",
+            reset: "Reset",
+            addLaundry: "Add laundry",
+            markNoLaundry: "No laundry"
+          },
+          laundryState: {
+            waiting: "Waiting for laundry",
+            none: "No laundry",
+            added: "Laundry added",
+            needsCorrection: "Needs correction"
+          }
+        },
+        common: {
+          notes: "Notes",
+          edit: "Edit"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+      reservationSource: "platform",
+      guestAmount: "",
+      laundryKg: "",
+      laundryAmount: "",
+      notes: ""
+    };
+
+    const tabHtml = manager.renderTabBar();
+    const registerHtml = manager.renderRegisterTab([
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        guestAmount: 150,
+        effectiveLaundryAmount: 0,
+        effectiveTotalToAh: 99.7
+      }
+    ]);
+
+    assert.includes(tabHtml, "To register");
+    assert.includes(registerHtml, 'id="cleaning-ah-fast-register-form"');
+    assert.includes(registerHtml, 'id="cleaning-ah-fast-property"');
+    assert.includes(registerHtml, "Save and next");
+    assert.includes(registerHtml, "Waiting for laundry");
+    assert.includes(registerHtml, 'data-action="mark-no-laundry"');
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("finds duplicate cleaning rows by date, property, and category", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+      }
+    ];
+
+    const duplicate = manager.getDuplicateCleaningRecord({
+      date: "2026-04-07",
+      propertyName: "acqua beach",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+    });
+    const excluded = manager.getDuplicateCleaningRecord({
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout
+    }, "cleaning-1");
+
+    assert.equal(duplicate.id, "cleaning-1");
+    assert.equal(excluded, null);
+
+    resetDom();
+  });
+
   test("renders collapsible stats help and per-category hover guidance", () => {
     const previousTranslations = i18n.translations;
     const previousLang = i18n.currentLang;

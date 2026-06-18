@@ -859,11 +859,21 @@
       "body": "Check-out uses the normal 22% extracted VAT rule, with 15.5% commission only on platform reservations. Owner check-outs, first cleanings, and other cleanings skip platform commission, while mid-term cleanings track saved cost with no commission or VAT. Laundry uses 2.30 EUR per kg whether you enter it on the cleaning or add it later."
     },
     "tabs": {
+      "register": "To register",
       "stats": "Stats",
       "cleanings": "Cleanings",
       "laundry": "Laundry",
       "specialCleanings": "Special cleanings",
       "ariaLabel": "Cleaning AH tabs"
+    },
+    "register": {
+      "entryKicker": "Fast register",
+      "entryTitle": "Register today's work",
+      "entryDescription": "Use one compact form for the cleaning, optional laundry, and notes. Save and next keeps the date and type ready for the next property.",
+      "queueKicker": "Today and pending",
+      "queueTitle": "To register",
+      "queueDescription": "Today's cleanings and rows still waiting for a laundry decision appear here for quick updates.",
+      "emptyQueue": "No today's rows or pending laundry rows match the current filters."
     },
     "categories": {
       "checkout": {
@@ -1151,6 +1161,9 @@
     "laundryState": {
       "linkedAmount": "Linked: {{amount}}",
       "waiting": "Waiting for laundry",
+      "none": "No laundry",
+      "added": "Laundry added",
+      "needsCorrection": "Needs correction",
       "notLinked": "Not linked"
     },
     "actions": {
@@ -1165,6 +1178,8 @@
       "editLaundry": "Edit laundry",
       "updateLaundry": "Update laundry",
       "addMoreLaundry": "Add more laundry",
+      "markNoLaundry": "No laundry",
+      "saveAndNext": "Save and next",
       "saveLink": "Save link",
       "linkCleaning": "Link cleaning",
       "changeLink": "Change link",
@@ -1214,6 +1229,9 @@
       "laundryLinkSaved": "Laundry link updated.",
       "laundryLinkCleared": "Laundry link cleared.",
       "laundryLinkSaveFailed": "Laundry link could not be updated.",
+      "noLaundryMarked": "Cleaning marked as no laundry.",
+      "noLaundryMarkFailed": "Could not mark the cleaning as no laundry.",
+      "duplicateSaveCancelled": "Duplicate save cancelled.",
       "csvPreviewReady": "Parsed {{count}} CSV rows. Review the preview before importing.",
       "csvPreviewFailed": "CSV preview failed. Check the file format and try again.",
       "noNewRowsToImport": "There are no new rows to import.",
@@ -1232,6 +1250,10 @@
       "specialCleaningDeleteFailed": "Special cleaning record could not be deleted."
     },
     "confirm": {
+      "duplicateCleaning": "A cleaning for {{property}} on {{date}} already exists. OK saves another row anyway; Cancel opens the existing row.",
+      "duplicateCleaningBatch": "{{count}} cleaning rows may already exist. Save duplicates anyway?",
+      "duplicateLaundry": "Laundry for {{property}} on {{date}} already exists. OK saves another row anyway; Cancel opens the existing row.",
+      "duplicateLaundryBatch": "{{count}} laundry rows may already exist. Save duplicates anyway?",
       "deleteCleaningWithLinked": "Delete this cleaning record? {{count}} linked laundry rows will be kept and unlinked.",
       "deleteCleaning": "Delete this cleaning record?",
       "deleteLaundry": "Delete this laundry record?",

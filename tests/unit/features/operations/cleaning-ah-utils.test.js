@@ -467,4 +467,37 @@ describe("Cleaning AH utilities", () => {
         assert.equal(netSortedEntries[0].id, "cleaning-2");
         assert.equal(netSortedEntries[2].id, "cleaning-3");
     });
+
+    test("does not treat no-laundry cleanings as waiting for laundry", () => {
+        const entries = [
+            {
+                id: "cleaning-waiting",
+                date: "2025-11-10",
+                propertyName: "Bravo",
+                effectiveLaundryAmount: 0
+            },
+            {
+                id: "cleaning-none",
+                date: "2025-11-11",
+                propertyName: "Acqua",
+                effectiveLaundryAmount: 0,
+                laundryStatus: "none"
+            },
+            {
+                id: "cleaning-with-laundry",
+                date: "2025-11-12",
+                propertyName: "Calas",
+                effectiveLaundryAmount: 12,
+                linkedLaundryCount: 1
+            }
+        ];
+
+        const waitingEntries = filterCleaningRegisterEntries(entries, { filter: "waiting-laundry" });
+        const withLaundryEntries = filterCleaningRegisterEntries(entries, { filter: "with-laundry" });
+
+        assert.equal(waitingEntries.length, 1);
+        assert.equal(waitingEntries[0].id, "cleaning-waiting");
+        assert.equal(withLaundryEntries.length, 1);
+        assert.equal(withLaundryEntries[0].id, "cleaning-with-laundry");
+    });
 });

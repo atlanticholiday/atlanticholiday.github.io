@@ -430,6 +430,7 @@ export function createCleaningAhRecord(input = {}, options = {}) {
         categoryKey: categoryConfig.key,
         category: normalizeLabel(input.category) || getCleaningAhCategoryLabel(categoryConfig.key),
         reservationSource: inferredReservationSource,
+        laundryStatus: normalizeLabel(input.laundryStatus),
         source: input.source || 'manual',
         notes: normalizeLabel(input.notes),
         sourceMonthLabel: normalizeLabel(input.sourceMonthLabel),
@@ -1042,6 +1043,10 @@ function hasCleaningLaundry(entry) {
         || toFiniteNumber(entry.linkedLaundryCount, 0) > 0;
 }
 
+function hasResolvedLaundryState(entry) {
+    return hasCleaningLaundry(entry) || normalizeLabel(entry.laundryStatus) === 'none';
+}
+
 export function filterCleaningRegisterEntries(entries = [], options = {}) {
     const filter = options.filter || 'all';
     const sort = options.sort || 'date-desc';
@@ -1054,7 +1059,7 @@ export function filterCleaningRegisterEntries(entries = [], options = {}) {
         }
 
         if (filter === 'waiting-laundry') {
-            return !cleaningHasLaundry;
+            return !hasResolvedLaundryState(entry);
         }
 
         return true;
