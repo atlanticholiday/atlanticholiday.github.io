@@ -1008,6 +1008,8 @@
             "batchCategory": "Categoria para todas as linhas",
             "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas, o valor hóspede e os kg de lavandaria em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
             "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela também aparece no separador Lavandaria.",
+            "quickLaundryEditHint": "Isto atualiza o valor de lavandaria existente desta limpeza em vez de adicionar uma linha duplicada.",
+            "inlineEditHint": "Edite a limpeza selecionada diretamente na tabela Dados guardados e guarde junto dessa linha.",
             "entryModes": {
                 "single": "Registo único",
                 "batch": "Registo em lote"
@@ -1104,6 +1106,7 @@
             "noLinkedCleaning": "Sem limpeza associada",
             "linkedCleaningHint": "Associe a lavandaria a uma limpeza anterior para atualizar a receita líquida final quando os kg chegarem.",
             "kg": "Kg",
+            "amount": "Valor",
             "ratePerKg": "Preço / kg",
             "csvFile": "Ficheiro CSV"
         },
@@ -1167,6 +1170,8 @@
             "saveLaundryBatch": "Guardar todas as linhas",
             "saveSpecialCleaning": "Guardar limpeza especial",
             "addLaundry": "Adicionar lavandaria",
+            "editLaundry": "Editar lavandaria",
+            "updateLaundry": "Atualizar lavandaria",
             "addMoreLaundry": "Adicionar mais lavandaria",
             "saveLink": "Guardar associacao",
             "linkCleaning": "Associar limpeza",
@@ -1206,8 +1211,8 @@
             "cleaningBatchValidationError": "Introduza uma data e complete a propriedade e o valor em cada linha de limpeza que pretende guardar.",
             "cleaningBatchSaved": "Foram guardadas {{count}} linhas de limpeza.",
             "cleaningBatchSaveFailed": "Nao foi possivel guardar as linhas de limpeza.",
-            "linkedLaundryValidationError": "Introduza uma data e os kg para guardar a lavandaria associada.",
-            "laundryValidationError": "A data e a propriedade sao obrigatorias para um registo de lavandaria.",
+            "linkedLaundryValidationError": "Introduza uma data e kg ou valor para guardar a lavandaria associada.",
+            "laundryValidationError": "A data, a propriedade e kg ou valor sao obrigatorios para um registo de lavandaria.",
             "laundryUpdated": "Registo de lavandaria atualizado.",
             "laundrySaved": "Registo de lavandaria guardado.",
             "laundrySaveFailed": "Nao foi possivel guardar o registo de lavandaria.",

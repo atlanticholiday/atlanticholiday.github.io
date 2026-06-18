@@ -259,8 +259,11 @@ export class CleaningAhManager {
         return {
             date: getTodayIsoDate(),
             kg: "",
+            amount: "",
             laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: "",
+            editingLaundryId: "",
+            updatesInlineCleaning: false,
             ...overrides,
             linkedCleaningId: record.id || ""
         };
@@ -334,6 +337,7 @@ export class CleaningAhManager {
             linkedCleaningId: "",
             propertyName: "",
             kg: "",
+            amount: "",
             laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: ""
         };
@@ -790,27 +794,63 @@ export class CleaningAhManager {
         return this.laundryRecords.filter((record) => record.linkedCleaningId === recordId);
     }
 
+    getPrimaryLinkedLaundryRecordForCleaning(recordId) {
+        return this.getLinkedLaundryRecordsForCleaning(recordId)
+            .sort((left, right) => {
+                return String(right.date || "").localeCompare(String(left.date || ""))
+                    || String(right.id || "").localeCompare(String(left.id || ""));
+            })[0] || null;
+    }
+
     getCleaningQuickLaundryDraft(record) {
         const existingDraft = this.cleaningLaundryQuickDrafts[record?.id || ""];
-        return existingDraft
-            ? { ...existingDraft }
-            : this.createCleaningQuickLaundryDraft(record);
+        if (existingDraft) {
+            return { ...existingDraft };
+        }
+
+        const linkedLaundry = this.getPrimaryLinkedLaundryRecordForCleaning(record?.id || "");
+        if (linkedLaundry) {
+            return this.createCleaningQuickLaundryDraft(record, {
+                date: linkedLaundry.date || getTodayIsoDate(),
+                kg: toInputNumber(linkedLaundry.kg),
+                amount: toInputNumber(linkedLaundry.amount),
+                laundryRatePerKg: toInputNumber(linkedLaundry.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
+                notes: linkedLaundry.notes || "",
+                editingLaundryId: linkedLaundry.id || ""
+            });
+        }
+
+        if (roundCurrency(record?.laundryAmount || 0) > 0) {
+            return this.createCleaningQuickLaundryDraft(record, {
+                date: record.date || getTodayIsoDate(),
+                kg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
+                amount: toInputNumber(record.laundryAmount),
+                laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
+                notes: record.notes || "",
+                updatesInlineCleaning: true
+            });
+        }
+
+        return this.createCleaningQuickLaundryDraft(record);
     }
 
     readCleaningQuickLaundryDraftFromContainer(container, recordId) {
         const record = this.cleaningRecords.find((entry) => entry.id === recordId) || { id: recordId };
+        const previousDraft = this.cleaningLaundryQuickDrafts[recordId] || {};
         return this.createCleaningQuickLaundryDraft(record, {
             date: String(container?.querySelector('[name="date"]')?.value || "").trim(),
             kg: String(container?.querySelector('[name="kg"]')?.value || "").trim(),
+            amount: String(container?.querySelector('[name="amount"]')?.value || "").trim(),
             laundryRatePerKg: String(container?.querySelector('[name="laundryRatePerKg"]')?.value || "").trim(),
-            notes: String(container?.querySelector('[name="notes"]')?.value || "").trim()
+            notes: String(container?.querySelector('[name="notes"]')?.value || "").trim(),
+            editingLaundryId: previousDraft.editingLaundryId || "",
+            updatesInlineCleaning: Boolean(previousDraft.updatesInlineCleaning)
         });
     }
 
     getCleaningQuickLaundryActionLabel(record) {
-        const linkedLaundryCount = this.getLinkedLaundryRecordsForCleaning(record?.id || "").length;
-        if (linkedLaundryCount > 0 || roundCurrency(record?.effectiveLaundryAmount ?? record?.laundryAmount) > 0) {
-            return this.tr("actions.addMoreLaundry");
+        if (this.getPrimaryLinkedLaundryRecordForCleaning(record?.id || "") || roundCurrency(record?.laundryAmount || 0) > 0) {
+            return this.tr("actions.editLaundry");
         }
 
         return this.tr("actions.addLaundry");
@@ -1805,9 +1845,10 @@ export class CleaningAhManager {
         const draft = this.cleaningDraft;
         const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
         const categoryLabel = this.getCleaningCategoryLabel(categoryKey);
-        const isBatchMode = !this.editingCleaningId && this.cleaningEntryMode === "batch";
+        const isEditing = Boolean(this.editingCleaningId);
+        const isBatchMode = !isEditing && this.cleaningEntryMode === "batch";
         const guestAmountField = this.getCleaningGuestAmountFieldState(draft, {
-            enableSuggestion: !this.editingCleaningId,
+            enableSuggestion: !isEditing,
             excludeRecordId: this.editingCleaningId || "",
             categoryKey
         });
@@ -1832,17 +1873,20 @@ export class CleaningAhManager {
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("cleanings.entryKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingCleaningId ? this.tr("cleanings.editTitle") : isBatchMode ? this.tr("cleanings.batchTitle") : this.tr("cleanings.addTitle"))}</h3>
-                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isBatchMode ? this.tr("cleanings.batchDescription") : this.tr("cleanings.description"))}</p>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(isEditing ? this.tr("cleanings.editTitle") : isBatchMode ? this.tr("cleanings.batchTitle") : this.tr("cleanings.addTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isEditing ? this.tr("cleanings.inlineEditHint") : isBatchMode ? this.tr("cleanings.batchDescription") : this.tr("cleanings.description"))}</p>
                                 ${this.renderCleaningEntryModeSwitcher()}
                             </div>
                             <div class="flex flex-wrap gap-3 xl:justify-end">
-                                ${this.editingCleaningId ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
-                                <button type="submit" form="${isBatchMode ? "cleaning-ah-cleaning-batch-form" : "cleaning-ah-cleaning-form"}" class="view-btn active">${escapeHtml(this.editingCleaningId ? this.tr("actions.saveChanges") : isBatchMode ? this.tr("actions.saveCleaningBatch") : this.tr("actions.saveCleaning"))}</button>
-                                <button type="button" id="${isBatchMode ? "cleaning-ah-reset-cleaning-batch-form" : "cleaning-ah-reset-cleaning-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
+                                ${isEditing ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : `
+                                    <button type="submit" form="${isBatchMode ? "cleaning-ah-cleaning-batch-form" : "cleaning-ah-cleaning-form"}" class="view-btn active">${escapeHtml(isBatchMode ? this.tr("actions.saveCleaningBatch") : this.tr("actions.saveCleaning"))}</button>
+                                    <button type="button" id="${isBatchMode ? "cleaning-ah-reset-cleaning-batch-form" : "cleaning-ah-reset-cleaning-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
+                                `}
                             </div>
                         </div>
-                        ${isBatchMode
+                        ${isEditing
+                            ? `<div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">${escapeHtml(this.tr("cleanings.inlineEditHint"))}</div>`
+                            : isBatchMode
                             ? this.renderCleaningBatchForm(batchPreview)
                             : this.renderCleaningSingleForm({
                                 draft,
@@ -1871,7 +1915,7 @@ export class CleaningAhManager {
         `;
     }
 
-    renderCleaningSingleForm({ draft, preview, guestAmountField }) {
+    renderCleaningSingleForm({ draft, preview, guestAmountField, formId = "cleaning-ah-cleaning-form", previewId = "cleaning-ah-cleaning-preview", extraContent = "" }) {
         const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
         const categoryOptions = this.getKnownCategories()
             .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === categoryKey ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
@@ -1882,7 +1926,7 @@ export class CleaningAhManager {
         ];
 
         return `
-            <form id="cleaning-ah-cleaning-form" class="mt-5 space-y-4">
+            <form id="${escapeHtml(formId)}" class="mt-5 space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
@@ -1920,9 +1964,10 @@ export class CleaningAhManager {
                     <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
                 </label>
                 <p class="text-sm text-slate-500">${escapeHtml(this.getCleaningCategoryRuleText(categoryKey))}</p>
-                <div id="cleaning-ah-cleaning-preview">
+                <div id="${escapeHtml(previewId)}">
                     ${this.renderCleaningPreview(preview)}
                 </div>
+                ${extraContent}
             </form>
         `;
     }
@@ -2022,6 +2067,7 @@ export class CleaningAhManager {
             propertyName: linkedCleaning?.propertyName || draft.propertyName,
             linkedCleaningId: draft.linkedCleaningId,
             kg: toOptionalNumber(draft.kg) || 0,
+            amount: toOptionalNumber(draft.amount),
             laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: draft.notes
         });
@@ -2099,7 +2145,11 @@ export class CleaningAhManager {
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
-                        <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
+                        <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0">
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.amount"))}</span>
+                        <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.amount))}" placeholder="0">
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
@@ -2405,18 +2455,23 @@ export class CleaningAhManager {
 
     renderCleaningQuickLaundryEntry(record) {
         const draft = this.getCleaningQuickLaundryDraft(record);
+        const isUpdatingExisting = draft.editingLaundryId || draft.updatesInlineCleaning;
 
         return `
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-cleaning-laundry-entry="${escapeHtml(record.id || "")}">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_130px_140px_minmax(0,1fr)]">
+                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_120px_130px_140px_minmax(0,1fr)]">
                         <label class="block">
                             <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.date"))}</span>
                             <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                         </label>
                         <label class="block">
                             <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</span>
-                            <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" required>
+                            <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.amount"))}</span>
+                            <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.amount))}" placeholder="0">
                         </label>
                         <label class="block">
                             <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
@@ -2429,11 +2484,58 @@ export class CleaningAhManager {
                     </div>
                     <div class="flex items-center justify-end gap-3">
                         <button type="button" data-action="toggle-cleaning-laundry-entry" data-id="${escapeHtml(record.id || "")}" class="text-sm text-slate-500 hover:text-slate-700">${escapeHtml(t("common.cancel"))}</button>
-                        <button type="button" data-action="save-cleaning-laundry" data-id="${escapeHtml(record.id || "")}" class="view-btn active">${escapeHtml(this.tr("actions.saveLaundry"))}</button>
+                        <button type="button" data-action="save-cleaning-laundry" data-id="${escapeHtml(record.id || "")}" class="view-btn active">${escapeHtml(isUpdatingExisting ? this.tr("actions.updateLaundry") : this.tr("actions.saveLaundry"))}</button>
                     </div>
                 </div>
-                <p class="mt-3 text-xs text-slate-500">${escapeHtml(this.tr("cleanings.quickLaundryHint"))}</p>
+                <p class="mt-3 text-xs text-slate-500">${escapeHtml(isUpdatingExisting ? this.tr("cleanings.quickLaundryEditHint") : this.tr("cleanings.quickLaundryHint"))}</p>
             </div>
+        `;
+    }
+
+    renderCleaningInlineEditRow(record) {
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningDraft.categoryKey || this.cleaningDraft.category);
+        const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
+            enableSuggestion: false,
+            excludeRecordId: this.editingCleaningId || "",
+            categoryKey
+        });
+        const previewRecord = createCleaningAhRecord({
+            date: this.cleaningDraft.date,
+            propertyName: this.cleaningDraft.propertyName,
+            categoryKey,
+            category: this.getCleaningCategoryLabel(categoryKey),
+            reservationSource: this.categoryUsesReservationSource(categoryKey)
+                ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
+            guestAmount: guestAmountField.numericValue || 0,
+            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
+            notes: this.cleaningDraft.notes
+        });
+
+        return `
+            <tr class="border-b border-slate-100">
+                <td colspan="8" class="px-3 pb-4 pt-0">
+                    <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">${escapeHtml(this.tr("cleanings.editTitle"))}</div>
+                                <div class="mt-1 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName || "")}</div>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button type="button" id="cleaning-ah-cancel-inline-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>
+                                <button type="submit" form="cleaning-ah-inline-cleaning-form" class="view-btn active">${escapeHtml(this.tr("actions.saveChanges"))}</button>
+                            </div>
+                        </div>
+                        ${this.renderCleaningSingleForm({
+                            draft: this.cleaningDraft,
+                            preview: previewRecord,
+                            guestAmountField,
+                            formId: "cleaning-ah-inline-cleaning-form",
+                            previewId: "cleaning-ah-inline-cleaning-preview"
+                        })}
+                    </div>
+                </td>
+            </tr>
         `;
     }
 
@@ -2581,6 +2683,7 @@ export class CleaningAhManager {
                 <tbody>
                     ${records.map((record) => {
                         const isQuickLaundryEntryOpen = this.openCleaningLaundryEntryId === record.id;
+                        const isInlineCleaningEditOpen = this.editingCleaningId === record.id;
                         return `
                         <tr class="border-b border-slate-100 align-top">
                             <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
@@ -2632,6 +2735,7 @@ export class CleaningAhManager {
                                 </td>
                             </tr>
                         ` : ""}
+                        ${isInlineCleaningEditOpen ? this.renderCleaningInlineEditRow(record) : ""}
                     `;
                     }).join("")}
                 </tbody>
@@ -2885,6 +2989,23 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-reset-cleaning-form")?.addEventListener("click", () => this.resetCleaningForm());
         document.getElementById("cleaning-ah-cancel-cleaning-edit")?.addEventListener("click", () => this.resetCleaningForm());
 
+        const inlineCleaningForm = document.getElementById("cleaning-ah-inline-cleaning-form");
+        inlineCleaningForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "categoryKey") {
+                this.cleaningDraft = this.readCleaningDraftFromForm(inlineCleaningForm);
+                this.render();
+                return;
+            }
+            this.cleaningDraft = this.readCleaningDraftFromForm(inlineCleaningForm);
+            this.updateCleaningPreview("cleaning-ah-inline-cleaning-preview");
+        });
+        inlineCleaningForm?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.cleaningDraft = this.readCleaningDraftFromForm(inlineCleaningForm);
+            this.saveCleaningRecord();
+        });
+        document.getElementById("cleaning-ah-cancel-inline-cleaning-edit")?.addEventListener("click", () => this.resetCleaningForm());
+
         const cleaningBatchForm = document.getElementById("cleaning-ah-cleaning-batch-form");
         cleaningBatchForm?.addEventListener("input", (event) => {
             if (event.target?.name === "categoryKey") {
@@ -3079,7 +3200,11 @@ export class CleaningAhManager {
     }
 
     readCleaningDraftFromDom() {
-        const form = document.getElementById("cleaning-ah-cleaning-form");
+        const form = document.getElementById("cleaning-ah-inline-cleaning-form") || document.getElementById("cleaning-ah-cleaning-form");
+        return this.readCleaningDraftFromForm(form);
+    }
+
+    readCleaningDraftFromForm(form) {
         if (!form) {
             return { ...this.cleaningDraft };
         }
@@ -3135,6 +3260,7 @@ export class CleaningAhManager {
             linkedCleaningId: String(formData.get("linkedCleaningId") || "").trim(),
             propertyName: normalizeLabel(formData.get("propertyName")),
             kg: String(formData.get("kg") || "").trim(),
+            amount: String(formData.get("amount") || "").trim(),
             laundryRatePerKg: String(formData.get("laundryRatePerKg") || "").trim(),
             notes: String(formData.get("notes") || "").trim()
         };
@@ -3183,8 +3309,8 @@ export class CleaningAhManager {
         };
     }
 
-    updateCleaningPreview() {
-        const container = document.getElementById("cleaning-ah-cleaning-preview");
+    updateCleaningPreview(containerId = "cleaning-ah-cleaning-preview") {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
@@ -3222,6 +3348,7 @@ export class CleaningAhManager {
             date: this.laundryDraft.date,
             propertyName: this.laundryDraft.propertyName,
             kg: toOptionalNumber(this.laundryDraft.kg) || 0,
+            amount: toOptionalNumber(this.laundryDraft.amount),
             laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: this.laundryDraft.notes
         });
@@ -3367,7 +3494,8 @@ export class CleaningAhManager {
         this.cleaningLaundryQuickDrafts[recordId] = draft;
 
         const kg = toOptionalNumber(draft.kg);
-        if (!draft.date || kg === null || kg <= 0) {
+        const amount = toOptionalNumber(draft.amount);
+        if (!draft.date || ((kg === null || kg <= 0) && (amount === null || amount <= 0))) {
             this.setStatus(this.tr("status.linkedLaundryValidationError"), "error");
             this.render();
             return;
@@ -3379,21 +3507,43 @@ export class CleaningAhManager {
             linkedCleaningId: cleaningRecord.id,
             propertyName: cleaningRecord.propertyName,
             propertyId: property?.id || cleaningRecord.propertyId || "",
-            kg,
+            kg: kg || 0,
+            amount,
             laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: draft.notes,
             source: "standalone"
         });
 
         try {
-            await addDoc(this.getLaundryCollectionRef(), {
-                ...record,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
+            if (draft.editingLaundryId) {
+                const existingLaundry = this.laundryRecords.find((entry) => entry.id === draft.editingLaundryId) || {};
+                await updateDoc(doc(this.db, "cleaningAhLaundryRecords", draft.editingLaundryId), {
+                    ...existingLaundry,
+                    ...record,
+                    updatedAt: new Date()
+                });
+            } else if (draft.updatesInlineCleaning) {
+                const updatedCleaning = createCleaningAhRecord({
+                    ...cleaningRecord,
+                    laundryKg: kg,
+                    laundryAmount: amount,
+                    laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg
+                });
+                await updateDoc(doc(this.db, "cleaningAhRecords", cleaningRecord.id), {
+                    ...cleaningRecord,
+                    ...updatedCleaning,
+                    updatedAt: new Date()
+                });
+            } else {
+                await addDoc(this.getLaundryCollectionRef(), {
+                    ...record,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+            }
             this.openCleaningLaundryEntryId = "";
             delete this.cleaningLaundryQuickDrafts[recordId];
-            this.setStatus(this.tr("status.laundrySaved"), "success");
+            this.setStatus(draft.editingLaundryId || draft.updatesInlineCleaning ? this.tr("status.laundryUpdated") : this.tr("status.laundrySaved"), "success");
             this.render();
         } catch (error) {
             console.error("[Cleaning AH] failed to save cleaning-linked laundry:", error);
@@ -3409,7 +3559,9 @@ export class CleaningAhManager {
             : null;
         const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === this.laundryDraft.linkedCleaningId) || null;
         const propertyName = linkedCleaning?.propertyName || this.laundryDraft.propertyName;
-        if (!this.laundryDraft.date || !propertyName) {
+        const kg = toOptionalNumber(this.laundryDraft.kg);
+        const amount = toOptionalNumber(this.laundryDraft.amount);
+        if (!this.laundryDraft.date || !propertyName || ((kg === null || kg <= 0) && (amount === null || amount <= 0))) {
             this.setStatus(this.tr("status.laundryValidationError"), "error");
             this.render();
             return;
@@ -3420,7 +3572,8 @@ export class CleaningAhManager {
             linkedCleaningId: this.laundryDraft.linkedCleaningId,
             propertyName,
             propertyId: property?.id || "",
-            kg: toOptionalNumber(this.laundryDraft.kg) || 0,
+            kg: kg || 0,
+            amount,
             laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: this.laundryDraft.notes,
             source: existingLaundry?.source || "standalone"
@@ -3695,6 +3848,7 @@ export class CleaningAhManager {
             linkedCleaningId: record.linkedCleaningId || "",
             propertyName: record.propertyName || "",
             kg: toInputNumber(record.kg),
+            amount: toInputNumber(record.amount),
             laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
             notes: record.notes || ""
         };

@@ -846,6 +846,216 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("uses the quick laundry row to update an existing linked amount", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          cleanings: {
+            quickLaundryHint: "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.",
+            quickLaundryEditHint: "This updates the existing laundry amount for this cleaning instead of adding a duplicate row."
+          },
+          forms: {
+            date: "Date",
+            kg: "Kg",
+            amount: "Amount",
+            ratePerKg: "Rate / kg",
+            notesPlaceholder: "Optional note"
+          },
+          actions: {
+            addLaundry: "Add laundry",
+            editLaundry: "Edit laundry",
+            saveLaundry: "Save laundry",
+            updateLaundry: "Update laundry"
+          },
+          tables: {
+            date: "Date",
+            property: "Property",
+            category: "Category",
+            reservation: "Reservation",
+            guest: "Guest",
+            laundry: "Laundry",
+            net: "Net",
+            actions: "Actions"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          laundryState: {
+            linkedAmount: "Linked: {{amount}}",
+            waiting: "Waiting for laundry"
+          }
+        },
+        common: {
+          cancel: "Cancel",
+          notes: "Notes",
+          edit: "Edit",
+          delete: "Delete"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.laundryRecords = [
+      {
+        id: "laundry-1",
+        linkedCleaningId: "cleaning-1",
+        date: "2026-04-08",
+        propertyName: "Acqua Beach",
+        kg: 5,
+        amount: 11.5,
+        laundryRatePerKg: 2.3,
+        notes: "Original invoice"
+      }
+    ];
+    manager.openCleaningLaundryEntryId = "cleaning-1";
+
+    const draft = manager.getCleaningQuickLaundryDraft({ id: "cleaning-1", date: "2026-04-07", propertyName: "Acqua Beach" });
+    const tableHtml = manager.renderCleaningsTable([
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        category: "Limpeza check-out",
+        reservationSource: "platform",
+        guestAmount: 150,
+        laundryAmount: 0,
+        linkedLaundryAmount: 11.5,
+        linkedLaundryCount: 1,
+        effectiveLaundryAmount: 11.5,
+        effectiveTotalToAh: 88.2,
+        notes: "",
+        source: "manual"
+      }
+    ]);
+
+    assert.equal(manager.getCleaningQuickLaundryActionLabel({ id: "cleaning-1" }), "Edit laundry");
+    assert.equal(draft.editingLaundryId, "laundry-1");
+    assert.equal(draft.amount, "11.5");
+    assert.includes(tableHtml, 'name="amount"');
+    assert.includes(tableHtml, 'value="11.5"');
+    assert.includes(tableHtml, "Update laundry");
+    assert.includes(tableHtml, "instead of adding a duplicate row");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("renders cleaning edits inline in the stored-data table", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Check-out from property owner" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
+          },
+          categoryRules: {
+            checkout: "Checkout rule"
+          },
+          cleanings: {
+            editTitle: "Edit cleaning"
+          },
+          forms: {
+            date: "Date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount",
+            kg: "Kg",
+            notesPlaceholder: "Optional note"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          preview: {
+            title: "Preview"
+          },
+          metrics: {
+            commission: "Commission",
+            vat: "VAT",
+            beforeLaundry: "Before laundry",
+            laundry: "Laundry",
+            currentNet: "Current net"
+          },
+          tables: {
+            date: "Date",
+            property: "Property",
+            category: "Category",
+            reservation: "Reservation",
+            guest: "Guest",
+            laundry: "Laundry",
+            net: "Net",
+            actions: "Actions"
+          },
+          actions: {
+            addLaundry: "Add laundry",
+            cancelEdit: "Cancel edit",
+            saveChanges: "Save changes"
+          },
+          laundryState: {
+            waiting: "Waiting for laundry"
+          }
+        },
+        common: {
+          notes: "Notes",
+          edit: "Edit",
+          delete: "Delete"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.editingCleaningId = "cleaning-1";
+    manager.cleaningDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+      reservationSource: "platform",
+      guestAmount: "150",
+      laundryKg: "",
+      notes: "Needs correction"
+    };
+
+    const tableHtml = manager.renderCleaningsTable([
+      {
+        id: "cleaning-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        reservationSource: "platform",
+        guestAmount: 150,
+        laundryAmount: 0,
+        effectiveLaundryAmount: 0,
+        effectiveTotalToAh: 99.7,
+        notes: "",
+        source: "manual"
+      }
+    ]);
+
+    assert.includes(tableHtml, 'id="cleaning-ah-inline-cleaning-form"');
+    assert.includes(tableHtml, 'id="cleaning-ah-inline-cleaning-preview"');
+    assert.includes(tableHtml, 'form="cleaning-ah-inline-cleaning-form"');
+    assert.includes(tableHtml, "Needs correction");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
   test("renders quick link controls for standalone laundry rows in the register", () => {
     resetDom();
 
