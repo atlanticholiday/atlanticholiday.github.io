@@ -1810,10 +1810,10 @@ export class CleaningAhManager {
         const tabs = [
             ["register", this.tr("tabs.register")],
             ["calendar", this.tr("tabs.calendar")],
-            ["stats", this.tr("tabs.stats")],
             ["cleanings", this.tr("tabs.cleanings")],
             ["laundry", this.tr("tabs.laundry")],
-            ["special-cleanings", this.tr("tabs.specialCleanings")]
+            ["special-cleanings", this.tr("tabs.specialCleanings")],
+            ["stats", this.tr("tabs.stats")]
         ];
 
         return `
