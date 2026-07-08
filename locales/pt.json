@@ -897,7 +897,9 @@
             "queueKicker": "Hoje e pendente",
             "queueTitle": "Por registar",
             "queueDescription": "As limpezas de hoje e as linhas ainda a aguardar decisão de lavandaria aparecem aqui para atualização rápida.",
-            "emptyQueue": "Não existem linhas de hoje nem lavandaria pendente para os filtros atuais."
+            "emptyQueue": "Não existem linhas de hoje nem lavandaria pendente para os filtros atuais.",
+            "queueSortOldest": "Mais antigas",
+            "queueSortNewest": "Mais recentes"
         },
         "categories": {
             "checkout": {

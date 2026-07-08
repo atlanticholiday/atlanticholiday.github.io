@@ -153,6 +153,7 @@ export class CleaningAhManager {
         this.calendarDate = getTodayIsoDate();
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
+        this.registerQueueSort = "oldest";
         this.laundryRegisterFilter = "all";
         this.laundryRegisterSort = "date-desc";
         this.openLaundryLinkEditorId = "";
@@ -2100,13 +2101,24 @@ export class CleaningAhManager {
     renderRegisterTab(derivedCleanings) {
         const today = getTodayIsoDate();
         const todayEntries = derivedCleanings.filter((record) => record.date === today);
+        const newestFirst = this.registerQueueSort === "newest";
         const waitingLaundryEntries = derivedCleanings
             .filter((record) => this.getCleaningLaundryState(record).key === "waiting")
-            .sort((left, right) => this.getCleaningWaitingDays(right, today) - this.getCleaningWaitingDays(left, today)
-                || String(left.date || "").localeCompare(String(right.date || ""))
-                || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName)))
-            .slice(0, 12);
-        const quickCards = this.dedupeFastRegisterCards([...todayEntries, ...waitingLaundryEntries]).slice(0, 12);
+            .sort((left, right) => {
+                if (newestFirst) {
+                    return String(right.date || "").localeCompare(String(left.date || ""))
+                        || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
+                }
+                return this.getCleaningWaitingDays(right, today) - this.getCleaningWaitingDays(left, today)
+                    || String(left.date || "").localeCompare(String(right.date || ""))
+                    || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
+            });
+        const quickCards = this.dedupeFastRegisterCards([...todayEntries, ...waitingLaundryEntries]);
+
+        const sortOptions = [
+            ["oldest", this.tr("register.queueSortOldest")],
+            ["newest", this.tr("register.queueSortNewest")]
+        ];
 
         return `
             <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
@@ -2126,7 +2138,19 @@ export class CleaningAhManager {
                             <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("register.queueTitle"))}</h3>
                             <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.queueDescription"))}</p>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(quickCards.length))}</div>
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(quickCards.length))}</div>
+                            <div class="flex items-center gap-1 rounded-full bg-slate-100 p-1">
+                                ${sortOptions.map(([value, label]) => `
+                                    <button
+                                        type="button"
+                                        data-action="set-register-queue-sort"
+                                        data-sort="${escapeHtml(value)}"
+                                        class="rounded-full px-3 py-1 text-xs font-medium transition ${this.registerQueueSort === value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}"
+                                    >${escapeHtml(label)}</button>
+                                `).join("")}
+                            </div>
+                        </div>
                     </div>
                     <div class="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
                         ${quickCards.length
@@ -3808,6 +3832,12 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-laundry-register-sort")?.addEventListener("change", (event) => {
             this.laundryRegisterSort = event.target.value || "date-desc";
             this.render();
+        });
+        document.querySelectorAll("[data-action='set-register-queue-sort']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.registerQueueSort = button.dataset.sort || "oldest";
+                this.render();
+            });
         });
 
         const fastRegisterForm = document.getElementById("cleaning-ah-fast-register-form");

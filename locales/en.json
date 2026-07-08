@@ -885,7 +885,9 @@
       "queueKicker": "Today and pending",
       "queueTitle": "To register",
       "queueDescription": "Today's cleanings and rows still waiting for a laundry decision appear here for quick updates.",
-      "emptyQueue": "No today's rows or pending laundry rows match the current filters."
+      "emptyQueue": "No today's rows or pending laundry rows match the current filters.",
+      "queueSortOldest": "Oldest",
+      "queueSortNewest": "Newest"
     },
     "categories": {
       "checkout": {
