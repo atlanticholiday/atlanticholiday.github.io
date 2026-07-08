@@ -1777,4 +1777,103 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("isMonthEndWindow returns true during first 3 days and last 3 days of any month", () => {
+    // First 3 days
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-01"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-02"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-03"), true);
+    
+    // Middle of month
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-15"), false);
+    
+    // Last 3 days of July (31 days)
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-28"), false);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-29"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-30"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-31"), true);
+
+    // Last 3 days of June (30 days)
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-27"), false);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-28"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-29"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-30"), true);
+  });
+
+  test("renders month-end checklist banner when inside window and has unresolved items", () => {
+    resetDom();
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          register: {
+            monthEndChecklistTitle: "Month-End Close Checklist",
+            monthEndChecklistDescription: "Please resolve the following prior-month pending items:",
+            monthEndPriorWaiting: {
+              one: "1 prior-month cleaning awaiting laundry decision",
+              other: "{{count}} prior-month cleanings awaiting laundry decision"
+            },
+            monthEndUnlinkedLaundry: {
+              one: "1 standalone laundry record with no linked cleaning",
+              other: "{{count}} standalone laundry records with no linked cleaning"
+            },
+            viewPriorWaiting: "View pending",
+            dismissForToday: "Dismiss for today"
+          },
+          laundryState: {
+            waiting: "waiting"
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const realDate = Date;
+    globalThis.Date = function(...args) {
+      if (args.length === 0) {
+        return new realDate("2026-07-01T12:00:00Z");
+      }
+      return new realDate(...args);
+    };
+    globalThis.Date.now = () => new realDate("2026-07-01T12:00:00Z").getTime();
+    globalThis.Date.prototype = realDate.prototype;
+
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-prior",
+        date: "2026-06-25",
+        monthKey: "2026-06",
+        propertyName: "Acqua Beach",
+        laundryStatus: "waiting"
+      }
+    ];
+    manager.laundryRecords = [
+      {
+        id: "laundry-unlinked",
+        date: "2026-06-26",
+        propertyName: "Villa Mar",
+        linkedCleaningId: ""
+      }
+    ];
+
+    const allDerived = [
+      {
+        id: "cleaning-prior",
+        date: "2026-06-25",
+        propertyName: "Acqua Beach"
+      }
+    ];
+
+    const bannerHtml = manager.renderMonthEndChecklistBanner(allDerived);
+    assert.includes(bannerHtml, "Month-End Close Checklist");
+    assert.includes(bannerHtml, "1 prior-month cleaning awaiting laundry decision");
+    assert.includes(bannerHtml, "1 standalone laundry record with no linked cleaning");
+
+    globalThis.Date = realDate;
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
 });

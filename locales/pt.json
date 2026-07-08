@@ -899,7 +899,32 @@
             "queueDescription": "As limpezas de hoje e as linhas ainda a aguardar decisão de lavandaria aparecem aqui para atualização rápida.",
             "emptyQueue": "Não existem linhas de hoje nem lavandaria pendente para os filtros atuais.",
             "queueSortOldest": "Mais antigas",
-            "queueSortNewest": "Mais recentes"
+            "queueSortNewest": "Mais recentes",
+            "queueCompactView": "Vista compacta",
+            "queueExpandedView": "Vista expandida",
+            "inlineKgPlaceholder": "kg…",
+            "saveKg": "Guardar kg",
+            "duplicateWarning": "Já existe uma limpeza para esta propriedade nesta data. Pode na mesma guardar outra linha.",
+            "overdueTitle": "Lavandaria em atraso",
+            "overdueKicker": "Reconciliação",
+            "overdueDescription": "Limpezas à espera de uma decisão de lavandaria há 10 ou mais dias.",
+            "overdueCount": {
+                "one": "1 limpeza à espera há 10+ dias",
+                "other": "{{count}} limpezas à espera há 10+ dias"
+            },
+            "markAllNoLaundry": "Marcar tudo sem lavandaria",
+            "monthEndChecklistTitle": "Lista de Fecho de Mês",
+            "monthEndChecklistDescription": "Por favor, resolva os itens do mês anterior antes de fechar o mês.",
+            "monthEndPriorWaiting": {
+                "one": "1 limpeza do mês anterior ainda aguarda decisão de lavandaria.",
+                "other": "{{count}} limpezas do mês anterior ainda aguardam decisão de lavandaria."
+            },
+            "monthEndUnlinkedLaundry": {
+                "one": "1 registo de lavandaria independente não está associado a nenhuma limpeza.",
+                "other": "{{count}} registos de lavandaria independentes não estão associados a nenhuma limpeza."
+            },
+            "dismissForToday": "Ignorar por hoje",
+            "viewPriorWaiting": "Filtrar pendentes"
         },
         "categories": {
             "checkout": {
@@ -986,6 +1011,13 @@
             "focusByCategory": "Propriedade selecionada por categoria",
             "focusByReservation": "Propriedade selecionada por reserva",
             "recentEntries": "Registos recentes",
+            "laundryTrendKicker": "Histórico de Lavandaria",
+            "laundryTrendTitle": "Evolução da Lavandaria por Mês",
+            "laundryTrendDescription": "Média de kg por limpeza, valor total gasto e custo efetivo por kg ao longo do tempo.",
+            "laundryTrendCostPerKg": "Custo / Kg",
+            "heatmapKicker": "Distribuição",
+            "heatmapTitle": "Mapa Térmico de Receita Mensal",
+            "heatmapDescription": "Top 15 propriedades ordenadas pela receita líquida total, divididas por mês (a intensidade da cor representa o valor relativo).",
             "empty": "Nenhuma propriedade com registos corresponde aos filtros atuais.",
             "workflow": {
                 "step1": "Escolha primeiro um tipo de limpeza se quiser comparações justas, porque cada categoria usa regras de receita diferentes.",
@@ -1222,7 +1254,8 @@
             "reset": "Repor",
             "openCleaning": "Abrir limpeza",
             "addRow": "Adicionar linha",
-            "removeRow": "Remover linha"
+            "removeRow": "Remover linha",
+            "fillForm": "Preencher"
         },
         "counts": {
             "rows": {
@@ -1277,6 +1310,8 @@
             "laundryLinkIgnoreFailed": "Nao foi possivel ignorar a linha de lavandaria.",
             "noLaundryMarked": "Limpeza marcada como sem lavandaria.",
             "noLaundryMarkFailed": "Não foi possível marcar a limpeza como sem lavandaria.",
+            "markAllNoLaundrySuccess": "Marcadas com sucesso {{count}} limpezas como sem lavandaria.",
+            "markAllNoLaundryFailed": "Falha ao marcar as limpezas como sem lavandaria.",
             "duplicateSaveCancelled": "Gravação duplicada cancelada.",
             "csvPreviewReady": "Foram analisadas {{count}} linhas do CSV. Reveja a pré-visualização antes de importar.",
             "csvPreviewFailed": "A pré-visualização do CSV falhou. Verifique o formato do ficheiro e tente novamente.",
@@ -1303,10 +1338,13 @@
             "deleteCleaningWithLinked": "Eliminar este registo de limpeza? {{count}} linhas de lavandaria associadas vao ser mantidas e desassociadas.",
             "deleteCleaning": "Eliminar este registo de limpeza?",
             "deleteLaundry": "Eliminar este registo de lavandaria?",
-            "deleteSpecialCleaning": "Eliminar este registo de limpeza especial?"
+            "deleteSpecialCleaning": "Eliminar este registo de limpeza especial?",
+            "markAllNoLaundry": "Tem a certeza de que deseja marcar todas as {{count}} limpezas em atraso como sem lavandaria?"
         },
         "labels": {
-            "unknown": "Desconhecido"
+            "unknown": "Desconhecido",
+            "daysWaiting": "Dias em espera",
+            "actions": "Ações"
         }
     },
     "userManagement": {
