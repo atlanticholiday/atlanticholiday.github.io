@@ -221,6 +221,180 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("renders a Monday-first cleaning calendar week", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          tabs: {
+            register: "To register",
+            calendar: "Calendar",
+            stats: "Stats",
+            cleanings: "Cleanings",
+            laundry: "Laundry",
+            specialCleanings: "Special cleanings",
+            ariaLabel: "Cleaning AH tabs"
+          },
+          calendar: {
+            kicker: "Calendar",
+            today: "Today",
+            previous: "Previous",
+            next: "Next",
+            emptyDay: "No cleanings",
+            addCleaning: "Add cleaning",
+            modalKicker: "Calendar cleaning",
+            addTitle: "Add cleaning",
+            editTitle: "Edit cleaning"
+          },
+          categories: {
+            checkout: { label: "Check-out" }
+          },
+          labels: {
+            unknown: "Unknown"
+          },
+          laundryState: {
+            waiting: "Waiting for laundry",
+            added: "Laundry added",
+            none: "No laundry",
+            needsCorrection: "Needs correction"
+          },
+          counts: {
+            rows: {
+              one: "1 row",
+              other: "{{count}} rows"
+            }
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.calendarDate = "2026-07-08";
+
+    const days = manager.getCalendarWeekDays();
+    const html = manager.renderCalendarTab([
+      {
+        id: "cleaning-1",
+        date: "2026-07-06",
+        propertyName: "Tropical Pearl",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 0,
+        effectiveLaundryAmount: 0
+      },
+      {
+        id: "cleaning-2",
+        date: "2026-07-08",
+        propertyName: "Ocean Refuge",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 11.5,
+        effectiveLaundryAmount: 11.5
+      }
+    ]);
+    const tabHtml = manager.renderTabBar();
+
+    assert.equal(days[0].date, "2026-07-06");
+    assert.equal(days[6].date, "2026-07-12");
+    assert.includes(tabHtml, "Calendar");
+    assert.includes(html, "Jul 6, 2026");
+    assert.includes(html, "Jul 12, 2026");
+    assert.includes(html, "Tropical Pearl");
+    assert.includes(html, "Ocean Refuge");
+    assert.includes(html, "Waiting for laundry");
+    assert.includes(html, "Laundry added");
+    assert.includes(html, 'data-action="open-calendar-add-cleaning" data-date="2026-07-06"');
+    assert.includes(html, 'data-action="open-calendar-edit-cleaning" data-id="cleaning-1"');
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("renders calendar cleaning modal using the connected cleaning form", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        common: {
+          cancel: "Cancel",
+          notes: "Notes"
+        },
+        cleaningAh: {
+          calendar: {
+            modalKicker: "Calendar cleaning",
+            addTitle: "Add cleaning",
+            editTitle: "Edit cleaning"
+          },
+          categories: {
+            checkout: { label: "Check-out" },
+            "owner-checkout": { label: "Owner checkout" },
+            "first-cleaning": { label: "First cleaning" },
+            "mid-term": { label: "Mid-term cleaning" },
+            "other-cleanings": { label: "Other cleanings" }
+          },
+          categoryRules: {
+            checkout: "Checkout rule"
+          },
+          forms: {
+            cleaningDate: "Cleaning date",
+            property: "Property",
+            propertyPlaceholder: "Type or pick a property",
+            category: "Category",
+            reservationSource: "Reservation",
+            guestAmount: "Guest amount",
+            kg: "Kg",
+            amount: "Amount",
+            notesPlaceholder: "Optional note"
+          },
+          reservationSources: {
+            platform: "Platform",
+            direct: "Direct"
+          },
+          preview: {
+            title: "Preview"
+          },
+          metrics: {
+            commission: "Commission",
+            vat: "VAT",
+            beforeLaundry: "Before laundry",
+            laundry: "Laundry",
+            currentNet: "Current net"
+          },
+          actions: {
+            saveCleaning: "Save cleaning",
+            saveChanges: "Save changes"
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.calendarModalMode = "add";
+    manager.cleaningDraft = {
+      ...manager.createDefaultCleaningDraft(),
+      date: "2026-07-08",
+      propertyName: "Ocean Refuge",
+      guestAmount: "120"
+    };
+
+    const html = manager.renderCalendarCleaningModal();
+
+    assert.includes(html, 'role="dialog"');
+    assert.includes(html, 'id="cleaning-ah-calendar-cleaning-form"');
+    assert.includes(html, 'form="cleaning-ah-calendar-cleaning-form"');
+    assert.includes(html, 'value="2026-07-08"');
+    assert.includes(html, 'value="Ocean Refuge"');
+    assert.includes(html, "Save cleaning");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
   test("scopes stats records to the selected cleaning category", () => {
     resetDom();
 

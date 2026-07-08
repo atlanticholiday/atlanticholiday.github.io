@@ -872,11 +872,23 @@
         },
         "tabs": {
             "register": "Por registar",
+            "calendar": "Calendario",
             "stats": "Estatísticas",
             "cleanings": "Limpezas",
             "laundry": "Lavandaria",
             "specialCleanings": "Limpezas especiais",
             "ariaLabel": "Separadores do Limpeza AH"
+        },
+        "calendar": {
+            "kicker": "Calendario",
+            "today": "Hoje",
+            "previous": "Anterior",
+            "next": "Seguinte",
+            "emptyDay": "Sem limpezas",
+            "addCleaning": "Adicionar limpeza",
+            "modalKicker": "Limpeza calendario",
+            "addTitle": "Adicionar limpeza",
+            "editTitle": "Editar limpeza"
         },
         "register": {
             "entryKicker": "Registo rápido",

@@ -860,11 +860,23 @@
     },
     "tabs": {
       "register": "To register",
+      "calendar": "Calendar",
       "stats": "Stats",
       "cleanings": "Cleanings",
       "laundry": "Laundry",
       "specialCleanings": "Special cleanings",
       "ariaLabel": "Cleaning AH tabs"
+    },
+    "calendar": {
+      "kicker": "Calendar",
+      "today": "Today",
+      "previous": "Previous",
+      "next": "Next",
+      "emptyDay": "No cleanings",
+      "addCleaning": "Add cleaning",
+      "modalKicker": "Calendar cleaning",
+      "addTitle": "Add cleaning",
+      "editTitle": "Edit cleaning"
     },
     "register": {
       "entryKicker": "Fast register",

@@ -78,6 +78,41 @@ function getTodayIsoDate() {
     return `${year}-${month}-${day}`;
 }
 
+function parseIsoDateToUtc(value) {
+    const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+}
+
+function toIsoDateKey(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    return date.toISOString().slice(0, 10);
+}
+
+function addDaysIsoDate(value, days) {
+    const date = parseIsoDateToUtc(value);
+    if (!date) {
+        return getTodayIsoDate();
+    }
+
+    date.setUTCDate(date.getUTCDate() + days);
+    return toIsoDateKey(date);
+}
+
+function getMondayFirstWeekStart(value) {
+    const date = parseIsoDateToUtc(value) || parseIsoDateToUtc(getTodayIsoDate());
+    const day = date.getUTCDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    date.setUTCDate(date.getUTCDate() + mondayOffset);
+    return toIsoDateKey(date);
+}
+
 function getIsoDateDiffDays(laterDateValue, earlierDateValue) {
     const later = Date.parse(`${String(laterDateValue || "").slice(0, 10)}T00:00:00Z`);
     const earlier = Date.parse(`${String(earlierDateValue || "").slice(0, 10)}T00:00:00Z`);
@@ -115,6 +150,7 @@ export class CleaningAhManager {
         this.statsCategoryKey = "";
         this.statsPropertySort = "net-desc";
         this.statsSelectedPropertyName = "";
+        this.calendarDate = getTodayIsoDate();
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
         this.laundryRegisterFilter = "all";
@@ -122,6 +158,7 @@ export class CleaningAhManager {
         this.openLaundryLinkEditorId = "";
         this.openCleaningLaundryEntryId = "";
         this.cleaningLaundryQuickDrafts = {};
+        this.calendarModalMode = "";
 
         this.editingCleaningId = null;
         this.editingLaundryId = null;
@@ -1461,12 +1498,11 @@ export class CleaningAhManager {
         input.dataset.autoSuggestedValue = suggestedValue;
     }
 
-    applyCleaningSuggestionToSingleForm() {
-        if (this.editingCleaningId) {
+    applyCleaningSuggestionToForm(form, { skipWhenEditing = false } = {}) {
+        if (skipWhenEditing && this.editingCleaningId) {
             return;
         }
 
-        const form = document.getElementById("cleaning-ah-cleaning-form");
         const propertyInput = form?.querySelector('[name="propertyName"]');
         const guestAmountInput = form?.querySelector('[name="guestAmount"]');
         const categoryInput = form?.querySelector('[name="categoryKey"]');
@@ -1480,19 +1516,14 @@ export class CleaningAhManager {
         this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
     }
 
-    applyCleaningSuggestionToFastForm() {
-        const form = document.getElementById("cleaning-ah-fast-register-form");
-        const propertyInput = form?.querySelector('[name="propertyName"]');
-        const guestAmountInput = form?.querySelector('[name="guestAmount"]');
-        const categoryInput = form?.querySelector('[name="categoryKey"]');
-        if (!propertyInput || !guestAmountInput) {
-            return;
-        }
-
-        const suggestion = this.getSuggestedCleaningGuestAmount(propertyInput.value, {
-            categoryKey: categoryInput?.value || ""
+    applyCleaningSuggestionToSingleForm() {
+        this.applyCleaningSuggestionToForm(document.getElementById("cleaning-ah-cleaning-form"), {
+            skipWhenEditing: true
         });
-        this.applySuggestedGuestAmountToInput(guestAmountInput, suggestion);
+    }
+
+    applyCleaningSuggestionToFastForm() {
+        this.applyCleaningSuggestionToForm(document.getElementById("cleaning-ah-fast-register-form"));
     }
 
     applyCleaningSuggestionToBatchRow(rowElement) {
@@ -1619,6 +1650,7 @@ export class CleaningAhManager {
             ${this.renderTabBar()}
             ${this.renderActiveTab(
                 visibleCleaningRegisterEntries,
+                derivedCleanings,
                 filteredStandaloneLaundry,
                 statsCleaningSummary,
                 laundrySummary,
@@ -1777,6 +1809,7 @@ export class CleaningAhManager {
     renderTabBar() {
         const tabs = [
             ["register", this.tr("tabs.register")],
+            ["calendar", this.tr("tabs.calendar")],
             ["stats", this.tr("tabs.stats")],
             ["cleanings", this.tr("tabs.cleanings")],
             ["laundry", this.tr("tabs.laundry")],
@@ -1798,6 +1831,7 @@ export class CleaningAhManager {
 
     renderActiveTab(
         visibleCleaningRegisterEntries,
+        calendarCleaningEntries,
         filteredStandaloneLaundry,
         cleaningSummary,
         laundrySummary,
@@ -1810,6 +1844,10 @@ export class CleaningAhManager {
     ) {
         if (this.activeTab === "register") {
             return this.renderRegisterTab(visibleCleaningRegisterEntries);
+        }
+
+        if (this.activeTab === "calendar") {
+            return this.renderCalendarTab(calendarCleaningEntries);
         }
 
         if (this.activeTab === "cleanings") {
@@ -1831,6 +1869,232 @@ export class CleaningAhManager {
             selectedStatsPropertyName,
             selectedStatsPropertyDetail
         );
+    }
+
+    getCalendarWeekDays(anchorDate = this.calendarDate) {
+        const weekStart = getMondayFirstWeekStart(anchorDate || getTodayIsoDate());
+        return Array.from({ length: 7 }, (_, index) => {
+            const date = addDaysIsoDate(weekStart, index);
+            const parsed = parseIsoDateToUtc(date);
+            const weekday = new Intl.DateTimeFormat(this.getLocale(), { weekday: "short", timeZone: "UTC" }).format(parsed);
+            const dayNumber = new Intl.DateTimeFormat(this.getLocale(), { day: "numeric", timeZone: "UTC" }).format(parsed);
+            return {
+                date,
+                weekday,
+                dayNumber,
+                isToday: date === getTodayIsoDate()
+            };
+        });
+    }
+
+    getCalendarRangeLabel(days = this.getCalendarWeekDays()) {
+        const first = days[0]?.date;
+        const last = days[days.length - 1]?.date;
+        if (!first || !last) {
+            return "";
+        }
+
+        const formatter = new Intl.DateTimeFormat(this.getLocale(), {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "UTC"
+        });
+        return `${formatter.format(parseIsoDateToUtc(first))} - ${formatter.format(parseIsoDateToUtc(last))}`;
+    }
+
+    getCalendarRecordsByDate(records = []) {
+        return records.reduce((groups, record) => {
+            const date = normalizeDateKey(record.date);
+            if (!date) {
+                return groups;
+            }
+
+            const existing = groups.get(date) || [];
+            existing.push(record);
+            groups.set(date, existing);
+            return groups;
+        }, new Map());
+    }
+
+    getCalendarChipClasses(record = {}) {
+        const state = this.getCleaningLaundryState(record).key;
+        const classByState = {
+            waiting: "border-sky-200 bg-sky-100 text-sky-950",
+            added: "border-emerald-200 bg-emerald-100 text-emerald-950",
+            none: "border-slate-200 bg-white text-slate-700",
+            "needs-correction": "border-amber-200 bg-amber-100 text-amber-950"
+        };
+
+        return classByState[state] || classByState.waiting;
+    }
+
+    openCalendarCleaningModal({ recordId = "", date = "" } = {}) {
+        if (recordId) {
+            const record = this.cleaningRecords.find((entry) => entry.id === recordId);
+            if (!record) {
+                return;
+            }
+
+            this.editingCleaningId = record.id;
+            this.cleaningDraft = {
+                date: record.date || getTodayIsoDate(),
+                propertyName: record.propertyName || "",
+                categoryKey: this.getCleaningCategoryKey(record.categoryKey || record.category),
+                reservationSource: this.getCleaningReservationSource(record),
+                guestAmount: toInputNumber(record.guestAmount),
+                laundryKg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
+                laundryAmount: toInputNumber(record.laundryAmount),
+                notes: record.notes || ""
+            };
+            this.calendarModalMode = "edit";
+            this.openCleaningLaundryEntryId = "";
+            delete this.cleaningLaundryQuickDrafts[record.id];
+            this.render();
+            return;
+        }
+
+        this.editingCleaningId = null;
+        this.cleaningEntryMode = "single";
+        this.cleaningDraft = {
+            ...this.createDefaultCleaningDraft(),
+            date: date || this.calendarDate || getTodayIsoDate()
+        };
+        this.calendarModalMode = "add";
+        this.render();
+    }
+
+    closeCalendarCleaningModal() {
+        this.calendarModalMode = "";
+        this.editingCleaningId = null;
+        this.cleaningDraft = this.createDefaultCleaningDraft();
+        this.render();
+    }
+
+    renderCalendarTab(records = []) {
+        const days = this.getCalendarWeekDays();
+        const recordsByDate = this.getCalendarRecordsByDate(records);
+        const weekRecordCount = days.reduce((count, day) => count + (recordsByDate.get(day.date)?.length || 0), 0);
+
+        return `
+            <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("calendar.kicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.getCalendarRangeLabel(days))}</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" data-action="calendar-prev-week" class="view-btn">${escapeHtml(this.tr("calendar.previous"))}</button>
+                        <button type="button" data-action="calendar-today" class="view-btn">${escapeHtml(this.tr("calendar.today"))}</button>
+                        <button type="button" data-action="calendar-next-week" class="view-btn">${escapeHtml(this.tr("calendar.next"))}</button>
+                        <span class="ml-0 rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 lg:ml-2">${escapeHtml(this.getRowsLabel(weekRecordCount))}</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 divide-y divide-slate-200 lg:grid-cols-7 lg:divide-x lg:divide-y-0">
+                    ${days.map((day) => this.renderCalendarDayColumn(day, recordsByDate.get(day.date) || [])).join("")}
+                </div>
+            </section>
+            ${this.renderCalendarCleaningModal()}
+        `;
+    }
+
+    renderCalendarCleaningModal() {
+        if (!this.calendarModalMode) {
+            return "";
+        }
+
+        const draft = this.cleaningDraft;
+        const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
+        const guestAmountField = this.getCleaningGuestAmountFieldState(draft, {
+            enableSuggestion: !this.editingCleaningId,
+            excludeRecordId: this.editingCleaningId || "",
+            categoryKey
+        });
+        const previewRecord = createCleaningAhRecord({
+            date: draft.date,
+            propertyName: draft.propertyName,
+            categoryKey,
+            category: this.getCleaningCategoryLabel(categoryKey),
+            reservationSource: this.categoryUsesReservationSource(categoryKey)
+                ? (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
+            guestAmount: guestAmountField.numericValue || 0,
+            laundryKg: toOptionalNumber(draft.laundryKg) || 0,
+            laundryAmount: toOptionalNumber(draft.laundryAmount),
+            notes: draft.notes
+        });
+
+        return `
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="cleaning-ah-calendar-modal-title">
+                <section class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                    <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">${escapeHtml(this.tr("calendar.modalKicker"))}</div>
+                            <h3 id="cleaning-ah-calendar-modal-title" class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.calendarModalMode === "edit" ? this.tr("calendar.editTitle") : this.tr("calendar.addTitle"))}</h3>
+                        </div>
+                        <button type="button" data-action="close-calendar-cleaning-modal" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900" aria-label="${escapeHtml(t("common.cancel"))}">
+                            <i class="fas fa-xmark" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="px-5 pb-5">
+                        ${this.renderCleaningSingleForm({
+                            draft,
+                            preview: previewRecord,
+                            guestAmountField,
+                            formId: "cleaning-ah-calendar-cleaning-form",
+                            previewId: "cleaning-ah-calendar-cleaning-preview"
+                        })}
+                        <div class="mt-5 flex flex-wrap justify-end gap-3">
+                            <button type="button" data-action="close-calendar-cleaning-modal" class="view-btn">${escapeHtml(t("common.cancel"))}</button>
+                            <button type="submit" form="cleaning-ah-calendar-cleaning-form" class="view-btn active">${escapeHtml(this.calendarModalMode === "edit" ? this.tr("actions.saveChanges") : this.tr("actions.saveCleaning"))}</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        `;
+    }
+
+    renderCalendarDayColumn(day, records = []) {
+        const sortedRecords = [...records].sort((left, right) => {
+            return this.getCleaningLaundryState(left).key.localeCompare(this.getCleaningLaundryState(right).key)
+                || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
+        });
+
+        return `
+            <section class="min-h-[28rem] bg-slate-50/60">
+                <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-3 py-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(day.weekday)}</div>
+                            <div class="mt-1 text-2xl font-semibold ${day.isToday ? "text-rose-600" : "text-slate-950"}">${escapeHtml(day.dayNumber)}</div>
+                        </div>
+                        <div class="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">${escapeHtml(String(sortedRecords.length))}</div>
+                    </div>
+                </header>
+                <div class="space-y-2 px-2 py-3">
+                    ${sortedRecords.length
+                        ? sortedRecords.map((record, index) => this.renderCalendarCleaningChip(record, index + 1)).join("")
+                        : `<div class="px-2 py-4 text-sm text-slate-400">${escapeHtml(this.tr("calendar.emptyDay"))}</div>`}
+                    <button type="button" data-action="open-calendar-add-cleaning" data-date="${escapeHtml(day.date)}" class="mt-2 flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900">
+                        <span aria-hidden="true" class="mr-1 text-lg leading-none">+</span>${escapeHtml(this.tr("calendar.addCleaning"))}
+                    </button>
+                </div>
+            </section>
+        `;
+    }
+
+    renderCalendarCleaningChip(record, index) {
+        const state = this.getCleaningLaundryState(record);
+        return `
+            <button type="button" data-action="open-calendar-edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="group flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${this.getCalendarChipClasses(record)}">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-semibold">${escapeHtml(String(index))}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="block truncate font-medium">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</span>
+                    <span class="block truncate text-xs opacity-75">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))} - ${escapeHtml(state.label)}</span>
+                </span>
+                <span class="h-3 w-3 shrink-0 rounded-sm border border-white/80 bg-white/60" aria-hidden="true"></span>
+            </button>
+        `;
     }
 
     renderRegisterTab(derivedCleanings) {
@@ -3423,6 +3687,38 @@ export class CleaningAhManager {
             });
         });
 
+        document.querySelectorAll("[data-action='calendar-prev-week']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.calendarDate = addDaysIsoDate(this.calendarDate, -7);
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='calendar-next-week']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.calendarDate = addDaysIsoDate(this.calendarDate, 7);
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='calendar-today']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.calendarDate = getTodayIsoDate();
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='open-calendar-add-cleaning']").forEach((button) => {
+            button.addEventListener("click", () => this.openCalendarCleaningModal({
+                date: button.dataset.date || getTodayIsoDate()
+            }));
+        });
+        document.querySelectorAll("[data-action='open-calendar-edit-cleaning']").forEach((button) => {
+            button.addEventListener("click", () => this.openCalendarCleaningModal({
+                recordId: button.dataset.id || ""
+            }));
+        });
+        document.querySelectorAll("[data-action='close-calendar-cleaning-modal']").forEach((button) => {
+            button.addEventListener("click", () => this.closeCalendarCleaningModal());
+        });
+
         document.querySelectorAll("[data-cleaning-entry-mode]").forEach((button) => {
             button.addEventListener("click", () => {
                 const nextMode = button.dataset.cleaningEntryMode === "batch" ? "batch" : "single";
@@ -3556,6 +3852,25 @@ export class CleaningAhManager {
         });
         document.getElementById("cleaning-ah-reset-cleaning-form")?.addEventListener("click", () => this.resetCleaningForm());
         document.getElementById("cleaning-ah-cancel-cleaning-edit")?.addEventListener("click", () => this.resetCleaningForm());
+
+        const calendarCleaningForm = document.getElementById("cleaning-ah-calendar-cleaning-form");
+        calendarCleaningForm?.addEventListener("input", (event) => {
+            if (event.target?.name === "categoryKey") {
+                this.cleaningDraft = this.readCleaningDraftFromForm(calendarCleaningForm);
+                this.render();
+                return;
+            }
+            if (event.target?.name === "propertyName") {
+                this.applyCleaningSuggestionToForm(calendarCleaningForm);
+            }
+            this.cleaningDraft = this.readCleaningDraftFromForm(calendarCleaningForm);
+            this.updateCleaningPreview("cleaning-ah-calendar-cleaning-preview");
+        });
+        calendarCleaningForm?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.cleaningDraft = this.readCleaningDraftFromForm(calendarCleaningForm);
+            this.saveCleaningRecord();
+        });
 
         const inlineCleaningForm = document.getElementById("cleaning-ah-inline-cleaning-form");
         inlineCleaningForm?.addEventListener("input", (event) => {
@@ -3784,6 +4099,7 @@ export class CleaningAhManager {
 
     readCleaningDraftFromDom() {
         const form = document.getElementById("cleaning-ah-inline-cleaning-form")
+            || document.getElementById("cleaning-ah-calendar-cleaning-form")
             || document.getElementById("cleaning-ah-fast-register-form")
             || document.getElementById("cleaning-ah-cleaning-form");
         return this.readCleaningDraftFromForm(form);
@@ -4028,7 +4344,13 @@ export class CleaningAhManager {
                 });
                 this.setStatus(this.tr("status.cleaningSaved"), "success");
             }
-            if (keepContext && !this.editingCleaningId) {
+            if (this.calendarModalMode) {
+                this.calendarModalMode = "";
+                this.editingCleaningId = null;
+                this.cleaningDraft = this.createDefaultCleaningDraft();
+                this.activeTab = "calendar";
+                this.render();
+            } else if (keepContext && !this.editingCleaningId) {
                 this.resetCleaningFormForNext(this.cleaningDraft);
             } else {
                 this.resetCleaningForm();
@@ -4662,6 +4984,7 @@ export class CleaningAhManager {
         this.editingCleaningId = null;
         this.cleaningEntryMode = "single";
         this.openCleaningLaundryEntryId = "";
+        this.calendarModalMode = "";
         this.cleaningDraft = this.createDefaultCleaningDraft();
         this.render();
     }
@@ -4670,6 +4993,7 @@ export class CleaningAhManager {
         this.editingCleaningId = null;
         this.cleaningEntryMode = "single";
         this.openCleaningLaundryEntryId = "";
+        this.calendarModalMode = "";
         this.cleaningDraft = {
             ...this.createDefaultCleaningDraft(),
             date: previousDraft.date || getTodayIsoDate(),
