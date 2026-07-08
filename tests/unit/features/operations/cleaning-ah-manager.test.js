@@ -1876,7 +1876,6 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
-<<<<<<< HEAD
 
   test("renders heatmap cells with correct interactive click and hover attributes", () => {
     const manager = new CleaningAhManager(null);
@@ -1951,6 +1950,4 @@ describe("CleaningAhManager", () => {
       window.jspdf = originalJspdf;
     }
   });
-=======
->>>>>>> 103446412495de0d387b5929e1a9dbff7b61fab8
 });

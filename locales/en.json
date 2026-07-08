@@ -1005,7 +1005,6 @@
       "heatmapKicker": "Distribution",
       "heatmapTitle": "Monthly Revenue Heatmap",
       "heatmapDescription": "Top 15 properties ranked by total net revenue, broken down by month (color intensity represents relative value).",
-<<<<<<< HEAD
       "heatmapDetailKicker": "Monthly Checkout Breakdown",
       "exportReport": "Export PDF Summary",
       "exportKicker": "Reports",
@@ -1013,8 +1012,6 @@
       "exportDescription": "Generate a print-ready PDF financial report for any selected month. The report includes checkout details, laundry expenses, and VAT summaries.",
       "exportSelectMonth": "Select Month",
       "exportDownloadBtn": "Download Report",
-=======
->>>>>>> 103446412495de0d387b5929e1a9dbff7b61fab8
       "empty": "No properties with entries match the current filters.",
       "workflow": {
         "step1": "Pick a cleaning type first if you want like-for-like comparisons, because each category uses different revenue rules.",

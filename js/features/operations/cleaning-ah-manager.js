@@ -2639,69 +2639,6 @@ export class CleaningAhManager {
                     </section>
                 ` : ""}
                 ${this.renderPropertyMonthHeatmap(allStatsRecords)}
-<<<<<<< HEAD
-=======
-            </section>
-        `;
-    }
-
-    renderPropertyMonthHeatmap(records = []) {
-        if (!records.length) return "";
-        const cellMap = {};
-        const propertyTotals = {};
-        const monthSet = new Set();
-        for (const record of records) {
-            const prop = record.propertyName || "";
-            const monthKey = (record.date || "").slice(0, 7);
-            if (!prop || !monthKey) continue;
-            const cellKey = `${prop}||${monthKey}`;
-            const val = record.effectiveTotalToAh ?? record.totalToAh ?? 0;
-            cellMap[cellKey] = (cellMap[cellKey] || 0) + val;
-            propertyTotals[prop] = (propertyTotals[prop] || 0) + val;
-            monthSet.add(monthKey);
-        }
-        if (!monthSet.size) return "";
-        const months = [...monthSet].sort();
-        const properties = Object.keys(propertyTotals)
-            .sort((a, b) => propertyTotals[b] - propertyTotals[a])
-            .slice(0, 15);
-        const allValues = Object.values(cellMap).filter((v) => v > 0);
-        const maxVal = allValues.length ? Math.max(...allValues) : 1;
-        const cellBg = (value) => {
-            if (!value || value <= 0) return "";
-            const intensity = Math.min(1, value / maxVal);
-            const lightness = Math.round(97 - intensity * 55);
-            const saturation = Math.round(80 + intensity * 10);
-            return `hsl(199,${saturation}%,${lightness}%)`;
-        };
-        const headerCells = months.map((m) =>
-            `<th class="min-w-[5rem] px-2 py-2 text-right text-xs font-semibold text-slate-500">${escapeHtml(this.formatMonthKey(m))}</th>`
-        ).join("");
-        const rows = properties.map((prop) => {
-            const cells = months.map((m) => {
-                const val = cellMap[`${prop}||${m}`] || 0;
-                const bg = cellBg(val);
-                return `<td class="px-2 py-1.5 text-right text-xs" ${bg ? `style="background:${bg}"` : ""} title="${escapeHtml(prop)} \u2013 ${escapeHtml(this.formatMonthKey(m))}: ${escapeHtml(this.formatCurrency(val))}">${val > 0 ? escapeHtml(this.formatCurrency(val)) : ""}</td>`;
-            }).join("");
-            return `<tr class="border-b border-slate-100"><td class="max-w-[10rem] truncate py-1.5 pr-3 text-sm font-medium text-slate-900" title="${escapeHtml(prop)}">${escapeHtml(prop)}</td>${cells}</tr>`;
-        }).join("");
-        return `
-            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="mb-4">
-                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.heatmapKicker"))}</div>
-                    <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.heatmapTitle"))}</h3>
-                    <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.heatmapDescription"))}</p>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead><tr class="border-b border-slate-200">
-                            <th class="py-2 pr-3 text-left text-xs font-semibold text-slate-500">${escapeHtml(this.tr("tables.property"))}</th>
-                            ${headerCells}
-                        </tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
->>>>>>> 103446412495de0d387b5929e1a9dbff7b61fab8
             </section>
         `;
     }
@@ -4956,7 +4893,6 @@ export class CleaningAhManager {
                 this.markAllOverdueNoLaundry(overdueIds);
             });
         });
-<<<<<<< HEAD
         document.querySelectorAll("[data-action='open-heatmap-detail']").forEach((button) => {
             button.addEventListener("click", () => {
                 this.heatmapDetailModal = {
@@ -4995,8 +4931,6 @@ export class CleaningAhManager {
                 this.render();
             });
         });
-=======
->>>>>>> 103446412495de0d387b5929e1a9dbff7b61fab8
     }
 
     readCleaningDraftFromDom() {

@@ -1018,7 +1018,6 @@
             "heatmapKicker": "Distribuição",
             "heatmapTitle": "Mapa Térmico de Receita Mensal",
             "heatmapDescription": "Top 15 propriedades ordenadas pela receita líquida total, divididas por mês (a intensidade da cor representa o valor relativo).",
-<<<<<<< HEAD
             "heatmapDetailKicker": "Detalhamento Mensal de Checkouts",
             "exportReport": "Exportar Resumo PDF",
             "exportKicker": "Relatórios",
@@ -1026,8 +1025,6 @@
             "exportDescription": "Gere um relatório financeiro em PDF pronto para impressão de qualquer mês selecionado. O relatório inclui detalhes de checkout, despesas de lavandaria e resumos de IVA.",
             "exportSelectMonth": "Selecionar Mês",
             "exportDownloadBtn": "Descarregar Relatório",
-=======
->>>>>>> 103446412495de0d387b5929e1a9dbff7b61fab8
             "empty": "Nenhuma propriedade com registos corresponde aos filtros atuais.",
             "workflow": {
                 "step1": "Escolha primeiro um tipo de limpeza se quiser comparações justas, porque cada categoria usa regras de receita diferentes.",
