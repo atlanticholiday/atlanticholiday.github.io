@@ -914,7 +914,10 @@ describe("CleaningAhManager", () => {
           },
           forms: {
             date: "Date",
+            cleaningDate: "Cleaning date",
+            laundryReceivedDate: "Laundry received date",
             kg: "Kg",
+            totalAmount: "Total amount",
             ratePerKg: "Rate / kg",
             notesPlaceholder: "Optional note"
           },
@@ -979,6 +982,10 @@ describe("CleaningAhManager", () => {
     assert.includes(tableHtml, 'data-cleaning-laundry-entry="cleaning-1"');
     assert.includes(tableHtml, 'data-action="save-cleaning-laundry"');
     assert.includes(tableHtml, 'name="laundryRatePerKg"');
+    assert.includes(tableHtml, 'value="11.5"');
+    assert.ok(tableHtml.indexOf('name="kg"') < tableHtml.indexOf('name="laundryRatePerKg"'));
+    assert.ok(tableHtml.indexOf('name="laundryRatePerKg"') < tableHtml.indexOf('name="amount"'));
+    assert.includes(tableHtml, "Total amount");
     assert.includes(tableHtml, 'aria-label="Cancel"');
     assert.includes(tableHtml, 'fas fa-xmark');
     assert.includes(tableHtml, "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.");
@@ -1085,6 +1092,25 @@ describe("CleaningAhManager", () => {
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("calculates quick laundry amount from kg and rate", () => {
+    resetDom(`
+      <div data-cleaning-laundry-entry="cleaning-1">
+        <input name="kg" value="2">
+        <input name="laundryRatePerKg" value="2.3">
+        <input name="amount" value="">
+      </div>
+    `);
+
+    const manager = new CleaningAhManager(null);
+    const container = document.querySelector("[data-cleaning-laundry-entry]");
+
+    manager.updateCleaningQuickLaundryAmount(container);
+
+    assert.equal(container.querySelector('[name="amount"]').value, "4.6");
+
     resetDom();
   });
 
@@ -1295,6 +1321,213 @@ describe("CleaningAhManager", () => {
     assert.includes(cleaningHtml, 'aria-label="Open cleaning"');
     assert.includes(cleaningHtml, 'fa-arrow-up-right-from-square');
     assert.equal(cleaningHtml.includes('data-action="save-laundry-link"'), false);
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("prioritizes same-property waiting cleanings when linking received laundry", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          categories: {
+            checkout: { label: "Check-out" }
+          },
+          labels: {
+            unknown: "Unknown"
+          },
+          laundryMatching: {
+            sameProperty: "same property",
+            waiting: "waiting for kg"
+          },
+          counts: {
+            daysAfterCleaning: {
+              one: "1 day after cleaning",
+              other: "{{count}} days after cleaning"
+            }
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+    manager.cleaningRecords = [
+      {
+        id: "close-same-property",
+        date: "2026-04-06",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 0
+      },
+      {
+        id: "old-same-property",
+        date: "2026-04-01",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 0
+      },
+      {
+        id: "other-property",
+        date: "2026-04-07",
+        propertyName: "Bravo",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 0
+      },
+      {
+        id: "already-has-laundry",
+        date: "2026-04-08",
+        propertyName: "Acqua Beach",
+        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
+        laundryAmount: 9.2
+      }
+    ];
+
+    const options = manager.getLaundryLinkOptions("", "Acqua Beach", { receivedDate: "2026-04-08" });
+    const label = manager.getCleaningLinkOptionLabel(options[0], "Acqua Beach", "2026-04-08");
+
+    assert.deepEqual(options.map((record) => record.id), [
+      "close-same-property",
+      "old-same-property",
+      "other-property"
+    ]);
+    assert.includes(label, "same property");
+    assert.includes(label, "waiting for kg");
+    assert.includes(label, "2 days after cleaning");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("renders unlinked laundry rows as review items with link controls", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          laundryTab: {
+            reviewKicker: "Needs review",
+            reviewTitle: "Unlinked laundry rows"
+          },
+          laundryState: {
+            needsReview: "Needs review"
+          },
+          forms: {
+            laundryReceivedDate: "Laundry received date",
+            noLinkedCleaning: "No linked cleaning"
+          },
+          actions: {
+            linkCleaning: "Link cleaning",
+            saveLink: "Save link",
+            ignoreLink: "Ignore"
+          },
+          tables: {
+            linkedCleaning: "Linked cleaning"
+          },
+          labels: {
+            unknown: "Unknown"
+          },
+          counts: {
+            rows: {
+              one: "1 row",
+              other: "{{count}} rows"
+            }
+          }
+        },
+        common: {
+          cancel: "Cancel"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const html = manager.renderUnlinkedLaundryReview([
+      {
+        id: "laundry-1",
+        date: "2026-04-08",
+        propertyName: "Acqua Beach",
+        linkedCleaningId: "",
+        kg: 5,
+        amount: 11.5,
+        source: "standalone"
+      }
+    ]);
+
+    assert.includes(html, "Unlinked laundry rows");
+    assert.includes(html, "Needs review");
+    assert.includes(html, "Laundry received date");
+    assert.includes(html, 'data-action="toggle-laundry-link-editor"');
+    assert.includes(html, 'data-action="ignore-laundry-link"');
+    assert.includes(html, "Ignore");
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("keeps ignored laundry rows out of review while showing ignored state in register", () => {
+    resetDom();
+
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          laundryState: {
+            ignored: "Ignored",
+            notLinked: "Not linked"
+          },
+          actions: {
+            linkCleaning: "Link cleaning",
+            saveLink: "Save link"
+          },
+          tables: {
+            date: "Date",
+            laundryReceivedDate: "Laundry received",
+            property: "Property",
+            linkedCleaning: "Linked cleaning",
+            kg: "Kg",
+            ratePerKg: "Rate / kg",
+            amount: "Amount",
+            actions: "Actions"
+          },
+          forms: {
+            noLinkedCleaning: "No linked cleaning"
+          }
+        },
+        common: {
+          cancel: "Cancel",
+          edit: "Edit",
+          delete: "Delete"
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const ignoredEntry = {
+      id: "laundry-ignored",
+      date: "2026-04-08",
+      propertyName: "Acqua Beach",
+      linkedCleaningId: "",
+      kg: 5,
+      amount: 11.5,
+      laundryRatePerKg: 2.3,
+      linkStatus: "ignored",
+      ignoreLink: true,
+      source: "standalone"
+    };
+
+    assert.equal(manager.renderUnlinkedLaundryReview([ignoredEntry]), "");
+    assert.includes(manager.renderLaundryTable([ignoredEntry]), "Ignored");
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;

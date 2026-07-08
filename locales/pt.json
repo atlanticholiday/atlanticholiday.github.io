@@ -201,6 +201,10 @@
             "expired": "Expirado",
             "expiresSoon": "Expira em breve"
         },
+        "laundryMatching": {
+            "sameProperty": "mesma propriedade",
+            "waiting": "a aguardar kg"
+        },
         "actions": {
             "newVehicle": "Novo veículo",
             "saveVehicle": "Guardar veículo",
@@ -928,6 +932,7 @@
             "avgNetPerCleaning": "Média líquida / limpeza",
             "kg": "Kg",
             "amount": "Valor",
+            "totalAmount": "Valor total",
             "rows": "Linhas",
             "type": "Tipo",
             "commission": "Comissão",
@@ -1017,7 +1022,7 @@
             "batchDate": "Data para todas as linhas",
             "batchCategory": "Categoria para todas as linhas",
             "batchHint": "Use o registo em lote quando tem muitos check-outs no mesmo dia. Pode ajustar as notas, o valor hóspede e os kg de lavandaria em cada linha antes de guardar, enquanto Plataforma ou Direta se aplica ao lote todo.",
-            "quickLaundryHint": "Isto guarda uma linha de lavandaria associada a esta limpeza e ela também aparece no separador Lavandaria.",
+            "quickLaundryHint": "Isto adiciona os kg recebidos a esta limpeza. A data recebida da lavandaria pode ser depois da data da limpeza.",
             "quickLaundryEditHint": "Isto atualiza o valor de lavandaria existente desta limpeza em vez de adicionar uma linha duplicada.",
             "inlineEditHint": "Edite a limpeza selecionada diretamente na tabela Dados guardados e guarde junto dessa linha.",
             "entryModes": {
@@ -1059,6 +1064,8 @@
             "batchHint": "Use o registo em lote para lavandaria do mesmo dia em várias propriedades. Se for preciso, pode associar as linhas às limpezas mais tarde.",
             "activityKicker": "Atividade de lavandaria",
             "activityTitle": "Registo combinado de lavandaria",
+            "reviewKicker": "Rever",
+            "reviewTitle": "Linhas de lavandaria sem associacao",
             "empty": "Nenhum registo de lavandaria corresponde aos filtros atuais.",
             "entryModes": {
                 "single": "Registo único",
@@ -1104,6 +1111,8 @@
         },
         "forms": {
             "date": "Data",
+            "cleaningDate": "Data da limpeza",
+            "laundryReceivedDate": "Data recebida lavandaria",
             "property": "Propriedade",
             "propertyPlaceholder": "Escreva ou escolha uma propriedade",
             "category": "Categoria",
@@ -1114,7 +1123,7 @@
             "notesPlaceholder": "Nota opcional",
             "linkedCleaning": "Limpeza associada",
             "noLinkedCleaning": "Sem limpeza associada",
-            "linkedCleaningHint": "Associe a lavandaria a uma limpeza anterior para atualizar a receita líquida final quando os kg chegarem.",
+            "linkedCleaningHint": "Escolha a limpeza que gerou a roupa. Limpezas da mesma propriedade ainda sem kg aparecem primeiro.",
             "kg": "Kg",
             "amount": "Valor",
             "ratePerKg": "Preço / kg",
@@ -1136,6 +1145,7 @@
         },
         "tables": {
             "date": "Data",
+            "laundryReceivedDate": "Lavandaria recebida",
             "property": "Propriedade",
             "category": "Categoria",
             "reservation": "Reserva",
@@ -1169,8 +1179,11 @@
         "laundryState": {
             "linkedAmount": "Associado: {{amount}}",
             "waiting": "A aguardar lavandaria",
+            "waitingToday": "A aguardar hoje",
             "none": "Sem lavandaria",
             "added": "Lavandaria adicionada",
+            "needsReview": "Precisa revisao",
+            "ignored": "Ignorado",
             "needsCorrection": "Precisa correção",
             "notLinked": "Não associado"
         },
@@ -1182,7 +1195,7 @@
             "saveLaundry": "Guardar lavandaria",
             "saveLaundryBatch": "Guardar todas as linhas",
             "saveSpecialCleaning": "Guardar limpeza especial",
-            "addLaundry": "Adicionar lavandaria",
+            "addLaundry": "Adicionar kg a limpeza",
             "editLaundry": "Editar lavandaria",
             "updateLaundry": "Atualizar lavandaria",
             "addMoreLaundry": "Adicionar mais lavandaria",
@@ -1191,6 +1204,7 @@
             "saveLink": "Guardar associação",
             "linkCleaning": "Associar limpeza",
             "changeLink": "Alterar associação",
+            "ignoreLink": "Ignorar",
             "reset": "Repor",
             "openCleaning": "Abrir limpeza",
             "addRow": "Adicionar linha",
@@ -1212,6 +1226,14 @@
             "linkedRows": {
                 "one": "1 linha associada",
                 "other": "{{count}} linhas associadas"
+            },
+            "daysWaiting": {
+                "one": "1 dia a aguardar",
+                "other": "{{count}} dias a aguardar"
+            },
+            "daysAfterCleaning": {
+                "one": "1 dia depois da limpeza",
+                "other": "{{count}} dias depois da limpeza"
             },
             "importRows": {
                 "one": "Importar 1 linha",
@@ -1237,6 +1259,8 @@
             "laundryLinkSaved": "Associação da lavandaria atualizada.",
             "laundryLinkCleared": "Associação da lavandaria removida.",
             "laundryLinkSaveFailed": "Não foi possível atualizar a associação da lavandaria.",
+            "laundryLinkIgnored": "Linha de lavandaria ignorada para associacao.",
+            "laundryLinkIgnoreFailed": "Nao foi possivel ignorar a linha de lavandaria.",
             "noLaundryMarked": "Limpeza marcada como sem lavandaria.",
             "noLaundryMarkFailed": "Não foi possível marcar a limpeza como sem lavandaria.",
             "duplicateSaveCancelled": "Gravação duplicada cancelada.",

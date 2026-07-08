@@ -11,6 +11,7 @@ import {
     filterCleaningRegisterEntries,
     filterLaundryRegisterEntries,
     parseCleaningAhCsv,
+    resolveLaundryAmount,
     summarizeCleaningAhRecords,
     summarizeCleaningAhPropertyDetail,
     summarizeCleaningAhPropertyRows,
@@ -30,6 +31,23 @@ describe("Cleaning AH utilities", () => {
         assert.equal(result.totalToAhWithoutLaundry, 79.76);
         assert.equal(result.laundryAmount, 23);
         assert.equal(result.totalToAh, 56.76);
+    });
+
+    test("derives laundry amount from kg when saved amount is blank or zero", () => {
+        const blankAmount = computeCleaningAhAmounts({
+            guestAmount: 120,
+            laundryKg: 5,
+            laundryAmount: ""
+        });
+        const zeroAmount = computeCleaningAhAmounts({
+            guestAmount: 120,
+            laundryKg: 5,
+            laundryAmount: 0
+        });
+
+        assert.equal(blankAmount.laundryAmount, 11.5);
+        assert.equal(zeroAmount.laundryAmount, 11.5);
+        assert.equal(resolveLaundryAmount({ laundryKg: 5, laundryAmount: 0 }, "laundryAmount"), 11.5);
     });
 
     test("sets platform commission to zero for direct reservations", () => {
@@ -155,6 +173,29 @@ describe("Cleaning AH utilities", () => {
         assert.equal(derived[0].linkedLaundryAmount, 27.6);
         assert.equal(derived[0].effectiveLaundryAmount, 27.6);
         assert.equal(derived[0].effectiveTotalToAh, 52.16);
+    });
+
+    test("derives effective laundry and net from cleaning kg when amount is missing", () => {
+        const records = [
+            {
+                id: "c1",
+                ...createCleaningAhRecord({
+                    date: "2025-11-18",
+                    propertyName: "Acqua Beach",
+                    category: "Limpeza check-out",
+                    guestAmount: 120,
+                    laundryKg: 5,
+                    source: "manual"
+                }),
+                laundryAmount: 0
+            }
+        ];
+
+        const derived = deriveCleaningAhRecords(records);
+
+        assert.equal(derived[0].inlineLaundryAmount, 11.5);
+        assert.equal(derived[0].effectiveLaundryAmount, 11.5);
+        assert.equal(derived[0].effectiveTotalToAh, 68.26);
     });
 
     test("creates standalone laundry records with a custom rate per kg", () => {
@@ -385,6 +426,38 @@ describe("Cleaning AH utilities", () => {
         assert.equal(summary.entries[0].id, "linked-laundry");
         assert.equal(summary.entries[0].propertyName, "Acqua Beach");
         assert.equal(summary.entries[1].id, "standalone-laundry");
+    });
+
+    test("includes existing laundry rows with kg but missing amount", () => {
+        const summary = summarizeLaundryRecords([
+            {
+                id: "cleaning-laundry",
+                date: "2026-04-08",
+                propertyName: "Acqua Beach",
+                laundryKg: 5,
+                laundryAmount: 0,
+                laundryRatePerKg: 2.3
+            }
+        ], [
+            {
+                id: "standalone-laundry",
+                date: "2026-04-09",
+                propertyName: "Acqua Beach",
+                kg: 4,
+                amount: 0,
+                laundryRatePerKg: 2.3,
+                linkStatus: "ignored",
+                ignoreLink: true
+            }
+        ]);
+
+        assert.equal(summary.totals.count, 2);
+        assert.equal(summary.totals.kg, 9);
+        assert.equal(summary.totals.amount, 20.7);
+        assert.equal(summary.entries[0].amount, 9.2);
+        assert.equal(summary.entries[1].amount, 11.5);
+        assert.equal(summary.entries[0].linkStatus, "ignored");
+        assert.equal(summary.entries[0].ignoreLink, true);
     });
 
     test("filters and sorts combined laundry register entries", () => {

@@ -1009,7 +1009,7 @@
       "batchDate": "Date for all rows",
       "batchCategory": "Category for all rows",
       "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes, guest amount, and laundry kg on each row before saving, while Platform or Direct applies to the whole batch.",
-      "quickLaundryHint": "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.",
+      "quickLaundryHint": "This adds the received kg to this cleaning. The laundry received date can be later than the cleaning date.",
       "quickLaundryEditHint": "This updates the existing laundry amount for this cleaning instead of adding a duplicate row.",
       "inlineEditHint": "Edit the selected cleaning directly in the Stored data table, then save beside that row.",
       "entryModes": {
@@ -1051,6 +1051,8 @@
       "batchHint": "Use batch entry for same-day laundry across many properties. If needed, you can link rows to cleanings later.",
       "activityKicker": "Laundry activity",
       "activityTitle": "Combined laundry register",
+      "reviewKicker": "Needs review",
+      "reviewTitle": "Unlinked laundry rows",
       "empty": "No laundry records match the current filters.",
       "entryModes": {
         "single": "Single entry",
@@ -1096,6 +1098,8 @@
     },
     "forms": {
       "date": "Date",
+      "cleaningDate": "Cleaning date",
+      "laundryReceivedDate": "Laundry received date",
       "property": "Property",
       "propertyPlaceholder": "Type or pick a property",
       "category": "Category",
@@ -1106,9 +1110,10 @@
       "notesPlaceholder": "Optional note",
       "linkedCleaning": "Linked cleaning",
       "noLinkedCleaning": "No linked cleaning",
-      "linkedCleaningHint": "Link the laundry to an earlier cleaning so the final net revenue updates when the kg arrives.",
+      "linkedCleaningHint": "Choose the cleaning that generated the linen. Same-property cleanings still waiting for kg are shown first.",
       "kg": "Kg",
       "amount": "Amount",
+      "totalAmount": "Total amount",
       "ratePerKg": "Rate / kg",
       "csvFile": "CSV file"
     },
@@ -1128,6 +1133,7 @@
     },
     "tables": {
       "date": "Date",
+      "laundryReceivedDate": "Laundry received",
       "property": "Property",
       "category": "Category",
       "reservation": "Reservation",
@@ -1161,10 +1167,17 @@
     "laundryState": {
       "linkedAmount": "Linked: {{amount}}",
       "waiting": "Waiting for laundry",
+      "waitingToday": "Waiting today",
       "none": "No laundry",
       "added": "Laundry added",
       "needsCorrection": "Needs correction",
+      "needsReview": "Needs review",
+      "ignored": "Ignored",
       "notLinked": "Not linked"
+    },
+    "laundryMatching": {
+      "sameProperty": "same property",
+      "waiting": "waiting for kg"
     },
     "actions": {
       "cancelEdit": "Cancel edit",
@@ -1174,7 +1187,7 @@
       "saveLaundry": "Save laundry",
       "saveLaundryBatch": "Save all rows",
       "saveSpecialCleaning": "Save special cleaning",
-      "addLaundry": "Add laundry",
+      "addLaundry": "Add kg to cleaning",
       "editLaundry": "Edit laundry",
       "updateLaundry": "Update laundry",
       "addMoreLaundry": "Add more laundry",
@@ -1183,6 +1196,7 @@
       "saveLink": "Save link",
       "linkCleaning": "Link cleaning",
       "changeLink": "Change link",
+      "ignoreLink": "Ignore",
       "reset": "Reset",
       "openCleaning": "Open cleaning",
       "addRow": "Add row",
@@ -1204,6 +1218,14 @@
       "linkedRows": {
         "one": "1 linked row",
         "other": "{{count}} linked rows"
+      },
+      "daysWaiting": {
+        "one": "1 day waiting",
+        "other": "{{count}} days waiting"
+      },
+      "daysAfterCleaning": {
+        "one": "1 day after cleaning",
+        "other": "{{count}} days after cleaning"
       },
       "importRows": {
         "one": "Import 1 row",
@@ -1229,6 +1251,8 @@
       "laundryLinkSaved": "Laundry link updated.",
       "laundryLinkCleared": "Laundry link cleared.",
       "laundryLinkSaveFailed": "Laundry link could not be updated.",
+      "laundryLinkIgnored": "Laundry row ignored for linking.",
+      "laundryLinkIgnoreFailed": "Laundry row could not be ignored.",
       "noLaundryMarked": "Cleaning marked as no laundry.",
       "noLaundryMarkFailed": "Could not mark the cleaning as no laundry.",
       "duplicateSaveCancelled": "Duplicate save cancelled.",

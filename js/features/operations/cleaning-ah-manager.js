@@ -20,6 +20,7 @@ import {
     getCleaningAhCategoryConfig,
     normalizeCleaningAhCategoryKey,
     parseCleaningAhCsv,
+    resolveLaundryAmount,
     roundCurrency,
     summarizeCleaningAhRecords,
     summarizeCleaningAhPropertyDetail,
@@ -75,6 +76,16 @@ function getTodayIsoDate() {
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+}
+
+function getIsoDateDiffDays(laterDateValue, earlierDateValue) {
+    const later = Date.parse(`${String(laterDateValue || "").slice(0, 10)}T00:00:00Z`);
+    const earlier = Date.parse(`${String(earlierDateValue || "").slice(0, 10)}T00:00:00Z`);
+    if (!Number.isFinite(later) || !Number.isFinite(earlier)) {
+        return null;
+    }
+
+    return Math.round((later - earlier) / 86400000);
 }
 
 const CLEANING_LAUNDRY_STATUS = Object.freeze({
@@ -537,6 +548,7 @@ export class CleaningAhManager {
                 this.cleaningRecords = snapshot.docs
                     .map((entry) => ({ id: entry.id, ...entry.data() }))
                     .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+                this.repairMissingLaundryAmounts(snapshot.docs, "laundryAmount");
                 this.render();
             }, (error) => {
                 console.error("[Cleaning AH] cleanings listener failed:", error);
@@ -548,6 +560,7 @@ export class CleaningAhManager {
                 this.laundryRecords = snapshot.docs
                     .map((entry) => ({ id: entry.id, ...entry.data() }))
                     .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+                this.repairMissingLaundryAmounts(snapshot.docs, "amount");
                 this.render();
             }, (error) => {
                 console.error("[Cleaning AH] laundry listener failed:", error);
@@ -563,6 +576,75 @@ export class CleaningAhManager {
             }, (error) => {
                 console.error("[Cleaning AH] special cleanings listener failed:", error);
             });
+        }
+    }
+
+    async repairMissingLaundryAmounts(snapshotDocs = [], amountField = "amount") {
+        if (!this.db || !Array.isArray(snapshotDocs) || !snapshotDocs.length) {
+            return;
+        }
+
+        const patches = snapshotDocs
+            .map((entry) => {
+                const record = { id: entry.id, ...entry.data() };
+                const kg = toOptionalNumber(record.kg ?? record.laundryKg ?? record.estimatedLaundryKg);
+                const savedAmount = toOptionalNumber(record[amountField]);
+                if (kg === null || kg <= 0 || (savedAmount !== null && savedAmount > 0)) {
+                    return null;
+                }
+
+                const laundryRatePerKg = toOptionalNumber(record.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+                const amount = resolveLaundryAmount({
+                    ...record,
+                    kg,
+                    laundryKg: record.laundryKg ?? kg,
+                    laundryRatePerKg
+                }, amountField);
+                if (amount <= 0) {
+                    return null;
+                }
+
+                const patch = {
+                    [amountField]: amount,
+                    laundryRatePerKg,
+                    updatedAt: new Date()
+                };
+
+                if (amountField === "laundryAmount") {
+                    const totalToAhWithoutLaundry = toOptionalNumber(record.totalToAhWithoutLaundry)
+                        ?? createCleaningAhRecord({
+                            ...record,
+                            laundryKg: kg,
+                            laundryAmount: amount,
+                            laundryRatePerKg
+                        }).totalToAhWithoutLaundry;
+                    patch.totalToAh = roundCurrency(totalToAhWithoutLaundry - amount - (toOptionalNumber(record.suppliesCost) || 0));
+                    patch.laundryStatus = "";
+                    patch.fingerprint = createCleaningAhFingerprint({
+                        ...record,
+                        ...patch
+                    });
+                }
+
+                return { ref: entry.ref, patch };
+            })
+            .filter(Boolean);
+
+        if (!patches.length) {
+            return;
+        }
+
+        try {
+            const chunkSize = 400;
+            for (let index = 0; index < patches.length; index += chunkSize) {
+                const batch = writeBatch(this.db);
+                patches.slice(index, index + chunkSize).forEach(({ ref, patch }) => {
+                    batch.update(ref, patch);
+                });
+                await batch.commit();
+            }
+        } catch (error) {
+            console.error("[Cleaning AH] failed to repair missing laundry amounts:", error);
         }
     }
 
@@ -779,18 +861,60 @@ export class CleaningAhManager {
         return rows[0]?.label || "";
     }
 
-    getLaundryLinkOptions(currentLinkedCleaningId = "", preferredPropertyName = "") {
+    cleaningHasLaundryAssigned(record = {}, currentLinkedCleaningId = "") {
+        if (!record) {
+            return false;
+        }
+
+        if (record.id && record.id === currentLinkedCleaningId) {
+            return false;
+        }
+
+        if (roundCurrency(record.effectiveLaundryAmount ?? record.laundryAmount) > 0) {
+            return true;
+        }
+
+        return this.getLinkedLaundryRecordsForCleaning(record.id || "")
+            .some((entry) => entry.id !== currentLinkedCleaningId);
+    }
+
+    getLaundryReceivedDateDistance(record = {}, receivedDate = "") {
+        const diffDays = getIsoDateDiffDays(receivedDate, record.date);
+        if (diffDays === null) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        if (diffDays < 0) {
+            return 1000 + Math.abs(diffDays);
+        }
+
+        return diffDays;
+    }
+
+    getLaundryLinkOptions(currentLinkedCleaningId = "", preferredPropertyName = "", { receivedDate = "" } = {}) {
         const normalizedPreferredProperty = normalizeKey(preferredPropertyName);
         return [...this.cleaningRecords]
             .filter((record) => {
-                return record.id === currentLinkedCleaningId || roundCurrency(record.laundryAmount || 0) <= 0;
+                return record.id === currentLinkedCleaningId || !this.cleaningHasLaundryAssigned(record, currentLinkedCleaningId);
             })
             .sort((left, right) => {
+                const leftIsCurrent = left.id === currentLinkedCleaningId;
+                const rightIsCurrent = right.id === currentLinkedCleaningId;
+                if (leftIsCurrent !== rightIsCurrent) {
+                    return leftIsCurrent ? -1 : 1;
+                }
+
                 const leftMatchesProperty = normalizedPreferredProperty && normalizeKey(left.propertyName) === normalizedPreferredProperty;
                 const rightMatchesProperty = normalizedPreferredProperty && normalizeKey(right.propertyName) === normalizedPreferredProperty;
 
                 if (leftMatchesProperty !== rightMatchesProperty) {
                     return leftMatchesProperty ? -1 : 1;
+                }
+
+                const leftDistance = this.getLaundryReceivedDateDistance(left, receivedDate);
+                const rightDistance = this.getLaundryReceivedDateDistance(right, receivedDate);
+                if (leftDistance !== rightDistance) {
+                    return leftDistance - rightDistance;
                 }
 
                 return String(right.date || "").localeCompare(String(left.date || ""));
@@ -919,6 +1043,10 @@ export class CleaningAhManager {
         return this.laundryRecords.filter((record) => record.linkedCleaningId === recordId);
     }
 
+    isLaundryLinkIgnored(record = {}) {
+        return record.ignoreLink === true || normalizeLabel(record.linkStatus) === "ignored";
+    }
+
     getPrimaryLinkedLaundryRecordForCleaning(recordId) {
         return this.getLinkedLaundryRecordsForCleaning(recordId)
             .sort((left, right) => {
@@ -983,6 +1111,40 @@ export class CleaningAhManager {
 
     getCleaningLinkLabel(record) {
         return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${this.getCleaningCategoryLabel(record.categoryKey || record.category)}`;
+    }
+
+    getCleaningWaitingDays(record = {}, today = getTodayIsoDate()) {
+        const diffDays = getIsoDateDiffDays(today, record.date);
+        return diffDays === null ? 0 : Math.max(0, diffDays);
+    }
+
+    getCleaningWaitingLabel(record = {}) {
+        const days = this.getCleaningWaitingDays(record);
+        if (days <= 0) {
+            return this.tr("laundryState.waitingToday");
+        }
+
+        return this.trCount("counts.daysWaiting", days);
+    }
+
+    getCleaningLinkMatchLabel(record = {}, preferredPropertyName = "", receivedDate = "") {
+        const parts = [];
+        if (normalizeKey(preferredPropertyName) && normalizeKey(record.propertyName) === normalizeKey(preferredPropertyName)) {
+            parts.push(this.tr("laundryMatching.sameProperty"));
+        }
+        if (!this.cleaningHasLaundryAssigned(record)) {
+            parts.push(this.tr("laundryMatching.waiting"));
+        }
+        const diffDays = getIsoDateDiffDays(receivedDate, record.date);
+        if (diffDays !== null && diffDays >= 0) {
+            parts.push(this.trCount("counts.daysAfterCleaning", diffDays));
+        }
+
+        return parts.length ? ` (${parts.join(", ")})` : "";
+    }
+
+    getCleaningLinkOptionLabel(record, preferredPropertyName = "", receivedDate = "") {
+        return `${this.formatDate(record.date)} - ${record.propertyName || this.tr("labels.unknown")} - ${this.getCleaningCategoryLabel(record.categoryKey || record.category)}${this.getCleaningLinkMatchLabel(record, preferredPropertyName, receivedDate)}`;
     }
 
     getSuggestedCleaningRecord(propertyName, { excludeRecordId = "", categoryKey = "" } = {}) {
@@ -1676,7 +1838,10 @@ export class CleaningAhManager {
         const todayEntries = derivedCleanings.filter((record) => record.date === today);
         const waitingLaundryEntries = derivedCleanings
             .filter((record) => this.getCleaningLaundryState(record).key === "waiting")
-            .slice(0, 8);
+            .sort((left, right) => this.getCleaningWaitingDays(right, today) - this.getCleaningWaitingDays(left, today)
+                || String(left.date || "").localeCompare(String(right.date || ""))
+                || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName)))
+            .slice(0, 12);
         const quickCards = this.dedupeFastRegisterCards([...todayEntries, ...waitingLaundryEntries]).slice(0, 12);
 
         return `
@@ -1740,7 +1905,7 @@ export class CleaningAhManager {
             <form id="cleaning-ah-fast-register-form" class="mt-5 space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.cleaningDate"))}</span>
                         <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                     </label>
                     <label class="block">
@@ -1791,6 +1956,7 @@ export class CleaningAhManager {
 
     renderRegisterQueueCard(record) {
         const state = this.getCleaningLaundryState(record);
+        const waitingLabel = state.key === "waiting" ? this.getCleaningWaitingLabel(record) : "";
         return `
             <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="flex items-start justify-between gap-3">
@@ -1800,6 +1966,7 @@ export class CleaningAhManager {
                     </div>
                     ${this.renderLaundryStateBadge(record)}
                 </div>
+                ${waitingLabel ? `<div class="mt-2 text-xs font-medium text-sky-700">${escapeHtml(this.tr("forms.cleaningDate"))}: ${escapeHtml(this.formatDate(record.date))} - ${escapeHtml(waitingLabel)}</div>` : ""}
                 <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                     <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
                         <div class="text-xs text-slate-500">${escapeHtml(this.tr("tables.guest"))}</div>
@@ -2246,7 +2413,7 @@ export class CleaningAhManager {
             <form id="${escapeHtml(formId)}" class="mt-5 space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.cleaningDate"))}</span>
                         <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                     </label>
                     <label class="block">
@@ -2383,6 +2550,9 @@ export class CleaningAhManager {
         const draft = this.laundryDraft;
         const isBatchMode = !this.editingLaundryId && this.laundryEntryMode === "batch";
         const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === draft.linkedCleaningId) || null;
+        const unlinkedLaundryEntries = this.getVisibleLaundryRegisterEntries(
+            laundrySummary.entries.filter((entry) => entry.source !== "cleaning" && !entry.linkedCleaningId && !this.isLaundryLinkIgnored(entry))
+        ).slice(0, 8);
         const singlePreview = createStandaloneLaundryRecord({
             date: draft.date,
             propertyName: linkedCleaning?.propertyName || draft.propertyName,
@@ -2393,8 +2563,9 @@ export class CleaningAhManager {
             notes: draft.notes
         });
         const batchPreview = this.getLaundryBatchPreview();
-        const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId, linkedCleaning?.propertyName || draft.propertyName)
-            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === draft.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkLabel(record))}</option>`)
+        const preferredPropertyName = linkedCleaning?.propertyName || draft.propertyName;
+        const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId, preferredPropertyName, { receivedDate: draft.date })
+            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === draft.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkOptionLabel(record, preferredPropertyName, draft.date))}</option>`)
             .join("");
 
         return `
@@ -2435,6 +2606,7 @@ export class CleaningAhManager {
                         </div>
                         <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(visibleLaundryRegisterEntries.length))}</div>
                     </div>
+                    ${this.renderUnlinkedLaundryReview(unlinkedLaundryEntries)}
                     ${this.renderLaundryRegisterControls()}
                     <div class="mt-5 overflow-x-auto">
                         ${this.renderLaundryTable(visibleLaundryRegisterEntries)}
@@ -2449,7 +2621,7 @@ export class CleaningAhManager {
             <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.laundryReceivedDate"))}</span>
                         <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                     </label>
                     <label class="block md:col-span-2 lg:col-span-3">
@@ -2777,13 +2949,20 @@ export class CleaningAhManager {
     renderCleaningQuickLaundryEntry(record) {
         const draft = this.getCleaningQuickLaundryDraft(record);
         const isUpdatingExisting = draft.editingLaundryId || draft.updatesInlineCleaning;
+        const kg = toOptionalNumber(draft.kg);
+        const laundryRatePerKg = toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+        const amount = toOptionalNumber(draft.amount);
+        const amountValue = kg !== null && kg > 0 && (amount === null || amount <= 0)
+            ? roundCurrency(kg * laundryRatePerKg)
+            : draft.amount;
 
         return `
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-cleaning-laundry-entry="${escapeHtml(record.id || "")}">
+                <div class="mb-3 text-xs font-medium text-slate-500">${escapeHtml(this.tr("forms.cleaningDate"))}: ${escapeHtml(this.formatDate(record.date))}</div>
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_120px_130px_140px_minmax(0,1fr)]">
+                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_120px_140px_130px_minmax(0,1fr)]">
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.date"))}</span>
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.laundryReceivedDate"))}</span>
                             <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                         </label>
                         <label class="block">
@@ -2791,12 +2970,12 @@ export class CleaningAhManager {
                             <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.amount"))}</span>
-                            <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.amount))}" placeholder="0">
-                        </label>
-                        <label class="block">
                             <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
                             <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.totalAmount"))}</span>
+                            <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(amountValue))}" placeholder="0">
                         </label>
                         <label class="block">
                             <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</span>
@@ -2878,8 +3057,8 @@ export class CleaningAhManager {
             `;
         }
 
-        const linkOptions = this.getLaundryLinkOptions(entry.linkedCleaningId, entry.propertyName)
-            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === entry.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkLabel(record))}</option>`)
+        const linkOptions = this.getLaundryLinkOptions(entry.linkedCleaningId, entry.propertyName, { receivedDate: entry.date })
+            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === entry.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkOptionLabel(record, entry.propertyName, entry.date))}</option>`)
             .join("");
 
         return `
@@ -3071,6 +3250,42 @@ export class CleaningAhManager {
         `;
     }
 
+    renderUnlinkedLaundryReview(entries) {
+        const reviewEntries = entries.filter((entry) => !this.isLaundryLinkIgnored(entry));
+        if (!reviewEntries.length) {
+            return "";
+        }
+
+        return `
+            <section class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">${escapeHtml(this.tr("laundryTab.reviewKicker"))}</div>
+                        <h4 class="mt-1 text-base font-semibold text-amber-950">${escapeHtml(this.tr("laundryTab.reviewTitle"))}</h4>
+                    </div>
+                    <div class="text-sm text-amber-800">${escapeHtml(this.getRowsLabel(reviewEntries.length))}</div>
+                </div>
+                <div class="mt-3 space-y-3">
+                    ${reviewEntries.map((entry) => `
+                        <article class="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                            <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold text-slate-900">${escapeHtml(entry.propertyName || this.tr("labels.unknown"))}</div>
+                                    <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.laundryReceivedDate"))}: ${escapeHtml(this.formatDate(entry.date))} - ${escapeHtml(this.formatNumber(entry.kg))} kg - ${escapeHtml(this.formatCurrency(entry.amount))}</div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex w-fit items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">${escapeHtml(this.tr("laundryState.needsReview"))}</span>
+                                    <button type="button" data-action="ignore-laundry-link" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-slate-500 hover:text-slate-800">${escapeHtml(this.tr("actions.ignoreLink"))}</button>
+                                </div>
+                            </div>
+                            ${this.renderLaundryQuickLinkControls(entry)}
+                        </article>
+                    `).join("")}
+                </div>
+            </section>
+        `;
+    }
+
     renderLaundryTable(entries) {
         if (!entries.length) {
             return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.empty"))}</div>`;
@@ -3080,7 +3295,7 @@ export class CleaningAhManager {
             <table class="min-w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundryReceivedDate"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.linkedCleaning"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
@@ -3100,6 +3315,8 @@ export class CleaningAhManager {
                             <td class="px-3 py-3 text-sm text-slate-600">
                                 ${entry.linkedCleaningId
                                     ? `${escapeHtml(this.formatDate(entry.linkedCleaningDate || ""))}${entry.linkedCleaningCategory ? `<div class="text-xs text-slate-400">${escapeHtml(entry.linkedCleaningCategory)}</div>` : ""}`
+                                    : this.isLaundryLinkIgnored(entry)
+                                    ? `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.ignored"))}</span>`
                                     : `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.notLinked"))}</span>`}
                                 ${this.renderLaundryQuickLinkControls(entry)}
                             </td>
@@ -3400,6 +3617,12 @@ export class CleaningAhManager {
             this.laundryDraft = this.readLaundryDraftFromDom();
             this.updateLaundryPreview();
         });
+        laundryForm?.addEventListener("change", (event) => {
+            if (event.target?.name === "propertyName" || event.target?.name === "date") {
+                this.laundryDraft = this.readLaundryDraftFromDom();
+                this.render();
+            }
+        });
         laundryForm?.addEventListener("submit", (event) => {
             event.preventDefault();
             this.saveLaundryRecord();
@@ -3504,12 +3727,15 @@ export class CleaningAhManager {
             });
         });
         document.querySelectorAll("[data-cleaning-laundry-entry]").forEach((container) => {
-            container.addEventListener("input", () => {
+            container.addEventListener("input", (event) => {
                 const recordId = container.dataset.cleaningLaundryEntry || "";
                 if (!recordId) {
                     return;
                 }
 
+                if (event.target?.name === "kg" || event.target?.name === "laundryRatePerKg") {
+                    this.updateCleaningQuickLaundryAmount(container);
+                }
                 this.cleaningLaundryQuickDrafts[recordId] = this.readCleaningQuickLaundryDraftFromContainer(container, recordId);
             });
         });
@@ -3547,6 +3773,9 @@ export class CleaningAhManager {
                 const select = controls?.querySelector("[data-laundry-link-select]");
                 this.saveLaundryLink(button.dataset.id || "", select?.value || "");
             });
+        });
+        document.querySelectorAll("[data-action='ignore-laundry-link']").forEach((button) => {
+            button.addEventListener("click", () => this.ignoreLaundryLink(button.dataset.id || ""));
         });
         document.querySelectorAll("[data-action='open-cleaning-from-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.openCleaningFromLaundry(button.dataset.id || ""));
@@ -3719,6 +3948,21 @@ export class CleaningAhManager {
 
         const preview = this.getLaundryBatchPreview(this.readLaundryBatchDraftFromDom());
         container.innerHTML = this.renderLaundryBatchPreview(preview);
+    }
+
+    updateCleaningQuickLaundryAmount(container) {
+        if (!container) return;
+
+        const kg = toOptionalNumber(container.querySelector('[name="kg"]')?.value);
+        const laundryRatePerKg = toOptionalNumber(container.querySelector('[name="laundryRatePerKg"]')?.value) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+        const amountInput = container.querySelector('[name="amount"]');
+        if (!amountInput) {
+            return;
+        }
+
+        amountInput.value = kg !== null && kg > 0
+            ? toInputNumber(roundCurrency(kg * laundryRatePerKg))
+            : "";
     }
 
     async saveCleaningRecord({ keepContext = false } = {}) {
@@ -4070,6 +4314,8 @@ export class CleaningAhManager {
         const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === linkedCleaningId) || null;
         const payload = {
             linkedCleaningId: linkedCleaning ? linkedCleaning.id : "",
+            linkStatus: linkedCleaning ? "" : "",
+            ignoreLink: false,
             updatedAt: new Date()
         };
 
@@ -4092,6 +4338,30 @@ export class CleaningAhManager {
         } catch (error) {
             console.error("[Cleaning AH] failed to update laundry link:", error);
             this.setStatus(this.tr("status.laundryLinkSaveFailed"), "error");
+            this.render();
+        }
+    }
+
+    async ignoreLaundryLink(recordId) {
+        const existingLaundry = this.laundryRecords.find((entry) => entry.id === recordId);
+        if (!recordId || !existingLaundry) {
+            return;
+        }
+
+        try {
+            await updateDoc(doc(this.db, "cleaningAhLaundryRecords", recordId), {
+                ...existingLaundry,
+                linkedCleaningId: "",
+                linkStatus: "ignored",
+                ignoreLink: true,
+                updatedAt: new Date()
+            });
+            this.openLaundryLinkEditorId = "";
+            this.setStatus(this.tr("status.laundryLinkIgnored"), "success");
+            this.render();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to ignore laundry link:", error);
+            this.setStatus(this.tr("status.laundryLinkIgnoreFailed"), "error");
             this.render();
         }
     }

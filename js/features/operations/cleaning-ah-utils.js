@@ -71,6 +71,14 @@ function toFiniteNumber(value, fallback = 0) {
 }
 
 function toNullableFiniteNumber(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+        return null;
+    }
+
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
 }
@@ -333,7 +341,7 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
     );
     const totalToAhWithoutLaundry = roundCurrency(guestAmount - platformCommission - vatAmount);
     const laundryAmount = roundCurrency(
-        explicitLaundryAmount !== null
+        explicitLaundryAmount !== null && explicitLaundryAmount > 0
             ? explicitLaundryAmount
             : (laundryKg || 0) * laundryRatePerKg
     );
@@ -463,7 +471,7 @@ export function createStandaloneLaundryRecord(input = {}, defaults = CLEANING_AH
         defaults.laundryRatePerKg
     );
     const explicitAmount = toNullableFiniteNumber(input.amount);
-    const amount = roundCurrency(explicitAmount !== null ? explicitAmount : kg * laundryRatePerKg);
+    const amount = roundCurrency(explicitAmount !== null && explicitAmount > 0 ? explicitAmount : kg * laundryRatePerKg);
 
     return {
         date,
@@ -650,7 +658,7 @@ function buildLinkedLaundryMap(standaloneLaundryRecords = []) {
             kg: 0,
             count: 0
         };
-        existing.amount = roundCurrency(existing.amount + toFiniteNumber(record.amount, 0));
+        existing.amount = roundCurrency(existing.amount + resolveLaundryAmount(record, 'amount'));
         existing.kg = roundCurrency(existing.kg + resolveLaundryKg(record));
         existing.count += 1;
         linkedLaundryMap.set(linkedCleaningId, existing);
@@ -663,7 +671,7 @@ export function deriveCleaningAhRecords(records = [], standaloneLaundryRecords =
     const linkedLaundryMap = buildLinkedLaundryMap(standaloneLaundryRecords);
 
     return records.map((record) => {
-        const inlineLaundryAmount = roundCurrency(toFiniteNumber(record.laundryAmount, 0));
+        const inlineLaundryAmount = resolveLaundryAmount(record, 'laundryAmount');
         const linkedLaundry = linkedLaundryMap.get(record.id) || { amount: 0, kg: 0, count: 0 };
         const effectiveLaundryAmount = roundCurrency(inlineLaundryAmount + linkedLaundry.amount);
         const effectiveLaundryKg = roundCurrency(
@@ -922,11 +930,26 @@ function resolveLaundryKg(record) {
     return estimatedKg !== null ? estimatedKg : 0;
 }
 
+export function resolveLaundryAmount(record = {}, amountField = 'amount') {
+    const explicitAmount = toNullableFiniteNumber(record[amountField]);
+    if (explicitAmount !== null && explicitAmount > 0) {
+        return roundCurrency(explicitAmount);
+    }
+
+    const kg = resolveLaundryKg(record);
+    if (kg <= 0) {
+        return roundCurrency(explicitAmount || 0);
+    }
+
+    const laundryRatePerKg = toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg);
+    return roundCurrency(kg * laundryRatePerKg);
+}
+
 export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryRecords = []) {
     const cleaningsById = new Map(cleaningRecords.map((record) => [record.id, record]));
     const combinedEntries = [
         ...cleaningRecords
-            .filter((record) => toFiniteNumber(record.laundryAmount, 0) > 0)
+            .filter((record) => resolveLaundryAmount(record, 'laundryAmount') > 0)
             .map((record) => ({
                 id: record.id || '',
                 date: record.date,
@@ -934,7 +957,7 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
                 propertyName: record.propertyName,
                 propertyId: record.propertyId || '',
                 kg: resolveLaundryKg(record),
-                amount: roundCurrency(record.laundryAmount),
+                amount: resolveLaundryAmount(record, 'laundryAmount'),
                 laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
                 source: 'cleaning',
                 category: record.category,
@@ -952,13 +975,15 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
                 propertyName: linkedCleaning?.propertyName || record.propertyName,
                 propertyId: record.propertyId || '',
                 kg: resolveLaundryKg(record),
-                amount: roundCurrency(record.amount),
+                amount: resolveLaundryAmount(record, 'amount'),
                 laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
                 source: record.source || 'manual',
                 category: record.category || '',
                 linkedCleaningId: linkedCleaning ? (record.linkedCleaningId || '') : '',
                 linkedCleaningDate: linkedCleaning?.date || '',
                 linkedCleaningCategory: linkedCleaning?.category || '',
+                linkStatus: record.linkStatus || '',
+                ignoreLink: record.ignoreLink === true,
                 notes: record.notes || ''
             };
         })
@@ -1038,7 +1063,8 @@ function compareCleaningEntryProperties(left, right) {
 }
 
 function hasCleaningLaundry(entry) {
-    return toFiniteNumber(entry.effectiveLaundryAmount ?? entry.laundryAmount, 0) > 0
+    return toFiniteNumber(entry.effectiveLaundryAmount, 0) > 0
+        || resolveLaundryAmount(entry, 'laundryAmount') > 0
         || toFiniteNumber(entry.linkedLaundryAmount, 0) > 0
         || toFiniteNumber(entry.linkedLaundryCount, 0) > 0;
 }
