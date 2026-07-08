@@ -1777,4 +1777,177 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("isMonthEndWindow returns true during first 3 days and last 3 days of any month", () => {
+    // First 3 days
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-01"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-02"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-03"), true);
+    
+    // Middle of month
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-15"), false);
+    
+    // Last 3 days of July (31 days)
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-28"), false);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-29"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-30"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-31"), true);
+
+    // Last 3 days of June (30 days)
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-27"), false);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-28"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-29"), true);
+    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-30"), true);
+  });
+
+  test("renders month-end checklist banner when inside window and has unresolved items", () => {
+    resetDom();
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          register: {
+            monthEndChecklistTitle: "Month-End Close Checklist",
+            monthEndChecklistDescription: "Please resolve the following prior-month pending items:",
+            monthEndPriorWaiting: {
+              one: "1 prior-month cleaning awaiting laundry decision",
+              other: "{{count}} prior-month cleanings awaiting laundry decision"
+            },
+            monthEndUnlinkedLaundry: {
+              one: "1 standalone laundry record with no linked cleaning",
+              other: "{{count}} standalone laundry records with no linked cleaning"
+            },
+            viewPriorWaiting: "View pending",
+            dismissForToday: "Dismiss for today"
+          },
+          laundryState: {
+            waiting: "waiting"
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const realDate = Date;
+    globalThis.Date = function(...args) {
+      if (args.length === 0) {
+        return new realDate("2026-07-01T12:00:00Z");
+      }
+      return new realDate(...args);
+    };
+    globalThis.Date.now = () => new realDate("2026-07-01T12:00:00Z").getTime();
+    globalThis.Date.prototype = realDate.prototype;
+
+    manager.cleaningRecords = [
+      {
+        id: "cleaning-prior",
+        date: "2026-06-25",
+        monthKey: "2026-06",
+        propertyName: "Acqua Beach",
+        laundryStatus: "waiting"
+      }
+    ];
+    manager.laundryRecords = [
+      {
+        id: "laundry-unlinked",
+        date: "2026-06-26",
+        propertyName: "Villa Mar",
+        linkedCleaningId: ""
+      }
+    ];
+
+    const allDerived = [
+      {
+        id: "cleaning-prior",
+        date: "2026-06-25",
+        propertyName: "Acqua Beach"
+      }
+    ];
+
+    const bannerHtml = manager.renderMonthEndChecklistBanner(allDerived);
+    assert.includes(bannerHtml, "Month-End Close Checklist");
+    assert.includes(bannerHtml, "1 prior-month cleaning awaiting laundry decision");
+    assert.includes(bannerHtml, "1 standalone laundry record with no linked cleaning");
+
+    globalThis.Date = realDate;
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
+  });
+
+  test("renders heatmap cells with correct interactive click and hover attributes", () => {
+    const manager = new CleaningAhManager(null);
+    const records = [
+      { propertyName: "Acqua Beach", date: "2026-07-05", totalToAh: 120 }
+    ];
+    const html = manager.renderPropertyMonthHeatmap(records);
+    assert.includes(html, "data-action=\"open-heatmap-detail\"");
+    assert.includes(html, "data-property=\"Acqua Beach\"");
+    assert.includes(html, "data-month=\"2026-07\"");
+    assert.includes(html, "cursor-pointer");
+  });
+
+  test("renders heatmap detail modal when active", () => {
+    const manager = new CleaningAhManager(null);
+    manager.heatmapDetailModal = { propertyName: "Acqua Beach", monthKey: "2026-07" };
+    const allRecords = [
+      { propertyName: "Acqua Beach", date: "2026-07-05", categoryKey: "checkout", reservationSource: "platform", guestAmount: 150, platformCommission: 15, vatAmount: 22, effectiveLaundryAmount: 30, effectiveTotalToAh: 105 }
+    ];
+    const html = manager.renderHeatmapDetailModal(allRecords);
+    assert.includes(html, "Acqua Beach");
+    assert.includes(html, "2026-07-05");
+    assert.includes(html, "data-action=\"close-heatmap-detail\"");
+  });
+
+  test("exportMonthReportAsPDF generates and saves report correctly", () => {
+    const manager = new CleaningAhManager(null);
+    manager.cleaningRecords = [
+      { id: "c1", date: "2026-07-05", propertyName: "Acqua Beach", categoryKey: "checkout", guestAmount: 150, platformCommission: 15, vatAmount: 22, laundryAmount: 30 }
+    ];
+    manager.laundryRecords = [];
+
+    let constructorCalled = false;
+    let autoTableCalls = [];
+    let saveCalledFilename = null;
+
+    class jsPDFMock {
+      constructor(options) {
+        constructorCalled = true;
+        this.options = options;
+        this.internal = {
+          getNumberOfPages: () => 1
+        };
+        this.lastAutoTable = { finalY: 100 };
+      }
+      setFont() {}
+      setFontSize() {}
+      setTextColor() {}
+      setDrawColor() {}
+      setLineWidth() {}
+      line() {}
+      text() {}
+      addPage() {}
+      autoTable(config) {
+        autoTableCalls.push(config);
+      }
+      save(filename) {
+        saveCalledFilename = filename;
+      }
+    }
+
+    const originalJspdf = window.jspdf;
+    window.jspdf = { jsPDF: jsPDFMock };
+
+    try {
+      manager.exportMonthReportAsPDF("2026-07");
+
+      assert.ok(constructorCalled);
+      assert.equal(autoTableCalls.length, 2); // highlights + properties
+      assert.equal(saveCalledFilename, "financial-report-2026-07.pdf");
+    } finally {
+      window.jspdf = originalJspdf;
+    }
+  });
 });

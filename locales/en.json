@@ -887,7 +887,32 @@
       "queueDescription": "Today's cleanings and rows still waiting for a laundry decision appear here for quick updates.",
       "emptyQueue": "No today's rows or pending laundry rows match the current filters.",
       "queueSortOldest": "Oldest",
-      "queueSortNewest": "Newest"
+      "queueSortNewest": "Newest",
+      "queueCompactView": "Compact view",
+      "queueExpandedView": "Expanded view",
+      "inlineKgPlaceholder": "kg…",
+      "saveKg": "Save kg",
+      "duplicateWarning": "A cleaning already exists for this property on this date. You can still save a second row.",
+      "overdueTitle": "Overdue laundry",
+      "overdueKicker": "Reconciliation",
+      "overdueDescription": "Cleanings waiting for a laundry decision for 10 or more days.",
+      "overdueCount": {
+        "one": "1 cleaning waiting 10+ days",
+        "other": "{{count}} cleanings waiting 10+ days"
+      },
+      "markAllNoLaundry": "Mark all as no laundry",
+      "monthEndChecklistTitle": "Month-End Close Checklist",
+      "monthEndChecklistDescription": "Please resolve prior-month items before closing the month.",
+      "monthEndPriorWaiting": {
+        "one": "1 prior-month cleaning is still awaiting laundry decision.",
+        "other": "{{count}} prior-month cleanings are still awaiting laundry decision."
+      },
+      "monthEndUnlinkedLaundry": {
+        "one": "1 standalone laundry record is not linked to any cleaning.",
+        "other": "{{count}} standalone laundry records are not linked to any cleaning."
+      },
+      "dismissForToday": "Dismiss for today",
+      "viewPriorWaiting": "Filter waiting"
     },
     "categories": {
       "checkout": {
@@ -973,6 +998,20 @@
       "focusByCategory": "Selected property by category",
       "focusByReservation": "Selected property by reservation",
       "recentEntries": "Recent entries",
+      "laundryTrendKicker": "Laundry History",
+      "laundryTrendTitle": "Laundry Trend by Month",
+      "laundryTrendDescription": "Average kg per cleaning, total amount spent, and effective cost per kg over time.",
+      "laundryTrendCostPerKg": "Cost / Kg",
+      "heatmapKicker": "Distribution",
+      "heatmapTitle": "Monthly Revenue Heatmap",
+      "heatmapDescription": "Top 15 properties ranked by total net revenue, broken down by month (color intensity represents relative value).",
+      "heatmapDetailKicker": "Monthly Checkout Breakdown",
+      "exportReport": "Export PDF Summary",
+      "exportKicker": "Reports",
+      "exportTitle": "Export Monthly Report",
+      "exportDescription": "Generate a print-ready PDF financial report for any selected month. The report includes checkout details, laundry expenses, and VAT summaries.",
+      "exportSelectMonth": "Select Month",
+      "exportDownloadBtn": "Download Report",
       "empty": "No properties with entries match the current filters.",
       "workflow": {
         "step1": "Pick a cleaning type first if you want like-for-like comparisons, because each category uses different revenue rules.",
@@ -1214,7 +1253,8 @@
       "reset": "Reset",
       "openCleaning": "Open cleaning",
       "addRow": "Add row",
-      "removeRow": "Remove row"
+      "removeRow": "Remove row",
+      "fillForm": "Fill form"
     },
     "counts": {
       "rows": {
@@ -1269,6 +1309,8 @@
       "laundryLinkIgnoreFailed": "Laundry row could not be ignored.",
       "noLaundryMarked": "Cleaning marked as no laundry.",
       "noLaundryMarkFailed": "Could not mark the cleaning as no laundry.",
+      "markAllNoLaundrySuccess": "Successfully marked {{count}} cleanings as having no laundry.",
+      "markAllNoLaundryFailed": "Failed to mark cleanings as having no laundry.",
       "duplicateSaveCancelled": "Duplicate save cancelled.",
       "csvPreviewReady": "Parsed {{count}} CSV rows. Review the preview before importing.",
       "csvPreviewFailed": "CSV preview failed. Check the file format and try again.",
@@ -1295,10 +1337,13 @@
       "deleteCleaningWithLinked": "Delete this cleaning record? {{count}} linked laundry rows will be kept and unlinked.",
       "deleteCleaning": "Delete this cleaning record?",
       "deleteLaundry": "Delete this laundry record?",
-      "deleteSpecialCleaning": "Delete this special cleaning record?"
+      "deleteSpecialCleaning": "Delete this special cleaning record?",
+      "markAllNoLaundry": "Are you sure you want to mark all {{count}} overdue cleanings as having no laundry?"
     },
     "labels": {
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
     }
   },
   "userManagement": {

@@ -22,6 +22,7 @@ import {
     parseCleaningAhCsv,
     resolveLaundryAmount,
     roundCurrency,
+    deriveCleaningAhRecords,
     summarizeCleaningAhRecords,
     summarizeCleaningAhPropertyDetail,
     summarizeCleaningAhPropertyRows,
@@ -76,6 +77,23 @@ function getTodayIsoDate() {
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+}
+
+function isMonthEndWindow(todayStr) {
+    const parts = todayStr.split("-").map(Number);
+    if (parts.length !== 3) return false;
+    const year = parts[0];
+    const month = parts[1] - 1; // 0-based month
+    const day = parts[2];
+    
+    // First 3 days of any month
+    if (day <= 3) return true;
+    
+    // Last 3 days of the month
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    if (day >= daysInMonth - 2) return true;
+    
+    return false;
 }
 
 function parseIsoDateToUtc(value) {
@@ -153,13 +171,18 @@ export class CleaningAhManager {
         this.calendarDate = getTodayIsoDate();
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
-        this.registerQueueSort = "oldest";
+        this.registerQueueSort = localStorage.getItem("cleaningAhRegisterQueueSort") || "oldest";
+        this.registerQueueCompact = localStorage.getItem("cleaningAhRegisterQueueCompact") === "true";
+        this.inlineKgDrafts = {};
+        this.fastRegisterDuplicateWarning = false;
         this.laundryRegisterFilter = "all";
         this.laundryRegisterSort = "date-desc";
         this.openLaundryLinkEditorId = "";
         this.openCleaningLaundryEntryId = "";
         this.cleaningLaundryQuickDrafts = {};
         this.calendarModalMode = "";
+        this.heatmapDetailModal = null;
+        this.exportModalActive = false;
 
         this.editingCleaningId = null;
         this.editingLaundryId = null;
@@ -1628,6 +1651,13 @@ export class CleaningAhManager {
         const selectedStatsPropertyName = this.getStatsSelectedPropertyName(statsPropertyRows);
         const selectedStatsPropertyDetail = summarizeCleaningAhPropertyDetail(statsCleaningSummary.records, selectedStatsPropertyName);
 
+        const today = getTodayIsoDate();
+        const allDerivedCleanings = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords);
+        const overdueCount = allDerivedCleanings.filter((record) => {
+            return this.getCleaningLaundryState(record).key === "waiting"
+                && this.getCleaningWaitingDays(record, today) >= 10;
+        }).length;
+
         root.innerHTML = `
             ${this.renderStatusMessage()}
             <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -1648,7 +1678,7 @@ export class CleaningAhManager {
             </section>
 
             ${this.renderFilters()}
-            ${this.renderTabBar()}
+            ${this.renderTabBar(overdueCount)}
             ${this.renderActiveTab(
                 visibleCleaningRegisterEntries,
                 derivedCleanings,
@@ -1660,8 +1690,11 @@ export class CleaningAhManager {
                 statsPropertyRows,
                 statsCategoryOptions,
                 selectedStatsPropertyName,
-                selectedStatsPropertyDetail
+                selectedStatsPropertyDetail,
+                allDerivedCleanings
             )}
+            ${this.renderHeatmapDetailModal(statsCleaningSummary.records)}
+            ${this.renderExportReportModal(statsCleaningSummary.records, laundrySummary)}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
         `;
 
@@ -1807,7 +1840,7 @@ export class CleaningAhManager {
         `;
     }
 
-    renderTabBar() {
+    renderTabBar(overdueCount = 0) {
         const tabs = [
             ["register", this.tr("tabs.register")],
             ["calendar", this.tr("tabs.calendar")],
@@ -1819,13 +1852,19 @@ export class CleaningAhManager {
 
         return `
             <nav class="flex flex-wrap gap-2" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
-                ${tabs.map(([key, label]) => `
-                    <button
-                        type="button"
-                        data-tab="${key}"
-                        class="view-btn ${this.activeTab === key ? "active" : ""}"
-                    >${escapeHtml(label)}</button>
-                `).join("")}
+                ${tabs.map(([key, label]) => {
+                    const isRegister = key === "register";
+                    const badge = isRegister && overdueCount > 0
+                        ? `<span class="ml-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white leading-none" aria-label="${escapeHtml(String(overdueCount))} overdue">${escapeHtml(String(overdueCount))}</span>`
+                        : "";
+                    return `
+                        <button
+                            type="button"
+                            data-tab="${key}"
+                            class="view-btn ${this.activeTab === key ? "active" : ""}"
+                        >${escapeHtml(label)}${badge}</button>
+                    `;
+                }).join("")}
             </nav>
         `;
     }
@@ -1841,10 +1880,11 @@ export class CleaningAhManager {
         statsPropertyRows,
         statsCategoryOptions,
         selectedStatsPropertyName,
-        selectedStatsPropertyDetail
+        selectedStatsPropertyDetail,
+        allDerivedCleanings
     ) {
         if (this.activeTab === "register") {
-            return this.renderRegisterTab(visibleCleaningRegisterEntries);
+            return this.renderRegisterTab(visibleCleaningRegisterEntries, allDerivedCleanings);
         }
 
         if (this.activeTab === "calendar") {
@@ -1868,7 +1908,9 @@ export class CleaningAhManager {
             statsPropertyRows,
             statsCategoryOptions,
             selectedStatsPropertyName,
-            selectedStatsPropertyDetail
+            selectedStatsPropertyDetail,
+            laundrySummary,
+            cleaningSummary.records
         );
     }
 
@@ -2084,6 +2126,17 @@ export class CleaningAhManager {
         `;
     }
 
+    getCalendarChipDotClass(record) {
+        const key = this.getCleaningLaundryState(record).key;
+        const classes = {
+            waiting: "bg-sky-500 border-sky-300",
+            added: "bg-emerald-500 border-emerald-300",
+            none: "bg-slate-300 border-slate-200",
+            "needs-correction": "bg-amber-500 border-amber-300"
+        };
+        return classes[key] || classes.waiting;
+    }
+
     renderCalendarCleaningChip(record, index) {
         const state = this.getCleaningLaundryState(record);
         return `
@@ -2091,14 +2144,146 @@ export class CleaningAhManager {
                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-semibold">${escapeHtml(String(index))}</span>
                 <span class="min-w-0 flex-1">
                     <span class="block truncate font-medium">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</span>
-                    <span class="block truncate text-xs opacity-75">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))} - ${escapeHtml(state.label)}</span>
+                    <span class="block truncate text-xs opacity-75">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</span>
                 </span>
-                <span class="h-3 w-3 shrink-0 rounded-sm border border-white/80 bg-white/60" aria-hidden="true"></span>
+                <span class="h-2.5 w-2.5 shrink-0 rounded-full border ${this.getCalendarChipDotClass(record)}" title="${escapeHtml(state.label)}" aria-label="${escapeHtml(state.label)}"></span>
             </button>
         `;
     }
 
-    renderRegisterTab(derivedCleanings) {
+    renderMonthEndChecklistBanner(allDerivedCleanings = []) {
+        const today = getTodayIsoDate();
+        if (!isMonthEndWindow(today)) return "";
+        if (localStorage.getItem("monthEndDismissedAt") === today) return "";
+
+        const currentMonthKey = today.slice(0, 7);
+        const priorWaitingCleanings = allDerivedCleanings.filter((record) => {
+            const recordMonthKey = (record.date || "").slice(0, 7);
+            return recordMonthKey < currentMonthKey
+                && this.getCleaningLaundryState(record).key === "waiting";
+        });
+
+        const cleaningsById = new Map(this.cleaningRecords.map((c) => [c.id, c]));
+        const unlinkedLaundry = this.laundryRecords.filter((record) => {
+            return !record.linkedCleaningId || !cleaningsById.has(record.linkedCleaningId);
+        });
+
+        if (priorWaitingCleanings.length === 0 && unlinkedLaundry.length === 0) {
+            return "";
+        }
+
+        return `
+            <div class="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50 via-indigo-50 to-white p-6 shadow-sm">
+                <div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-sky-200/40 blur-3xl"></div>
+                <div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-indigo-200/40 blur-3xl"></div>
+                
+                <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-500 text-white shadow-md shadow-indigo-200">
+                            <i class="fas fa-clipboard-check text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("register.monthEndChecklistTitle"))}</div>
+                            <p class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("register.monthEndChecklistDescription"))}</p>
+                            
+                            <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                                ${priorWaitingCleanings.length > 0 ? `
+                                    <div class="flex items-center gap-2 text-amber-700">
+                                        <i class="fas fa-circle-exclamation text-xs"></i>
+                                        <span>${escapeHtml(this.trCount("register.monthEndPriorWaiting", priorWaitingCleanings.length))}</span>
+                                        <button type="button" data-action="filter-prior-waiting" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 ml-1 transition">
+                                            ${escapeHtml(this.tr("register.viewPriorWaiting"))}
+                                        </button>
+                                    </div>
+                                ` : ""}
+                                ${unlinkedLaundry.length > 0 ? `
+                                    <div class="flex items-center gap-2 text-rose-700">
+                                        <i class="fas fa-circle-exclamation text-xs"></i>
+                                        <span>${escapeHtml(this.trCount("register.monthEndUnlinkedLaundry", unlinkedLaundry.length))}</span>
+                                    </div>
+                                ` : ""}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-3 self-end sm:self-center">
+                        <button type="button" data-action="dismiss-month-end" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition active:scale-95">
+                            <i class="fas fa-eye-slash mr-1.5"></i>
+                            ${escapeHtml(this.tr("register.dismissForToday"))}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderOverdueReconciliationPanel(allDerivedCleanings = []) {
+        const today = getTodayIsoDate();
+        const overdueCleanings = allDerivedCleanings.filter((record) => {
+            return this.getCleaningLaundryState(record).key === "waiting"
+                && this.getCleaningWaitingDays(record, today) >= 10;
+        });
+
+        if (overdueCleanings.length === 0) return "";
+
+        const overdueIds = overdueCleanings.map((c) => c.id).filter(Boolean);
+
+        return `
+            <section class="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600">${escapeHtml(this.tr("register.overdueKicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.trCount("register.overdueCount", overdueCleanings.length))}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.overdueDescription"))}</p>
+                    </div>
+                    <div>
+                        <button type="button" data-action="mark-all-overdue-no-laundry" data-ids="${escapeHtml(overdueIds.join(","))}" class="rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition active:scale-95">
+                            <i class="fas fa-check-double mr-1.5"></i>
+                            ${escapeHtml(this.tr("register.markAllNoLaundry"))}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-5 overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th class="py-3 px-4">${escapeHtml(this.tr("forms.property"))}</th>
+                                <th class="py-3 px-4">${escapeHtml(this.tr("forms.cleaningDate"))}</th>
+                                <th class="py-3 px-4">${escapeHtml(this.tr("labels.daysWaiting"))}</th>
+                                <th class="py-3 px-4 text-right">${escapeHtml(this.tr("metrics.guestTotal"))}</th>
+                                <th class="py-3 px-4 text-right">${escapeHtml(this.tr("labels.actions"))}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            ${overdueCleanings.map((record) => {
+                                const waitingDays = this.getCleaningWaitingDays(record, today);
+                                return `
+                                    <tr class="hover:bg-slate-50/80 transition-colors">
+                                        <td class="py-3.5 px-4 font-medium text-slate-900">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</td>
+                                        <td class="py-3.5 px-4">${escapeHtml(record.date)}</td>
+                                        <td class="py-3.5 px-4">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                                ${escapeHtml(this.trCount("counts.daysWaiting", waitingDays))}
+                                            </span>
+                                        </td>
+                                        <td class="py-3.5 px-4 text-right">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
+                                        <td class="py-3.5 px-4 text-right">
+                                            <button type="button" data-action="mark-no-laundry" data-id="${escapeHtml(record.id || "")}" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition">
+                                                <i class="fas fa-check mr-1"></i>
+                                                ${escapeHtml(this.tr("actions.markNoLaundry"))}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        `;
+    }
+
+    renderRegisterTab(derivedCleanings, allDerivedCleanings = []) {
         const today = getTodayIsoDate();
         const todayEntries = derivedCleanings.filter((record) => record.date === today);
         const newestFirst = this.registerQueueSort === "newest";
@@ -2120,45 +2305,59 @@ export class CleaningAhManager {
             ["newest", this.tr("register.queueSortNewest")]
         ];
 
-        return `
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">${escapeHtml(this.tr("register.entryKicker"))}</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("register.entryTitle"))}</h3>
-                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.entryDescription"))}</p>
-                    </div>
-                    ${this.renderFastRegisterForm()}
-                </section>
+        const compactToggleIcon = this.registerQueueCompact ? "fa-table-cells" : "fa-list";
+        const compactToggleLabel = this.registerQueueCompact
+            ? this.tr("register.queueExpandedView")
+            : this.tr("register.queueCompactView");
 
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        return `
+            <div class="space-y-6">
+                ${this.renderMonthEndChecklistBanner(allDerivedCleanings)}
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
+                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm self-start xl:sticky xl:top-4">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("register.queueKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("register.queueTitle"))}</h3>
-                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.queueDescription"))}</p>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">${escapeHtml(this.tr("register.entryKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("register.entryTitle"))}</h3>
+                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.entryDescription"))}</p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(quickCards.length))}</div>
-                            <div class="flex items-center gap-1 rounded-full bg-slate-100 p-1">
-                                ${sortOptions.map(([value, label]) => `
-                                    <button
-                                        type="button"
-                                        data-action="set-register-queue-sort"
-                                        data-sort="${escapeHtml(value)}"
-                                        class="rounded-full px-3 py-1 text-xs font-medium transition ${this.registerQueueSort === value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}"
-                                    >${escapeHtml(label)}</button>
-                                `).join("")}
+                        ${this.renderFastRegisterForm()}
+                    </section>
+
+                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("register.queueKicker"))}</div>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("register.queueTitle"))}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.queueDescription"))}</p>
+                            </div>
+                            <div class="flex flex-col items-end gap-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(quickCards.length))}</div>
+                                    <button type="button" data-action="toggle-register-compact" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-800 transition" title="${escapeHtml(compactToggleLabel)}">
+                                        <i class="fas ${compactToggleIcon} text-xs"></i>
+                                    </button>
+                                </div>
+                                <div class="flex items-center gap-1 rounded-full bg-slate-100 p-1">
+                                    ${sortOptions.map(([value, label]) => `
+                                        <button
+                                            type="button"
+                                            data-action="set-register-queue-sort"
+                                            data-sort="${escapeHtml(value)}"
+                                            class="rounded-full px-3 py-1 text-xs font-medium transition ${this.registerQueueSort === value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}"
+                                        >${escapeHtml(label)}</button>
+                                    `).join("")}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                        ${quickCards.length
-                            ? quickCards.map((record) => this.renderRegisterQueueCard(record)).join("")
-                            : `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("register.emptyQueue"))}</div>`}
-                    </div>
+                        <div class="mt-5 ${this.registerQueueCompact ? "flex flex-col gap-1" : "grid grid-cols-1 gap-3 2xl:grid-cols-2"}">
+                            ${quickCards.length
+                                ? quickCards.map((record) => this.renderRegisterQueueCard(record)).join("")
+                                : `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("register.emptyQueue"))}</div>`}
+                        </div>
+                    </section>
                 </section>
-            </section>
+                ${this.renderOverdueReconciliationPanel(allDerivedCleanings)}
+            </div>
         `;
     }
 
@@ -2191,6 +2390,12 @@ export class CleaningAhManager {
 
         return `
             <form id="cleaning-ah-fast-register-form" class="mt-5 space-y-4">
+                ${this.fastRegisterDuplicateWarning ? `
+                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                        <i class="fas fa-triangle-exclamation mt-0.5 shrink-0"></i>
+                        <span>${escapeHtml(this.tr("register.duplicateWarning"))}</span>
+                    </div>
+                ` : ""}
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.cleaningDate"))}</span>
@@ -2245,6 +2450,27 @@ export class CleaningAhManager {
     renderRegisterQueueCard(record) {
         const state = this.getCleaningLaundryState(record);
         const waitingLabel = state.key === "waiting" ? this.getCleaningWaitingLabel(record) : "";
+        const compact = this.registerQueueCompact;
+        const inlineKg = this.inlineKgDrafts[record.id] ?? "";
+
+        if (compact) {
+            return `
+                <article class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-slate-900">${escapeHtml(record.propertyName)}</div>
+                        <div class="truncate text-xs text-slate-500">${escapeHtml(this.formatDate(record.date))} · ${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}${waitingLabel ? ` · ${escapeHtml(waitingLabel)}` : ""}</div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                        ${this.renderLaundryStateBadge(record)}
+                        ${state.key === "waiting" ? this.renderTableActionButton({ action: "mark-no-laundry", id: record.id, label: this.tr("actions.markNoLaundry"), iconClass: "fas fa-check", tone: "primary" }) : ""}
+                        ${this.renderTableActionButton({ action: "prefill-fast-form", id: record.id, label: this.tr("actions.fillForm"), iconClass: "fas fa-arrow-left", tone: "primary" })}
+                        ${this.renderTableActionButton({ action: "toggle-cleaning-laundry-entry", id: record.id, label: this.getCleaningQuickLaundryActionLabel(record), iconClass: "fas fa-plus", tone: "accent" })}
+                        ${this.renderTableActionButton({ action: "edit-cleaning", id: record.id, label: t("common.edit"), iconClass: "fas fa-pen", tone: "primary" })}
+                    </div>
+                </article>
+            `;
+        }
+
         return `
             <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="flex items-start justify-between gap-3">
@@ -2265,7 +2491,29 @@ export class CleaningAhManager {
                         <div class="font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}</div>
                     </div>
                 </div>
-                <div class="mt-4 flex flex-wrap justify-end gap-2">
+                ${state.key === "waiting" ? `
+                    <div class="mt-3 flex items-center gap-2">
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="${escapeHtml(this.tr("register.inlineKgPlaceholder"))}"
+                            value="${escapeHtml(inlineKg)}"
+                            data-action="update-inline-kg"
+                            data-id="${escapeHtml(record.id || "")}"
+                            class="w-28 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            aria-label="${escapeHtml(this.tr("forms.kg"))}"
+                        >
+                        <button
+                            type="button"
+                            data-action="save-inline-kg"
+                            data-id="${escapeHtml(record.id || "")}"
+                            class="view-btn active text-sm"
+                            ${!inlineKg ? "disabled" : ""}
+                        >${escapeHtml(this.tr("register.saveKg"))}</button>
+                    </div>
+                ` : ""}
+                <div class="mt-3 flex flex-wrap justify-end gap-2">
                     ${state.key === "waiting" ? this.renderTableActionButton({
                         action: "mark-no-laundry",
                         id: record.id,
@@ -2273,6 +2521,13 @@ export class CleaningAhManager {
                         iconClass: "fas fa-check",
                         tone: "primary"
                     }) : ""}
+                    ${this.renderTableActionButton({
+                        action: "prefill-fast-form",
+                        id: record.id,
+                        label: this.tr("actions.fillForm"),
+                        iconClass: "fas fa-arrow-left",
+                        tone: "primary"
+                    })}
                     ${this.renderTableActionButton({
                         action: "toggle-cleaning-laundry-entry",
                         id: record.id,
@@ -2293,7 +2548,8 @@ export class CleaningAhManager {
         `;
     }
 
-    renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail) {
+    renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail, laundrySummary = {}, allStatsRecords = []) {
+        const laundryByMonth = laundrySummary.byMonth || [];
         return `
             <section class="space-y-6">
                 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -2303,7 +2559,13 @@ export class CleaningAhManager {
                             <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.overviewTitle"))}</h3>
                             <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("stats.overviewDescription"))}</p>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
+                            <button type="button" data-action="open-export-modal" class="rounded-xl bg-indigo-50 px-4 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition active:scale-95">
+                                <i class="fas fa-file-export mr-1.5"></i>
+                                ${escapeHtml(this.tr("stats.exportReport"))}
+                            </button>
+                        </div>
                     </div>
                     <div class="mt-5 flex flex-wrap gap-2">
                         ${this.renderStatsCategorySwitcher(statsCategoryOptions)}
@@ -2338,8 +2600,435 @@ export class CleaningAhManager {
                             [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                         ])}
                 </section>
+                ${laundryByMonth.length > 0 ? `
+                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div class="mb-4">
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.laundryTrendKicker"))}</div>
+                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.laundryTrendTitle"))}</h3>
+                            <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.laundryTrendDescription"))}</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <th class="py-2 pr-4 text-left">${escapeHtml(this.tr("tables.month"))}</th>
+                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.rows"))}</th>
+                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.avgKg"))}</th>
+                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.laundry"))}</th>
+                                        <th class="py-2 text-right">${escapeHtml(this.tr("stats.laundryTrendCostPerKg"))}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${laundryByMonth.map((entry) => {
+                                        const kg = entry.totalKg || 0;
+                                        const amount = entry.totalAmount || entry.laundryAmount || 0;
+                                        const costPerKg = kg > 0 ? roundCurrency(amount / kg) : null;
+                                        return `
+                                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                                <td class="py-2 pr-4 font-medium text-slate-900">${escapeHtml(this.formatMonthKey(entry.label))}</td>
+                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(String(entry.count || 0))}</td>
+                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(this.formatNumber(entry.averageKg ?? (entry.totalKg && entry.count ? entry.totalKg / entry.count : 0)))}</td>
+                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(this.formatCurrency(amount))}</td>
+                                                <td class="py-2 text-right font-semibold ${costPerKg !== null ? "text-slate-900" : "text-slate-400"}">${costPerKg !== null ? escapeHtml(this.formatCurrency(costPerKg)) : "—"}</td>
+                                            </tr>
+                                        `;
+                                    }).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                ` : ""}
+                ${this.renderPropertyMonthHeatmap(allStatsRecords)}
             </section>
         `;
+    }
+
+    renderPropertyMonthHeatmap(records = []) {
+        if (!records.length) return "";
+        const cellMap = {};
+        const propertyTotals = {};
+        const monthSet = new Set();
+        for (const record of records) {
+            const prop = record.propertyName || "";
+            const monthKey = (record.date || "").slice(0, 7);
+            if (!prop || !monthKey) continue;
+            const cellKey = `${prop}||${monthKey}`;
+            const val = record.effectiveTotalToAh ?? record.totalToAh ?? 0;
+            cellMap[cellKey] = (cellMap[cellKey] || 0) + val;
+            propertyTotals[prop] = (propertyTotals[prop] || 0) + val;
+            monthSet.add(monthKey);
+        }
+        if (!monthSet.size) return "";
+        const months = [...monthSet].sort();
+        const properties = Object.keys(propertyTotals)
+            .sort((a, b) => propertyTotals[b] - propertyTotals[a])
+            .slice(0, 15);
+        const allValues = Object.values(cellMap).filter((v) => v > 0);
+        const maxVal = allValues.length ? Math.max(...allValues) : 1;
+        const cellBg = (value) => {
+            if (!value || value <= 0) return "";
+            const intensity = Math.min(1, value / maxVal);
+            const lightness = Math.round(97 - intensity * 55);
+            const saturation = Math.round(80 + intensity * 10);
+            return `hsl(199,${saturation}%,${lightness}%)`;
+        };
+        const headerCells = months.map((m) =>
+            `<th class="min-w-[5rem] px-2 py-2 text-right text-xs font-semibold text-slate-500">${escapeHtml(this.formatMonthKey(m))}</th>`
+        ).join("");
+        const rows = properties.map((prop) => {
+            const cells = months.map((m) => {
+                const val = cellMap[`${prop}||${m}`] || 0;
+                const bg = cellBg(val);
+                if (val > 0) {
+                    return `<td class="cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:scale-[1.03] transition-all px-2 py-1.5 text-right text-xs" style="background:${bg}" data-action="open-heatmap-detail" data-property="${escapeHtml(prop)}" data-month="${escapeHtml(m)}" title="${escapeHtml(prop)} \u2013 ${escapeHtml(this.formatMonthKey(m))}: ${escapeHtml(this.formatCurrency(val))}">${escapeHtml(this.formatCurrency(val))}</td>`;
+                }
+                return `<td class="px-2 py-1.5 text-right text-xs text-slate-300">—</td>`;
+            }).join("");
+            return `<tr class="border-b border-slate-100"><td class="max-w-[10rem] truncate py-1.5 pr-3 text-sm font-medium text-slate-900" title="${escapeHtml(prop)}">${escapeHtml(prop)}</td>${cells}</tr>`;
+        }).join("");
+        return `
+            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="mb-4">
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.heatmapKicker"))}</div>
+                    <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.heatmapTitle"))}</h3>
+                    <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.heatmapDescription"))}</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="border-b border-slate-200">
+                            <th class="py-2 pr-3 text-left text-xs font-semibold text-slate-500">${escapeHtml(this.tr("tables.property"))}</th>
+                            ${headerCells}
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </section>
+        `;
+    }
+
+    renderHeatmapDetailModal(allRecords = []) {
+        if (!this.heatmapDetailModal) return "";
+        const { propertyName, monthKey } = this.heatmapDetailModal;
+
+        const filtered = allRecords.filter((record) => {
+            return record.propertyName === propertyName
+                && (record.date || "").slice(0, 7) === monthKey;
+        }).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+
+        const totalGuest = filtered.reduce((sum, r) => sum + (r.guestAmount || 0), 0);
+        const totalCommission = filtered.reduce((sum, r) => sum + (r.platformCommission || 0), 0);
+        const totalVat = filtered.reduce((sum, r) => sum + (r.vatAmount || 0), 0);
+        const totalLaundry = filtered.reduce((sum, r) => sum + (r.effectiveLaundryAmount || 0), 0);
+        const totalNet = filtered.reduce((sum, r) => sum + (r.effectiveTotalToAh ?? r.totalToAh ?? 0), 0);
+
+        return `
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6" role="dialog" aria-modal="true" data-action="close-heatmap-detail">
+                <div class="relative flex max-h-[85vh] w-full max-w-4xl flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-xl transition-all" onclick="event.stopPropagation()">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.heatmapDetailKicker"))}</div>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-900">
+                                ${escapeHtml(propertyName)} &ndash; ${escapeHtml(this.formatMonthKey(monthKey))}
+                            </h3>
+                        </div>
+                        <button type="button" data-action="close-heatmap-detail" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-4 overflow-y-auto pr-1">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-100 font-semibold uppercase tracking-wider text-slate-500">
+                                    <th class="py-2.5 px-3">${escapeHtml(this.tr("tables.date"))}</th>
+                                    <th class="py-2.5 px-3">${escapeHtml(this.tr("tables.category"))}</th>
+                                    <th class="py-2.5 px-3">${escapeHtml(this.tr("tables.source"))}</th>
+                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.amount"))}</th>
+                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("metrics.platformFees"))}</th>
+                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("metrics.vat"))}</th>
+                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.laundry"))}</th>
+                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.net"))}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                ${filtered.map((record) => {
+                                    const sourceLabel = record.reservationSource === "platform" ? this.tr("reservationSources.platform") : this.tr("reservationSources.direct");
+                                    const netVal = record.effectiveTotalToAh ?? record.totalToAh ?? 0;
+                                    return `
+                                        <tr class="hover:bg-slate-50/50">
+                                            <td class="py-2.5 px-3 font-medium text-slate-900">${escapeHtml(record.date)}</td>
+                                            <td class="py-2.5 px-3">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
+                                            <td class="py-2.5 px-3">${escapeHtml(sourceLabel)}</td>
+                                            <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
+                                            <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.platformCommission))}</td>
+                                            <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.vatAmount))}</td>
+                                            <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount))}</td>
+                                            <td class="py-2.5 px-3 text-right font-semibold text-slate-900">${escapeHtml(this.formatCurrency(netVal))}</td>
+                                        </tr>
+                                    `;
+                                }).join("")}
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-slate-200 bg-slate-50 font-semibold text-slate-900">
+                                    <td class="py-2.5 px-3" colspan="3">${escapeHtml(this.tr("tables.total"))} (${filtered.length})</td>
+                                    <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(totalGuest))}</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalCommission))}</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalVat))}</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalLaundry))}</td>
+                                    <td class="py-2.5 px-3 text-right text-emerald-700">${escapeHtml(this.formatCurrency(totalNet))}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderExportReportModal(records = [], laundrySummary = {}) {
+        if (!this.exportModalActive) return "";
+
+        const monthsSet = new Set();
+        records.forEach((r) => {
+            const m = (r.date || "").slice(0, 7);
+            if (m) monthsSet.add(m);
+        });
+        const laundryByMonth = laundrySummary.byMonth || [];
+        laundryByMonth.forEach((e) => {
+            if (e.label) monthsSet.add(e.label);
+        });
+        const uniqueMonths = [...monthsSet].sort().reverse();
+
+        return `
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6" role="dialog" aria-modal="true" data-action="close-export-modal">
+                <div class="relative flex w-full max-w-md flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-xl transition-all" onclick="event.stopPropagation()">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("stats.exportKicker"))}</div>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(this.tr("stats.exportTitle"))}</h3>
+                        </div>
+                        <button type="button" data-action="close-export-modal" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-sm text-slate-600">${escapeHtml(this.tr("stats.exportDescription"))}</p>
+                        
+                        <label class="mt-4 block">
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("stats.exportSelectMonth"))}</span>
+                            <select id="cleaning-ah-export-month-select" class="mt-2 w-full rounded-xl border border-slate-200 p-2 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                ${uniqueMonths.map((m) => `
+                                    <option value="${escapeHtml(m)}">${escapeHtml(this.formatMonthKey(m))}</option>
+                                `).join("")}
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+                        <button type="button" data-action="close-export-modal" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition">
+                            ${escapeHtml(this.tr("actions.cancel"))}
+                        </button>
+                        <button type="button" data-action="generate-pdf-report" class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shadow-sm transition active:scale-95">
+                            <i class="fas fa-download mr-1.5"></i>
+                            ${escapeHtml(this.tr("stats.exportDownloadBtn"))}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    exportMonthReportAsPDF(monthKey) {
+        const jsPDF = window.jspdf?.jsPDF || window.jsPDF;
+        if (!jsPDF) {
+            this.setStatus(this.tr("status.pdfLibraryNotFound") || "PDF library not loaded.", "error");
+            return;
+        }
+
+        const cleanings = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords)
+            .filter((r) => (r.date || "").slice(0, 7) === monthKey)
+            .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+
+        const standaloneLaundry = this.laundryRecords
+            .filter((r) => (r.date || "").slice(0, 7) === monthKey && !r.linkedCleaningId)
+            .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+
+        if (cleanings.length === 0 && standaloneLaundry.length === 0) {
+            this.setStatus(this.tr("status.noDataForSelectedMonth") || "No data available for the selected month.", "info");
+            return;
+        }
+
+        const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+        const monthName = this.formatMonthKey(monthKey);
+
+        const brandColor = [79, 70, 229]; // Indigo-600
+        const darkSlate = [15, 23, 42]; // Slate-900
+
+        const drawHeaderFooter = (data) => {
+            const pageCount = doc.internal.getNumberOfPages();
+            
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(15, 20, 195, 20);
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
+            doc.text("ATLANTIC HOLIDAY", 15, 15);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Financial Summary Report - ${monthName}`, 70, 15);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 195, 15, { align: "right" });
+
+            doc.line(15, 282, 195, 282);
+            doc.text(`Page ${pageCount}`, 195, 287, { align: "right" });
+            doc.text("Confidential - Internal Operations Document", 15, 287);
+        };
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+        doc.text(`Month-End Summary: ${monthName}`, 15, 32);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Operational review and financial performance analysis for checkout cleanings and laundry services.", 15, 38);
+
+        const grossGuest = cleanings.reduce((sum, c) => sum + (c.guestAmount || 0), 0);
+        const fees = cleanings.reduce((sum, c) => sum + (c.platformCommission || 0), 0);
+        const vat = cleanings.reduce((sum, c) => sum + (c.vatAmount || 0), 0);
+        const cleaningLaundry = cleanings.reduce((sum, c) => sum + (c.effectiveLaundryAmount || 0), 0);
+        const standaloneLaundryAmt = standaloneLaundry.reduce((sum, l) => sum + (l.amount || 0), 0);
+        const totalLaundry = cleaningLaundry + standaloneLaundryAmt;
+        const netAh = cleanings.reduce((sum, c) => sum + (c.effectiveTotalToAh ?? c.totalToAh ?? 0), 0) - standaloneLaundryAmt;
+
+        const highlightsHead = [["Metric", "Value"]];
+        const highlightsBody = [
+            ["Total Checkout Cleanings", String(cleanings.length)],
+            ["Gross Bookings Revenue", this.formatCurrency(grossGuest)],
+            ["Platform Commission Fees", this.formatCurrency(fees)],
+            ["VAT Liabilities (Estimated)", this.formatCurrency(vat)],
+            ["Checkout Laundry Expenses", this.formatCurrency(cleaningLaundry)],
+            ["Standalone Laundry Expenses", this.formatCurrency(standaloneLaundryAmt)],
+            ["Total Monthly Laundry Costs", this.formatCurrency(totalLaundry)],
+            ["Net Monthly AH Revenue", this.formatCurrency(netAh)]
+        ];
+
+        doc.autoTable({
+            startY: 45,
+            head: highlightsHead,
+            body: highlightsBody,
+            theme: "striped",
+            headStyles: { fillColor: brandColor, textColor: [255, 255, 255] },
+            bodyStyles: { fontSize: 9 },
+            columnStyles: {
+                0: { fontStyle: "bold", width: 70 },
+                1: { align: "right", fontStyle: "bold" }
+            },
+            margin: { left: 15, right: 15 },
+            didDrawPage: drawHeaderFooter
+        });
+
+        let nextY = doc.lastAutoTable.finalY + 12;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+        doc.text("Revenues & Laundry Costs by Property", 15, nextY);
+
+        const propertyGroups = {};
+        cleanings.forEach((c) => {
+            const prop = c.propertyName || "Unknown";
+            if (!propertyGroups[prop]) {
+                propertyGroups[prop] = { count: 0, guestAmount: 0, platformCommission: 0, vatAmount: 0, laundryAmount: 0, netToAh: 0 };
+            }
+            propertyGroups[prop].count++;
+            propertyGroups[prop].guestAmount += (c.guestAmount || 0);
+            propertyGroups[prop].platformCommission += (c.platformCommission || 0);
+            propertyGroups[prop].vatAmount += (c.vatAmount || 0);
+            propertyGroups[prop].laundryAmount += (c.effectiveLaundryAmount || 0);
+            propertyGroups[prop].netToAh += (c.effectiveTotalToAh ?? c.totalToAh ?? 0);
+        });
+
+        const propertyRows = Object.entries(propertyGroups).map(([name, data]) => {
+            return [
+                name,
+                String(data.count),
+                this.formatCurrency(data.guestAmount),
+                this.formatCurrency(data.platformCommission),
+                this.formatCurrency(data.vatAmount),
+                this.formatCurrency(data.laundryAmount),
+                this.formatCurrency(data.netToAh)
+            ];
+        });
+
+        doc.autoTable({
+            startY: nextY + 4,
+            head: [["Property", "Cleanings", "Gross Rev", "Platform Fees", "VAT", "Laundry Cost", "Net AH"]],
+            body: propertyRows,
+            theme: "striped",
+            headStyles: { fillColor: brandColor, textColor: [255, 255, 255] },
+            bodyStyles: { fontSize: 8 },
+            columnStyles: {
+                0: { fontStyle: "bold" },
+                1: { align: "right" },
+                2: { align: "right" },
+                3: { align: "right" },
+                4: { align: "right" },
+                5: { align: "right" },
+                6: { align: "right", fontStyle: "bold" }
+            },
+            margin: { left: 15, right: 15 },
+            didDrawPage: drawHeaderFooter
+        });
+
+        nextY = doc.lastAutoTable.finalY + 12;
+
+        if (nextY > 230) {
+            doc.addPage();
+            nextY = 32;
+        }
+
+        if (standaloneLaundry.length > 0) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+            doc.text("Standalone Laundry Log", 15, nextY);
+
+            const laundryRows = standaloneLaundry.map((l) => [
+                l.date,
+                l.propertyName || "Unknown",
+                this.formatNumber(l.kg),
+                this.formatCurrency(l.laundryRatePerKg || 2.30),
+                this.formatCurrency(l.amount),
+                l.notes || ""
+            ]);
+
+            doc.autoTable({
+                startY: nextY + 4,
+                head: [["Date", "Property", "Weight (Kg)", "Rate / Kg", "Amount", "Notes"]],
+                body: laundryRows,
+                theme: "striped",
+                headStyles: { fillColor: [14, 116, 144], textColor: [255, 255, 255] },
+                bodyStyles: { fontSize: 8 },
+                columnStyles: {
+                    0: { fontStyle: "bold" },
+                    2: { align: "right" },
+                    3: { align: "right" },
+                    4: { align: "right", fontStyle: "bold" }
+                },
+                margin: { left: 15, right: 15 },
+                didDrawPage: drawHeaderFooter
+            });
+        }
+
+        const filename = `financial-report-${monthKey}.pdf`;
+        doc.save(filename);
+        this.setStatus(`Report generated successfully: ${filename}`, "success");
     }
 
     renderStatsComparisonBlock(statsPropertyRows, selectedStatsPropertyName) {
@@ -3836,7 +4525,58 @@ export class CleaningAhManager {
         document.querySelectorAll("[data-action='set-register-queue-sort']").forEach((button) => {
             button.addEventListener("click", () => {
                 this.registerQueueSort = button.dataset.sort || "oldest";
+                localStorage.setItem("cleaningAhRegisterQueueSort", this.registerQueueSort);
                 this.render();
+            });
+        });
+        document.querySelector("[data-action='toggle-register-compact']")?.addEventListener("click", () => {
+            this.registerQueueCompact = !this.registerQueueCompact;
+            localStorage.setItem("cleaningAhRegisterQueueCompact", String(this.registerQueueCompact));
+            this.render();
+        });
+        document.querySelectorAll("[data-action='prefill-fast-form']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const id = button.dataset.id;
+                const allDerived = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords);
+                const record = allDerived.find((r) => r.id === id) || this.cleaningRecords.find((r) => r.id === id);
+                if (!record) return;
+                this.cleaningDraft = {
+                    ...this.cleaningDraft,
+                    date: record.date || this.cleaningDraft.date,
+                    propertyName: record.propertyName || "",
+                    categoryKey: record.categoryKey || record.category || DEFAULT_CLEANING_CATEGORY_KEY,
+                    reservationSource: record.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform
+                };
+                this.render();
+                this.applyCleaningSuggestionToFastForm();
+                document.getElementById("cleaning-ah-fast-register-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            });
+        });
+        document.querySelectorAll("[data-action='update-inline-kg']").forEach((input) => {
+            input.addEventListener("input", () => {
+                this.inlineKgDrafts[input.dataset.id] = input.value;
+                const saveBtn = document.querySelector(`[data-action='save-inline-kg'][data-id='${CSS.escape(input.dataset.id)}']`);
+                if (saveBtn) saveBtn.disabled = !input.value;
+            });
+        });
+        document.querySelectorAll("[data-action='save-inline-kg']").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const id = button.dataset.id;
+                const kg = parseFloat(this.inlineKgDrafts[id]);
+                if (!id || !kg || kg <= 0) return;
+                const record = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords).find((r) => r.id === id);
+                if (!record) return;
+                const laundryRatePerKg = CLEANING_AH_DEFAULTS.laundryRatePerKg;
+                const amount = roundCurrency(kg * laundryRatePerKg);
+                this.cleaningLaundryQuickDrafts[id] = {
+                    date: getTodayIsoDate(),
+                    kg: String(kg),
+                    laundryRatePerKg: String(laundryRatePerKg),
+                    amount: String(amount),
+                    notes: ""
+                };
+                delete this.inlineKgDrafts[id];
+                await this.saveCleaningLinkedLaundry(id);
             });
         });
 
@@ -3846,7 +4586,16 @@ export class CleaningAhManager {
                 this.applyCleaningSuggestionToFastForm();
             }
             this.cleaningDraft = this.readCleaningDraftFromForm(fastRegisterForm);
-            if (event.target?.name === "categoryKey") {
+            const draft = this.cleaningDraft;
+            if (draft.date && draft.propertyName) {
+                const normProp = normalizeKey(draft.propertyName);
+                this.fastRegisterDuplicateWarning = this.cleaningRecords.some(
+                    (r) => r.date === draft.date && normalizeKey(r.propertyName) === normProp
+                );
+            } else {
+                this.fastRegisterDuplicateWarning = false;
+            }
+            if (event.target?.name === "categoryKey" || event.target?.name === "propertyName" || event.target?.name === "date") {
                 this.render();
             }
         });
@@ -4124,6 +4873,63 @@ export class CleaningAhManager {
         });
         document.querySelectorAll("[data-action='open-cleaning-from-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.openCleaningFromLaundry(button.dataset.id || ""));
+        });
+        document.querySelectorAll("[data-action='filter-prior-waiting']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.selectedMonthKey = "";
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='dismiss-month-end']").forEach((button) => {
+            button.addEventListener("click", () => {
+                localStorage.setItem("monthEndDismissedAt", getTodayIsoDate());
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='mark-all-overdue-no-laundry']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const idsString = button.dataset.ids || "";
+                const overdueIds = idsString ? idsString.split(",") : [];
+                this.markAllOverdueNoLaundry(overdueIds);
+            });
+        });
+        document.querySelectorAll("[data-action='open-heatmap-detail']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.heatmapDetailModal = {
+                    propertyName: button.dataset.property || "",
+                    monthKey: button.dataset.month || ""
+                };
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='close-heatmap-detail']").forEach((element) => {
+            element.addEventListener("click", () => {
+                this.heatmapDetailModal = null;
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='open-export-modal']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.exportModalActive = true;
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='close-export-modal']").forEach((element) => {
+            element.addEventListener("click", () => {
+                this.exportModalActive = false;
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='generate-pdf-report']").forEach((button) => {
+            button.addEventListener("click", () => {
+                const select = document.getElementById("cleaning-ah-export-month-select");
+                if (select) {
+                    const monthKey = select.value;
+                    this.exportMonthReportAsPDF(monthKey);
+                }
+                this.exportModalActive = false;
+                this.render();
+            });
         });
     }
 
@@ -4740,6 +5546,34 @@ export class CleaningAhManager {
         }
     }
 
+    async markAllOverdueNoLaundry(overdueIds = []) {
+        if (!overdueIds.length) return;
+        if (!confirm(this.tr("confirm.markAllNoLaundry", { count: overdueIds.length }))) {
+            return;
+        }
+
+        try {
+            const batch = writeBatch(this.db);
+            overdueIds.forEach((recordId) => {
+                const record = this.cleaningRecords.find((entry) => entry.id === recordId);
+                if (record) {
+                    batch.update(doc(this.db, "cleaningAhRecords", recordId), {
+                        ...record,
+                        laundryStatus: CLEANING_LAUNDRY_STATUS.none,
+                        updatedAt: new Date()
+                    });
+                }
+            });
+            await batch.commit();
+            this.setStatus(this.tr("status.markAllNoLaundrySuccess", { count: overdueIds.length }), "success");
+            this.render();
+        } catch (error) {
+            console.error("[Cleaning AH] failed to mark all no laundry:", error);
+            this.setStatus(this.tr("status.markAllNoLaundryFailed"), "error");
+            this.render();
+        }
+    }
+
     async saveSpecialCleaningRecord() {
         this.specialCleaningDraft = this.readSpecialCleaningDraftFromDom();
         const existingRecord = this.editingSpecialCleaningId
@@ -5133,3 +5967,5 @@ export class CleaningAhManager {
         }
     }
 }
+
+CleaningAhManager.isMonthEndWindow = isMonthEndWindow;
