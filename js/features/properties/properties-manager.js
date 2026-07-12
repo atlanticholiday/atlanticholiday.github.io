@@ -8,6 +8,7 @@ export class PropertiesManager {
         this.properties = [];
         this.filteredProperties = [];
         this.unsubscribe = null;
+        this.wifiFieldsCleaned = false;
 
         // Filter and sort state
         this.currentSort = 'name-asc';
@@ -155,6 +156,11 @@ export class PropertiesManager {
             if (this.filteredProperties.length === 0) {
                 this.filteredProperties = [...this.properties];
             }
+            // Auto-clean stale WiFi fields if any exist (run once on first load to prevent infinite loops during imports)
+            if (!this.wifiFieldsCleaned && this.properties.length > 0) {
+                this.wifiFieldsCleaned = true;
+                this.checkAndCleanupStaleWifiFields(this.properties);
+            }
             // Notify other modules that properties data has updated (e.g., VisitsManager)
             try {
                 const evt = new CustomEvent('propertiesDataUpdated', { detail: { count: this.properties.length } });
@@ -164,6 +170,34 @@ export class PropertiesManager {
         }, (error) => {
             console.error("❌ Error listening for property changes:", error);
         });
+    }
+
+    async checkAndCleanupStaleWifiFields(properties) {
+        if (!properties || properties.length === 0) return;
+        const staleItems = properties.filter((p) => {
+            const speed = String(p.wifiSpeed ?? "").trim();
+            // Stale speeds from old mappings
+            const isStaleSpeed = ["sim", "nao", "basic", "standard", "fast", "very-fast", "fiber"].includes(speed.toLowerCase());
+            return isStaleSpeed;
+        });
+
+        if (staleItems.length === 0) return;
+
+        console.log(`🧹 [MIGRATION] Found ${staleItems.length} properties with stale WiFi fields. Clearing...`);
+        const updates = staleItems.map((p) => ({
+            id: p.id,
+            updates: {
+                wifiSpeed: "",
+                wifiAirbnb: ""
+            }
+        }));
+
+        try {
+            await this.updatePropertiesBatchMixed(updates);
+            console.log(`🧹 [MIGRATION] Successfully cleared stale WiFi fields for ${staleItems.length} properties.`);
+        } catch (error) {
+            console.error("Failed to auto-cleanup stale WiFi fields:", error);
+        }
     }
 
     stopListening() {

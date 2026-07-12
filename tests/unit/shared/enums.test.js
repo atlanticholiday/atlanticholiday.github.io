@@ -3,10 +3,10 @@ import { ENUMS, getEnumOptions } from "../../../js/shared/enums.js";
 
 describe("Enums", () => {
   test("returns enum options for known fields", () => {
-    const options = getEnumOptions("wifiSpeed");
-    assert.ok(Array.isArray(options), "wifiSpeed options should be an array");
-    assert.equal(options[0].value, "basic");
-    assert.equal(options[4].value, "fiber");
+    const options = getEnumOptions("wifiAirbnb");
+    assert.ok(Array.isArray(options), "wifiAirbnb options should be an array");
+    assert.equal(options[0].value, "yes");
+    assert.equal(options[2].value, "featured");
   });
 
   test("returns null for unknown fields", () => {

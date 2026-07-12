@@ -2139,15 +2139,9 @@ Mountain Villa, Sintra Hills, V4"
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">WiFi Speed</label>
-                            <select id="advanced-property-wifi-speed"
-                                class="w-full p-3 border rounded-md focus-ring transition-all">
-                                <option value="">Not specified</option>
-                                <option value="basic">Basic (&lt; 25 Mbps)</option>
-                                <option value="standard">Standard (25-50 Mbps)</option>
-                                <option value="fast">Fast (50-100 Mbps)</option>
-                                <option value="very-fast">Very Fast (100+ Mbps)</option>
-                                <option value="fiber">Fiber (500+ Mbps)</option>
-                            </select>
+                            <input type="text" id="advanced-property-wifi-speed"
+                                class="w-full p-3 border rounded-md focus-ring transition-all"
+                                placeholder="e.g. 450 Mbps">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">WiFi Listed on Airbnb</label>

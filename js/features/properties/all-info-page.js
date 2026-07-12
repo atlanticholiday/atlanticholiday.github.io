@@ -7,16 +7,17 @@ const ALL_INFO_CATEGORIES = [
     { title: 'Basic Information', titlePt: 'Informação básica', slug: 'basic-info-edit', fields: ['location', 'type', 'typology', 'rooms', 'bathrooms', 'floor'], icon: 'fas fa-info-circle' },
     { title: 'Maps & Location', titlePt: 'Mapas e localização', slug: 'maps-location', fields: ['googleMapsLink', 'garbageLocationLink', 'garbageFloor'], icon: 'fas fa-map-marker-alt' },
     { title: 'Access & Parking', titlePt: 'Acesso e estacionamento', slug: 'access-parking', fields: ['keyBoxCode', 'parkingSpot', 'parkingFloor'], icon: 'fas fa-parking' },
-    { title: 'Media & Content', titlePt: 'Media e conteúdo', slug: 'media-content', fields: ['checkinVideos', 'bookingDescriptionStatus', 'selfCheckinInstructions'], icon: 'fas fa-video' },
+    { title: 'Media & Content', titlePt: 'Media e conteúdo', slug: 'media-content', fields: ['checkinVideos', 'bookingDescriptionStatus', 'selfCheckinInstructions', 'dronePhotos'], icon: 'fas fa-video' },
     { title: 'Google Drive', titlePt: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled', 'googleDriveLink', 'scannedDocsLink'], icon: 'fab fa-google-drive' },
     { title: 'Recommendations', titlePt: 'Recomendações', slug: 'recommendations', fields: ['recommendationsLink', 'recommendationsEditLink'], icon: 'fas fa-star' },
-    { title: 'Frames', titlePt: 'Molduras', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame'], icon: 'fas fa-border-all' },
+    { title: 'Frames', titlePt: 'Molduras', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame', 'homeGuide'], icon: 'fas fa-border-all' },
     { title: 'Signage', titlePt: 'Sinalética', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'noiseSign', 'alAhSign', 'keysNotice', 'wcSign', 'signageNotes'], icon: 'fas fa-sign' },
-    { title: 'Equipment', titlePt: 'Equipamento', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair'], icon: 'fas fa-toolbox' },
+    { title: 'Equipment', titlePt: 'Equipamento', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair', 'smartTv', 'coffeeMachine'], icon: 'fas fa-toolbox' },
     { title: 'Services & Extras', titlePt: 'Serviços e extras', slug: 'services-extras', fields: ['breakfastBox', 'poolMaintenanceDay', 'poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
-    { title: 'Connectivity & Utilities', titlePt: 'Internet e utilidades', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
+    { title: 'Connectivity & Utilities', titlePt: 'Internet e utilidades', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'wifiAirbnb', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
     { title: 'Online Services', titlePt: 'Serviços online', slug: 'online-services', fields: ['onlineComplaintBooksEnabled', 'onlineComplaintBooksEmail', 'onlineComplaintBooksPassword', 'airbnbLinksStatus'], icon: 'fas fa-globe' },
     { title: 'Legal & Compliance', titlePt: 'Legal e conformidade', slug: 'legal-compliance', fields: ['contractsStatus', 'complaintBooksStatus', 'statisticsStatus', 'sefStatus', 'touristTaxInstructions'], icon: 'fas fa-gavel' },
+    { title: 'RNAL & Insurance', titlePt: 'RNAL e Seguro', slug: 'rnal-insurance', fields: ['rnalNumber', 'rnalHandledByUs', 'rnalDoneStatus', 'insuranceChargedStatus', 'insurancePlatformStatus', 'insuranceValidity', 'insuranceNotes', 'insuranceAccounting'], icon: 'fas fa-file-contract' },
     { title: 'Safety Maintenance', titlePt: 'Segurança e manutenção', slug: 'safety-maintenance', fields: ['fireExtinguisherExpiration', 'fireExtinguisherLocation', 'fireExtinguisherNotes', 'firstAidStatus', 'firstAidLastChecked', 'firstAidNotes'], icon: 'fas fa-shield-alt' },
     { title: 'Owner', titlePt: 'Proprietário', slug: 'owner', fields: ['ownerFirstName', 'ownerLastName', 'ownerVatNumber', 'ownerPropertyAddress', 'ownerContact'], icon: 'fas fa-user-tie' },
     { title: 'Accounting', titlePt: 'Contabilidade', slug: 'accounting', fields: ['accountingName', 'accountingPhone', 'accountingEmail', 'accountingContact'], icon: 'fas fa-file-invoice-dollar' },
@@ -33,9 +34,7 @@ const IMPORTED_AH_CATEGORY_FIELDS = {
         'contractSignedStatus', 'contractScannedStatus', 'contractNotes',
         'sefStatisticsNotes',
         'touristTaxMunicipality', 'touristTaxPlatformStatus', 'touristTaxNotes',
-        'propertyRegisterNumber', 'propertyRegisterAirbnbStatus', 'propertyRegisterBookingStatus', 'propertyRegisterBenefitsStatus',
-        'rnalNumber', 'rnalHandledByUs', 'rnalDoneStatus', 'insuranceChargedStatus', 'insurancePlatformStatus', 'insuranceValidity',
-        'insuranceNotes', 'insuranceAccounting'
+        'propertyRegisterNumber', 'propertyRegisterAirbnbStatus', 'propertyRegisterBookingStatus', 'propertyRegisterBenefitsStatus'
     ]
 };
 
@@ -304,6 +303,7 @@ const FIELD_LABELS_PT = {
     poolMaintenanceDay: 'Dia manutenção piscina',
     poolMaintenanceNotes: 'Notas manutenção piscina',
     wifiSpeed: 'Velocidade Wi-Fi',
+    wifiAirbnb: 'Wi-Fi Airbnb',
     internetProvider: 'Fornecedor internet',
     energySource: 'Fonte de energia',
     onlineComplaintBooksEnabled: 'Livro reclamações online ativo',
@@ -335,7 +335,11 @@ const FIELD_LABELS_PT = {
     guestCleaningFee: 'Taxa limpeza hóspede',
     condominiumName: 'Nome condomínio',
     condominiumEmail: 'Email condomínio',
-    condominiumPhone: 'Telefone condomínio'
+    condominiumPhone: 'Telefone condomínio',
+    smartTv: 'Smart TV',
+    coffeeMachine: 'Máquina de café',
+    dronePhotos: 'Fotos de drone',
+    homeGuide: 'Guia da casa'
 };
 
 Object.assign(FIELD_LABELS_PT, {
@@ -415,8 +419,14 @@ function buildLabel(key) {
     return key.replace(/([A-Z])/g, ' $1').replace(/^./, (first) => first.toUpperCase());
 }
 
-function isMissingValue(value) {
-    return value === undefined || value === null || String(value).trim() === '';
+// Old enum values that were stored for wifiSpeed before it became free-text.
+// Treat them as effectively missing so the field is highlighted and re-importable.
+const STALE_WIFI_SPEED_VALUES = new Set(['basic', 'standard', 'fast', 'very-fast', 'fiber']);
+
+function isMissingValue(value, field = '') {
+    if (value === undefined || value === null || String(value).trim() === '') return true;
+    if (field === 'wifiSpeed' && STALE_WIFI_SPEED_VALUES.has(String(value).trim())) return true;
+    return false;
 }
 
 function getCategoryStats(properties, category) {
@@ -426,7 +436,7 @@ function getCategoryStats(properties, category) {
     let completeProperties = 0;
 
     properties.forEach((property) => {
-        const missingForProperty = fields.filter((field) => isMissingValue(property[field])).length;
+        const missingForProperty = fields.filter((field) => isMissingValue(property[field], field)).length;
         missingFields += missingForProperty;
         if (missingForProperty === 0) {
             completeProperties += 1;
@@ -448,7 +458,7 @@ function propertyMatchesCategoryFilter(property, category, mode, fieldKey = '') 
     }
 
     const fields = fieldKey ? [fieldKey] : category.fields;
-    const missingCount = fields.filter((field) => isMissingValue(property[field])).length;
+    const missingCount = fields.filter((field) => isMissingValue(property[field], field)).length;
 
     if (mode === 'missing') {
         return missingCount > 0;
@@ -462,8 +472,7 @@ function propertyMatchesCategoryFilter(property, category, mode, fieldKey = '') 
 }
 
 function isNumericField(field) {
-    return ['cleaningCompanyPrice', 'guestCleaningFee', 'wifiSpeed', 'rooms', 'bathrooms', 'checkinVideos'].includes(field)
-        || /price|fee|amount|count|number|kg|weight|speed|rooms|bathrooms/i.test(field);
+    return ['cleaningCompanyPrice', 'guestCleaningFee', 'rooms', 'bathrooms', 'checkinVideos'].includes(field);
 }
 
 function isBooleanField(field) {
@@ -509,7 +518,11 @@ function normalizeInlineValue(input) {
 
 function createInlineFieldControl(documentRef, field, value) {
     const enumOptions = getEnumOptions(field);
-    const currentValue = value ?? '';
+    // Blank out stale wifiSpeed enum values so the free-text input shows the placeholder
+    const resolvedValue = (field === 'wifiSpeed' && STALE_WIFI_SPEED_VALUES.has(String(value ?? '').trim()))
+        ? ''
+        : (value ?? '');
+    const currentValue = resolvedValue;
 
     if (field === 'location') {
         const select = documentRef.createElement('select');
@@ -926,7 +939,7 @@ function renderReportHistory(documentRef, container, windowRef = window) {
     container.appendChild(history);
 }
 
-function createAlojamentosCheckPanel({ documentRef, properties }) {
+function createAlojamentosCheckPanel({ documentRef, properties, onImportSaved = () => {} }) {
     const panel = documentRef.createElement('section');
     panel.className = 'mb-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm';
     const ptMode = activeLang() === 'pt';
@@ -950,8 +963,74 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
     input.disabled = !ptMode;
     input.className = 'w-full lg:w-80 text-sm text-gray-600 file:mr-3 file:px-4 file:py-2 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200';
 
+    const clearWifiBtn = documentRef.createElement('button');
+    clearWifiBtn.type = 'button';
+    clearWifiBtn.className = 'px-4 py-2 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 rounded-md text-sm font-medium transition-colors flex items-center gap-2';
+    clearWifiBtn.innerHTML = ptMode
+        ? '<i class="fas fa-trash-can"></i><span>Limpar Dados de WiFi</span>'
+        : '<i class="fas fa-trash-can"></i><span>Clear WiFi Data</span>';
+    clearWifiBtn.onclick = async () => {
+        const manager = window.propertiesManager;
+        if (!manager?.updatePropertiesBatchMixed) {
+            alert('Properties manager not initialized.');
+            return;
+        }
+
+        const confirmMsg = ptMode 
+            ? 'Tem a certeza de que deseja limpar os campos "WiFi Speed" e "WiFi Airbnb" de todos os alojamentos? Isto permitirá importá-los novamente a partir do ficheiro Excel.'
+            : 'Are you sure you want to clear the "WiFi Speed" and "WiFi Airbnb" fields for all properties? This will empty the fields so you can import them again from the Excel file.';
+
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        clearWifiBtn.disabled = true;
+        clearWifiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Clearing...</span>';
+
+        const updates = properties.map((p) => ({
+            id: p.id,
+            updates: {
+                wifiSpeed: '',
+                wifiAirbnb: ''
+            }
+        }));
+
+        try {
+            await manager.updatePropertiesBatchMixed(updates);
+            properties.forEach((p) => {
+                p.wifiSpeed = '';
+                p.wifiAirbnb = '';
+            });
+
+            const successMsg = ptMode
+                ? 'Os campos de WiFi foram limpos com sucesso! Agora pode importar a folha Excel para os preencher.'
+                : 'WiFi fields cleared successfully! You can now import the Excel sheet to populate them.';
+
+            alert(successMsg);
+            if (typeof onImportSaved === 'function') {
+                onImportSaved();
+            }
+        } catch (error) {
+            console.error('Failed to clear WiFi fields', error);
+            const errorMsg = ptMode
+                ? 'Erro ao limpar os campos de WiFi. Consulte a consola para obter detalhes.'
+                : 'Failed to clear WiFi fields. See console for details.';
+            alert(errorMsg);
+        } finally {
+            clearWifiBtn.disabled = false;
+            clearWifiBtn.innerHTML = ptMode
+                ? '<i class="fas fa-trash-can"></i><span>Limpar Dados de WiFi</span>'
+                : '<i class="fas fa-trash-can"></i><span>Clear WiFi Data</span>';
+        }
+    };
+
+    const actionContainer = documentRef.createElement('div');
+    actionContainer.className = 'flex flex-wrap items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0';
+    actionContainer.appendChild(input);
+    actionContainer.appendChild(clearWifiBtn);
+
     header.appendChild(copyBlock);
-    header.appendChild(input);
+    header.appendChild(actionContainer);
     panel.appendChild(header);
 
     const result = documentRef.createElement('div');
@@ -1216,6 +1295,7 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
                         ? copy('compare.reportOnlySaved')
                         : `${replaceExisting ? copy('compare.replaced') : copy('compare.imported')} ${copy('compare.propertyFieldsSaved', { count: savedFieldCount, plural: savedFieldCount === 1 ? '' : 's' })}`;
                     importButton.innerHTML = `<i class="fas fa-check"></i><span>${savedMessage}</span>`;
+                    onImportSaved();
                 } catch (error) {
                     console.error('AH workbook import failed', error);
                     importButton.disabled = false;
@@ -1517,7 +1597,7 @@ function renderCategoryTable({
             const td = documentRef.createElement('td');
             td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
 
-            const missing = isMissingValue(property[fieldKey]);
+            const missing = isMissingValue(property[fieldKey], fieldKey);
             if (fieldKey === 'name') {
                 td.classList.add('allinfo-property-cell');
                 td.textContent = property[fieldKey] ?? '';
@@ -1615,6 +1695,9 @@ function renderCategoryTable({
                     }
                 });
                 saveButton.innerHTML = `<i class="fas fa-check"></i><span>${copy('table.saved')}</span>`;
+                if (typeof onEditProperty === 'function') {
+                    onEditProperty();
+                }
             } catch (error) {
                 console.error('Inline property save failed', error);
                 saveButton.disabled = false;
@@ -1703,7 +1786,14 @@ export function initializeAllInfoPage({
 
     const comparePanel = documentRef.createElement('div');
     comparePanel.className = 'allinfo-workspace-panel hidden';
-    comparePanel.appendChild(createAlojamentosCheckPanel({ documentRef, properties: sortedProperties }));
+    comparePanel.appendChild(createAlojamentosCheckPanel({
+        documentRef,
+        properties: sortedProperties,
+        onImportSaved: () => {
+            updateOverview();
+            renderCategory(filterState.activeCategoryIndex);
+        }
+    }));
 
     const missingPanel = documentRef.createElement('div');
     missingPanel.className = 'allinfo-workspace-panel hidden';
@@ -1782,7 +1872,22 @@ export function initializeAllInfoPage({
         }
     };
 
+    const updateBadges = () => {
+        if (!navigationElement) return;
+        Array.from(navigationElement.children).forEach((button, categoryIndex) => {
+            const category = ALL_INFO_CATEGORIES[categoryIndex];
+            if (!category) return;
+            const stats = getCategoryStats(sortedProperties, category);
+            const badge = button.querySelector('.allinfo-cat-badge');
+            if (badge) {
+                badge.textContent = stats.missingFields;
+                badge.className = stats.missingFields > 0 ? 'allinfo-cat-badge needs-attention' : 'allinfo-cat-badge';
+            }
+        });
+    };
+
     const updateOverview = () => {
+        updateBadges();
         const categoriesWithMissing = ALL_INFO_CATEGORIES.filter((category) => (
             getCategoryStats(sortedProperties, category).missingFields > 0
         )).length;
@@ -1863,7 +1968,16 @@ export function initializeAllInfoPage({
             filterState,
             documentRef,
             contentElement,
-            onEditProperty
+            onEditProperty: () => {
+                updateOverview();
+                const stats = getCategoryStats(sortedProperties, category);
+                const kpiDivs = contentElement.querySelectorAll('.allinfo-category-kpis > div > strong');
+                if (kpiDivs.length === 3) {
+                    kpiDivs[0].textContent = `${stats.completion}%`;
+                    kpiDivs[1].textContent = stats.missingFields;
+                    kpiDivs[2].textContent = stats.completeProperties;
+                }
+            }
         });
 
         missingWorkbench?.render();

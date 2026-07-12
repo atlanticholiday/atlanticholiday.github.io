@@ -49,13 +49,6 @@ export const ENUMS = {
   ],
 
   // Connectivity & Utilities
-  wifiSpeed: [
-    { value: 'basic', label: '< 25 Mbps' },
-    { value: 'standard', label: '25-50 Mbps' },
-    { value: 'fast', label: '50-100 Mbps' },
-    { value: 'very-fast', label: '100+ Mbps' },
-    { value: 'fiber', label: 'Fiber (500+ Mbps)' },
-  ],
   internetProvider: [
     { value: 'MEO', label: 'MEO' },
     { value: 'NOS', label: 'NOS' },
@@ -74,23 +67,44 @@ export const ENUMS = {
     { value: 'no', label: 'No' },
     { value: 'done', label: 'Done' },
     { value: 'check', label: 'Check' },
+    { value: 'not-applicable', label: 'Not applicable' },
   ],
   recommendationsFrame: [
     { value: 'placed', label: 'Placed' },
     { value: 'no', label: 'No' },
     { value: 'done', label: 'Done' },
     { value: 'check', label: 'Check' },
+    { value: 'not-applicable', label: 'Not applicable' },
   ],
   investmentFrame: [
     { value: 'yes', label: 'Yes' },
     { value: 'no', label: 'No' },
     { value: 'do-not-place', label: 'Do not place' },
   ],
+  homeGuide: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'not-applicable', label: 'Not applicable' },
+  ],
 
   // Services & Extras
   breakfastBox: [
     { value: 'yes', label: 'Yes' },
     { value: 'no', label: 'No' },
+  ],
+
+  // Equipment
+  smartTv: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'needs-publishing', label: 'Needs publishing' },
+  ],
+
+  // Media & Content
+  dronePhotos: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'needs-publishing', label: 'Needs publishing' },
   ],
   poolMaintenanceDay: [
     { value: 'Monday', label: 'Monday' },
@@ -147,12 +161,31 @@ export const ENUMS = {
     { value: 'not-necessary', label: 'Not necessary' },
   ],
 
-  // Safety
-  firstAidStatus: [
-    { value: 'Complete', label: 'Complete' },
-    { value: 'Incomplete', label: 'Incomplete' },
-    { value: 'Needs Restocking', label: 'Needs Restocking' },
-    { value: 'Missing', label: 'Missing' },
+
+  // RNAL & Insurance
+  rnalHandledByUs: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ],
+  rnalDoneStatus: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ],
+  insuranceChargedStatus: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ],
+  insurancePlatformStatus: [
+    { value: 'on-platform', label: 'On the platform' },
+    { value: 'requested', label: 'Requested' },
+    { value: 'missing', label: 'Missing' },
+  ],
+
+  // Connectivity & Utilities
+  wifiAirbnb: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'featured', label: 'Featured Amenity' },
   ],
 };
 

@@ -76,6 +76,54 @@ function normalizeSignageStatus(value) {
     return text;
 }
 
+function normalizeFrameStatus(value) {
+    const text = cellText(value);
+    const normalized = normalizeHeader(text);
+
+    if (!normalized) return "";
+    if (["colocado", "sim"].includes(normalized)) return "placed";
+    if (["nao", "nao coloquei"].includes(normalized)) return "no";
+    if (normalized.includes("falta levar") || normalized.includes("feito")) return "done";
+    if (["verificar"].includes(normalized)) return "check";
+    if (normalized.includes("nao se aplica") || normalized.includes("nao e preciso") || normalized.includes("nao necessario")) return "not-applicable";
+    return text;
+}
+
+function normalizeDronePhotosStatus(value) {
+    const text = cellText(value);
+    const normalized = normalizeHeader(text);
+
+    if (!normalized) return "";
+    if (["sim"].includes(normalized)) return "yes";
+    if (["nao"].includes(normalized)) return "no";
+    if (normalized.includes("falta publicar") || normalized.includes("falta")) return "needs-publishing";
+    return text;
+}
+
+function normalizeInvestmentFrame(value) {
+    const text = cellText(value);
+    const normalized = normalizeHeader(text);
+
+    if (!normalized) return "";
+    if (["sim"].includes(normalized)) return "yes";
+    if (["nao"].includes(normalized)) return "no";
+    if (normalized.includes("nao colocar") || normalized.includes("nao se aplica") || normalized.includes("nao e necessario") || normalized.includes("nao necessario")) return "do-not-place";
+    return text;
+}
+
+function normalizeEnergySource(value) {
+    const text = cellText(value);
+    const normalized = normalizeHeader(text);
+
+    if (!normalized) return "";
+    if (normalized.includes("eletricidade") || normalized.includes("eletrica") || normalized.includes("eletrico")) return "electric";
+    if (["gas"].includes(normalized)) return "gas";
+    if (normalized.includes("solar")) return "solar";
+    if (normalized.includes("bomba de calor") || normalized.includes("heat pump")) return "heat-pump";
+    if (normalized.includes("misto") || normalized.includes("mixed")) return "mixed";
+    return text;
+}
+
 function normalizePlatformStatus(value) {
     const status = normalizeImportedStatus(value);
     if (status === "yes") return "on-platform";
@@ -203,8 +251,15 @@ function applyField(updates, field, value) {
     updates[field] = value;
 }
 
-function isEmptyImportTarget(value) {
-    return value === undefined || value === null || String(value).trim() === "";
+function isEmptyImportTarget(value, field = "") {
+    if (value === undefined || value === null || String(value).trim() === "") return true;
+    if (field === "wifiSpeed") {
+        const valLower = String(value).trim().toLowerCase();
+        if (["basic", "standard", "fast", "very-fast", "fiber", "sim", "nao"].includes(valLower)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function buildUpdatesFromRow(row, mappings) {
@@ -417,6 +472,70 @@ const AH_WORKBOOK_SHEET_MAPPINGS = [
             { field: "insuranceNotes", value: (row) => row["notas"] },
             { field: "insuranceAccounting", value: (row) => row["contabilidade"] }
         ]
+    },
+    {
+        sheet: "ac ventoinhas aquecedores",
+        fields: [
+            { field: "airConditioning", value: (row) => cellText(row["ar condicionado"]) },
+            { field: "fans", value: (row) => cellText(row["ventoinha"]) },
+            { field: "heaters", value: (row) => cellText(row["aquecedor"]) },
+        ]
+    },
+    {
+        sheet: "baby cots e baby chairs",
+        fields: [
+            { field: "crib", value: (row) => normalizeYesNo(row["baby cot"]) },
+            { field: "cribMattress", value: (row) => normalizeYesNo(row["matress"]) },
+            { field: "babyChair", value: (row) => normalizeYesNo(row["baby chair"]) },
+        ]
+    },
+    {
+        sheet: "condominios",
+        fields: [
+            { field: "condominiumName", value: (row) => cellText(row["condominio"]) },
+            { field: "condominiumEmail", value: (row) => cellText(row["email condominio"]) },
+            { field: "condominiumPhone", value: (row) => cellText(row["n condominio"]) },
+        ]
+    },
+    {
+        sheet: "extintores",
+        fields: [
+            { field: "fireExtinguisherExpiration", value: (row) => cellText(row["data de validade 2024"]) },
+            { field: "fireExtinguisherLocation", value: (row) => cellText(row["localidade"]) },
+            { field: "fireExtinguisherNotes", value: (row) => cellText(row["notas"]) },
+        ]
+    },
+    {
+        sheet: "kit 1 s socorros",
+        fields: [
+            { field: "firstAidStatus", value: (row) => cellText(row["estado"]) },
+            { field: "firstAidLastChecked", value: (row) => cellText(row["ultima verificacao"]) },
+            { field: "firstAidNotes", value: (row) => cellText(row["notas"]) },
+        ]
+    },
+    {
+        sheet: "quadros v2",
+        fields: [
+            { field: "wifiFrame", value: (row) => normalizeFrameStatus(row["quadro wifi"]) },
+            { field: "recommendationsFrame", value: (row) => normalizeFrameStatus(row["quadro recomendacoes"]) },
+            { field: "investmentFrame", value: (row) => normalizeInvestmentFrame(row["quadro investimento"]) },
+            { field: "breakfastBox", value: (row) => normalizeYesNo(row["breakfast in a box"]) },
+            { field: "homeGuide", value: (row) => normalizeFrameStatus(row["guia da casa"]) },
+        ]
+    },
+    {
+        sheet: "codigos andar smarttv aquecimento da agua wifi",
+        fields: [
+            { field: "keyBoxCode", value: (row) => cellText(row["codigo para entrar na propriedade"]) },
+            { field: "floor", value: (row) => cellText(row["andar do alojamento"]) },
+            { field: "parkingSpot", value: (row) => cellText(row["parking spot"]) },
+            { field: "energySource", value: (row) => normalizeEnergySource(row["aquecimento da agua gas ou eletricidade"]) },
+            { field: "smartTv", value: (row) => normalizeDronePhotosStatus(row["smart tv"]) },
+            { field: "wifiSpeed", value: (row) => cellText(row["wifi speed"]) },
+            { field: "wifiAirbnb", value: (row) => normalizeYesNo(row["wifi airbnb"]) },
+            { field: "coffeeMachine", value: (row) => cellText(row["maquina de cafe"]) },
+            { field: "dronePhotos", value: (row) => normalizeDronePhotosStatus(row["fotos de drone"]) },
+        ]
     }
 ];
 
@@ -462,7 +581,41 @@ const GENERIC_PORTUGUESE_COLUMN_MAPPINGS = {
     "placa do ruido": { field: "noiseSign", value: (row) => normalizeSignageStatus(row["placa do ruido"]) },
     "placa al ah": { field: "alAhSign", value: (row) => normalizeSignageStatus(row["placa al ah"]) },
     "aviso das chaves": { field: "keysNotice", value: (row) => normalizeSignageStatus(row["aviso das chaves"]) },
-    "placa wc": { field: "wcSign", value: (row) => normalizeSignageStatus(row["placa wc"]) }
+    "placa wc": { field: "wcSign", value: (row) => normalizeSignageStatus(row["placa wc"]) },
+    // AC / Ventoinhas / Aquecedores
+    "ar condicionado": { field: "airConditioning", value: (row) => cellText(row["ar condicionado"]) },
+    "ventoinha": { field: "fans", value: (row) => cellText(row["ventoinha"]) },
+    "aquecedor": { field: "heaters", value: (row) => cellText(row["aquecedor"]) },
+    // Baby equipment
+    "baby cot": { field: "crib", value: (row) => normalizeYesNo(row["baby cot"]) },
+    "matress": { field: "cribMattress", value: (row) => normalizeYesNo(row["matress"]) },
+    "baby chair": { field: "babyChair", value: (row) => normalizeYesNo(row["baby chair"]) },
+    // Condominiums
+    "condominio": { field: "condominiumName", value: (row) => cellText(row["condominio"]) },
+    "email condominio": { field: "condominiumEmail", value: (row) => cellText(row["email condominio"]) },
+    "n condominio": { field: "condominiumPhone", value: (row) => cellText(row["n condominio"]) },
+    // Fire extinguishers
+    "data de validade 2024": { field: "fireExtinguisherExpiration", value: (row) => cellText(row["data de validade 2024"]) },
+    "localidade": { field: "fireExtinguisherLocation", value: (row) => cellText(row["localidade"]) },
+    // First aid
+    "estado": { field: "firstAidStatus", value: (row) => cellText(row["estado"]) },
+    "ultima verificacao": { field: "firstAidLastChecked", value: (row) => cellText(row["ultima verificacao"]) },
+    // Frames / Quadros
+    "quadro wifi": { field: "wifiFrame", value: (row) => normalizeFrameStatus(row["quadro wifi"]) },
+    "quadro recomendacoes": { field: "recommendationsFrame", value: (row) => normalizeFrameStatus(row["quadro recomendacoes"]) },
+    "quadro investimento": { field: "investmentFrame", value: (row) => normalizeInvestmentFrame(row["quadro investimento"]) },
+    "breakfast in a box": { field: "breakfastBox", value: (row) => normalizeYesNo(row["breakfast in a box"]) },
+    "guia da casa": { field: "homeGuide", value: (row) => normalizeFrameStatus(row["guia da casa"]) },
+    // Codes / Wifi sheet
+    "codigo para entrar na propriedade": { field: "keyBoxCode", value: (row) => cellText(row["codigo para entrar na propriedade"]) },
+    "andar do alojamento": { field: "floor", value: (row) => cellText(row["andar do alojamento"]) },
+    "parking spot": { field: "parkingSpot", value: (row) => cellText(row["parking spot"]) },
+    "aquecimento da agua gas ou eletricidade": { field: "energySource", value: (row) => normalizeEnergySource(row["aquecimento da agua gas ou eletricidade"]) },
+    "smart tv": { field: "smartTv", value: (row) => normalizeDronePhotosStatus(row["smart tv"]) },
+    "wifi speed": { field: "wifiSpeed", value: (row) => cellText(row["wifi speed"]) },
+    "wifi airbnb": { field: "wifiAirbnb", value: (row) => normalizeYesNo(row["wifi airbnb"]) },
+    "maquina de cafe": { field: "coffeeMachine", value: (row) => cellText(row["maquina de cafe"]) },
+    "fotos de drone": { field: "dronePhotos", value: (row) => normalizeDronePhotosStatus(row["fotos de drone"]) }
 };
 
 export function normalizePropertyTypology(value) {
@@ -762,7 +915,7 @@ export function parseAhWorkbookImport(sheetRowsByName = {}, existingProperties =
             };
 
             Object.entries(updates).forEach(([field, value]) => {
-                if (!isEmptyImportTarget(property[field])) {
+                if (!isEmptyImportTarget(property[field], field)) {
                     if (!overwriteExisting) {
                         skippedExistingFields += 1;
                         skippedExisting.push({

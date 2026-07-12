@@ -237,7 +237,34 @@
               <i class="fas fa-map-marker-alt"></i>
               <span>Location *</span>
             </label>
-            <input type="text" id="settings-location" class="form-input" placeholder="Enter location" required>
+            <select id="settings-location" class="form-input" required>
+              <option value="">Select location</option>
+              <option value="Água de Pena">Água de Pena</option>
+              <option value="Arco da Calheta">Arco da Calheta</option>
+              <option value="Arco de São Jorge">Arco de São Jorge</option>
+              <option value="Calheta">Calheta</option>
+              <option value="Câmara de Lobos">Câmara de Lobos</option>
+              <option value="Caniçal">Caniçal</option>
+              <option value="Caniço">Caniço</option>
+              <option value="Fajã da Ovelha">Fajã da Ovelha</option>
+              <option value="Funchal">Funchal</option>
+              <option value="Gaula">Gaula</option>
+              <option value="Ilha">Ilha</option>
+              <option value="Machico">Machico</option>
+              <option value="Madalena do Mar">Madalena do Mar</option>
+              <option value="Paul do Mar">Paul do Mar</option>
+              <option value="Ponta Delgada">Ponta Delgada</option>
+              <option value="Ponta do Sol">Ponta do Sol</option>
+              <option value="Porto Moniz">Porto Moniz</option>
+              <option value="Porto Novo">Porto Novo</option>
+              <option value="Ribeira Brava">Ribeira Brava</option>
+              <option value="Ribeira da Janela">Ribeira da Janela</option>
+              <option value="Santa Cruz">Santa Cruz</option>
+              <option value="Santa do Porto Moniz">Santa do Porto Moniz</option>
+              <option value="Santana">Santana</option>
+              <option value="São Jorge">São Jorge</option>
+              <option value="São Vicente">São Vicente</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">
@@ -349,6 +376,103 @@
         </div>
       </div>
 
+      <!-- Keys & House Rules -->
+      <div id="section-keys-house-rules" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #475569 0%, #1e293b 100%); color: #fff;">
+              <i class="fas fa-key"></i>
+            </div>
+            <h2 class="section-title">Keys & House Rules</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Entrance Keys</span>
+            </label>
+            <input type="text" id="settings-keys-entrance" class="form-input" placeholder="Entrance Keys">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>House Keys</span>
+            </label>
+            <input type="text" id="settings-keys-house" class="form-input" placeholder="House Keys">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Remote Control</span>
+            </label>
+            <input type="text" id="settings-keys-remote" class="form-input" placeholder="Remote Control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-key"></i>
+              <span>Other Keys</span>
+            </label>
+            <input type="text" id="settings-keys-other" class="form-input" placeholder="Other Keys">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Keys Inventory Notes</span>
+            </label>
+            <textarea id="settings-keys-inventory-notes" class="form-input" rows="3" placeholder="Keys Inventory Notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-door-closed"></i>
+              <span>House Rules Status</span>
+            </label>
+            <select id="settings-house-rules-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-hospital"></i>
+              <span>Nearest Hospital Link</span>
+            </label>
+            <input type="text" id="settings-nearest-hospital-link" class="form-input" placeholder="Nearest Hospital Link">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-clock"></i>
+              <span>Nearest Hospital Hours</span>
+            </label>
+            <textarea id="settings-nearest-hospital-hours" class="form-input" rows="3" placeholder="Nearest Hospital Hours"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-bus"></i>
+              <span>Bus Stop Link</span>
+            </label>
+            <input type="text" id="settings-bus-stop-link" class="form-input" placeholder="Bus Stop Link">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-calendar-alt"></i>
+              <span>Bus Schedule Link</span>
+            </label>
+            <input type="text" id="settings-bus-schedule-link" class="form-input" placeholder="Bus Schedule Link">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>House Rules Notes</span>
+            </label>
+            <textarea id="settings-house-rules-notes" class="form-input" rows="3" placeholder="House Rules Notes"></textarea>
+          </div>
+        </div>
+      </div>
+
       <!-- Maps & Location -->
       <div id="section-maps-location" class="form-section">
         <div class="section-header">
@@ -369,6 +493,19 @@
           </div>
           <div class="form-group">
             <label class="form-label">
+              <i class="fas fa-map-marked-alt"></i>
+              <span>Google Maps Status</span>
+            </label>
+            <select id="settings-google-maps-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
               <i class="fas fa-trash"></i>
               <span>Garbage Location</span>
             </label>
@@ -380,6 +517,20 @@
               <span>Garbage Floor</span>
             </label>
             <input type="text" id="settings-garbage-floor" class="form-input" placeholder="e.g. Ground">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Garbage Location Notes</span>
+            </label>
+            <textarea id="settings-garbage-location-notes" class="form-input" rows="3" placeholder="Garbage Location Notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Location Notes</span>
+            </label>
+            <textarea id="settings-location-notes" class="form-input" rows="3" placeholder="Location Notes"></textarea>
           </div>
         </div>
       </div>
@@ -404,6 +555,20 @@
           </div>
           <div class="form-group">
             <label class="form-label">
+              <i class="fas fa-link"></i>
+              <span>Check-in Video Links</span>
+            </label>
+            <textarea id="settings-checkin-video-links" class="form-input" rows="3" placeholder="Check-in Video Links"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Check-in Video Notes</span>
+            </label>
+            <textarea id="settings-checkin-video-notes" class="form-input" rows="3" placeholder="Check-in Video Notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
               <i class="fas fa-file-alt"></i>
               <span>Descriptions on Booking</span>
             </label>
@@ -416,6 +581,39 @@
             </select>
           </div>
           <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-file-alt"></i>
+              <span>New Description Status</span>
+            </label>
+            <select id="settings-booking-description-new-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-file-export"></i>
+              <span>Avantio Description Status</span>
+            </label>
+            <select id="settings-avantio-description-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Description Notes</span>
+            </label>
+            <textarea id="settings-booking-description-notes" class="form-input" rows="3" placeholder="Description Notes"></textarea>
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
             <label class="form-label">
               <i class="fas fa-key"></i>
               <span>Self Check-in Instructions</span>
@@ -517,6 +715,39 @@
           </div>
           <div class="form-group">
             <label class="form-label">
+              <i class="fas fa-file-contract"></i>
+              <span>Contract Signed Status</span>
+            </label>
+            <select id="settings-contract-signed-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-file-contract"></i>
+              <span>Contract Scanned Status</span>
+            </label>
+            <select id="settings-contract-scanned-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Contract Notes</span>
+            </label>
+            <textarea id="settings-contract-notes" class="form-input" rows="3" placeholder="Contract Notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
               <i class="fas fa-book"></i>
               <span>Complaint Books</span>
             </label>
@@ -535,6 +766,7 @@
               <option value="">Select an option</option>
               <option value="on-platform">On the Platform</option>
               <option value="missing">Missing</option>
+              <option value="requested">Requested</option>
             </select>
           </div>
           <div class="form-group">
@@ -546,7 +778,42 @@
               <option value="">Select an option</option>
               <option value="on-platform">On the platform</option>
               <option value="missing">Missing</option>
+              <option value="requested">Requested</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>SEF/Statistics Notes</span>
+            </label>
+            <textarea id="settings-sef-statistics-notes" class="form-input" rows="3" placeholder="SEF/Statistics Notes"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>Tourist Tax Municipality</span>
+            </label>
+            <input type="text" id="settings-tourist-tax-municipality" class="form-input" placeholder="Tourist Tax Municipality">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-globe"></i>
+              <span>Tourist Tax Platform Status</span>
+            </label>
+            <select id="settings-tourist-tax-platform-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Tourist Tax Notes</span>
+            </label>
+            <textarea id="settings-tourist-tax-notes" class="form-input" rows="3" placeholder="Tourist Tax Notes"></textarea>
           </div>
           <div class="form-group">
             <label class="form-label">
@@ -554,6 +821,142 @@
               <span>Tourist Tax Instructions</span>
             </label>
             <textarea id="settings-tourist-tax-instructions" class="form-input" rows="3" placeholder="Explain where guests should leave the tourist tax payment and any relevant details"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-id-card"></i>
+              <span>Property Register Number</span>
+            </label>
+            <input type="text" id="settings-property-register-number" class="form-input" placeholder="Property Register Number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fab fa-airbnb"></i>
+              <span>Register Airbnb Status</span>
+            </label>
+            <select id="settings-property-register-airbnb-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-bookmark"></i>
+              <span>Register Booking Status</span>
+            </label>
+            <select id="settings-property-register-booking-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-gift"></i>
+              <span>Register Benefits Status</span>
+            </label>
+            <select id="settings-property-register-benefits-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- RNAL & Insurance -->
+      <div id="section-rnal-insurance" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); color: #fff;">
+              <i class="fas fa-file-contract"></i>
+            </div>
+            <h2 class="section-title">RNAL & Insurance</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-id-badge"></i>
+              <span>AL/RNAL Number</span>
+            </label>
+            <input type="text" id="settings-rnal-number" class="form-input" placeholder="AL/RNAL Number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-user-shield"></i>
+              <span>RNAL Handled By Us</span>
+            </label>
+            <select id="settings-rnal-handled-by-us" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-check-circle"></i>
+              <span>RNAL Done Status</span>
+            </label>
+            <select id="settings-rnal-done-status" class="form-input">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-hand-holding-usd"></i>
+              <span>Insurance Charged Status</span>
+            </label>
+            <select id="settings-insurance-charged-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-laptop-house"></i>
+              <span>Insurance Platform Status</span>
+            </label>
+            <select id="settings-insurance-platform-status" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-calendar-alt"></i>
+              <span>Insurance Validity</span>
+            </label>
+            <input type="date" id="settings-insurance-validity" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-file-invoice-dollar"></i>
+              <span>Insurance Accounting</span>
+            </label>
+            <input type="text" id="settings-insurance-accounting" class="form-input" placeholder="Insurance Accounting">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Insurance Notes</span>
+            </label>
+            <textarea id="settings-insurance-notes" class="form-input" rows="3" placeholder="Insurance Notes"></textarea>
           </div>
         </div>
       </div>
@@ -604,6 +1007,13 @@
               <option value="missing">Missing</option>
             </select>
           </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Airbnb Links Notes</span>
+            </label>
+            <textarea id="settings-airbnb-links-notes" class="form-input" rows="3" placeholder="Airbnb Links Notes"></textarea>
+          </div>
         </div>
       </div>
 
@@ -623,13 +1033,17 @@
               <i class="fas fa-signal"></i>
               <span>WiFi Speed</span>
             </label>
-            <select id="settings-wifi-speed" class="form-input">
-              <option value="">Select Speed</option>
-              <option value="basic">&lt; 25 Mbps</option>
-              <option value="standard">25-50 Mbps</option>
-              <option value="fast">50-100 Mbps</option>
-              <option value="very-fast">100+ Mbps</option>
-              <option value="fiber">Fiber (500+ Mbps)</option>
+            <input type="text" id="settings-wifi-speed" class="form-input" placeholder="e.g. 450 Mbps" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fab fa-airbnb"></i>
+              <span>WiFi Airbnb</span>
+            </label>
+            <select id="settings-wifi-airbnb" class="form-input">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+              <option value="featured">Featured Amenity</option>
             </select>
           </div>
           <div class="form-group">
@@ -870,6 +1284,7 @@
             <select id="settings-private-sign" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
             </select>
@@ -882,6 +1297,7 @@
             <select id="settings-no-smoking-sign" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
             </select>
@@ -894,6 +1310,7 @@
             <select id="settings-no-junk-mail-sign" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
             </select>
@@ -906,6 +1323,7 @@
             <select id="settings-al-ah-sign" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="not-necessary">Not necessary</option>
               <option value="authorized">Authorized</option>
             </select>
@@ -918,8 +1336,10 @@
             <select id="settings-keys-notice" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
+              <option value="authorized">Authorized</option>
             </select>
           </div>
           <div class="form-group">
@@ -930,9 +1350,30 @@
             <select id="settings-wc-sign" class="form-input">
               <option value="">Select</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
               <option value="needs-checking">Needs checking</option>
               <option value="not-necessary">Not necessary</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-volume-mute"></i>
+              <span>Noise Sign</span>
+            </label>
+            <select id="settings-noise-sign" class="form-input">
+              <option value="">Select status</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="needs-checking">Needs checking</option>
+              <option value="not-necessary">Not necessary</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Signage Notes</span>
+            </label>
+            <textarea id="settings-signage-notes" class="form-input" rows="3" placeholder="Signage Notes"></textarea>
           </div>
         </div>
       </div>
@@ -982,6 +1423,48 @@
         </div>
       </div>
 
+      <!-- Accounting -->
+      <div id="section-accounting" class="form-section">
+        <div class="section-header">
+          <div class="section-header-title">
+            <div class="section-icon" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); color: #fff;">
+              <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <h2 class="section-title">Accounting</h2>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-user"></i>
+              <span>Accounting Contact Name</span>
+            </label>
+            <input type="text" id="settings-accounting-name" class="form-input" placeholder="Name or Company">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-phone"></i>
+              <span>Accounting Phone</span>
+            </label>
+            <input type="tel" id="settings-accounting-phone" class="form-input" placeholder="Phone number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-envelope"></i>
+              <span>Accounting Email</span>
+            </label>
+            <input type="email" id="settings-accounting-email" class="form-input" placeholder="Email address">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">
+              <i class="fas fa-sticky-note"></i>
+              <span>Accounting Notes</span>
+            </label>
+            <textarea id="settings-accounting-notes" class="form-input" rows="3" placeholder="Additional notes for accounting..."></textarea>
+          </div>
+        </div>
+      </div>
+
       <!-- Contacts -->
       <div id="section-contacts" class="form-section">
         <div class="section-header">
@@ -1021,13 +1504,6 @@
               <span>Charge to Guest per Cleaning</span>
             </label>
             <input type="number" id="settings-guest-cleaning-fee" name="guestCleaningFee" class="form-input" step="0.01" min="0" placeholder="e.g. 60.00 charged to the guest">
-          </div>
-          <div class="form-group">
-            <label class="form-label">
-              <i class="fas fa-file-invoice-dollar"></i>
-              <span>Accounting Contact</span>
-            </label>
-            <textarea id="settings-accounting-contact" class="form-input" rows="3" placeholder="Name/company, phone, email, notes"></textarea>
           </div>
         </div>
       </div>

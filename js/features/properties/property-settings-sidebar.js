@@ -25,7 +25,9 @@ function initSettingsSidebar() {
     // Platforms and compliance
     { id: 'section-online-services', name: 'Online Services' },
     { id: 'section-legal-compliance', name: 'Legal & Compliance' },
+    { id: 'section-rnal-insurance', name: 'RNAL & Insurance' },
     { id: 'section-safety-maintenance', name: 'Safety Maintenance' },
+    { id: 'section-keys-house-rules', name: 'Keys & House Rules' },
 
     // Admin and building
     { id: 'section-owner', name: 'Owner' },

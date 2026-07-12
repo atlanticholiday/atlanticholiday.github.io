@@ -318,302 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return exact || '';
     };
 
-    // Rename the Contacts section to Cleaning in the UI without heavy HTML edits
-    const ensureCleaningSectionHeader = () => {
-        const section = document.getElementById('section-contacts');
-        if (!section) return;
-        const titleEl = section.querySelector('.section-title');
-        if (titleEl) titleEl.textContent = 'Cleaning';
-        const iconWrap = section.querySelector('.section-icon');
-        if (iconWrap) {
-            let iEl = iconWrap.querySelector('i');
-            if (!iEl) {
-                iEl = document.createElement('i');
-                iconWrap.appendChild(iEl);
-            }
-            iEl.className = 'fas fa-broom';
-        }
-    };
 
-    // Ensure a dedicated Accounting section exists in the form (avoids heavy HTML edits)
-    const ensureAccountingSection = () => {
-        const form = document.getElementById('property-settings-form');
-        if (!form) return null;
-        let section = document.getElementById('section-accounting');
-        if (section) return section;
-
-        // Build section scaffold
-        section = document.createElement('div');
-        section.id = 'section-accounting';
-        section.className = 'form-section';
-        section.innerHTML = `
-          <div class="section-header">
-            <div class="section-header-title">
-              <div class="section-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); color: #fff;">
-                <i class="fas fa-file-invoice-dollar"></i>
-              </div>
-              <h2 class="section-title">Accounting</h2>
-            </div>
-          </div>
-          <div class="form-grid"></div>
-        `;
-
-        // Insert before Contacts if available, otherwise before Condominium, else append
-        const contacts = document.getElementById('section-contacts');
-        const condo = document.getElementById('section-condominium-info');
-        if (contacts && contacts.parentElement === form) {
-            form.insertBefore(section, contacts);
-        } else if (condo && condo.parentElement === form) {
-            form.insertBefore(section, condo);
-        } else {
-            form.appendChild(section);
-        }
-        return section;
-    };
-
-    // Ensure Accounting fields exist, split into Name/Phone/Email/Notes and place under the Accounting section
-    const ensureAccountingFields = () => {
-        const form = document.getElementById('property-settings-form');
-        if (!form) return;
-
-        // Ensure the Accounting section scaffold exists
-        const section = ensureAccountingSection();
-        const targetGrid = section?.querySelector('.form-grid') || form;
-
-        // If we already created the structured fields, skip
-        if (document.getElementById('settings-accounting-name') &&
-            document.getElementById('settings-accounting-phone') &&
-            document.getElementById('settings-accounting-email') &&
-            document.getElementById('settings-accounting-notes')) {
-            return;
-        }
-
-        // Locate legacy textarea if present and repurpose as Notes
-        const legacyTextarea = document.getElementById('settings-accounting-contact');
-        let notesGroup;
-        if (legacyTextarea) {
-            // Adjust label/icon and id
-            const group = legacyTextarea.closest('.form-group') || document.createElement('div');
-            if (!group.classList.contains('form-group')) group.className = 'form-group';
-            const label = group.querySelector('label.form-label') || document.createElement('label');
-            label.className = 'form-label';
-            label.innerHTML = '<i class="fas fa-sticky-note"></i> <span>Accounting Notes</span>';
-            if (!label.parentElement) group.prepend(label);
-            legacyTextarea.id = 'settings-accounting-notes';
-            legacyTextarea.placeholder = 'Notes about accounting (optional)';
-            notesGroup = group;
-        } else if (!document.getElementById('settings-accounting-notes')) {
-            // Create notes textarea if legacy not found
-            notesGroup = document.createElement('div');
-            notesGroup.className = 'form-group';
-            notesGroup.innerHTML = `
-                <label class="form-label">
-                  <i class="fas fa-sticky-note"></i>
-                  <span>Accounting Notes</span>
-                </label>
-                <textarea id="settings-accounting-notes" class="form-input" rows="3" placeholder="Notes about accounting (optional)"></textarea>
-            `;
-        }
-
-        // Create Name, Phone, Email groups
-        if (!document.getElementById('settings-accounting-name')) {
-            const nameGroup = document.createElement('div');
-            nameGroup.className = 'form-group';
-            nameGroup.innerHTML = `
-                <label class="form-label">
-                  <i class="fas fa-user-tie"></i>
-                  <span>Accounting Contact Name/Company</span>
-                </label>
-                <input id="settings-accounting-name" name="accountingName" type="text" class="form-input" placeholder="e.g. ABC Contabilidade" />
-            `;
-            targetGrid.appendChild(nameGroup);
-        }
-
-        if (!document.getElementById('settings-accounting-phone')) {
-            const phoneGroup = document.createElement('div');
-            phoneGroup.className = 'form-group';
-            phoneGroup.innerHTML = `
-                <label class="form-label">
-                  <i class="fas fa-phone"></i>
-                  <span>Accounting Phone</span>
-                </label>
-                <input id="settings-accounting-phone" name="accountingPhone" type="tel" class="form-input" placeholder="e.g. +351 912 345 678" />
-            `;
-            targetGrid.appendChild(phoneGroup);
-        }
-
-        if (!document.getElementById('settings-accounting-email')) {
-            const emailGroup = document.createElement('div');
-            emailGroup.className = 'form-group';
-            emailGroup.innerHTML = `
-                <label class="form-label">
-                  <i class="fas fa-envelope"></i>
-                  <span>Accounting Email</span>
-                </label>
-                <input id="settings-accounting-email" name="accountingEmail" type="email" class="form-input" placeholder="e.g. accounting@company.com" />
-            `;
-            targetGrid.appendChild(emailGroup);
-        }
-
-        if (notesGroup) {
-            targetGrid.appendChild(notesGroup);
-        }
-    };
-
-    // Apply quick UI adjustments immediately
-    ensureCleaningSectionHeader();
-    const ensureLocationField = () => {
-        const el = document.getElementById('settings-location');
-        if (!el) {
-            console.warn('🔧 [PROPERTY SETTINGS] settings-location element not found');
-            return;
-        }
-        let selectEl = el;
-        if (el.tagName !== 'SELECT') {
-            // Replace input/textarea with a select element to enforce canonical list
-            const newSelect = document.createElement('select');
-            newSelect.id = el.id;
-            if (el.name) newSelect.name = el.name;
-            newSelect.className = el.className || 'w-full';
-            el.parentNode.replaceChild(newSelect, el);
-            selectEl = newSelect;
-        }
-        // Populate options
-        selectEl.innerHTML = '';
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = 'Select location';
-        selectEl.appendChild(emptyOpt);
-        for (const loc of LOCATIONS) {
-            const opt = document.createElement('option');
-            opt.value = loc;
-            opt.textContent = loc;
-            selectEl.appendChild(opt);
-        }
-    };
-
-    const toKebab = (value) => String(value || '').replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-    const settingsIdForImportedField = (field) => `settings-${toKebab(field)}`;
-    const IMPORTED_AH_SETTINGS_FIELDS = [
-        ['maps-location', 'googleMapsStatus', 'Google Maps Status'],
-        ['maps-location', 'garbageLocationNotes', 'Garbage Location Notes', 'textarea'],
-        ['maps-location', 'locationNotes', 'Location Notes', 'textarea'],
-        ['media-content', 'checkinVideoLinks', 'Check-in Video Links', 'textarea'],
-        ['media-content', 'checkinVideoNotes', 'Check-in Video Notes', 'textarea'],
-        ['media-content', 'bookingDescriptionNewStatus', 'New Description Status'],
-        ['media-content', 'avantioDescriptionStatus', 'Avantio Description Status'],
-        ['media-content', 'bookingDescriptionNotes', 'Description Notes', 'textarea'],
-        ['recommendations', 'recommendationsStatus', 'Recommendations Status'],
-        ['recommendations', 'recommendationsNotes', 'Recommendations Notes', 'textarea'],
-        ['online-services', 'airbnbLinksNotes', 'Airbnb Notes', 'textarea'],
-        ['signage', 'noiseSign', 'Noise Sign'],
-        ['signage', 'signageNotes', 'Signage Notes', 'textarea'],
-        ['legal-compliance', 'contractSignedStatus', 'Contract Signed Status'],
-        ['legal-compliance', 'contractScannedStatus', 'Contract Scanned Status'],
-        ['legal-compliance', 'contractNotes', 'Contract Notes', 'textarea'],
-        ['legal-compliance', 'sefStatisticsNotes', 'SEF/Statistics Notes', 'textarea'],
-        ['legal-compliance', 'touristTaxMunicipality', 'Tourist Tax Municipality'],
-        ['legal-compliance', 'touristTaxPlatformStatus', 'Tourist Tax Platform Status'],
-        ['legal-compliance', 'touristTaxNotes', 'Tourist Tax Notes', 'textarea'],
-        ['legal-compliance', 'propertyRegisterNumber', 'Property Register Number'],
-        ['legal-compliance', 'propertyRegisterAirbnbStatus', 'Register Airbnb Status'],
-        ['legal-compliance', 'propertyRegisterBookingStatus', 'Register Booking Status'],
-        ['legal-compliance', 'propertyRegisterBenefitsStatus', 'Register Benefits Status'],
-        ['legal-compliance', 'rnalNumber', 'AL/RNAL Number'],
-        ['legal-compliance', 'rnalHandledByUs', 'RNAL Handled By Us'],
-        ['legal-compliance', 'rnalDoneStatus', 'RNAL Done Status'],
-        ['legal-compliance', 'insuranceChargedStatus', 'Insurance Charged Status'],
-        ['legal-compliance', 'insurancePlatformStatus', 'Insurance Platform Status'],
-        ['legal-compliance', 'insuranceValidity', 'Insurance Validity', 'date'],
-        ['legal-compliance', 'insuranceNotes', 'Insurance Notes', 'textarea'],
-        ['legal-compliance', 'insuranceAccounting', 'Insurance Accounting'],
-        ['keys-house-rules', 'keysEntrance', 'Entrance Keys'],
-        ['keys-house-rules', 'keysHouse', 'House Keys'],
-        ['keys-house-rules', 'keysRemote', 'Remote Control'],
-        ['keys-house-rules', 'keysOther', 'Other Keys'],
-        ['keys-house-rules', 'keysInventoryNotes', 'Keys Inventory Notes', 'textarea'],
-        ['keys-house-rules', 'houseRulesStatus', 'House Rules Status'],
-        ['keys-house-rules', 'nearestHospitalLink', 'Nearest Hospital Link', 'url'],
-        ['keys-house-rules', 'nearestHospitalHours', 'Nearest Hospital Hours', 'textarea'],
-        ['keys-house-rules', 'busStopLink', 'Bus Stop Link', 'url'],
-        ['keys-house-rules', 'busScheduleLink', 'Bus Schedule Link', 'url'],
-        ['keys-house-rules', 'houseRulesNotes', 'House Rules Notes', 'textarea']
-    ].map(([sectionSlug, field, label, type = 'text']) => ({ sectionSlug, field, label, type }));
-
-    const ensureImportedAhFields = () => {
-        const form = document.getElementById('property-settings-form');
-        if (!form) return;
-
-        const ensureSection = (slug) => {
-            let section = document.getElementById(`section-${slug}`);
-            if (section) return section;
-
-            section = document.createElement('div');
-            section.id = `section-${slug}`;
-            section.className = 'form-section';
-            section.innerHTML = `
-              <div class="section-header">
-                <div class="section-header-title">
-                  <div class="section-icon" style="background: linear-gradient(135deg, #334155 0%, #0f172a 100%); color: #fff;">
-                    <i class="fas fa-key"></i>
-                  </div>
-                  <h2 class="section-title">Keys & House Rules</h2>
-                </div>
-              </div>
-              <div class="form-grid"></div>
-            `;
-
-            const ownerSection = document.getElementById('section-owner');
-            if (ownerSection?.parentElement === form) {
-                form.insertBefore(section, ownerSection);
-            } else {
-                form.appendChild(section);
-            }
-            return section;
-        };
-
-        IMPORTED_AH_SETTINGS_FIELDS.forEach(({ sectionSlug, field, label, type }) => {
-            const fieldId = settingsIdForImportedField(field);
-            if (document.getElementById(fieldId)) return;
-
-            const section = ensureSection(sectionSlug);
-            const grid = section.querySelector('.form-grid') || section;
-            const group = document.createElement('div');
-            group.className = 'form-group';
-            const control = type === 'textarea'
-                ? `<textarea id="${fieldId}" class="form-input" rows="3" placeholder="${label}"></textarea>`
-                : `<input id="${fieldId}" type="${type}" class="form-input" placeholder="${label}">`;
-            group.innerHTML = `
-                <label class="form-label">
-                  <i class="fas fa-file-import"></i>
-                  <span>${label}</span>
-                </label>
-                ${control}
-            `;
-            grid.appendChild(group);
-        });
-    };
-
-    const ensureImportedAhSelectOptions = () => {
-        [
-            ['settings-statistics-status', 'requested', 'Requested'],
-            ['settings-sef-status', 'requested', 'Requested'],
-            ['settings-private-sign', 'no', 'No'],
-            ['settings-no-smoking-sign', 'no', 'No'],
-            ['settings-no-junk-mail-sign', 'no', 'No'],
-            ['settings-al-ah-sign', 'no', 'No'],
-            ['settings-keys-notice', 'no', 'No'],
-            ['settings-keys-notice', 'authorized', 'Authorized'],
-            ['settings-wc-sign', 'no', 'No']
-        ].forEach(([selectId, value, label]) => {
-            const select = document.getElementById(selectId);
-            if (!select || select.querySelector(`option[value="${value}"]`)) return;
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = label;
-            select.appendChild(option);
-        });
-    };
 
     // --- Comprehensive mapping from DB keys to form element IDs ---
     const SETTINGS_MAP = {
@@ -663,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Connectivity & Utilities
         wifiSpeed: 'settings-wifi-speed',
+        wifiAirbnb: 'settings-wifi-airbnb',
         energySource: 'settings-energy-source',
 
         // Access & Parking
@@ -738,7 +444,63 @@ document.addEventListener('DOMContentLoaded', () => {
         ownerLastName: 'settings-owner-last-name',
         ownerVatNumber: 'settings-owner-vat-number',
         ownerPropertyAddress: 'settings-owner-property-address',
-        ...Object.fromEntries(IMPORTED_AH_SETTINGS_FIELDS.map(({ field }) => [field, settingsIdForImportedField(field)]))
+
+        // Maps & Location Imported fields
+        googleMapsStatus: 'settings-google-maps-status',
+        garbageLocationNotes: 'settings-garbage-location-notes',
+        locationNotes: 'settings-location-notes',
+
+        // Media & Content Imported fields
+        checkinVideoLinks: 'settings-checkin-video-links',
+        checkinVideoNotes: 'settings-checkin-video-notes',
+        bookingDescriptionNewStatus: 'settings-booking-description-new-status',
+        avantioDescriptionStatus: 'settings-avantio-description-status',
+        bookingDescriptionNotes: 'settings-booking-description-notes',
+
+        // Recommendations Imported fields
+        recommendationsStatus: 'settings-recommendations-status',
+        recommendationsNotes: 'settings-recommendations-notes',
+
+        // Online Services Imported fields
+        airbnbLinksNotes: 'settings-airbnb-links-notes',
+
+        // Signage Imported fields
+        noiseSign: 'settings-noise-sign',
+        signageNotes: 'settings-signage-notes',
+
+        // Legal & Compliance Imported fields
+        contractSignedStatus: 'settings-contract-signed-status',
+        contractScannedStatus: 'settings-contract-scanned-status',
+        contractNotes: 'settings-contract-notes',
+        sefStatisticsNotes: 'settings-sef-statistics-notes',
+        touristTaxMunicipality: 'settings-tourist-tax-municipality',
+        touristTaxPlatformStatus: 'settings-tourist-tax-platform-status',
+        touristTaxNotes: 'settings-tourist-tax-notes',
+        propertyRegisterNumber: 'settings-property-register-number',
+        propertyRegisterAirbnbStatus: 'settings-property-register-airbnb-status',
+        propertyRegisterBookingStatus: 'settings-property-register-booking-status',
+        propertyRegisterBenefitsStatus: 'settings-property-register-benefits-status',
+        rnalNumber: 'settings-rnal-number',
+        rnalHandledByUs: 'settings-rnal-handled-by-us',
+        rnalDoneStatus: 'settings-rnal-done-status',
+        insuranceChargedStatus: 'settings-insurance-charged-status',
+        insurancePlatformStatus: 'settings-insurance-platform-status',
+        insuranceValidity: 'settings-insurance-validity',
+        insuranceNotes: 'settings-insurance-notes',
+        insuranceAccounting: 'settings-insurance-accounting',
+
+        // Keys & House Rules Imported fields
+        keysEntrance: 'settings-keys-entrance',
+        keysHouse: 'settings-keys-house',
+        keysRemote: 'settings-keys-remote',
+        keysOther: 'settings-keys-other',
+        keysInventoryNotes: 'settings-keys-inventory-notes',
+        houseRulesStatus: 'settings-house-rules-status',
+        nearestHospitalLink: 'settings-nearest-hospital-link',
+        nearestHospitalHours: 'settings-nearest-hospital-hours',
+        busStopLink: 'settings-bus-stop-link',
+        busScheduleLink: 'settings-bus-schedule-link',
+        houseRulesNotes: 'settings-house-rules-notes'
     };
 
     // Function to populate the entire page from a single property object
@@ -793,33 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Ensure Guest Cleaning Fee field exists and is placed near cleaning company price
-    const ensureGuestCleaningFeeField = () => {
-        const form = document.getElementById('property-settings-form');
-        if (!form) return;
-        if (document.getElementById('settings-guest-cleaning-fee')) return; // already present
-        const anchor = document.getElementById('settings-cleaning-company-price');
-        // Prefer to insert inside the Basic Information grid to keep consistent layout
-        const basicGrid = document.querySelector('#section-basic-info-edit .form-grid');
-        // Build consistent form-group with icon and styled label
-        const group = document.createElement('div');
-        group.className = 'form-group';
-        group.innerHTML = `
-            <label class="form-label">
-              <i class="fas fa-broom"></i>
-              <span>Charge to Guest per Cleaning</span>
-            </label>
-            <input id="settings-guest-cleaning-fee" name="guestCleaningFee" type="number" step="0.01" min="0" class="form-input" placeholder="e.g. 60.00 charged to the guest" />
-        `;
-        if (anchor && anchor.parentElement) {
-            // Insert right after the anchor's form-group if available
-            anchor.parentElement.insertAdjacentElement('afterend', group);
-        } else if (basicGrid) {
-            basicGrid.appendChild(group);
-        } else {
-            form.appendChild(group);
-        }
-    };
+
 
     const loadAndPopulate = async () => {
         try {
@@ -897,13 +633,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (propertyData) {
-                // Ensure fields are present before populating
-                ensureGuestCleaningFeeField();
-                ensureAccountingFields();
-                ensureImportedAhFields();
-                ensureImportedAhSelectOptions();
-                // Ensure the location field is a select with canonical options before populating values
-                ensureLocationField();
                 populatePage(propertyData);
                 // Normalize and set canonical location selection if possible
                 const locEl = document.getElementById('settings-location');
@@ -989,12 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsForm.addEventListener('submit', saveSettings);
     }
 
-    // Prepare fields, then initial load
-    ensureGuestCleaningFeeField();
-    ensureAccountingFields();
-    ensureImportedAhFields();
-    ensureImportedAhSelectOptions();
-    ensureLocationField();
     // Initialize the in-page property switcher UI
     initPropertySwitcher();
     loadAndPopulate();

@@ -73,7 +73,7 @@ import { getEnumOptions } from '../../shared/enums.js';
 
     // Build fields grid for current category
     const cat = state.category;
-    const numberKeys = new Set(['cleaningCompanyPrice','guestCleaningFee','wifiSpeed','rooms','bathrooms']);
+    const numberKeys = new Set(['cleaningCompanyPrice', 'guestCleaningFee', 'rooms', 'bathrooms', 'checkinVideos']);
     const isTextarea = (key) => /instructions|notes|description|how|steps|comments|details/i.test(key);
 
     const fieldsHtml = (cat?.fields || []).map((field) => {
@@ -149,7 +149,7 @@ import { getEnumOptions } from '../../shared/enums.js';
           </div>
         `;
       }
-      const isNumber = numberKeys.has(field) || /price|fee|amount|count|number|kg|weight|speed|rooms|bathrooms/i.test(field);
+      const isNumber = numberKeys.has(field);
       const typeAttr = isNumber ? 'number' : 'text';
       const stepAttr = isNumber ? ' step="0.01"' : '';
       const v = typeof val === 'number' ? String(val) : (val ?? '');

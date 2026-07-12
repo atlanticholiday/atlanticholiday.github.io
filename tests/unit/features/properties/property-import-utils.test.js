@@ -224,4 +224,27 @@ describe("property-import-utils", () => {
     assert.equal(result.updates[0].updates.signageNotes, "Falta colocar sem o nome Pestana");
     assert.equal(result.updates[1].updates.wcSign, "yes");
   });
+
+  test("imports wifi speed and wifi airbnb columns correctly", () => {
+    const result = parseAhWorkbookImport(
+      {
+        "codigos andar smarttv aquecimento da agua wifi": [
+          ["Alojamento", "Wifi speed", "Wifi airbnb", "Parking spot"],
+          ["Acanto Loft", "450 Mbps", "Sim", "Garage 2"],
+          ["Apartamento do Mar", "100 Mbps", "Não", ""]
+        ]
+      },
+      [
+        { id: "property-1", name: "Acanto Loft", wifiSpeed: "Sim", wifiAirbnb: "" },
+        { id: "property-2", name: "Apartamento do Mar", wifiSpeed: "basic", wifiAirbnb: "yes" }
+      ]
+    );
+
+    assert.equal(result.totals.propertiesToUpdate, 2);
+    // Even without overwriteExisting: true, it should overwrite "Sim" and "basic" because they are stale/empty import targets
+    assert.equal(result.updates[0].updates.wifiSpeed, "450 Mbps");
+    assert.equal(result.updates[0].updates.wifiAirbnb, "yes");
+    assert.equal(result.updates[1].updates.wifiSpeed, "100 Mbps");
+    assert.equal(result.updates[1].updates.wifiAirbnb, undefined);
+  });
 });

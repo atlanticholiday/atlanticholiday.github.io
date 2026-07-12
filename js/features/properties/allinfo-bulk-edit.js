@@ -91,10 +91,10 @@ import { getEnumOptions } from '../../shared/enums.js';
 
     // Build field rows
     const grid = panel.querySelector('#bulk-fields-grid');
-    const numberKeys = new Set(['cleaningCompanyPrice', 'guestCleaningFee', 'wifiSpeed', 'rooms', 'bathrooms']);
+    const numberKeys = new Set(['cleaningCompanyPrice', 'guestCleaningFee', 'rooms', 'bathrooms', 'checkinVideos']);
 
     cat.fields.forEach((field) => {
-      const isNumber = numberKeys.has(field) || /price|fee|amount|count|number|kg|weight|speed|rooms|bathrooms/i.test(field);
+      const isNumber = numberKeys.has(field);
       const fieldId = `bulk-field-${field}`;
       const applyId = `bulk-apply-${field}`;
       const human = field === 'name' ? 'Property Name' : field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
