@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ef6b79">
+    <meta name="application-name" content="Atlantic Holiday">
+    <meta name="apple-mobile-web-app-title" content="Atlantic Holiday">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Property Settings</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180.png">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/property-settings-update.css">
     <style>
@@ -1106,6 +1114,7 @@
   </button>
 
   <!-- Firebase v11.6.1 is loaded via ES6 modules in the controller script -->
+  <script type="module" src="js/pwa-register.js"></script>
   <script type="module" src="js/features/properties/main.js"></script>
 
   <!-- Removed collapsible behavior scripts - sections are now always visible -->
