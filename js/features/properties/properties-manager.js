@@ -34,6 +34,10 @@ export class PropertiesManager {
         return collection(this.db, "properties");
     }
 
+    getPropertyImportReportsCollectionRef() {
+        return collection(this.db, "propertyImportReports");
+    }
+
     async addProperty(propertyData) {
         try {
             const docRef = await addDoc(this.getPropertiesCollectionRef(), {
@@ -91,6 +95,20 @@ export class PropertiesManager {
             await batch.commit();
         } catch (error) {
             console.error('Error performing mixed bulk update:', error);
+            throw error;
+        }
+    }
+
+    async savePropertyImportReport(reportData) {
+        try {
+            const docRef = await addDoc(this.getPropertyImportReportsCollectionRef(), {
+                ...reportData,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            return docRef.id;
+        } catch (error) {
+            console.error('Error saving property import report:', error);
             throw error;
         }
     }

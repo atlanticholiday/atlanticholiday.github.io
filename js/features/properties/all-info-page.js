@@ -1,7 +1,7 @@
 import { LOCATIONS } from '../../shared/locations.js';
 import { getEnumOptions } from '../../shared/enums.js';
 import { i18n } from '../../core/i18n.js';
-import { compareAlojamentosProperties, parseAlojamentosRows } from './property-import-utils.js';
+import { compareAlojamentosProperties, parseAhWorkbookImport, parseAlojamentosRows } from './property-import-utils.js';
 
 const ALL_INFO_CATEGORIES = [
     { title: 'Basic Information', titlePt: 'Informação básica', slug: 'basic-info-edit', fields: ['location', 'type', 'typology', 'rooms', 'bathrooms', 'floor'], icon: 'fas fa-info-circle' },
@@ -11,7 +11,7 @@ const ALL_INFO_CATEGORIES = [
     { title: 'Google Drive', titlePt: 'Google Drive', slug: 'google-drive', fields: ['googleDriveEnabled', 'googleDriveLink', 'scannedDocsLink'], icon: 'fab fa-google-drive' },
     { title: 'Recommendations', titlePt: 'Recomendações', slug: 'recommendations', fields: ['recommendationsLink', 'recommendationsEditLink'], icon: 'fas fa-star' },
     { title: 'Frames', titlePt: 'Molduras', slug: 'frames', fields: ['wifiFrame', 'recommendationsFrame', 'investmentFrame'], icon: 'fas fa-border-all' },
-    { title: 'Signage', titlePt: 'Sinalética', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'alAhSign', 'keysNotice', 'wcSign'], icon: 'fas fa-sign' },
+    { title: 'Signage', titlePt: 'Sinalética', slug: 'signage', fields: ['privateSign', 'noSmokingSign', 'noJunkMailSign', 'noiseSign', 'alAhSign', 'keysNotice', 'wcSign', 'signageNotes'], icon: 'fas fa-sign' },
     { title: 'Equipment', titlePt: 'Equipamento', slug: 'equipment', fields: ['airConditioning', 'fans', 'heaters', 'crib', 'cribMattress', 'babyChair'], icon: 'fas fa-toolbox' },
     { title: 'Services & Extras', titlePt: 'Serviços e extras', slug: 'services-extras', fields: ['breakfastBox', 'poolMaintenanceDay', 'poolMaintenanceNotes'], icon: 'fas fa-concierge-bell' },
     { title: 'Connectivity & Utilities', titlePt: 'Internet e utilidades', slug: 'connectivity-utilities', fields: ['wifiSpeed', 'internetProvider', 'energySource'], icon: 'fas fa-wifi' },
@@ -23,6 +23,41 @@ const ALL_INFO_CATEGORIES = [
     { title: 'Cleaning', titlePt: 'Limpeza', slug: 'contacts', fields: ['cleaningCompanyContact', 'cleaningCompanyPrice', 'guestCleaningFee'], icon: 'fas fa-broom' },
     { title: 'Condominium Information', titlePt: 'Informação do condomínio', slug: 'condominium-info', fields: ['condominiumName', 'condominiumEmail', 'condominiumPhone'], icon: 'fas fa-building' }
 ];
+
+const IMPORTED_AH_CATEGORY_FIELDS = {
+    'maps-location': ['googleMapsStatus', 'garbageLocationNotes', 'locationNotes'],
+    'media-content': ['checkinVideoLinks', 'checkinVideoNotes', 'bookingDescriptionNewStatus', 'avantioDescriptionStatus', 'bookingDescriptionNotes'],
+    recommendations: ['recommendationsStatus', 'recommendationsNotes'],
+    'online-services': ['airbnbLinksNotes'],
+    'legal-compliance': [
+        'contractSignedStatus', 'contractScannedStatus', 'contractNotes',
+        'sefStatisticsNotes',
+        'touristTaxMunicipality', 'touristTaxPlatformStatus', 'touristTaxNotes',
+        'propertyRegisterNumber', 'propertyRegisterAirbnbStatus', 'propertyRegisterBookingStatus', 'propertyRegisterBenefitsStatus',
+        'rnalNumber', 'rnalHandledByUs', 'rnalDoneStatus', 'insuranceChargedStatus', 'insurancePlatformStatus', 'insuranceValidity',
+        'insuranceNotes', 'insuranceAccounting'
+    ]
+};
+
+ALL_INFO_CATEGORIES.forEach((category) => {
+    const fields = IMPORTED_AH_CATEGORY_FIELDS[category.slug] || [];
+    fields.forEach((field) => {
+        if (!category.fields.includes(field)) {
+            category.fields.push(field);
+        }
+    });
+});
+
+ALL_INFO_CATEGORIES.splice(ALL_INFO_CATEGORIES.length - 2, 0, {
+    title: 'Keys & House Rules',
+    titlePt: 'Chaves e regras',
+    slug: 'keys-house-rules',
+    fields: [
+        'keysEntrance', 'keysHouse', 'keysRemote', 'keysOther', 'keysInventoryNotes',
+        'houseRulesStatus', 'nearestHospitalLink', 'nearestHospitalHours', 'busStopLink', 'busScheduleLink', 'houseRulesNotes'
+    ],
+    icon: 'fas fa-key'
+});
 
 const COPY = {
     en: {
@@ -79,7 +114,33 @@ const COPY = {
             error: 'Could not check this file: {{message}}',
             workbook: 'Workbook',
             matched: 'Matched',
-            changed: 'Changed'
+            changed: 'Changed',
+            importable: 'Ready to import',
+            fieldUpdates: 'Empty fields',
+            skippedExisting: 'Existing fields skipped',
+            replacedExisting: 'Existing fields to replace',
+            importMode: 'Import mode',
+            fillEmptyMode: 'Fill empty fields only',
+            replaceExistingMode: 'Replace existing fields',
+            replaceWarning: 'Replace mode will overwrite fields that already have values in the app.',
+            importedSheets: 'Sheets',
+            importButton: 'Save import and report',
+            replaceButton: 'Save replacements and report',
+            saveReportButton: 'Save report',
+            importing: 'Saving...',
+            imported: 'Import saved and report stored.',
+            replaced: 'Replacements saved and report stored.',
+            reportSaved: 'Report stored.',
+            reportOnlySaved: 'No property fields were changed. Report stored only.',
+            propertyFieldsSaved: '{{count}} property field{{plural}} saved.',
+            switchToReplace: 'No empty fields are available in this mode. Choose "Replace existing fields" if you want to write workbook values into existing app fields.',
+            noUpdates: 'No empty fields found for the supported workbook sheets.',
+            missingRows: 'Rows not matched to an app property',
+            unsupportedColumns: 'Unsupported columns',
+            reportHistory: 'Saved import reports',
+            noReports: 'No saved import reports yet.',
+            ptOnly: 'Property imports are only available in Portuguese mode because source files use Portuguese headers.',
+            importFailed: 'Import failed: {{message}}'
         },
         table: {
             visibleOf: '{{visible}} visible of {{total}} properties',
@@ -153,7 +214,33 @@ const COPY = {
             error: 'Não foi possível verificar este ficheiro: {{message}}',
             workbook: 'Ficheiro',
             matched: 'Correspondem',
-            changed: 'Diferentes'
+            changed: 'Diferentes',
+            importable: 'Pronto para importar',
+            fieldUpdates: 'Campos vazios',
+            skippedExisting: 'Campos existentes ignorados',
+            replacedExisting: 'Campos existentes a substituir',
+            importMode: 'Modo de importacao',
+            fillEmptyMode: 'Preencher apenas campos vazios',
+            replaceExistingMode: 'Substituir campos existentes',
+            replaceWarning: 'O modo substituir vai gravar por cima de campos que ja tem valores na app.',
+            importedSheets: 'Folhas',
+            importButton: 'Guardar importacao e relatorio',
+            replaceButton: 'Guardar substituicoes e relatorio',
+            saveReportButton: 'Guardar relatorio',
+            importing: 'A guardar...',
+            imported: 'Importacao guardada e relatorio arquivado.',
+            replaced: 'Substituicoes guardadas e relatorio arquivado.',
+            reportSaved: 'Relatorio guardado.',
+            reportOnlySaved: 'Nenhum campo do alojamento foi alterado. Apenas o relatorio foi guardado.',
+            propertyFieldsSaved: '{{count}} campo{{plural}} do alojamento guardado{{plural}}.',
+            switchToReplace: 'Nao existem campos vazios neste modo. Escolha "Substituir campos existentes" se quiser gravar os valores do ficheiro nos campos existentes da app.',
+            noUpdates: 'Nao foram encontrados campos vazios para as folhas suportadas.',
+            missingRows: 'Linhas sem alojamento correspondente na app',
+            unsupportedColumns: 'Colunas nao suportadas',
+            reportHistory: 'Relatorios de importacao guardados',
+            noReports: 'Ainda nao existem relatorios de importacao guardados.',
+            ptOnly: 'A importacao de alojamentos so esta disponivel em portugues porque os ficheiros usam cabecalhos em portugues.',
+            importFailed: 'Importacao falhou: {{message}}'
         },
         table: {
             visibleOf: '{{visible}} visíveis de {{total}} alojamentos',
@@ -202,9 +289,11 @@ const FIELD_LABELS_PT = {
     privateSign: 'Placa privado',
     noSmokingSign: 'Placa não fumar',
     noJunkMailSign: 'Placa publicidade',
+    noiseSign: 'Placa do ruído',
     alAhSign: 'Placa AL/AH',
     keysNotice: 'Aviso chaves',
     wcSign: 'Placa WC',
+    signageNotes: 'Notas sinalética',
     airConditioning: 'Ar condicionado',
     fans: 'Ventoinhas',
     heaters: 'Aquecedores',
@@ -248,6 +337,50 @@ const FIELD_LABELS_PT = {
     condominiumEmail: 'Email condomínio',
     condominiumPhone: 'Telefone condomínio'
 };
+
+Object.assign(FIELD_LABELS_PT, {
+    googleMapsStatus: 'Estado Google Maps',
+    garbageLocationNotes: 'Notas local do lixo',
+    locationNotes: 'Notas localizacao',
+    checkinVideoLinks: 'Links videos check-in',
+    checkinVideoNotes: 'Notas videos check-in',
+    bookingDescriptionNewStatus: 'Estado novas descricoes',
+    avantioDescriptionStatus: 'Estado Avantio',
+    bookingDescriptionNotes: 'Notas descricoes',
+    recommendationsStatus: 'Estado recomendacoes',
+    recommendationsNotes: 'Notas recomendacoes',
+    airbnbLinksNotes: 'Notas Airbnb',
+    contractSignedStatus: 'Contrato assinado',
+    contractScannedStatus: 'Contrato digitalizado',
+    contractNotes: 'Notas contrato',
+    sefStatisticsNotes: 'Notas SEF/estatistica',
+    touristTaxMunicipality: 'Concelho taxa turistica',
+    touristTaxPlatformStatus: 'Estado plataforma taxa',
+    touristTaxNotes: 'Notas taxa turistica',
+    propertyRegisterNumber: 'Numero caderneta',
+    propertyRegisterAirbnbStatus: 'Caderneta Airbnb',
+    propertyRegisterBookingStatus: 'Caderneta Booking',
+    propertyRegisterBenefitsStatus: 'Beneficios adicionais',
+    rnalNumber: 'Numero AL/RNAL',
+    rnalHandledByUs: 'RNAL feito por nos',
+    rnalDoneStatus: 'RNAL concluido',
+    insuranceChargedStatus: 'Seguro cobrado',
+    insurancePlatformStatus: 'Seguro na plataforma',
+    insuranceValidity: 'Validade seguro',
+    insuranceNotes: 'Notas seguro',
+    insuranceAccounting: 'Contabilidade seguro',
+    keysEntrance: 'Chaves entrada',
+    keysHouse: 'Chaves casa',
+    keysRemote: 'Comando',
+    keysOther: 'Outras chaves',
+    keysInventoryNotes: 'Notas inventario chaves',
+    houseRulesStatus: 'Estado regras casa',
+    nearestHospitalLink: 'Unidade hospitalar',
+    nearestHospitalHours: 'Horario hospital',
+    busStopLink: 'Paragem autocarro',
+    busScheduleLink: 'Horario autocarro',
+    houseRulesNotes: 'Notas regras casa'
+});
 
 function activeLang() {
     return i18n?.getCurrentLanguage?.() === 'pt' ? 'pt' : 'en';
@@ -329,12 +462,12 @@ function propertyMatchesCategoryFilter(property, category, mode, fieldKey = '') 
 }
 
 function isNumericField(field) {
-    return ['cleaningCompanyPrice', 'guestCleaningFee', 'wifiSpeed', 'rooms', 'bathrooms'].includes(field)
+    return ['cleaningCompanyPrice', 'guestCleaningFee', 'wifiSpeed', 'rooms', 'bathrooms', 'checkinVideos'].includes(field)
         || /price|fee|amount|count|number|kg|weight|speed|rooms|bathrooms/i.test(field);
 }
 
 function isBooleanField(field) {
-    return /Enabled$/.test(field);
+    return false;
 }
 
 function isUrlField(field) {
@@ -654,9 +787,149 @@ function renderSimpleList(documentRef, container, title, items, renderItem, empt
     container.appendChild(section);
 }
 
+const PROPERTY_IMPORT_REPORTS_KEY = 'propertyImportReports';
+
+function getStoredPropertyImportReports(windowRef = window) {
+    try {
+        return JSON.parse(windowRef.localStorage?.getItem(PROPERTY_IMPORT_REPORTS_KEY) || '[]');
+    } catch (error) {
+        return [];
+    }
+}
+
+function storePropertyImportReport(report, windowRef = window) {
+    const reports = getStoredPropertyImportReports(windowRef);
+    const nextReports = [report, ...reports].slice(0, 25);
+    try {
+        windowRef.localStorage?.setItem(PROPERTY_IMPORT_REPORTS_KEY, JSON.stringify(nextReports));
+    } catch (error) {
+        console.warn('Could not store property import report locally', error);
+    }
+    return nextReports;
+}
+
+function summarizeReportLine(report) {
+    const date = report.savedAt ? new Date(report.savedAt).toLocaleString() : '';
+    return `${date} - ${report.fileName || 'Workbook'} - ${report.mode} - ${report.totals?.fieldsToUpdate || 0} fields, ${report.totals?.missingInApp || 0} unmatched`;
+}
+
+function appendReportDetailList(documentRef, container, title, items, renderItem, emptyText) {
+    const section = documentRef.createElement('div');
+    section.className = 'mt-3';
+    const heading = documentRef.createElement('div');
+    heading.className = 'text-xs font-semibold uppercase text-gray-500 mb-1';
+    heading.textContent = title;
+    section.appendChild(heading);
+
+    const list = documentRef.createElement('div');
+    list.className = 'max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100 bg-white';
+    if (!items?.length) {
+        const empty = documentRef.createElement('div');
+        empty.className = 'px-3 py-2 text-sm text-gray-500';
+        empty.textContent = emptyText;
+        list.appendChild(empty);
+    } else {
+        items.slice(0, 80).forEach((item) => {
+            const row = documentRef.createElement('div');
+            row.className = 'px-3 py-2 text-sm text-gray-700';
+            row.textContent = renderItem(item);
+            list.appendChild(row);
+        });
+    }
+    section.appendChild(list);
+    container.appendChild(section);
+}
+
+function buildPropertyImportReport({ file, mode, workbookImport, status, firestoreReportId = '', saveError = '' }) {
+    return {
+        id: `property-import-${Date.now()}`,
+        savedAt: new Date().toISOString(),
+        fileName: file?.name || '',
+        mode,
+        status,
+        firestoreReportId,
+        saveError,
+        totals: workbookImport.totals,
+        processedSheets: workbookImport.processedSheets,
+        appliedChanges: workbookImport.appliedChanges,
+        skippedExisting: workbookImport.skippedExisting,
+        noChange: workbookImport.noChange,
+        missingInApp: workbookImport.missingInApp,
+        unsupportedColumns: workbookImport.unsupportedColumns,
+        errors: workbookImport.errors
+    };
+}
+
+function renderReportHistory(documentRef, container, windowRef = window) {
+    const reports = getStoredPropertyImportReports(windowRef);
+    const history = documentRef.createElement('div');
+    history.className = 'rounded-lg border border-gray-200 bg-white p-4';
+    const heading = documentRef.createElement('h4');
+    heading.className = 'text-sm font-semibold text-gray-900 mb-2';
+    heading.textContent = copy('compare.reportHistory');
+    history.appendChild(heading);
+
+    if (!reports.length) {
+        const empty = documentRef.createElement('div');
+        empty.className = 'px-3 py-2 text-sm text-gray-500 rounded-md border border-gray-200';
+        empty.textContent = copy('compare.noReports');
+        history.appendChild(empty);
+    } else {
+        reports.forEach((report) => {
+            const details = documentRef.createElement('details');
+            details.className = 'rounded-md border border-gray-200 bg-gray-50 p-3 mb-2';
+            const summary = documentRef.createElement('summary');
+            summary.className = 'cursor-pointer text-sm font-medium text-gray-800';
+            summary.textContent = summarizeReportLine(report);
+            details.appendChild(summary);
+
+            const meta = documentRef.createElement('div');
+            meta.className = 'mt-2 text-xs text-gray-600';
+            meta.textContent = `Status: ${report.status || '-'} | Firestore report: ${report.firestoreReportId || 'not saved'}${report.saveError ? ` | Save error: ${report.saveError}` : ''}`;
+            details.appendChild(meta);
+
+            appendReportDetailList(
+                documentRef,
+                details,
+                'Saved / changed fields',
+                report.appliedChanges,
+                (entry) => `${entry.propertyName} - ${buildLabel(entry.field)}: ${entry.previousValue || '-'} -> ${entry.newValue || '-'} (${entry.sheet} row ${entry.rowNumber})`,
+                'No property fields changed.'
+            );
+            appendReportDetailList(
+                documentRef,
+                details,
+                'Skipped existing fields',
+                report.skippedExisting,
+                (entry) => `${entry.propertyName} - ${buildLabel(entry.field)} kept "${entry.existingValue || '-'}"; workbook had "${entry.workbookValue || '-'}"`,
+                'No existing fields skipped.'
+            );
+            appendReportDetailList(
+                documentRef,
+                details,
+                copy('compare.missingRows'),
+                report.missingInApp,
+                (entry) => `${entry.name} (${entry.sheet} row ${entry.rowNumber})`,
+                copy('compare.noMissing')
+            );
+            appendReportDetailList(
+                documentRef,
+                details,
+                copy('compare.unsupportedColumns'),
+                report.unsupportedColumns,
+                (entry) => `${entry.sheet}: ${entry.column}`,
+                copy('compare.noChanged')
+            );
+            history.appendChild(details);
+        });
+    }
+    container.appendChild(history);
+}
+
 function createAlojamentosCheckPanel({ documentRef, properties }) {
     const panel = documentRef.createElement('section');
     panel.className = 'mb-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm';
+    const ptMode = activeLang() === 'pt';
 
     const header = documentRef.createElement('div');
     header.className = 'flex flex-col lg:flex-row lg:items-end justify-between gap-4';
@@ -674,6 +947,7 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
     const input = documentRef.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx,.xls,.csv';
+    input.disabled = !ptMode;
     input.className = 'w-full lg:w-80 text-sm text-gray-600 file:mr-3 file:px-4 file:py-2 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200';
 
     header.appendChild(copyBlock);
@@ -681,8 +955,19 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
     panel.appendChild(header);
 
     const result = documentRef.createElement('div');
-    result.className = 'mt-4 hidden';
+    result.className = ptMode ? 'mt-4 hidden' : 'mt-4 rounded-md border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700';
+    if (!ptMode) {
+        result.textContent = copy('compare.ptOnly');
+    }
     panel.appendChild(result);
+
+    const reportHistoryContainer = documentRef.createElement('div');
+    panel.appendChild(reportHistoryContainer);
+    const refreshReportHistory = () => {
+        reportHistoryContainer.innerHTML = '';
+        renderReportHistory(documentRef, reportHistoryContainer);
+    };
+    refreshReportHistory();
 
     const renderError = (message) => {
         result.className = 'mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';
@@ -702,13 +987,18 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
         result.textContent = copy('compare.reading');
 
         try {
-            const arrayBuffer = await file.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            const isCsv = /\.csv$/i.test(file.name);
+            const workbook = isCsv
+                ? XLSX.read(await file.text(), { type: 'string', cellDates: true })
+                : XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+            const sheetRowsByName = Object.fromEntries(workbook.SheetNames.map((name) => [
+                name,
+                XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: '', raw: true })
+            ]));
             const sheetName = workbook.SheetNames.find((name) => name.trim().toLowerCase() === 'alojamentos')
                 ?? workbook.SheetNames.find((name) => name.toLowerCase().includes('alojamentos'))
                 ?? workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const rows = sheetRowsByName[sheetName] ?? [];
             const parsed = parseAlojamentosRows(rows);
             const comparison = compareAlojamentosProperties(properties, parsed.properties);
 
@@ -763,6 +1053,176 @@ function createAlojamentosCheckPanel({ documentRef, properties }) {
                 copy('compare.noChanged')
             );
             result.appendChild(lists);
+
+            const importPanel = documentRef.createElement('div');
+            importPanel.className = 'rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3';
+
+            const modeRow = documentRef.createElement('div');
+            modeRow.className = 'flex flex-col md:flex-row md:items-end gap-3';
+            const modeWrapper = documentRef.createElement('label');
+            modeWrapper.className = 'block text-sm font-semibold text-blue-950';
+            modeWrapper.textContent = copy('compare.importMode');
+            const modeSelect = documentRef.createElement('select');
+            modeSelect.className = 'mt-1 block w-full md:w-72 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-gray-800';
+            [
+                ['fill-empty', copy('compare.fillEmptyMode')],
+                ['replace-existing', copy('compare.replaceExistingMode')]
+            ].forEach(([value, label]) => {
+                const option = documentRef.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                modeSelect.appendChild(option);
+            });
+            modeWrapper.appendChild(modeSelect);
+            modeRow.appendChild(modeWrapper);
+
+            const modeWarning = documentRef.createElement('p');
+            modeWarning.className = 'hidden rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800';
+            modeWarning.textContent = copy('compare.replaceWarning');
+            modeRow.appendChild(modeWarning);
+            importPanel.appendChild(modeRow);
+
+            const importPreview = documentRef.createElement('div');
+            importPreview.className = 'space-y-3';
+            importPanel.appendChild(importPreview);
+
+            const importButton = documentRef.createElement('button');
+            importButton.type = 'button';
+            importButton.className = 'inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50';
+            importPanel.appendChild(importButton);
+
+            let activeWorkbookImport = null;
+
+            const renderImportPreview = () => {
+                const replaceExisting = modeSelect.value === 'replace-existing';
+                activeWorkbookImport = parseAhWorkbookImport(sheetRowsByName, properties, { overwriteExisting: replaceExisting });
+                importPreview.innerHTML = '';
+                modeWarning.classList.toggle('hidden', !replaceExisting);
+
+                const importMetrics = documentRef.createElement('div');
+                importMetrics.className = 'grid grid-cols-2 md:grid-cols-5 gap-3';
+                importMetrics.appendChild(createMetric(documentRef, copy('compare.importedSheets'), activeWorkbookImport.totals.sheets, 'blue'));
+                importMetrics.appendChild(createMetric(documentRef, copy('compare.importable'), activeWorkbookImport.totals.propertiesToUpdate, activeWorkbookImport.totals.propertiesToUpdate ? 'green' : 'gray'));
+                importMetrics.appendChild(createMetric(documentRef, copy('compare.fieldUpdates'), activeWorkbookImport.totals.fieldsToUpdate, activeWorkbookImport.totals.fieldsToUpdate ? 'green' : 'gray'));
+                importMetrics.appendChild(createMetric(
+                    documentRef,
+                    replaceExisting ? copy('compare.replacedExisting') : copy('compare.skippedExisting'),
+                    replaceExisting ? activeWorkbookImport.totals.replacedExistingFields : activeWorkbookImport.totals.skippedExistingFields,
+                    (replaceExisting ? activeWorkbookImport.totals.replacedExistingFields : activeWorkbookImport.totals.skippedExistingFields) ? 'orange' : 'gray'
+                ));
+                importMetrics.appendChild(createMetric(documentRef, copy('compare.missingRows'), activeWorkbookImport.totals.missingInApp, activeWorkbookImport.totals.missingInApp ? 'orange' : 'gray'));
+                importPreview.appendChild(importMetrics);
+
+                const importSummary = documentRef.createElement('p');
+                importSummary.className = 'text-sm text-blue-900';
+                importSummary.textContent = activeWorkbookImport.totals.fieldsToUpdate > 0
+                    ? `${activeWorkbookImport.importedFields.map(buildLabel).join(', ')}`
+                    : `${copy('compare.noUpdates')} ${!replaceExisting && activeWorkbookImport.totals.skippedExistingFields > 0 ? copy('compare.switchToReplace') : ''}`.trim();
+                importPreview.appendChild(importSummary);
+
+                const importLists = documentRef.createElement('div');
+                importLists.className = 'grid grid-cols-1 lg:grid-cols-3 gap-4';
+                renderSimpleList(
+                    documentRef,
+                    importLists,
+                    copy('compare.importable'),
+                    activeWorkbookImport.updates,
+                    (entry) => `${entry.property.name}: ${entry.fields.map(buildLabel).join(', ')}`,
+                    copy('compare.noUpdates')
+                );
+                renderSimpleList(
+                    documentRef,
+                    importLists,
+                    copy('compare.missingRows'),
+                    activeWorkbookImport.missingInApp,
+                    (entry) => `${entry.name} (${entry.sheet} row ${entry.rowNumber})`,
+                    copy('compare.noMissing')
+                );
+                renderSimpleList(
+                    documentRef,
+                    importLists,
+                    copy('compare.unsupportedColumns'),
+                    activeWorkbookImport.unsupportedColumns,
+                    (entry) => `${entry.sheet}: ${entry.column}`,
+                    copy('compare.noChanged')
+                );
+                importPreview.appendChild(importLists);
+
+                importButton.disabled = false;
+                const buttonLabel = activeWorkbookImport.updates.length === 0
+                    ? copy('compare.saveReportButton')
+                    : (replaceExisting ? copy('compare.replaceButton') : copy('compare.importButton'));
+                importButton.innerHTML = `<i class="fas fa-save"></i><span>${buttonLabel}</span>`;
+            };
+
+            modeSelect.addEventListener('change', renderImportPreview);
+            renderImportPreview();
+
+            importButton.addEventListener('click', async () => {
+                const manager = window.propertiesManager;
+                const replaceExisting = modeSelect.value === 'replace-existing';
+                const workbookImport = activeWorkbookImport;
+                if (!workbookImport) {
+                    return;
+                }
+                if (workbookImport.updates.length > 0 && !manager?.updatePropertiesBatchMixed && !manager?.updateProperty) {
+                    renderError(copy('missing.noManager'));
+                    return;
+                }
+
+                importButton.disabled = true;
+                importButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${copy('compare.importing')}</span>`;
+
+                try {
+                    const items = workbookImport.updates.map((entry) => ({
+                        id: entry.property.id,
+                        updates: entry.updates
+                    }));
+
+                    if (items.length > 0) {
+                        if (manager.updatePropertiesBatchMixed) {
+                            await manager.updatePropertiesBatchMixed(items);
+                        } else {
+                            for (const item of items) {
+                                await manager.updateProperty(item.id, item.updates);
+                            }
+                        }
+                    }
+
+                    workbookImport.updates.forEach((entry) => {
+                        Object.assign(entry.property, entry.updates);
+                    });
+                    let firestoreReportId = '';
+                    let saveError = '';
+                    const report = buildPropertyImportReport({
+                        file,
+                        mode: replaceExisting ? 'replace-existing' : 'fill-empty',
+                        workbookImport,
+                        status: items.length > 0 ? 'saved-with-updates' : 'report-only'
+                    });
+
+                    try {
+                        firestoreReportId = await manager?.savePropertyImportReport?.(report) || '';
+                        report.firestoreReportId = firestoreReportId;
+                    } catch (error) {
+                        saveError = error.message || String(error);
+                        report.saveError = saveError;
+                    }
+                    storePropertyImportReport(report);
+                    refreshReportHistory();
+
+                    const savedFieldCount = workbookImport.totals.fieldsToUpdate || 0;
+                    const savedMessage = savedFieldCount === 0
+                        ? copy('compare.reportOnlySaved')
+                        : `${replaceExisting ? copy('compare.replaced') : copy('compare.imported')} ${copy('compare.propertyFieldsSaved', { count: savedFieldCount, plural: savedFieldCount === 1 ? '' : 's' })}`;
+                    importButton.innerHTML = `<i class="fas fa-check"></i><span>${savedMessage}</span>`;
+                } catch (error) {
+                    console.error('AH workbook import failed', error);
+                    importButton.disabled = false;
+                    importButton.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${copy('compare.importFailed', { message: error.message })}</span>`;
+                }
+            });
+            result.appendChild(importPanel);
         } catch (error) {
             renderError(copy('compare.error', { message: error.message }));
         }

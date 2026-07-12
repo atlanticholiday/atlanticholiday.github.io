@@ -33,10 +33,12 @@ export const ENUMS = {
   ],
   statisticsStatus: [
     { value: 'on-platform', label: 'On the Platform' },
+    { value: 'requested', label: 'Requested' },
     { value: 'missing', label: 'Missing' },
   ],
   sefStatus: [
     { value: 'on-platform', label: 'On the platform' },
+    { value: 'requested', label: 'Requested' },
     { value: 'missing', label: 'Missing' },
   ],
 
@@ -103,31 +105,44 @@ export const ENUMS = {
   // Signage
   privateSign: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'needs-checking', label: 'Needs checking' },
     { value: 'not-necessary', label: 'Not necessary' },
   ],
   noSmokingSign: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'needs-checking', label: 'Needs checking' },
     { value: 'not-necessary', label: 'Not necessary' },
   ],
   noJunkMailSign: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+    { value: 'needs-checking', label: 'Needs checking' },
+    { value: 'not-necessary', label: 'Not necessary' },
+  ],
+  noiseSign: [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'needs-checking', label: 'Needs checking' },
     { value: 'not-necessary', label: 'Not necessary' },
   ],
   alAhSign: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'not-necessary', label: 'Not necessary' },
     { value: 'authorized', label: 'Authorized' },
   ],
   keysNotice: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'needs-checking', label: 'Needs checking' },
     { value: 'not-necessary', label: 'Not necessary' },
+    { value: 'authorized', label: 'Authorized' },
   ],
   wcSign: [
     { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
     { value: 'needs-checking', label: 'Needs checking' },
     { value: 'not-necessary', label: 'Not necessary' },
   ],

@@ -1,4 +1,4 @@
-const CACHE_NAME = "horario-pwa-v1";
+const CACHE_NAME = "horario-pwa-v8";
 
 const APP_SHELL_URLS = [
   "./",
@@ -62,8 +62,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (shouldUseNetworkFirst(request)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
   event.respondWith(cacheFirst(request));
 });
+
+function shouldUseNetworkFirst(request) {
+  const requestUrl = new URL(request.url);
+  return request.destination === "script" ||
+    request.destination === "style" ||
+    requestUrl.pathname.endsWith(".js") ||
+    requestUrl.pathname.endsWith(".css") ||
+    requestUrl.pathname.endsWith(".json");
+}
 
 async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);

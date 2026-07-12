@@ -3755,8 +3755,28 @@ Mountain Villa, Sintra Hills, V4"
     <!-- Papa Parse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script>
+        (() => {
+            const isLocalDevHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+            if (!isLocalDevHost || !('serviceWorker' in navigator)) return;
+
+            Promise.all([
+                navigator.serviceWorker.getRegistrations().then((registrations) =>
+                    Promise.all(registrations.map((registration) => registration.unregister()))
+                ),
+                'caches' in window
+                    ? caches.keys().then((cacheNames) => Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName))))
+                    : Promise.resolve()
+            ]).then(() => {
+                if (navigator.serviceWorker.controller && sessionStorage.getItem('horario-local-sw-cleared') !== 'yes') {
+                    sessionStorage.setItem('horario-local-sw-cleared', 'yes');
+                    location.reload();
+                }
+            });
+        })();
+    </script>
     <script type="module" src="js/pwa-register.js"></script>
-    <script type="module" src="js/app/main.js"></script>
+    <script type="module" src="js/app/main.js?v=20260712-import-cache-fix"></script>
 </body>
 
 </html>

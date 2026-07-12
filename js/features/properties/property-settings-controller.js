@@ -492,6 +492,129 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const toKebab = (value) => String(value || '').replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+    const settingsIdForImportedField = (field) => `settings-${toKebab(field)}`;
+    const IMPORTED_AH_SETTINGS_FIELDS = [
+        ['maps-location', 'googleMapsStatus', 'Google Maps Status'],
+        ['maps-location', 'garbageLocationNotes', 'Garbage Location Notes', 'textarea'],
+        ['maps-location', 'locationNotes', 'Location Notes', 'textarea'],
+        ['media-content', 'checkinVideoLinks', 'Check-in Video Links', 'textarea'],
+        ['media-content', 'checkinVideoNotes', 'Check-in Video Notes', 'textarea'],
+        ['media-content', 'bookingDescriptionNewStatus', 'New Description Status'],
+        ['media-content', 'avantioDescriptionStatus', 'Avantio Description Status'],
+        ['media-content', 'bookingDescriptionNotes', 'Description Notes', 'textarea'],
+        ['recommendations', 'recommendationsStatus', 'Recommendations Status'],
+        ['recommendations', 'recommendationsNotes', 'Recommendations Notes', 'textarea'],
+        ['online-services', 'airbnbLinksNotes', 'Airbnb Notes', 'textarea'],
+        ['signage', 'noiseSign', 'Noise Sign'],
+        ['signage', 'signageNotes', 'Signage Notes', 'textarea'],
+        ['legal-compliance', 'contractSignedStatus', 'Contract Signed Status'],
+        ['legal-compliance', 'contractScannedStatus', 'Contract Scanned Status'],
+        ['legal-compliance', 'contractNotes', 'Contract Notes', 'textarea'],
+        ['legal-compliance', 'sefStatisticsNotes', 'SEF/Statistics Notes', 'textarea'],
+        ['legal-compliance', 'touristTaxMunicipality', 'Tourist Tax Municipality'],
+        ['legal-compliance', 'touristTaxPlatformStatus', 'Tourist Tax Platform Status'],
+        ['legal-compliance', 'touristTaxNotes', 'Tourist Tax Notes', 'textarea'],
+        ['legal-compliance', 'propertyRegisterNumber', 'Property Register Number'],
+        ['legal-compliance', 'propertyRegisterAirbnbStatus', 'Register Airbnb Status'],
+        ['legal-compliance', 'propertyRegisterBookingStatus', 'Register Booking Status'],
+        ['legal-compliance', 'propertyRegisterBenefitsStatus', 'Register Benefits Status'],
+        ['legal-compliance', 'rnalNumber', 'AL/RNAL Number'],
+        ['legal-compliance', 'rnalHandledByUs', 'RNAL Handled By Us'],
+        ['legal-compliance', 'rnalDoneStatus', 'RNAL Done Status'],
+        ['legal-compliance', 'insuranceChargedStatus', 'Insurance Charged Status'],
+        ['legal-compliance', 'insurancePlatformStatus', 'Insurance Platform Status'],
+        ['legal-compliance', 'insuranceValidity', 'Insurance Validity', 'date'],
+        ['legal-compliance', 'insuranceNotes', 'Insurance Notes', 'textarea'],
+        ['legal-compliance', 'insuranceAccounting', 'Insurance Accounting'],
+        ['keys-house-rules', 'keysEntrance', 'Entrance Keys'],
+        ['keys-house-rules', 'keysHouse', 'House Keys'],
+        ['keys-house-rules', 'keysRemote', 'Remote Control'],
+        ['keys-house-rules', 'keysOther', 'Other Keys'],
+        ['keys-house-rules', 'keysInventoryNotes', 'Keys Inventory Notes', 'textarea'],
+        ['keys-house-rules', 'houseRulesStatus', 'House Rules Status'],
+        ['keys-house-rules', 'nearestHospitalLink', 'Nearest Hospital Link', 'url'],
+        ['keys-house-rules', 'nearestHospitalHours', 'Nearest Hospital Hours', 'textarea'],
+        ['keys-house-rules', 'busStopLink', 'Bus Stop Link', 'url'],
+        ['keys-house-rules', 'busScheduleLink', 'Bus Schedule Link', 'url'],
+        ['keys-house-rules', 'houseRulesNotes', 'House Rules Notes', 'textarea']
+    ].map(([sectionSlug, field, label, type = 'text']) => ({ sectionSlug, field, label, type }));
+
+    const ensureImportedAhFields = () => {
+        const form = document.getElementById('property-settings-form');
+        if (!form) return;
+
+        const ensureSection = (slug) => {
+            let section = document.getElementById(`section-${slug}`);
+            if (section) return section;
+
+            section = document.createElement('div');
+            section.id = `section-${slug}`;
+            section.className = 'form-section';
+            section.innerHTML = `
+              <div class="section-header">
+                <div class="section-header-title">
+                  <div class="section-icon" style="background: linear-gradient(135deg, #334155 0%, #0f172a 100%); color: #fff;">
+                    <i class="fas fa-key"></i>
+                  </div>
+                  <h2 class="section-title">Keys & House Rules</h2>
+                </div>
+              </div>
+              <div class="form-grid"></div>
+            `;
+
+            const ownerSection = document.getElementById('section-owner');
+            if (ownerSection?.parentElement === form) {
+                form.insertBefore(section, ownerSection);
+            } else {
+                form.appendChild(section);
+            }
+            return section;
+        };
+
+        IMPORTED_AH_SETTINGS_FIELDS.forEach(({ sectionSlug, field, label, type }) => {
+            const fieldId = settingsIdForImportedField(field);
+            if (document.getElementById(fieldId)) return;
+
+            const section = ensureSection(sectionSlug);
+            const grid = section.querySelector('.form-grid') || section;
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            const control = type === 'textarea'
+                ? `<textarea id="${fieldId}" class="form-input" rows="3" placeholder="${label}"></textarea>`
+                : `<input id="${fieldId}" type="${type}" class="form-input" placeholder="${label}">`;
+            group.innerHTML = `
+                <label class="form-label">
+                  <i class="fas fa-file-import"></i>
+                  <span>${label}</span>
+                </label>
+                ${control}
+            `;
+            grid.appendChild(group);
+        });
+    };
+
+    const ensureImportedAhSelectOptions = () => {
+        [
+            ['settings-statistics-status', 'requested', 'Requested'],
+            ['settings-sef-status', 'requested', 'Requested'],
+            ['settings-private-sign', 'no', 'No'],
+            ['settings-no-smoking-sign', 'no', 'No'],
+            ['settings-no-junk-mail-sign', 'no', 'No'],
+            ['settings-al-ah-sign', 'no', 'No'],
+            ['settings-keys-notice', 'no', 'No'],
+            ['settings-keys-notice', 'authorized', 'Authorized'],
+            ['settings-wc-sign', 'no', 'No']
+        ].forEach(([selectId, value, label]) => {
+            const select = document.getElementById(selectId);
+            if (!select || select.querySelector(`option[value="${value}"]`)) return;
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            select.appendChild(option);
+        });
+    };
+
     // --- Comprehensive mapping from DB keys to form element IDs ---
     const SETTINGS_MAP = {
         // Basic Info (editable fields)
@@ -614,7 +737,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ownerFirstName: 'settings-owner-first-name',
         ownerLastName: 'settings-owner-last-name',
         ownerVatNumber: 'settings-owner-vat-number',
-        ownerPropertyAddress: 'settings-owner-property-address'
+        ownerPropertyAddress: 'settings-owner-property-address',
+        ...Object.fromEntries(IMPORTED_AH_SETTINGS_FIELDS.map(({ field }) => [field, settingsIdForImportedField(field)]))
     };
 
     // Function to populate the entire page from a single property object
@@ -776,6 +900,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Ensure fields are present before populating
                 ensureGuestCleaningFeeField();
                 ensureAccountingFields();
+                ensureImportedAhFields();
+                ensureImportedAhSelectOptions();
                 // Ensure the location field is a select with canonical options before populating values
                 ensureLocationField();
                 populatePage(propertyData);
@@ -866,6 +992,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Prepare fields, then initial load
     ensureGuestCleaningFeeField();
     ensureAccountingFields();
+    ensureImportedAhFields();
+    ensureImportedAhSelectOptions();
     ensureLocationField();
     // Initialize the in-page property switcher UI
     initPropertySwitcher();
