@@ -174,16 +174,30 @@ export class PropertiesManager {
 
     async checkAndCleanupStaleWifiFields(properties) {
         if (!properties || properties.length === 0) return;
+        
+        // Check if we need to perform a one-time global clear of all wifi columns
+        const needsGlobalClear = !localStorage.getItem("wifi_columns_cleared_v2");
+        
         const staleItems = properties.filter((p) => {
+            if (needsGlobalClear) {
+                // If we need a global clear, any property with non-empty wifiSpeed or wifiAirbnb is considered stale/to be cleared
+                return (p.wifiSpeed && String(p.wifiSpeed).trim() !== "") || (p.wifiAirbnb && String(p.wifiAirbnb).trim() !== "");
+            }
             const speed = String(p.wifiSpeed ?? "").trim();
             // Stale speeds from old mappings
             const isStaleSpeed = ["sim", "nao", "basic", "standard", "fast", "very-fast", "fiber"].includes(speed.toLowerCase());
             return isStaleSpeed;
         });
 
-        if (staleItems.length === 0) return;
+        if (staleItems.length === 0) {
+            if (needsGlobalClear) {
+                localStorage.setItem("wifi_columns_cleared_v2", "true");
+                console.log("🧹 [MIGRATION] No active WiFi fields to clear for global cleanup. Marked as complete.");
+            }
+            return;
+        }
 
-        console.log(`🧹 [MIGRATION] Found ${staleItems.length} properties with stale WiFi fields. Clearing...`);
+        console.log(`🧹 [MIGRATION] Found ${staleItems.length} properties with WiFi fields to clear. Clearing...`);
         const updates = staleItems.map((p) => ({
             id: p.id,
             updates: {
@@ -194,9 +208,12 @@ export class PropertiesManager {
 
         try {
             await this.updatePropertiesBatchMixed(updates);
-            console.log(`🧹 [MIGRATION] Successfully cleared stale WiFi fields for ${staleItems.length} properties.`);
+            if (needsGlobalClear) {
+                localStorage.setItem("wifi_columns_cleared_v2", "true");
+            }
+            console.log(`🧹 [MIGRATION] Successfully cleared WiFi fields for ${staleItems.length} properties.`);
         } catch (error) {
-            console.error("Failed to auto-cleanup stale WiFi fields:", error);
+            console.error("Failed to auto-cleanup WiFi fields:", error);
         }
     }
 

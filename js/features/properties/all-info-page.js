@@ -854,6 +854,8 @@ function appendReportDetailList(documentRef, container, title, items, renderItem
 }
 
 function buildPropertyImportReport({ file, mode, workbookImport, status, firestoreReportId = '', saveError = '' }) {
+    // Truncate detail arrays to prevent payload size errors in Firestore and local storage (limit to 100 entries each)
+    const maxDetails = 100;
     return {
         id: `property-import-${Date.now()}`,
         savedAt: new Date().toISOString(),
@@ -864,12 +866,11 @@ function buildPropertyImportReport({ file, mode, workbookImport, status, firesto
         saveError,
         totals: workbookImport.totals,
         processedSheets: workbookImport.processedSheets,
-        appliedChanges: workbookImport.appliedChanges,
-        skippedExisting: workbookImport.skippedExisting,
-        noChange: workbookImport.noChange,
-        missingInApp: workbookImport.missingInApp,
-        unsupportedColumns: workbookImport.unsupportedColumns,
-        errors: workbookImport.errors
+        appliedChanges: (workbookImport.appliedChanges || []).slice(0, maxDetails),
+        skippedExisting: (workbookImport.skippedExisting || []).slice(0, maxDetails),
+        missingInApp: (workbookImport.missingInApp || []).slice(0, maxDetails),
+        unsupportedColumns: (workbookImport.unsupportedColumns || []).slice(0, maxDetails),
+        errors: (workbookImport.errors || []).slice(0, maxDetails)
     };
 }
 
@@ -1260,7 +1261,20 @@ function createAlojamentosCheckPanel({ documentRef, properties, onImportSaved = 
 
                     if (items.length > 0) {
                         if (manager.updatePropertiesBatchMixed) {
-                            await manager.updatePropertiesBatchMixed(items);
+                            try {
+                                // Race mixed batch update with a 3-second timeout.
+                                // If it times out, it is pending cloud sync (local IndexedDB cache is already updated), so we proceed.
+                                await Promise.race([
+                                    manager.updatePropertiesBatchMixed(items),
+                                    new Promise((_, reject) => setTimeout(() => reject(new Error('pending-sync')), 3000))
+                                ]);
+                            } catch (err) {
+                                if (err.message === 'pending-sync') {
+                                    console.warn('Database batch update is pending sync to Firestore, proceeding with local update.');
+                                } else {
+                                    throw err;
+                                }
+                            }
                         } else {
                             for (const item of items) {
                                 await manager.updateProperty(item.id, item.updates);
@@ -1281,11 +1295,20 @@ function createAlojamentosCheckPanel({ documentRef, properties, onImportSaved = 
                     });
 
                     try {
-                        firestoreReportId = await manager?.savePropertyImportReport?.(report) || '';
+                        // Race the Firestore save with a 3-second timeout to prevent UI freezes
+                        firestoreReportId = await Promise.race([
+                            manager?.savePropertyImportReport?.(report),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('pending-sync')), 3000))
+                        ]) || '';
                         report.firestoreReportId = firestoreReportId;
                     } catch (error) {
-                        saveError = error.message || String(error);
-                        report.saveError = saveError;
+                        if (error.message === 'pending-sync') {
+                            console.warn('Firestore report save is pending sync to cloud.');
+                        } else {
+                            saveError = error.message || String(error);
+                            report.saveError = saveError;
+                            console.warn('Firestore report save failed:', error);
+                        }
                     }
                     storePropertyImportReport(report);
                     refreshReportHistory();

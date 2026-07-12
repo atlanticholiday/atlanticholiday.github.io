@@ -253,11 +253,8 @@ function applyField(updates, field, value) {
 
 function isEmptyImportTarget(value, field = "") {
     if (value === undefined || value === null || String(value).trim() === "") return true;
-    if (field === "wifiSpeed") {
-        const valLower = String(value).trim().toLowerCase();
-        if (["basic", "standard", "fast", "very-fast", "fiber", "sim", "nao"].includes(valLower)) {
-            return true;
-        }
+    if (field === "wifiSpeed" || field === "wifiAirbnb") {
+        return true;
     }
     return false;
 }

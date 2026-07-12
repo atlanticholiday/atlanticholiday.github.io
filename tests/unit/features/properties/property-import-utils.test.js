@@ -241,10 +241,10 @@ describe("property-import-utils", () => {
     );
 
     assert.equal(result.totals.propertiesToUpdate, 2);
-    // Even without overwriteExisting: true, it should overwrite "Sim" and "basic" because they are stale/empty import targets
+    // Even without overwriteExisting: true, it should overwrite "Sim" and "basic" because they are empty import targets
     assert.equal(result.updates[0].updates.wifiSpeed, "450 Mbps");
     assert.equal(result.updates[0].updates.wifiAirbnb, "yes");
     assert.equal(result.updates[1].updates.wifiSpeed, "100 Mbps");
-    assert.equal(result.updates[1].updates.wifiAirbnb, undefined);
+    assert.equal(result.updates[1].updates.wifiAirbnb, "no");
   });
 });
