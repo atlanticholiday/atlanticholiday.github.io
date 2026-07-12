@@ -32,6 +32,7 @@ import '../features/properties/allinfo-accordion-edit.js';
 import { PropertiesManager } from '../features/properties/properties-manager.js';
 import { PropertiesDashboardController } from '../features/properties/properties-dashboard-controller.js';
 import { checkAndMigrateUserProperties, registerPropertyMigrationDebugTools } from '../features/properties/property-migration-tools.js';
+import { QuickSearchManager } from '../features/search/quick-search-manager.js';
 import { DataManager } from '../features/scheduling/data-manager.js';
 import { EventManager } from '../features/scheduling/event-manager.js';
 import { HolidayCalculator } from '../features/scheduling/holiday-calculator.js';
@@ -52,7 +53,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -409,6 +410,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         navigationManager = new NavigationManager({
             getDataManager: () => dataManager
         });
+        quickSearchManager = new QuickSearchManager({
+            navigationManager,
+            getDataManager: () => dataManager,
+            getPropertiesManager: () => propertiesManager,
+            getOperationalGuidelinesManager: () => operationalGuidelinesManager
+        });
+        quickSearchManager.init();
+        window.quickSearchManager = quickSearchManager;
         buildPlannerManager = new BuildPlannerManager();
         buildPlannerManager.init();
         window.buildPlannerManager = buildPlannerManager;
@@ -617,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (checklistsManager) {
                     checklistsManager.setUser(userId);
                 }
+                quickSearchManager?.setEnabled(true);
                 // Bind user to Vehicles manager for per-user Firestore path
                 if (vehiclesManager) {
                     vehiclesManager.setUser(userId);
@@ -691,6 +701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dataManager?.clearCurrentUserContext?.();
                 dataManager?.stopRealtimeListeners?.();
                 dataManager?.resetSessionState?.();
+                quickSearchManager?.setEnabled(false);
                 navigationManager.showLoginPage();
                 if (unsubscribe) unsubscribe();
                 if (propertiesManager) {

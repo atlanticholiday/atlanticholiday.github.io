@@ -27,6 +27,7 @@ import "./unit/features/properties/all-info-page.test.js";
 import "./unit/features/properties/property-form-utils.test.js";
 import "./unit/features/properties/property-import-utils.test.js";
 import "./unit/features/properties/properties-dashboard-controller.test.js";
+import "./unit/features/search/quick-search-manager.test.js";
 import "./unit/features/scheduling/attendance-print-period.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
