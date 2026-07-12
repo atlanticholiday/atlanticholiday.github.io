@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+    compareLaundryLogPreviousStock,
     createEmptyLaundryLogItems,
     createLaundryLogRecord,
     filterLaundryLogRecords,
@@ -41,6 +42,66 @@ describe("Laundry Log utilities", () => {
         assert.equal(summary.deliveredUnits, 5);
         assert.equal(summary.receivedUnits, 0);
         assert.equal(summary.mismatches.length, 1);
+    });
+
+    test("includes unlimited custom other items in totals, mismatches, and search", () => {
+        const record = createLaundryLogRecord({
+            propertyName: "Atlantic View",
+            deliveryDate: "2026-04-10",
+            receivedDate: "2026-04-12",
+            customItems: [
+                { name: "Beach bags", delivered: 3, received: 2 },
+                { name: "Loose covers", delivered: 4, received: 4 },
+                { name: "", delivered: 0, received: 0 }
+            ]
+        }, {
+            now: () => "2026-04-12T10:00:00.000Z"
+        });
+
+        const summary = summarizeLaundryLogRecord(record);
+        const otherSection = summary.sectionSummaries.find((section) => section.key === "other");
+        const filtered = filterLaundryLogRecords([record], { query: "beach" });
+
+        assert.equal(record.customItems.length, 2);
+        assert.equal(record.status, "mismatch");
+        assert.equal(record.deliveredUnits, 7);
+        assert.equal(record.receivedUnits, 6);
+        assert.equal(summary.mismatches[0].name, "Beach bags");
+        assert.equal(otherSection.delivered, 7);
+        assert.equal(filtered.length, 1);
+    });
+
+    test("compares current out counts with the previous completed return", () => {
+        const previous = createLaundryLogRecord({
+            propertyName: "Atlantic View",
+            deliveryDate: "2026-04-10",
+            receivedDate: "2026-04-12",
+            items: {
+                bathTowel: { delivered: 1, received: 1 },
+                faceTowel: { delivered: 1, received: 1 }
+            },
+            customItems: [
+                { name: "Beach bag", delivered: 1, received: 1 }
+            ]
+        }, {
+            now: () => "2026-04-12T10:00:00.000Z"
+        });
+        const current = createLaundryLogRecord({
+            propertyName: "Atlantic View",
+            deliveryDate: "2026-04-15",
+            items: {
+                bathTowel: { delivered: 1, received: 0 }
+            }
+        }, {
+            now: () => "2026-04-15T10:00:00.000Z"
+        });
+
+        const missing = compareLaundryLogPreviousStock(current, previous);
+
+        assert.equal(missing.length, 2);
+        assert.equal(missing[0].key, "faceTowel");
+        assert.equal(missing[0].missing, 1);
+        assert.equal(missing[1].name, "Beach bag");
     });
 
     test("summarizes record totals across statuses", () => {

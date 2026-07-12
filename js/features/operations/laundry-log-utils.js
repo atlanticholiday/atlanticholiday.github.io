@@ -63,6 +63,10 @@ function normalizeText(value) {
     return String(value || "").trim();
 }
 
+function normalizeKey(value) {
+    return normalizeText(value).toLocaleLowerCase();
+}
+
 function normalizeCount(value) {
     if (value === null || value === undefined || value === "") {
         return 0;
@@ -81,7 +85,8 @@ function buildSearchText(record = {}) {
         record.propertyName,
         record.deliveryDate,
         record.receivedDate,
-        record.notes
+        record.notes,
+        ...(record.customItems || []).map((item) => item.name)
     ]
         .map((value) => normalizeText(value).toLocaleLowerCase())
         .filter(Boolean)
@@ -100,10 +105,84 @@ export function createEmptyLaundryLogItems(overrides = {}) {
     return normalized;
 }
 
+export function createEmptyCustomLaundryLogItems(overrides = []) {
+    if (!Array.isArray(overrides)) {
+        return [];
+    }
+
+    return overrides
+        .map((item) => ({
+            name: normalizeText(item?.name),
+            delivered: normalizeCount(item?.delivered),
+            received: normalizeCount(item?.received)
+        }))
+        .filter((item) => item.name || item.delivered > 0 || item.received > 0);
+}
+
+function buildComparableItemMap(record = {}, field = "received") {
+    const items = createEmptyLaundryLogItems(record.items);
+    const customItems = createEmptyCustomLaundryLogItems(record.customItems);
+    const comparableItems = new Map();
+
+    LAUNDRY_LOG_GROUPS.forEach((group) => {
+        group.items.forEach((item) => {
+            comparableItems.set(item.key, {
+                key: item.key,
+                labelKey: item.labelKey,
+                count: normalizeCount(items[item.key]?.[field])
+            });
+        });
+    });
+
+    customItems.forEach((item) => {
+        const normalizedName = normalizeKey(item.name);
+        if (!normalizedName) {
+            return;
+        }
+        comparableItems.set(`custom:${normalizedName}`, {
+            key: `custom:${normalizedName}`,
+            custom: true,
+            name: item.name,
+            count: normalizeCount(item[field])
+        });
+    });
+
+    return comparableItems;
+}
+
+export function compareLaundryLogPreviousStock(currentRecord = {}, previousRecord = {}) {
+    const previousItems = buildComparableItemMap(previousRecord, "received");
+    const currentItems = buildComparableItemMap(currentRecord, "delivered");
+    const missingItems = [];
+
+    previousItems.forEach((previousItem, key) => {
+        if (previousItem.count <= 0) {
+            return;
+        }
+
+        const currentCount = currentItems.get(key)?.count || 0;
+        if (currentCount >= previousItem.count) {
+            return;
+        }
+
+        missingItems.push({
+            key,
+            labelKey: previousItem.labelKey,
+            name: previousItem.name,
+            expected: previousItem.count,
+            found: currentCount,
+            missing: previousItem.count - currentCount
+        });
+    });
+
+    return missingItems;
+}
+
 export function summarizeLaundryLogRecord(record = {}) {
     const items = createEmptyLaundryLogItems(record.items);
+    const customItems = createEmptyCustomLaundryLogItems(record.customItems);
     const sectionSummaries = LAUNDRY_LOG_GROUPS.map((group) => {
-        const rows = group.items.map((item) => {
+        let rows = group.items.map((item) => {
             const counts = items[item.key];
             return {
                 key: item.key,
@@ -113,6 +192,20 @@ export function summarizeLaundryLogRecord(record = {}) {
                 difference: counts.delivered - counts.received
             };
         });
+
+        if (group.key === "other") {
+            rows = [
+                ...rows,
+                ...customItems.map((item, index) => ({
+                    key: `custom:${index}`,
+                    custom: true,
+                    name: item.name,
+                    delivered: item.delivered,
+                    received: item.received,
+                    difference: item.delivered - item.received
+                }))
+            ];
+        }
 
         return {
             key: group.key,
@@ -129,6 +222,7 @@ export function summarizeLaundryLogRecord(record = {}) {
         .map((item) => ({
             key: item.key,
             labelKey: item.labelKey,
+            name: item.name,
             delivered: item.delivered,
             received: item.received,
             missing: Math.max(item.delivered - item.received, 0),
@@ -166,6 +260,7 @@ export function createLaundryLogRecord(input = {}, { now = () => new Date().toIS
         receivedDate: normalizeText(input.receivedDate),
         notes: normalizeText(input.notes),
         items: createEmptyLaundryLogItems(input.items),
+        customItems: createEmptyCustomLaundryLogItems(input.customItems),
         createdAt: normalizeText(input.createdAt) || now(),
         updatedAt: now()
     };

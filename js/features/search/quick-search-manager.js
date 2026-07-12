@@ -578,15 +578,16 @@ export class QuickSearchManager {
         }).join("");
 
         this.resultsList.querySelectorAll("[data-quick-search-index]").forEach((button) => {
+            const index = Number(button.dataset.quickSearchIndex) || 0;
             button.addEventListener("mouseenter", () => {
-                this.activeIndex = Number(button.dataset.quickSearchIndex) || 0;
-                this.renderResults();
+                this.setActiveResultIndex(index);
+            });
+            button.addEventListener("pointerdown", (event) => {
+                event.preventDefault();
+                this.openResultAtIndex(index);
             });
             button.addEventListener("click", () => {
-                const result = this.results[Number(button.dataset.quickSearchIndex) || 0];
-                if (result) {
-                    this.openResult(result);
-                }
+                this.openResultAtIndex(index);
             });
         });
 
@@ -598,6 +599,22 @@ export class QuickSearchManager {
                 <strong>${escapeHtml(copy.empty)}</strong>
                 <span>${escapeHtml(copy.emptyHint)}</span>
             `;
+        }
+    }
+
+    setActiveResultIndex(index) {
+        this.activeIndex = Math.max(0, Math.min(index, Math.max(this.results.length - 1, 0)));
+        this.resultsList?.querySelectorAll("[data-quick-search-index]").forEach((button) => {
+            const isActive = (Number(button.dataset.quickSearchIndex) || 0) === this.activeIndex;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+    }
+
+    openResultAtIndex(index) {
+        const result = this.results[index];
+        if (result) {
+            this.openResult(result);
         }
     }
 

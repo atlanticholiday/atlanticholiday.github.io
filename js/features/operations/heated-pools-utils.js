@@ -502,20 +502,27 @@ function looksLikePropertyName(value = '') {
         && !MONEY_PATTERN.test(normalized);
 }
 
+const MOJIBAKE_TEXT_REPLACEMENTS = [
+    ['N\u00c3\u00a3o', 'Não'],
+    ['\u00c3\u20ac', 'À'],
+    ['\u00c3\u00a1', 'á'],
+    ['\u00c3\u00a2', 'â'],
+    ['\u00c3\u00a9', 'é'],
+    ['\u00c3\u00aa', 'ê'],
+    ['\u00c3\u00ad', 'í'],
+    ['\u00c3\u00b3', 'ó'],
+    ['\u00c3\u00b5', 'õ'],
+    ['\u00c3\u00ba', 'ú'],
+    ['\u00c3\u00a7', 'ç'],
+    ['\u00e2\u201a\u00ac', '€']
+];
+
 function normalizeText(value = '') {
-    return String(value)
-        .replace(/NÃ£o/g, 'Não')
-        .replace(/Ã€/g, 'À')
-        .replace(/Ã¡/g, 'á')
-        .replace(/Ã¢/g, 'â')
-        .replace(/Ã©/g, 'é')
-        .replace(/Ãª/g, 'ê')
-        .replace(/Ã­/g, 'í')
-        .replace(/Ã³/g, 'ó')
-        .replace(/Ãµ/g, 'õ')
-        .replace(/Ãº/g, 'ú')
-        .replace(/Ã§/g, 'ç')
-        .replace(/â‚¬/g, '€')
+    let normalized = String(value);
+    MOJIBAKE_TEXT_REPLACEMENTS.forEach(([broken, fixed]) => {
+        normalized = normalized.replaceAll(broken, fixed);
+    });
+    return normalized
         .replace(/\s+/g, ' ')
         .trim();
 }

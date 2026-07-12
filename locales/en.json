@@ -290,12 +290,17 @@
       "receivedShort": "Back",
       "varianceShort": "Variance",
       "notReturned": "Pending",
-      "unnamedProperty": "Unnamed property"
+      "unnamedProperty": "Unnamed property",
+      "customItems": "Other items",
+      "customItemName": "Item",
+      "customItemFallback": "Other item"
     },
     "form": {
       "helper": "Save the record when the laundry leaves, then reopen it to confirm what came back.",
       "propertyPlaceholder": "Start typing a property",
-      "notesPlaceholder": "Optional notes for this handoff"
+      "notesPlaceholder": "Optional notes for this handoff",
+      "customItemPlaceholder": "Write item name",
+      "customItemsHelper": "Add any extra item manually. There is no fixed item limit."
     },
     "filters": {
       "searchPlaceholder": "Search property or date",
@@ -316,7 +321,9 @@
       "review": "Review return",
       "edit": "Open record",
       "delete": "Delete",
-      "clearFilters": "Clear filters"
+      "clearFilters": "Clear filters",
+      "addCustomItem": "Add other item",
+      "removeCustomItem": "Remove"
     },
     "status": {
       "pending": "Pending return",
@@ -328,6 +335,11 @@
       "delivered": "Out: {{count}}",
       "received": "Back: {{count}}",
       "variance": "Variance: {{count}}"
+    },
+    "warnings": {
+      "previousStockTitle": "Possible missing linen",
+      "previousStockBody": "Compared with the previous completed return from {{date}}.",
+      "previousStockItem": "Previous: {{expected}} · Now out: {{found}} · Missing: {{missing}}"
     },
     "counts": {
       "records": {
@@ -351,7 +363,8 @@
       "pending": "No pending returns right now.",
       "returns": "No return records match the current filters.",
       "completed": "No completed records match the current filters.",
-      "records": "No records match the current filters."
+      "records": "No records match the current filters.",
+      "customItems": "No extra items added."
     },
     "messages": {
       "propertyRequired": "Choose a property before saving.",

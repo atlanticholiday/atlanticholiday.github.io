@@ -294,12 +294,17 @@
             "receivedShort": "Voltou",
             "varianceShort": "Diferença",
             "notReturned": "Pendente",
-            "unnamedProperty": "Propriedade sem nome"
+            "unnamedProperty": "Propriedade sem nome",
+            "customItems": "Outros artigos",
+            "customItemName": "Artigo",
+            "customItemFallback": "Outro artigo"
         },
         "form": {
             "helper": "Guarde quando a roupa sai e abra o mesmo registo depois para confirmar o que voltou.",
             "propertyPlaceholder": "Comece a escrever a propriedade",
-            "notesPlaceholder": "Notas opcionais para esta entrega"
+            "notesPlaceholder": "Notas opcionais para esta entrega",
+            "customItemPlaceholder": "Escrever nome do artigo",
+            "customItemsHelper": "Adicione qualquer artigo extra manualmente. Não existe limite fixo de artigos."
         },
         "filters": {
             "searchPlaceholder": "Pesquisar propriedade ou data",
@@ -320,7 +325,9 @@
             "review": "Rever devolução",
             "edit": "Abrir registo",
             "delete": "Eliminar",
-            "clearFilters": "Limpar filtros"
+            "clearFilters": "Limpar filtros",
+            "addCustomItem": "Adicionar outro artigo",
+            "removeCustomItem": "Remover"
         },
         "status": {
             "pending": "Devolução pendente",
@@ -332,6 +339,11 @@
             "delivered": "Saiu: {{count}}",
             "received": "Voltou: {{count}}",
             "variance": "Diferença: {{count}}"
+        },
+        "warnings": {
+            "previousStockTitle": "Possível roupa em falta",
+            "previousStockBody": "Comparado com a devolução concluída anterior de {{date}}.",
+            "previousStockItem": "Anterior: {{expected}} · Saiu agora: {{found}} · Em falta: {{missing}}"
         },
         "counts": {
             "records": {
@@ -355,7 +367,8 @@
             "pending": "Não existem devoluções pendentes neste momento.",
             "returns": "Não existem devoluções para conferir com os filtros atuais.",
             "completed": "Não existem registos concluídos com os filtros atuais.",
-            "records": "Não existem registos com os filtros atuais."
+            "records": "Não existem registos com os filtros atuais.",
+            "customItems": "Nenhum artigo extra adicionado."
         },
         "messages": {
             "propertyRequired": "Escolha uma propriedade antes de guardar.",

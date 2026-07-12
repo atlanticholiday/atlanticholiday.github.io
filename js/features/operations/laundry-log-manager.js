@@ -9,6 +9,8 @@ import {
 
 import { i18n, t } from "../../core/i18n.js";
 import {
+    compareLaundryLogPreviousStock,
+    createEmptyCustomLaundryLogItems,
     createEmptyLaundryLogItems,
     createLaundryLogRecord,
     filterLaundryLogRecords,
@@ -115,8 +117,9 @@ export class LaundryLogManager {
             deliveryDate: getTodayIsoDate(),
             receivedDate: "",
             notes: "",
-            items: createEmptyLaundryLogItems(),
-            ...overrides
+            ...overrides,
+            items: createEmptyLaundryLogItems(overrides.items),
+            customItems: createEmptyCustomLaundryLogItems(overrides.customItems)
         };
     }
 
@@ -127,7 +130,8 @@ export class LaundryLogManager {
             deliveryDate: record.deliveryDate || getTodayIsoDate(),
             receivedDate: record.receivedDate || "",
             notes: record.notes || "",
-            items: createEmptyLaundryLogItems(record.items)
+            items: createEmptyLaundryLogItems(record.items),
+            customItems: createEmptyCustomLaundryLogItems(record.customItems)
         });
     }
 
@@ -349,6 +353,53 @@ export class LaundryLogManager {
         return this.getFilteredRecords("matched");
     }
 
+    isSameProperty(left = {}, right = {}) {
+        const leftPropertyId = normalizeLabel(left.propertyId);
+        const rightPropertyId = normalizeLabel(right.propertyId);
+        if (leftPropertyId && rightPropertyId) {
+            return leftPropertyId === rightPropertyId;
+        }
+
+        return normalizeKey(left.propertyName) === normalizeKey(right.propertyName);
+    }
+
+    findPreviousCompletedRecord(targetRecord = {}, targetRecordId = "") {
+        if (!normalizeLabel(targetRecord.propertyName) && !normalizeLabel(targetRecord.propertyId)) {
+            return null;
+        }
+
+        const targetDate = normalizeLabel(targetRecord.deliveryDate);
+        return filterLaundryLogRecords(this.records)
+            .filter((record) => record.id !== targetRecordId)
+            .filter((record) => record.status === "matched")
+            .filter((record) => this.isSameProperty(record, targetRecord))
+            .filter((record) => {
+                if (!targetDate) {
+                    return true;
+                }
+                return normalizeLabel(record.deliveryDate) < targetDate;
+            })
+            .sort((left, right) => {
+                const dateCompare = String(right.deliveryDate || "").localeCompare(String(left.deliveryDate || ""));
+                if (dateCompare !== 0) {
+                    return dateCompare;
+                }
+                return String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""));
+            })[0] || null;
+    }
+
+    getPreviousStockWarnings(targetRecord = {}, targetRecordId = "") {
+        const previousRecord = this.findPreviousCompletedRecord(targetRecord, targetRecordId);
+        if (!previousRecord) {
+            return { previousRecord: null, missingItems: [] };
+        }
+
+        return {
+            previousRecord,
+            missingItems: compareLaundryLogPreviousStock(targetRecord, previousRecord)
+        };
+    }
+
     formatDate(dateValue) {
         if (!dateValue) {
             return "—";
@@ -411,13 +462,32 @@ export class LaundryLogManager {
             items[itemKey][field] = Number(input.value || 0);
         });
 
+        const customItemsByIndex = new Map();
+        document.querySelectorAll("[data-laundry-custom-index][data-laundry-custom-field]").forEach((input) => {
+            const index = Number(input.dataset.laundryCustomIndex);
+            const field = input.dataset.laundryCustomField;
+            if (!Number.isInteger(index) || index < 0 || !field) {
+                return;
+            }
+            const customItem = customItemsByIndex.get(index) || { name: "", delivered: 0, received: 0 };
+            if (field === "name") {
+                customItem.name = input.value || "";
+            } else if (field === "delivered" || field === "received") {
+                customItem[field] = Number(input.value || 0);
+            }
+            customItemsByIndex.set(index, customItem);
+        });
+
         return this.createDefaultDraft({
             propertyId: matchedProperty?.id || "",
             propertyName: matchedProperty?.name || propertyName,
             deliveryDate: document.getElementById("laundry-log-delivery-date-input")?.value || this.draft.deliveryDate,
             receivedDate: document.getElementById("laundry-log-received-date-input")?.value || "",
             notes: document.getElementById("laundry-log-notes-input")?.value || "",
-            items
+            items,
+            customItems: [...customItemsByIndex.keys()]
+                .sort((left, right) => left - right)
+                .map((index) => customItemsByIndex.get(index))
         });
     }
 
@@ -521,6 +591,9 @@ export class LaundryLogManager {
         Object.values(draft.items).forEach((item) => {
             item.received = item.delivered;
         });
+        draft.customItems.forEach((item) => {
+            item.received = item.delivered;
+        });
         draft.receivedDate = draft.receivedDate || getTodayIsoDate();
         this.draft = draft;
         this.render();
@@ -541,6 +614,40 @@ export class LaundryLogManager {
         if (field === "receivedDate") {
             draft.receivedDate = "";
         }
+        this.draft = draft;
+        this.render();
+    }
+
+    addCustomItem() {
+        const draft = this.readDraftFromDom();
+        draft.customItems.push({ name: "", delivered: 0, received: 0 });
+        this.draft = draft;
+        this.render();
+        window.requestAnimationFrame(() => {
+            const nameInputs = document.querySelectorAll("[data-laundry-custom-field='name']");
+            nameInputs[nameInputs.length - 1]?.focus?.();
+        });
+    }
+
+    removeCustomItem(index) {
+        const draft = this.readDraftFromDom();
+        if (index < 0 || index >= draft.customItems.length) {
+            return;
+        }
+        draft.customItems.splice(index, 1);
+        this.draft = draft;
+        this.render();
+    }
+
+    clearCustomItemCount(index, field) {
+        if (!field) {
+            return;
+        }
+        const draft = this.readDraftFromDom();
+        if (!draft.customItems?.[index]) {
+            return;
+        }
+        draft.customItems[index][field] = 0;
         this.draft = draft;
         this.render();
     }
@@ -606,6 +713,7 @@ export class LaundryLogManager {
         const sectionKey = target.dataset.sectionKey || "";
         const field = target.dataset.field || "";
         const itemKey = target.dataset.itemKey || "";
+        const customIndex = Number(target.dataset.customIndex);
         if (action === "workspace" && workspace) return void this.switchWorkspace(workspace);
         if (action === "jump-section" && sectionKey) return void this.jumpToSection(sectionKey);
         if (action === "save") return void this.saveDraft();
@@ -614,6 +722,9 @@ export class LaundryLogManager {
         if (action === "received-today") return void this.setReceivedDateToToday();
         if (action === "clear-date" && field) return void this.clearDate(field);
         if (action === "clear-count" && itemKey && field) return void this.clearItemCount(itemKey, field);
+        if (action === "add-custom-item") return void this.addCustomItem();
+        if (action === "remove-custom-item" && Number.isInteger(customIndex)) return void this.removeCustomItem(customIndex);
+        if (action === "clear-custom-count" && Number.isInteger(customIndex) && field) return void this.clearCustomItemCount(customIndex, field);
         if (action === "edit" && recordId) return void this.startEditing(recordId);
         if (action === "delete" && recordId) return void this.deleteRecord(recordId);
         if (action === "clear-filters") return void this.clearFilters();
@@ -707,7 +818,68 @@ export class LaundryLogManager {
         `;
     }
 
-    renderSection(section, summary, items) {
+    renderPreviousStockWarning(previousRecord, missingItems = []) {
+        if (!previousRecord || !missingItems.length) {
+            return "";
+        }
+
+        return `
+            <section class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <div class="font-semibold">${escapeHtml(this.tr("warnings.previousStockTitle"))}</div>
+                <p class="mt-1 text-amber-800">${escapeHtml(this.tr("warnings.previousStockBody", {
+                    date: this.formatDate(previousRecord.deliveryDate)
+                }))}</p>
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    ${missingItems.map((item) => `
+                        <div class="rounded-xl border border-amber-200 bg-white/70 px-3 py-2">
+                            <div class="font-semibold text-slate-900">${escapeHtml(this.getLaundryItemLabel(item))}</div>
+                            <div class="mt-1 text-xs text-amber-800">${escapeHtml(this.tr("warnings.previousStockItem", {
+                                expected: item.expected,
+                                found: item.found,
+                                missing: item.missing
+                            }))}</div>
+                        </div>
+                    `).join("")}
+                </div>
+            </section>
+        `;
+    }
+
+    getLaundryItemLabel(item) {
+        if (item?.name) {
+            return item.name;
+        }
+        if (item?.labelKey) {
+            return this.tr(item.labelKey);
+        }
+        return this.tr("labels.customItemFallback");
+    }
+
+    renderCustomItemRow(item, index) {
+        return `
+            <div class="grid gap-3 rounded-2xl border border-dashed border-rose-200 bg-rose-50/40 p-3 sm:grid-cols-[minmax(150px,1fr)_120px_120px_auto]">
+                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                    ${escapeHtml(this.tr("labels.customItemName"))}
+                    <input type="text" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="name" value="${escapeHtml(item.name)}" placeholder="${escapeHtml(this.tr("form.customItemPlaceholder"))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                </label>
+                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                    ${escapeHtml(this.tr("labels.deliveredShort"))}
+                    <input type="number" min="0" inputmode="numeric" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="delivered" value="${escapeHtml(toInputNumber(item.delivered))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    <button type="button" data-laundry-action="clear-custom-count" data-custom-index="${escapeHtml(String(index))}" data-field="delivered" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
+                </label>
+                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                    ${escapeHtml(this.tr("labels.receivedShort"))}
+                    <input type="number" min="0" inputmode="numeric" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="received" value="${escapeHtml(toInputNumber(item.received))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    <button type="button" data-laundry-action="clear-custom-count" data-custom-index="${escapeHtml(String(index))}" data-field="received" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
+                </label>
+                <div class="flex items-end">
+                    <button type="button" data-laundry-action="remove-custom-item" data-custom-index="${escapeHtml(String(index))}" class="w-full rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.removeCustomItem"))}</button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderSection(section, summary, items, customItems = []) {
         return `
             <details id="laundry-log-section-${escapeHtml(section.key)}" class="scroll-mt-28 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm" open>
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
@@ -740,6 +912,22 @@ export class LaundryLogManager {
                             </div>
                         `;
                     }).join("")}
+                    ${section.key === "other" ? `
+                        <div class="rounded-2xl border border-rose-100 bg-white p-3">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("labels.customItems"))}</div>
+                                    <p class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("form.customItemsHelper"))}</p>
+                                </div>
+                                <button type="button" data-laundry-action="add-custom-item" class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100">${escapeHtml(this.tr("actions.addCustomItem"))}</button>
+                            </div>
+                            <div class="mt-3 space-y-3">
+                                ${customItems.length
+                                    ? customItems.map((item, index) => this.renderCustomItemRow(item, index)).join("")
+                                    : `<p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">${escapeHtml(this.tr("empty.customItems"))}</p>`}
+                            </div>
+                        </div>
+                    ` : ""}
                 </div>
             </details>
         `;
@@ -796,9 +984,10 @@ export class LaundryLogManager {
     }
 
     renderPendingCard(record) {
+        const previousStock = this.getPreviousStockWarnings(record, record.id);
         const mismatchNames = record.summary.mismatches
             .slice(0, 3)
-            .map((item) => this.tr(item.labelKey))
+            .map((item) => this.getLaundryItemLabel(item))
             .join(", ");
 
         return `
@@ -825,6 +1014,7 @@ export class LaundryLogManager {
                     </div>
                 </div>
                 ${mismatchNames ? `<p class="mt-3 text-sm text-rose-700">${escapeHtml(mismatchNames)}</p>` : ""}
+                <div class="mt-4">${this.renderPreviousStockWarning(previousStock.previousRecord, previousStock.missingItems)}</div>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button type="button" data-laundry-action="edit" data-record-id="${escapeHtml(record.id)}" class="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700">
                         ${escapeHtml(this.tr("actions.review"))}
@@ -835,9 +1025,10 @@ export class LaundryLogManager {
     }
 
     renderRecordCard(record) {
+        const previousStock = this.getPreviousStockWarnings(record, record.id);
         const mismatchLines = record.summary.mismatches
             .slice(0, 4)
-            .map((item) => `${this.tr(item.labelKey)} (${item.delivered}/${item.received})`)
+            .map((item) => `${this.getLaundryItemLabel(item)} (${item.delivered}/${item.received})`)
             .join(", ");
 
         return `
@@ -868,6 +1059,7 @@ export class LaundryLogManager {
                     </div>
                 </div>
                 ${mismatchLines ? `<p class="mt-4 text-sm text-rose-700">${escapeHtml(mismatchLines)}</p>` : ""}
+                <div class="mt-4">${this.renderPreviousStockWarning(previousStock.previousRecord, previousStock.missingItems)}</div>
                 ${record.notes ? `<p class="mt-3 text-sm text-slate-600">${escapeHtml(record.notes)}</p>` : ""}
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button type="button" data-laundry-action="edit" data-record-id="${escapeHtml(record.id)}" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
@@ -881,7 +1073,7 @@ export class LaundryLogManager {
         `;
     }
 
-    renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey }) {
+    renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey, draftPreviousStock }) {
         return `
             <section class="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
                 ${this.renderSectionNavigator()}
@@ -915,6 +1107,7 @@ export class LaundryLogManager {
                                 <div class="mt-2">${escapeHtml(this.tr("summary.delivered", { count: draftSummary.deliveredUnits }))} · ${escapeHtml(this.tr("summary.received", { count: draftSummary.receivedUnits }))} · ${escapeHtml(this.tr("summary.variance", { count: draftSummary.differenceUnits }))}</div>
                             </div>
                         </div>
+                        <div class="mt-5">${this.renderPreviousStockWarning(draftPreviousStock.previousRecord, draftPreviousStock.missingItems)}</div>
                         <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             <button type="button" data-laundry-action="copy-delivered" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
                             <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
@@ -923,7 +1116,7 @@ export class LaundryLogManager {
                         <div class="mt-6 grid gap-4 2xl:grid-cols-2">
                             ${LAUNDRY_LOG_GROUPS.map((section) => {
                                 const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { delivered: 0, received: 0 };
-                                return this.renderSection(section, summary, this.draft.items);
+                                return this.renderSection(section, summary, this.draft.items, this.draft.customItems);
                             }).join("")}
                         </div>
                         <label class="mt-6 block text-sm font-medium text-slate-700">
@@ -1054,6 +1247,7 @@ export class LaundryLogManager {
         const propertyOptions = this.getKnownPropertyNames();
         const monthOptions = this.getMonthOptions();
         const draftSummary = summarizeLaundryLogRecord(this.draft);
+        const draftPreviousStock = this.getPreviousStockWarnings(this.draft, this.editingRecordId || "");
         const titleKey = this.editingRecordId ? "views.editTitle" : "views.formTitle";
 
         root.innerHTML = `
@@ -1061,7 +1255,7 @@ export class LaundryLogManager {
             ${this.renderMetricsSection(totals)}
             ${this.renderWorkspaceTabs()}
             ${this.activeWorkspace === "entry"
-                ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey })
+                ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey, draftPreviousStock })
                 : this.activeWorkspace === "returns"
                 ? this.renderReturnsWorkspace({ returnRecords, monthOptions, pendingRecords })
                 : this.renderCompletedWorkspace({ completedRecords, monthOptions })}

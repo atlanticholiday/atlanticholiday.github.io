@@ -218,9 +218,9 @@ describe("reservations-utils", () => {
         Nome: "Pool Guest",
         Portal: "Airbnb",
         SEF: "Validado",
-        "1Âª Mensagem": "Enviada",
+        ["1\u00c2\u00aa Mensagem"]: "Enviada",
         Cofre: "3",
-        NÃºmero: "123"
+        ["N\u00c3\u00bamero"]: "123"
       })
     ];
 
