@@ -1,6 +1,6 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, enableIndexedDbPersistence, collection, doc, addDoc, onSnapshot, deleteDoc, setLogLevel, getDoc, setDoc, updateDoc, deleteField, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, enableIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 import { Config } from '../core/config.js';
@@ -48,6 +48,8 @@ import { canonicalizeEmail } from '../shared/email.js';
 // --- GLOBAL VARIABLES & CONFIG ---
 let db, auth, functionsInstance, userId;
 let unsubscribe = null;
+let unsubscribeAccessModeSync = null;
+let unsubscribeScheduleUiRefresh = null;
 let migrationCompleted = false; // Flag to prevent repeated migration
 let timeClockAutoOpenedForUser = false;
 let unsubscribePendingAccessLinkSync = null;
@@ -342,63 +344,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         i18n.setupLanguageSwitcher();
 
 
-        // Add global Firestore read tracking
-        let globalReadCount = 0;
-        console.log("🔍 [GLOBAL READ TRACKER] Initialized - tracking all Firestore reads");
-
-        // Monitor Firebase console directly if possible
-        if (typeof window !== 'undefined') {
-            // Track any console network activity
-            const originalFetch = window.fetch;
-            window.fetch = async function (...args) {
-                const url = args[0];
-                if (typeof url === 'string' && url.includes('firestore')) {
-                    console.log(`🌐 [NETWORK TRACKER] Firestore request to:`, url);
-                }
-                return originalFetch.apply(this, args);
-            };
-
-            // Track XMLHttpRequest as well
-            const originalXHR = window.XMLHttpRequest.prototype.open;
-            window.XMLHttpRequest.prototype.open = function (method, url, ...args) {
-                if (typeof url === 'string' && url.includes('firestore')) {
-                    console.log(`🌐 [XHR TRACKER] Firestore ${method} request to:`, url);
-                }
-                return originalXHR.apply(this, [method, url, ...args]);
-            };
-        }
-
-        // Wrap getDocs to count reads
-        const originalGetDocs = window.getDocs || getDocs;
-        window.getDocsTracked = async function (query) {
-            const result = await originalGetDocs(query);
-            const readCount = result.docs.length || 1;
-            globalReadCount += readCount;
-            console.log(`📊 [GLOBAL READ TRACKER] getDocs called: +${readCount} reads (Total: ${globalReadCount})`);
-            console.log(`📊 [GLOBAL READ TRACKER] getDocs source: ${result.metadata?.fromCache ? 'CACHE' : 'SERVER'}`);
-            return result;
-        };
-
-        // Wrap onSnapshot to count reads
-        const originalOnSnapshot = window.onSnapshot || onSnapshot;
-        window.onSnapshotTracked = function (query, callback, errorCallback) {
-            return originalOnSnapshot(query, (snapshot) => {
-                const readCount = snapshot.docs.length || 1;
-                globalReadCount += readCount;
-                console.log(`📊 [GLOBAL READ TRACKER] onSnapshot triggered: +${readCount} reads (Total: ${globalReadCount})`);
-                console.log(`📊 [GLOBAL READ TRACKER] Snapshot source: ${snapshot.metadata.fromCache ? 'CACHE' : 'SERVER'}`);
-                callback(snapshot);
-            }, errorCallback);
-        };
-
         const holidayCalculator = new HolidayCalculator();
 
         // Initialize DataManager
         dataManager = new DataManager(db, auth.currentUser ? auth.currentUser.uid : null, holidayCalculator);
         window.dataManager = dataManager; // For debugging
-        dataManager.subscribeToDataChanges(() => {
-            syncAccessModeUi();
-        });
+        if (!unsubscribeAccessModeSync) {
+            unsubscribeAccessModeSync = dataManager.subscribeToDataChanges(() => {
+                syncAccessModeUi();
+            });
+        }
 
         // Initialize PDF Generator
         pdfGenerator = new PDFGenerator();
@@ -653,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
-                if (!propertiesManager) {
+                if (!propertiesManager && dataManager.hasAnyGrantedAppAccess?.()) {
                     propertiesManager = new PropertiesManager(db);
                     window.propertiesManager = propertiesManager;
                 }
@@ -682,6 +637,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 syncAccessModeUi();
                 routeCurrentUserAccess();
 
+                if (!(dataManager.hasPrivilegedRole?.() && window.localStorage?.getItem('horario:autoPropertyMigration') === 'true')) {
+                    migrationCompleted = true;
+                }
+
                 // OPTIMIZATION: Run migration AFTER properties have loaded to avoid duplicate reads
                 console.log(`⏰ [OPTIMIZATION] Scheduling migration check after properties load...`);
                 if (pendingMigrationTimeoutId) {
@@ -709,6 +668,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 unsubscribePendingAccessLinkSync?.();
                 unsubscribePendingAccessLinkSync = null;
+                unsubscribeScheduleUiRefresh?.();
+                unsubscribeScheduleUiRefresh = null;
                 dataManager?.clearCurrentUserContext?.();
                 dataManager?.stopRealtimeListeners?.();
                 dataManager?.resetSessionState?.();
@@ -939,6 +900,34 @@ function setupGlobalEventListeners() {
     propertyDashboardController?.init();
 }
 
+function subscribeScheduleDataForCurrentUser() {
+    if (!dataManager) {
+        return;
+    }
+
+    const hasPrivilegedScheduleAccess = dataManager.hasPrivilegedRole?.();
+    const canUseSchedule = dataManager.canAccessWorkSchedule?.();
+    const needsTimeClockData = dataManager.isTimeClockStationUser?.() || dataManager.isClockOnlyUser?.();
+    const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || needsTimeClockData;
+
+    if (!shouldLoadEmployeeDirectory) {
+        return;
+    }
+
+    dataManager.listenForEmployeeChanges();
+
+    if (canUseSchedule) {
+        dataManager.listenForVacationRecordChanges();
+        dataManager.listenForDailyNotes();
+        dataManager.listenForShiftPresets();
+        dataManager.listenForGlobalSettings();
+    }
+
+    if (canUseSchedule || needsTimeClockData) {
+        dataManager.listenForAttendanceChanges();
+    }
+}
+
 async function setupApp() {
     console.log(`🚀 [INITIALIZATION] setupApp() called`);
     try {
@@ -949,20 +938,17 @@ async function setupApp() {
 
         console.log(`👥 [INITIALIZATION] Setting up employee data listener...`);
         // Subscribe additional UI work that should happen after shared data updates
-        dataManager.subscribeToDataChanges(() => {
+        if (!unsubscribeScheduleUiRefresh) {
+            unsubscribeScheduleUiRefresh = dataManager.subscribeToDataChanges(() => {
             console.log(`🔄 [DATA CHANGE] Employee data changed, updating UI`);
             if (uiManager) {
                 // Ensure Shift Presets Modal list is updated if open
                 uiManager.renderShiftPresetsModal();
             }
-        });
+            });
+        }
 
-        dataManager.listenForEmployeeChanges();
-        dataManager.listenForVacationRecordChanges();
-        dataManager.listenForDailyNotes();
-        dataManager.listenForShiftPresets();
-        dataManager.listenForGlobalSettings();
-        dataManager.listenForAttendanceChanges();
+        subscribeScheduleDataForCurrentUser();
 
         // Show the main app interface
         const loadingEl = document.getElementById('loading');

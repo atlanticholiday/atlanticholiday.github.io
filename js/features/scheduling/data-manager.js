@@ -217,6 +217,10 @@ export class DataManager {
     }
 
     listenForEmployeeChanges() {
+        if (this.unsubscribe) {
+            return;
+        }
+
         this.employeeLoadError = null;
         this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), (snapshot) => {
             const readCount = snapshot.docs.length || 1;
@@ -258,6 +262,10 @@ export class DataManager {
     }
 
     listenForVacationRecordChanges() {
+        if (this.unsubscribeVacationRecords) {
+            return;
+        }
+
         this.unsubscribeVacationRecords = onSnapshot(this.getVacationRecordsCollectionRef(), (snapshot) => {
             this.vacationRecords = snapshot.docs
                 .map((recordDoc) => normalizeVacationEntry({ id: recordDoc.id, ...recordDoc.data() }))
@@ -269,6 +277,10 @@ export class DataManager {
     }
 
     listenForDailyNotes() {
+        if (this.unsubscribeNotes) {
+            return;
+        }
+
         // Create a listener for the daily_notes collection
         const notesCollection = collection(this.db, "daily_notes");
         this.unsubscribeNotes = onSnapshot(notesCollection, (snapshot) => {
@@ -285,6 +297,10 @@ export class DataManager {
     }
 
     listenForShiftPresets() {
+        if (this.unsubscribeShiftPresets) {
+            return;
+        }
+
         const presetsCollection = collection(this.db, "shift_presets");
         this.unsubscribeShiftPresets = onSnapshot(presetsCollection, (snapshot) => {
             const presets = [];
@@ -297,6 +313,10 @@ export class DataManager {
     }
 
     listenForGlobalSettings() {
+        if (this.unsubscribeSettings) {
+            return;
+        }
+
         // Global settings document
         const settingsDoc = doc(this.db, "settings", "global");
         this.unsubscribeSettings = onSnapshot(settingsDoc, (docSnap) => {
@@ -311,6 +331,10 @@ export class DataManager {
     }
 
     listenForAttendanceChanges() {
+        if (this.unsubscribeAttendance) {
+            return;
+        }
+
         this.unsubscribeAttendance = onSnapshot(this.getAttendanceCollectionRef(), { includeMetadataChanges: true }, (snapshot) => {
             const nextAttendanceRecords = { ...this.attendanceRecords };
 
