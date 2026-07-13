@@ -56,6 +56,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'main'
     },
     {
+        key: 'linenInventory',
+        buttonId: 'go-to-linen-inventory-btn',
+        pageName: 'linenInventory',
+        labelKey: 'apps.linenInventory',
+        fallbackLabel: 'Linen Inventory',
+        group: 'main'
+    },
+    {
         key: 'operationalGuidelines',
         buttonId: 'go-to-operational-guidelines-btn',
         pageName: 'operationalGuidelines',

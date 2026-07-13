@@ -108,6 +108,8 @@
     "welcomePacksDesc": "Stock and deliveries.",
     "laundryLog": "Laundry Log",
     "laundryLogDesc": "Linen by property.",
+    "linenInventory": "Linen Inventory",
+    "linenInventoryDesc": "Property linen counts.",
     "staff": "Staff",
     "staffDesc": "Team details.",
     "properties": "Properties",
@@ -297,6 +299,8 @@
     },
     "form": {
       "helper": "Save the record when the laundry leaves, then reopen it to confirm what came back.",
+      "openHelper": "Tap to register a new handoff.",
+      "returnHelper": "Confirm only what came back from the laundry here.",
       "propertyPlaceholder": "Start typing a property",
       "notesPlaceholder": "Optional notes for this handoff",
       "customItemPlaceholder": "Write item name",
@@ -316,6 +320,8 @@
       "copyDelivered": "Copy out counts to back",
       "setReceivedToday": "Set received date to today",
       "openReturns": "Open returns",
+      "openForm": "New handoff",
+      "hideForm": "Hide handoff",
       "viewAllReturns": "View all returns",
       "backToEntry": "Back to entry",
       "review": "Review return",
@@ -337,9 +343,9 @@
       "variance": "Variance: {{count}}"
     },
     "warnings": {
-      "previousStockTitle": "Possible missing linen",
-      "previousStockBody": "Compared with the previous completed return from {{date}}.",
-      "previousStockItem": "Previous: {{expected}} · Now out: {{found}} · Missing: {{missing}}"
+      "returnMismatchTitle": "Laundry return mismatch",
+      "returnMismatchBody": "The counts sent to the laundry and received back do not match.",
+      "returnMismatchItem": "Out: {{delivered}} · Back: {{received}} · Missing: {{missing}} · Extra: {{extra}}"
     },
     "counts": {
       "records": {
@@ -382,6 +388,126 @@
     },
     "states": {
       "restrictedTitle": "Laundry Log is not available in shared tablet mode.",
+      "restrictedBody": "Open it from a personal account or a manager session."
+    },
+    "sections": {
+      "doubleBed": "Double bed",
+      "singleBed": "Single bed",
+      "towels": "Towels",
+      "pillows": "Pillows",
+      "other": "Other"
+    },
+    "items": {
+      "doubleMattressProtector": "Mattress protectors",
+      "doubleFittedSheet": "Fitted sheets",
+      "doubleTopSheet": "Top sheets",
+      "doubleDuvet": "Duvets",
+      "doubleDuvetCover": "Duvet covers",
+      "singleMattressProtector": "Single mattress protectors",
+      "singleFittedSheet": "Single fitted sheets",
+      "singleTopSheet": "Single top sheets",
+      "singleDuvet": "Single duvets",
+      "singleDuvetCover": "Single duvet covers",
+      "bathTowel": "Bath towels",
+      "faceTowel": "Face towels",
+      "poolTowel": "Pool towels",
+      "bathMat": "Bath mats",
+      "pillows": "Pillows",
+      "pillowProtectors": "Pillow protectors",
+      "pillowCases": "Pillowcases",
+      "kitchenTowels": "Kitchen towels",
+      "blankets": "Blankets"
+    }
+  },
+  "linenInventory": {
+    "header": {
+      "kicker": "Linen Inventory",
+      "title": "Linen Inventory",
+      "subtitle": "Count linen by property and date."
+    },
+    "landing": {
+      "description": "Property linen counts."
+    },
+    "views": {
+      "formTitle": "New linen count",
+      "editTitle": "Update linen count",
+      "recordsTitle": "Saved counts"
+    },
+    "stats": {
+      "records": "Counts",
+      "countedUnits": "Counted",
+      "trackedItems": "Items counted"
+    },
+    "labels": {
+      "property": "Property",
+      "countedDate": "Count date",
+      "notes": "Notes",
+      "countShort": "Count",
+      "countedOn": "Counted {{date}}",
+      "noDate": "No date",
+      "unnamedProperty": "Unnamed property",
+      "trackedItems": "Items counted",
+      "totalCounted": "Total counted",
+      "customItems": "Other linen items",
+      "customItemName": "Item",
+      "customItemFallback": "Other item"
+    },
+    "form": {
+      "helper": "Choose a property, set the count date, and enter the quantities counted.",
+      "propertyPlaceholder": "Start typing a property",
+      "notesPlaceholder": "Optional notes for housekeeping",
+      "customItemPlaceholder": "Write item name"
+    },
+    "filters": {
+      "searchPlaceholder": "Search property, date, or item"
+    },
+    "actions": {
+      "save": "Save count",
+      "update": "Update count",
+      "reset": "Clear form",
+      "clearDate": "Clear date",
+      "clearCount": "Clear",
+      "markCountedToday": "Counted today",
+      "edit": "Open record",
+      "delete": "Delete",
+      "clearFilters": "Clear filters",
+      "addCustomItem": "Add other item",
+      "removeCustomItem": "Remove"
+    },
+    "status": {
+      "empty": "Empty",
+      "counted": "Counted"
+    },
+    "summary": {
+      "recordStatus": "Live count summary",
+      "counted": "Counted: {{count}}",
+      "items": "Items: {{count}}"
+    },
+    "counts": {
+      "records": {
+        "one": "{{count}} property inventory",
+        "other": "{{count}} property inventories"
+      }
+    },
+    "empty": {
+      "records": "No linen inventory records match the current filters.",
+      "customItems": "No extra linen items added."
+    },
+    "messages": {
+      "propertyRequired": "Choose a property before saving.",
+      "countRequired": "Add at least one counted quantity before saving.",
+      "saved": "Linen count saved.",
+      "updated": "Linen count updated.",
+      "deleted": "Linen count deleted.",
+      "saveFailed": "Could not save the linen count right now.",
+      "deleteFailed": "Could not delete the linen count right now.",
+      "loadFailed": "Could not load linen counts right now."
+    },
+    "confirm": {
+      "delete": "Delete this linen count?"
+    },
+    "states": {
+      "restrictedTitle": "Linen Inventory is not available in shared tablet mode.",
       "restrictedBody": "Open it from a personal account or a manager session."
     },
     "sections": {

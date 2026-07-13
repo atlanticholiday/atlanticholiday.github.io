@@ -15,6 +15,7 @@ import { CleaningBillsManager } from '../features/operations/cleaning-bills-mana
 import { CommissionCalculatorManager } from '../features/operations/commission-calculator-manager.js';
 import { HeatedPoolsManager } from '../features/operations/heated-pools-manager.js';
 import { LaundryLogManager } from '../features/operations/laundry-log-manager.js';
+import { LinenInventoryManager } from '../features/operations/linen-inventory-manager.js';
 import { NukiDoorsManager } from '../features/operations/nuki-doors-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
@@ -53,7 +54,7 @@ let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
 
 async function createSecondaryAuthUser(email, password) {
     const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -223,6 +224,7 @@ function syncAccessModeUi() {
 
     cleaningAhManager?.syncAccessVisibility?.();
     laundryLogManager?.syncAccessVisibility?.();
+    linenInventoryManager?.syncAccessVisibility?.();
 
     const scheduleButton = document.getElementById('go-to-schedule-btn');
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');
@@ -485,6 +487,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         window.laundryLogManager = laundryLogManager;
         try { laundryLogManager.ensureDomScaffold?.(); } catch { }
+        linenInventoryManager = new LinenInventoryManager(db, {
+            getDataManager: () => dataManager,
+            getProperties: () => propertiesManager?.properties || []
+        });
+        window.linenInventoryManager = linenInventoryManager;
+        try { linenInventoryManager.ensureDomScaffold?.(); } catch { }
         // Initialize Checklists manager (localStorage-backed + Firestore sync)
         checklistsManager = new ChecklistsManager(userId); // Reverted to original
         window.checklistsManager = checklistsManager;
@@ -552,6 +560,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         document.addEventListener('laundryLogPageOpened', () => {
             try { laundryLogManager?.render(); } catch (e) { console.warn('Laundry Log render failed:', e); }
+        });
+        document.addEventListener('linenInventoryPageOpened', () => {
+            try { linenInventoryManager?.render(); } catch (e) { console.warn('Linen Inventory render failed:', e); }
         });
 
         // Listen for language changes and refresh the current view
@@ -731,6 +742,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cleaningAhManager) {
                     try { cleaningAhManager.stopListening(); } catch { }
                 }
+                if (linenInventoryManager) {
+                    try { linenInventoryManager.stopListening(); } catch { }
+                }
                 if (heatedPoolsManager) {
                     try { heatedPoolsManager.stopListening(); } catch { }
                 }
@@ -758,7 +772,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #linen-inventory-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn')) {
             signOut(auth);
         }
     });

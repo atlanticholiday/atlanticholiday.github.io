@@ -10,6 +10,7 @@ export const QUICK_SEARCH_PAGE_EVENTS = Object.freeze({
     cleaningBills: "cleaningBillsPageOpened",
     heatedPools: "heatedPoolsPageOpened",
     laundryLog: "laundryLogPageOpened",
+    linenInventory: "linenInventoryPageOpened",
     nukiDoors: "nukiDoorsPageOpened",
     operationalGuidelines: "operationalGuidelinesPageOpened",
     operations: "operationsPageOpened",

@@ -9,7 +9,6 @@ import {
 
 import { i18n, t } from "../../core/i18n.js";
 import {
-    compareLaundryLogPreviousStock,
     createEmptyCustomLaundryLogItems,
     createEmptyLaundryLogItems,
     createLaundryLogRecord,
@@ -74,6 +73,8 @@ export class LaundryLogManager {
         this.searchQuery = "";
         this.selectedStatus = "all";
         this.selectedMonth = "all";
+        this.entryFormExpanded = false;
+        this.returnEditingRecordId = null;
         this.draft = this.createDefaultDraft();
         this.statusMessage = "";
         this.statusTone = "info";
@@ -353,53 +354,6 @@ export class LaundryLogManager {
         return this.getFilteredRecords("matched");
     }
 
-    isSameProperty(left = {}, right = {}) {
-        const leftPropertyId = normalizeLabel(left.propertyId);
-        const rightPropertyId = normalizeLabel(right.propertyId);
-        if (leftPropertyId && rightPropertyId) {
-            return leftPropertyId === rightPropertyId;
-        }
-
-        return normalizeKey(left.propertyName) === normalizeKey(right.propertyName);
-    }
-
-    findPreviousCompletedRecord(targetRecord = {}, targetRecordId = "") {
-        if (!normalizeLabel(targetRecord.propertyName) && !normalizeLabel(targetRecord.propertyId)) {
-            return null;
-        }
-
-        const targetDate = normalizeLabel(targetRecord.deliveryDate);
-        return filterLaundryLogRecords(this.records)
-            .filter((record) => record.id !== targetRecordId)
-            .filter((record) => record.status === "matched")
-            .filter((record) => this.isSameProperty(record, targetRecord))
-            .filter((record) => {
-                if (!targetDate) {
-                    return true;
-                }
-                return normalizeLabel(record.deliveryDate) < targetDate;
-            })
-            .sort((left, right) => {
-                const dateCompare = String(right.deliveryDate || "").localeCompare(String(left.deliveryDate || ""));
-                if (dateCompare !== 0) {
-                    return dateCompare;
-                }
-                return String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""));
-            })[0] || null;
-    }
-
-    getPreviousStockWarnings(targetRecord = {}, targetRecordId = "") {
-        const previousRecord = this.findPreviousCompletedRecord(targetRecord, targetRecordId);
-        if (!previousRecord) {
-            return { previousRecord: null, missingItems: [] };
-        }
-
-        return {
-            previousRecord,
-            missingItems: compareLaundryLogPreviousStock(targetRecord, previousRecord)
-        };
-    }
-
     formatDate(dateValue) {
         if (!dateValue) {
             return "—";
@@ -441,6 +395,24 @@ export class LaundryLogManager {
         });
     }
 
+    scrollToSelector(selector) {
+        window.requestAnimationFrame(() => {
+            const element = document.querySelector(selector);
+            element?.scrollIntoView?.({
+                behavior: "smooth",
+                block: "center"
+            });
+            element?.focus?.({ preventScroll: true });
+        });
+    }
+
+    showValidationError(message, selector) {
+        this.setStatus(message, "danger");
+        this.entryFormExpanded = true;
+        this.render();
+        this.scrollToSelector(selector);
+    }
+
     syncDraftFromDomIfPresent() {
         if (!document.getElementById("laundry-log-property-input")) {
             return;
@@ -451,7 +423,7 @@ export class LaundryLogManager {
     readDraftFromDom() {
         const propertyName = normalizeLabel(document.getElementById("laundry-log-property-input")?.value || this.draft.propertyName);
         const matchedProperty = this.findPropertyByName(propertyName);
-        const items = createEmptyLaundryLogItems();
+        const items = createEmptyLaundryLogItems(this.draft.items);
 
         document.querySelectorAll("[data-laundry-item-key][data-laundry-item-field]").forEach((input) => {
             const itemKey = input.dataset.laundryItemKey;
@@ -462,7 +434,10 @@ export class LaundryLogManager {
             items[itemKey][field] = Number(input.value || 0);
         });
 
-        const customItemsByIndex = new Map();
+        const customItemsByIndex = new Map(
+            createEmptyCustomLaundryLogItems(this.draft.customItems)
+                .map((item, index) => [index, { ...item }])
+        );
         document.querySelectorAll("[data-laundry-custom-index][data-laundry-custom-field]").forEach((input) => {
             const index = Number(input.dataset.laundryCustomIndex);
             const field = input.dataset.laundryCustomField;
@@ -495,18 +470,15 @@ export class LaundryLogManager {
         const draft = this.readDraftFromDom();
         const summary = summarizeLaundryLogRecord(draft);
         if (!draft.propertyName) {
-            this.setStatus(this.tr("messages.propertyRequired"), "danger");
-            this.render();
+            this.showValidationError(this.tr("messages.propertyRequired"), "#laundry-log-property-input");
             return;
         }
         if (!draft.deliveryDate) {
-            this.setStatus(this.tr("messages.deliveryDateRequired"), "danger");
-            this.render();
+            this.showValidationError(this.tr("messages.deliveryDateRequired"), "#laundry-log-delivery-date-input");
             return;
         }
         if (summary.deliveredUnits === 0 && summary.receivedUnits === 0) {
-            this.setStatus(this.tr("messages.countRequired"), "danger");
-            this.render();
+            this.showValidationError(this.tr("messages.countRequired"), "[data-laundry-item-field='delivered']");
             return;
         }
 
@@ -533,12 +505,15 @@ export class LaundryLogManager {
             }
 
             this.editingRecordId = null;
+            this.returnEditingRecordId = null;
             this.draft = this.createDefaultDraft();
+            this.entryFormExpanded = false;
             this.render();
         } catch (error) {
             console.error("[Laundry Log] failed to save record:", error);
             this.setStatus(this.tr("messages.saveFailed"), "danger");
             this.render();
+            this.scrollToSelector("#laundry-log-status-message");
         }
     }
 
@@ -549,10 +524,25 @@ export class LaundryLogManager {
         }
         this.activeWorkspace = "entry";
         this.editingRecordId = recordId;
+        this.entryFormExpanded = true;
         this.draft = this.createDraftFromRecord(target);
         this.setStatus("", "info");
         this.render();
         this.scrollFormIntoView();
+    }
+
+    startReturnReview(recordId) {
+        const target = this.records.find((record) => record.id === recordId);
+        if (!target) {
+            return;
+        }
+        this.activeWorkspace = "returns";
+        this.returnEditingRecordId = recordId;
+        this.editingRecordId = recordId;
+        this.draft = this.createDraftFromRecord(target);
+        this.setStatus("", "info");
+        this.render();
+        this.scrollToSelector("#laundry-log-return-editor");
     }
 
     async deleteRecord(recordId) {
@@ -581,6 +571,8 @@ export class LaundryLogManager {
 
     resetDraft() {
         this.editingRecordId = null;
+        this.returnEditingRecordId = null;
+        this.entryFormExpanded = false;
         this.draft = this.createDefaultDraft();
         this.setStatus("", "info");
         this.render();
@@ -679,6 +671,9 @@ export class LaundryLogManager {
 
         this.syncDraftFromDomIfPresent();
         this.activeWorkspace = nextWorkspace;
+        if (nextWorkspace !== "returns") {
+            this.returnEditingRecordId = null;
+        }
         this.render();
     }
 
@@ -726,6 +721,7 @@ export class LaundryLogManager {
         if (action === "remove-custom-item" && Number.isInteger(customIndex)) return void this.removeCustomItem(customIndex);
         if (action === "clear-custom-count" && Number.isInteger(customIndex) && field) return void this.clearCustomItemCount(customIndex, field);
         if (action === "edit" && recordId) return void this.startEditing(recordId);
+        if (action === "review-return" && recordId) return void this.startReturnReview(recordId);
         if (action === "delete" && recordId) return void this.deleteRecord(recordId);
         if (action === "clear-filters") return void this.clearFilters();
     }
@@ -744,6 +740,13 @@ export class LaundryLogManager {
         }
     }
 
+    handleRootToggle(event) {
+        const target = event.target;
+        if (target?.id === "laundry-log-form-card") {
+            this.entryFormExpanded = target.open;
+        }
+    }
+
     bindRootEvents() {
         const root = document.getElementById("laundry-log-root");
         if (!root || root.dataset.bound === "true") {
@@ -751,6 +754,7 @@ export class LaundryLogManager {
         }
         root.addEventListener("click", (event) => this.handleRootClick(event));
         root.addEventListener("change", (event) => this.handleRootChange(event));
+        root.addEventListener("toggle", (event) => this.handleRootToggle(event), true);
         root.dataset.bound = "true";
     }
 
@@ -818,25 +822,24 @@ export class LaundryLogManager {
         `;
     }
 
-    renderPreviousStockWarning(previousRecord, missingItems = []) {
-        if (!previousRecord || !missingItems.length) {
+    renderReturnMismatchWarning(summary = {}) {
+        if (!summary.receivedStarted || !summary.mismatches?.length) {
             return "";
         }
 
         return `
-            <section class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <div class="font-semibold">${escapeHtml(this.tr("warnings.previousStockTitle"))}</div>
-                <p class="mt-1 text-amber-800">${escapeHtml(this.tr("warnings.previousStockBody", {
-                    date: this.formatDate(previousRecord.deliveryDate)
-                }))}</p>
+            <section class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                <div class="font-semibold">${escapeHtml(this.tr("warnings.returnMismatchTitle"))}</div>
+                <p class="mt-1 text-rose-800">${escapeHtml(this.tr("warnings.returnMismatchBody"))}</p>
                 <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                    ${missingItems.map((item) => `
-                        <div class="rounded-xl border border-amber-200 bg-white/70 px-3 py-2">
+                    ${summary.mismatches.map((item) => `
+                        <div class="rounded-xl border border-rose-200 bg-white/70 px-3 py-2">
                             <div class="font-semibold text-slate-900">${escapeHtml(this.getLaundryItemLabel(item))}</div>
-                            <div class="mt-1 text-xs text-amber-800">${escapeHtml(this.tr("warnings.previousStockItem", {
-                                expected: item.expected,
-                                found: item.found,
-                                missing: item.missing
+                            <div class="mt-1 text-xs text-rose-800">${escapeHtml(this.tr("warnings.returnMismatchItem", {
+                                delivered: item.delivered,
+                                received: item.received,
+                                missing: item.missing,
+                                extra: item.extra
                             }))}</div>
                         </div>
                     `).join("")}
@@ -855,23 +858,32 @@ export class LaundryLogManager {
         return this.tr("labels.customItemFallback");
     }
 
-    renderCustomItemRow(item, index) {
+    renderCustomItemRow(item, index, mode = "full") {
+        const showDelivered = mode !== "return";
+        const showReceived = mode !== "new";
+        const columnsClass = showDelivered && showReceived
+            ? "sm:grid-cols-[minmax(150px,1fr)_120px_120px_auto]"
+            : "sm:grid-cols-[minmax(150px,1fr)_120px_auto]";
         return `
-            <div class="grid gap-3 rounded-2xl border border-dashed border-rose-200 bg-rose-50/40 p-3 sm:grid-cols-[minmax(150px,1fr)_120px_120px_auto]">
+            <div class="grid gap-3 rounded-2xl border border-dashed border-rose-200 bg-rose-50/40 p-3 ${columnsClass}">
                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     ${escapeHtml(this.tr("labels.customItemName"))}
                     <input type="text" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="name" value="${escapeHtml(item.name)}" placeholder="${escapeHtml(this.tr("form.customItemPlaceholder"))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                 </label>
+                ${showDelivered ? `
                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     ${escapeHtml(this.tr("labels.deliveredShort"))}
                     <input type="number" min="0" inputmode="numeric" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="delivered" value="${escapeHtml(toInputNumber(item.delivered))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                     <button type="button" data-laundry-action="clear-custom-count" data-custom-index="${escapeHtml(String(index))}" data-field="delivered" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                 </label>
+                ` : ""}
+                ${showReceived ? `
                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     ${escapeHtml(this.tr("labels.receivedShort"))}
                     <input type="number" min="0" inputmode="numeric" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="received" value="${escapeHtml(toInputNumber(item.received))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                     <button type="button" data-laundry-action="clear-custom-count" data-custom-index="${escapeHtml(String(index))}" data-field="received" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                 </label>
+                ` : ""}
                 <div class="flex items-end">
                     <button type="button" data-laundry-action="remove-custom-item" data-custom-index="${escapeHtml(String(index))}" class="w-full rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.removeCustomItem"))}</button>
                 </div>
@@ -879,7 +891,12 @@ export class LaundryLogManager {
         `;
     }
 
-    renderSection(section, summary, items, customItems = []) {
+    renderSection(section, summary, items, customItems = [], mode = "full") {
+        const showDelivered = mode !== "return";
+        const showReceived = mode !== "new";
+        const rowColumnsClass = showDelivered && showReceived
+            ? "sm:grid-cols-[minmax(0,1fr)_120px_120px]"
+            : "sm:grid-cols-[minmax(0,1fr)_120px]";
         return `
             <details id="laundry-log-section-${escapeHtml(section.key)}" class="scroll-mt-28 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm" open>
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
@@ -897,18 +914,22 @@ export class LaundryLogManager {
                     ${section.items.map((item) => {
                         const counts = items[item.key] || { delivered: 0, received: 0 };
                         return `
-                            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 sm:grid-cols-[minmax(0,1fr)_120px_120px]">
+                            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 ${rowColumnsClass}">
                                 <div class="text-sm font-medium text-slate-900">${escapeHtml(this.tr(item.labelKey))}</div>
+                                ${showDelivered ? `
                                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.deliveredShort"))}
                                     <input type="number" min="0" inputmode="numeric" data-laundry-item-key="${escapeHtml(item.key)}" data-laundry-item-field="delivered" value="${escapeHtml(toInputNumber(counts.delivered))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                                     <button type="button" data-laundry-action="clear-count" data-item-key="${escapeHtml(item.key)}" data-field="delivered" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                                 </label>
+                                ` : ""}
+                                ${showReceived ? `
                                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.receivedShort"))}
                                     <input type="number" min="0" inputmode="numeric" data-laundry-item-key="${escapeHtml(item.key)}" data-laundry-item-field="received" value="${escapeHtml(toInputNumber(counts.received))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                                     <button type="button" data-laundry-action="clear-count" data-item-key="${escapeHtml(item.key)}" data-field="received" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
                                 </label>
+                                ` : ""}
                             </div>
                         `;
                     }).join("")}
@@ -923,7 +944,7 @@ export class LaundryLogManager {
                             </div>
                             <div class="mt-3 space-y-3">
                                 ${customItems.length
-                                    ? customItems.map((item, index) => this.renderCustomItemRow(item, index)).join("")
+                                    ? customItems.map((item, index) => this.renderCustomItemRow(item, index, mode)).join("")
                                     : `<p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">${escapeHtml(this.tr("empty.customItems"))}</p>`}
                             </div>
                         </div>
@@ -984,7 +1005,6 @@ export class LaundryLogManager {
     }
 
     renderPendingCard(record) {
-        const previousStock = this.getPreviousStockWarnings(record, record.id);
         const mismatchNames = record.summary.mismatches
             .slice(0, 3)
             .map((item) => this.getLaundryItemLabel(item))
@@ -1014,9 +1034,9 @@ export class LaundryLogManager {
                     </div>
                 </div>
                 ${mismatchNames ? `<p class="mt-3 text-sm text-rose-700">${escapeHtml(mismatchNames)}</p>` : ""}
-                <div class="mt-4">${this.renderPreviousStockWarning(previousStock.previousRecord, previousStock.missingItems)}</div>
+                <div class="mt-4">${this.renderReturnMismatchWarning(record.summary)}</div>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <button type="button" data-laundry-action="edit" data-record-id="${escapeHtml(record.id)}" class="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700">
+                    <button type="button" data-laundry-action="review-return" data-record-id="${escapeHtml(record.id)}" class="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700">
                         ${escapeHtml(this.tr("actions.review"))}
                     </button>
                 </div>
@@ -1025,7 +1045,6 @@ export class LaundryLogManager {
     }
 
     renderRecordCard(record) {
-        const previousStock = this.getPreviousStockWarnings(record, record.id);
         const mismatchLines = record.summary.mismatches
             .slice(0, 4)
             .map((item) => `${this.getLaundryItemLabel(item)} (${item.delivered}/${item.received})`)
@@ -1059,7 +1078,7 @@ export class LaundryLogManager {
                     </div>
                 </div>
                 ${mismatchLines ? `<p class="mt-4 text-sm text-rose-700">${escapeHtml(mismatchLines)}</p>` : ""}
-                <div class="mt-4">${this.renderPreviousStockWarning(previousStock.previousRecord, previousStock.missingItems)}</div>
+                <div class="mt-4">${this.renderReturnMismatchWarning(record.summary)}</div>
                 ${record.notes ? `<p class="mt-3 text-sm text-slate-600">${escapeHtml(record.notes)}</p>` : ""}
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button type="button" data-laundry-action="edit" data-record-id="${escapeHtml(record.id)}" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
@@ -1073,7 +1092,7 @@ export class LaundryLogManager {
         `;
     }
 
-    renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey, draftPreviousStock }) {
+    renderLegacyEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey }) {
         return `
             <section class="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
                 ${this.renderSectionNavigator()}
@@ -1107,7 +1126,7 @@ export class LaundryLogManager {
                                 <div class="mt-2">${escapeHtml(this.tr("summary.delivered", { count: draftSummary.deliveredUnits }))} · ${escapeHtml(this.tr("summary.received", { count: draftSummary.receivedUnits }))} · ${escapeHtml(this.tr("summary.variance", { count: draftSummary.differenceUnits }))}</div>
                             </div>
                         </div>
-                        <div class="mt-5">${this.renderPreviousStockWarning(draftPreviousStock.previousRecord, draftPreviousStock.missingItems)}</div>
+                        <div class="mt-5">${this.renderReturnMismatchWarning(draftSummary)}</div>
                         <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             <button type="button" data-laundry-action="copy-delivered" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
                             <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
@@ -1146,9 +1165,146 @@ export class LaundryLogManager {
         `;
     }
 
+    renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey }) {
+        const isEditing = Boolean(this.editingRecordId);
+        const formMode = isEditing ? "full" : "new";
+        const formOpen = this.entryFormExpanded || isEditing;
+
+        return `
+            <section class="grid gap-6">
+                ${this.renderSectionNavigator()}
+                <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.36fr)] 2xl:items-start">
+                    <details id="laundry-log-form-card" class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" ${formOpen ? "open" : ""}>
+                        <summary class="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("header.kicker"))}</div>
+                                <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr(titleKey))}</h2>
+                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(formOpen ? this.tr("form.helper") : this.tr("form.openHelper"))}</p>
+                            </div>
+                            <span class="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm">
+                                ${escapeHtml(formOpen ? this.tr("actions.hideForm") : this.tr("actions.openForm"))}
+                            </span>
+                        </summary>
+                        <div class="mt-5 grid gap-4 md:grid-cols-2">
+                            <label class="block text-sm font-medium text-slate-700">
+                                ${escapeHtml(this.tr("labels.property"))}
+                                <input id="laundry-log-property-input" type="text" list="laundry-log-property-list" value="${escapeHtml(this.draft.propertyName)}" placeholder="${escapeHtml(this.tr("form.propertyPlaceholder"))}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                            </label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                ${escapeHtml(this.tr("labels.deliveryDate"))}
+                                <input id="laundry-log-delivery-date-input" type="date" value="${escapeHtml(this.draft.deliveryDate)}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                <button type="button" data-laundry-action="clear-date" data-field="deliveryDate" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearDate"))}</button>
+                            </label>
+                            ${isEditing ? `
+                                <label class="block text-sm font-medium text-slate-700">
+                                    ${escapeHtml(this.tr("labels.receivedDate"))}
+                                    <input id="laundry-log-received-date-input" type="date" value="${escapeHtml(this.draft.receivedDate)}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                    <button type="button" data-laundry-action="clear-date" data-field="receivedDate" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearDate"))}</button>
+                                </label>
+                            ` : ""}
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                <div class="font-semibold text-slate-900">${escapeHtml(this.tr("summary.recordStatus"))}</div>
+                                <div class="mt-2">${escapeHtml(this.tr("summary.delivered", { count: draftSummary.deliveredUnits }))} · ${escapeHtml(this.tr("summary.received", { count: draftSummary.receivedUnits }))} · ${escapeHtml(this.tr("summary.variance", { count: draftSummary.differenceUnits }))}</div>
+                            </div>
+                        </div>
+                        <div class="mt-5">${this.renderReturnMismatchWarning(draftSummary)}</div>
+                        ${isEditing ? `
+                            <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <button type="button" data-laundry-action="copy-delivered" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
+                                <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
+                                <button type="button" data-laundry-action="workspace" data-workspace="returns" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.openReturns"))}</button>
+                            </div>
+                        ` : ""}
+                        <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
+                            <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
+                        </div>
+                        <div class="mt-6 grid gap-4 2xl:grid-cols-2">
+                            ${LAUNDRY_LOG_GROUPS.map((section) => {
+                                const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { delivered: 0, received: 0 };
+                                return this.renderSection(section, summary, this.draft.items, this.draft.customItems, formMode);
+                            }).join("")}
+                        </div>
+                        <label class="mt-6 block text-sm font-medium text-slate-700">
+                            ${escapeHtml(this.tr("labels.notes"))}
+                            <textarea id="laundry-log-notes-input" rows="4" placeholder="${escapeHtml(this.tr("form.notesPlaceholder"))}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">${escapeHtml(this.draft.notes)}</textarea>
+                        </label>
+                        <datalist id="laundry-log-property-list">${propertyOptions.map((propertyName) => `<option value="${escapeHtml(propertyName)}"></option>`).join("")}</datalist>
+                        <div class="sticky bottom-3 mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:flex-wrap">
+                            <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
+                            <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
+                        </div>
+                    </details>
+                    <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 2xl:sticky 2xl:top-24">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(this.tr("views.pendingTitle"))}</div>
+                                <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.trCount("counts.pendingRecords", pendingRecords.length))}</h2>
+                            </div>
+                            <button type="button" data-laundry-action="workspace" data-workspace="returns" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.viewAllReturns"))}</button>
+                        </div>
+                        <div class="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-1">
+                            ${pendingRecords.length ? pendingRecords.map((record) => this.renderPendingCard(record)).join("") : `<p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">${escapeHtml(this.tr("empty.pending"))}</p>`}
+                        </div>
+                    </section>
+                </div>
+            </section>
+        `;
+    }
+
+    renderReturnEditor() {
+        if (!this.returnEditingRecordId || !this.editingRecordId) {
+            return "";
+        }
+
+        const summary = summarizeLaundryLogRecord(this.draft);
+        return `
+            <section id="laundry-log-return-editor" class="scroll-mt-28 rounded-[28px] border border-rose-200 bg-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("views.returnsTitle"))}</div>
+                        <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.draft.propertyName || this.tr("labels.unnamedProperty"))}</h2>
+                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("form.returnHelper"))}</p>
+                    </div>
+                    ${this.renderStatusBadge(summary.status)}
+                </div>
+                <input id="laundry-log-property-input" type="hidden" value="${escapeHtml(this.draft.propertyName)}">
+                <input id="laundry-log-delivery-date-input" type="hidden" value="${escapeHtml(this.draft.deliveryDate)}">
+                <textarea id="laundry-log-notes-input" class="hidden">${escapeHtml(this.draft.notes)}</textarea>
+                <div class="mt-5 grid gap-4 md:grid-cols-2">
+                    <label class="block text-sm font-medium text-slate-700">
+                        ${escapeHtml(this.tr("labels.receivedDate"))}
+                        <input id="laundry-log-received-date-input" type="date" value="${escapeHtml(this.draft.receivedDate || getTodayIsoDate())}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    </label>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <div class="font-semibold text-slate-900">${escapeHtml(this.tr("summary.recordStatus"))}</div>
+                        <div class="mt-2">${escapeHtml(this.tr("summary.delivered", { count: summary.deliveredUnits }))} · ${escapeHtml(this.tr("summary.received", { count: summary.receivedUnits }))} · ${escapeHtml(this.tr("summary.variance", { count: summary.differenceUnits }))}</div>
+                    </div>
+                </div>
+                <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button type="button" data-laundry-action="copy-delivered" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.copyDelivered"))}</button>
+                    <button type="button" data-laundry-action="received-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.setReceivedToday"))}</button>
+                    <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.tr("actions.update"))}</button>
+                </div>
+                <div class="mt-5">${this.renderReturnMismatchWarning(summary)}</div>
+                <div class="mt-6 grid gap-4 2xl:grid-cols-2">
+                    ${LAUNDRY_LOG_GROUPS.map((section) => {
+                        const sectionSummary = summary.sectionSummaries.find((entry) => entry.key === section.key) || { delivered: 0, received: 0 };
+                        return this.renderSection(section, sectionSummary, this.draft.items, this.draft.customItems, "return");
+                    }).join("")}
+                </div>
+                <div class="sticky bottom-3 mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:flex-wrap">
+                    <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.tr("actions.update"))}</button>
+                    <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
+                </div>
+            </section>
+        `;
+    }
+
     renderReturnsWorkspace({ returnRecords, monthOptions, pendingRecords }) {
         return `
             <section class="grid gap-6">
+                ${this.renderReturnEditor()}
                 <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
@@ -1247,15 +1403,14 @@ export class LaundryLogManager {
         const propertyOptions = this.getKnownPropertyNames();
         const monthOptions = this.getMonthOptions();
         const draftSummary = summarizeLaundryLogRecord(this.draft);
-        const draftPreviousStock = this.getPreviousStockWarnings(this.draft, this.editingRecordId || "");
         const titleKey = this.editingRecordId ? "views.editTitle" : "views.formTitle";
 
         root.innerHTML = `
-            ${this.statusMessage ? `<section class="rounded-2xl border px-4 py-3 text-sm font-medium ${toneClass(this.statusTone)}">${escapeHtml(this.statusMessage)}</section>` : ""}
+            ${this.statusMessage ? `<section id="laundry-log-status-message" class="rounded-2xl border px-4 py-3 text-sm font-medium ${toneClass(this.statusTone)}">${escapeHtml(this.statusMessage)}</section>` : ""}
             ${this.renderMetricsSection(totals)}
             ${this.renderWorkspaceTabs()}
             ${this.activeWorkspace === "entry"
-                ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey, draftPreviousStock })
+                ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey })
                 : this.activeWorkspace === "returns"
                 ? this.renderReturnsWorkspace({ returnRecords, monthOptions, pendingRecords })
                 : this.renderCompletedWorkspace({ completedRecords, monthOptions })}

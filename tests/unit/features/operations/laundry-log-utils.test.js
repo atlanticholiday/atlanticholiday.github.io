@@ -1,6 +1,5 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
-    compareLaundryLogPreviousStock,
     createEmptyLaundryLogItems,
     createLaundryLogRecord,
     filterLaundryLogRecords,
@@ -21,12 +20,15 @@ describe("Laundry Log utilities", () => {
         }, {
             now: () => "2026-04-12T10:00:00.000Z"
         });
+        const summary = summarizeLaundryLogRecord(record);
 
         assert.equal(record.status, "mismatch");
         assert.equal(record.deliveredUnits, 10);
         assert.equal(record.receivedUnits, 9);
         assert.equal(record.differenceUnits, 1);
         assert.deepEqual(record.mismatchItemKeys, ["doubleFittedSheet"]);
+        assert.equal(summary.mismatches[0].missing, 1);
+        assert.equal(summary.mismatches[0].extra, 0);
         assert.equal(record.monthKey, "2026-04");
     });
 
@@ -69,39 +71,6 @@ describe("Laundry Log utilities", () => {
         assert.equal(summary.mismatches[0].name, "Beach bags");
         assert.equal(otherSection.delivered, 7);
         assert.equal(filtered.length, 1);
-    });
-
-    test("compares current out counts with the previous completed return", () => {
-        const previous = createLaundryLogRecord({
-            propertyName: "Atlantic View",
-            deliveryDate: "2026-04-10",
-            receivedDate: "2026-04-12",
-            items: {
-                bathTowel: { delivered: 1, received: 1 },
-                faceTowel: { delivered: 1, received: 1 }
-            },
-            customItems: [
-                { name: "Beach bag", delivered: 1, received: 1 }
-            ]
-        }, {
-            now: () => "2026-04-12T10:00:00.000Z"
-        });
-        const current = createLaundryLogRecord({
-            propertyName: "Atlantic View",
-            deliveryDate: "2026-04-15",
-            items: {
-                bathTowel: { delivered: 1, received: 0 }
-            }
-        }, {
-            now: () => "2026-04-15T10:00:00.000Z"
-        });
-
-        const missing = compareLaundryLogPreviousStock(current, previous);
-
-        assert.equal(missing.length, 2);
-        assert.equal(missing[0].key, "faceTowel");
-        assert.equal(missing[0].missing, 1);
-        assert.equal(missing[1].name, "Beach bag");
     });
 
     test("summarizes record totals across statuses", () => {

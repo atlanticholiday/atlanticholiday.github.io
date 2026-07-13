@@ -93,6 +93,36 @@ describe("NavigationManager", () => {
     assert.ok(document.getElementById("laundry-log-page").classList.contains("hidden"));
   });
 
+  test("routes to linen inventory and back to landing", () => {
+    resetDom(`
+      <button id="go-to-linen-inventory-btn">Linen Inventory</button>
+      <button id="back-to-landing-from-linen-inventory-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="linen-inventory-page" class="hidden"></div>
+    `);
+
+    const navigationManager = new NavigationManager();
+    navigationManager.setupNavigationListeners();
+
+    let pageEventCount = 0;
+    document.addEventListener("linenInventoryPageOpened", () => {
+      pageEventCount += 1;
+    }, { once: true });
+
+    document.getElementById("go-to-linen-inventory-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "linenInventory");
+    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(!document.getElementById("linen-inventory-page").classList.contains("hidden"));
+    assert.equal(pageEventCount, 1);
+
+    document.getElementById("back-to-landing-from-linen-inventory-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "landing");
+    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(document.getElementById("linen-inventory-page").classList.contains("hidden"));
+  });
+
   test("routes to build planner and back to landing", () => {
     resetDom(`
       <button id="go-to-build-planner-btn">Build Planner</button>

@@ -63,10 +63,6 @@ function normalizeText(value) {
     return String(value || "").trim();
 }
 
-function normalizeKey(value) {
-    return normalizeText(value).toLocaleLowerCase();
-}
-
 function normalizeCount(value) {
     if (value === null || value === undefined || value === "") {
         return 0;
@@ -117,65 +113,6 @@ export function createEmptyCustomLaundryLogItems(overrides = []) {
             received: normalizeCount(item?.received)
         }))
         .filter((item) => item.name || item.delivered > 0 || item.received > 0);
-}
-
-function buildComparableItemMap(record = {}, field = "received") {
-    const items = createEmptyLaundryLogItems(record.items);
-    const customItems = createEmptyCustomLaundryLogItems(record.customItems);
-    const comparableItems = new Map();
-
-    LAUNDRY_LOG_GROUPS.forEach((group) => {
-        group.items.forEach((item) => {
-            comparableItems.set(item.key, {
-                key: item.key,
-                labelKey: item.labelKey,
-                count: normalizeCount(items[item.key]?.[field])
-            });
-        });
-    });
-
-    customItems.forEach((item) => {
-        const normalizedName = normalizeKey(item.name);
-        if (!normalizedName) {
-            return;
-        }
-        comparableItems.set(`custom:${normalizedName}`, {
-            key: `custom:${normalizedName}`,
-            custom: true,
-            name: item.name,
-            count: normalizeCount(item[field])
-        });
-    });
-
-    return comparableItems;
-}
-
-export function compareLaundryLogPreviousStock(currentRecord = {}, previousRecord = {}) {
-    const previousItems = buildComparableItemMap(previousRecord, "received");
-    const currentItems = buildComparableItemMap(currentRecord, "delivered");
-    const missingItems = [];
-
-    previousItems.forEach((previousItem, key) => {
-        if (previousItem.count <= 0) {
-            return;
-        }
-
-        const currentCount = currentItems.get(key)?.count || 0;
-        if (currentCount >= previousItem.count) {
-            return;
-        }
-
-        missingItems.push({
-            key,
-            labelKey: previousItem.labelKey,
-            name: previousItem.name,
-            expected: previousItem.count,
-            found: currentCount,
-            missing: previousItem.count - currentCount
-        });
-    });
-
-    return missingItems;
 }
 
 export function summarizeLaundryLogRecord(record = {}) {

@@ -108,6 +108,8 @@
         "welcomePacksDesc": "Stock e entregas.",
         "laundryLog": "Registo de Lavandaria",
         "laundryLogDesc": "Roupa por alojamento.",
+        "linenInventory": "Inventario de Roupa",
+        "linenInventoryDesc": "Contagens de roupa por propriedade.",
         "staff": "Equipa",
         "staffDesc": "Dados da equipa.",
         "properties": "Propriedades",
@@ -290,8 +292,8 @@
             "deliveryDate": "Data de entrega",
             "receivedDate": "Data de recolha",
             "notes": "Notas",
-            "deliveredShort": "Saiu",
-            "receivedShort": "Voltou",
+            "deliveredShort": "Entregues",
+            "receivedShort": "Levantadas",
             "varianceShort": "Diferença",
             "notReturned": "Pendente",
             "unnamedProperty": "Propriedade sem nome",
@@ -301,6 +303,8 @@
         },
         "form": {
             "helper": "Guarde quando a roupa sai e abra o mesmo registo depois para confirmar o que voltou.",
+            "openHelper": "Toque para registar uma nova entrega.",
+            "returnHelper": "Confirme aqui apenas o que foi levantado na lavandaria.",
             "propertyPlaceholder": "Comece a escrever a propriedade",
             "notesPlaceholder": "Notas opcionais para esta entrega",
             "customItemPlaceholder": "Escrever nome do artigo",
@@ -320,6 +324,8 @@
             "copyDelivered": "Copiar saída para entrada",
             "setReceivedToday": "Definir recolha para hoje",
             "openReturns": "Abrir devoluções",
+            "openForm": "Nova entrega",
+            "hideForm": "Ocultar entrega",
             "viewAllReturns": "Ver todas as devoluções",
             "backToEntry": "Voltar à entrada",
             "review": "Rever devolução",
@@ -336,14 +342,14 @@
         },
         "summary": {
             "recordStatus": "Resumo em direto",
-            "delivered": "Saiu: {{count}}",
-            "received": "Voltou: {{count}}",
+            "delivered": "Entregues: {{count}}",
+            "received": "Levantadas: {{count}}",
             "variance": "Diferença: {{count}}"
         },
         "warnings": {
-            "previousStockTitle": "Possível roupa em falta",
-            "previousStockBody": "Comparado com a devolução concluída anterior de {{date}}.",
-            "previousStockItem": "Anterior: {{expected}} · Saiu agora: {{found}} · Em falta: {{missing}}"
+            "returnMismatchTitle": "Diferenca na recolha da lavandaria",
+            "returnMismatchBody": "As quantidades enviadas para a lavandaria e recebidas de volta nao coincidem.",
+            "returnMismatchItem": "Entregues: {{delivered}} · Levantadas: {{received}} · Em falta: {{missing}} · Extra: {{extra}}"
         },
         "counts": {
             "records": {
@@ -406,6 +412,126 @@
             "singleTopSheet": "Lençóis de cima solteiro",
             "singleDuvet": "Edredões solteiro",
             "singleDuvetCover": "Capas de edredão solteiro",
+            "bathTowel": "Toalhas de banho",
+            "faceTowel": "Toalhas de rosto",
+            "poolTowel": "Toalhas de piscina",
+            "bathMat": "Tapetes de banho",
+            "pillows": "Almofadas",
+            "pillowProtectors": "Resguardos de almofada",
+            "pillowCases": "Fronhas",
+            "kitchenTowels": "Toalhas de cozinha",
+            "blankets": "Mantas"
+        }
+    },
+    "linenInventory": {
+        "header": {
+            "kicker": "Inventario de Roupa",
+            "title": "Inventario de Roupa",
+            "subtitle": "Contar roupa por propriedade e data."
+        },
+        "landing": {
+            "description": "Contagens de roupa por propriedade."
+        },
+        "views": {
+            "formTitle": "Nova contagem de roupa",
+            "editTitle": "Atualizar contagem de roupa",
+            "recordsTitle": "Contagens guardadas"
+        },
+        "stats": {
+            "records": "Contagens",
+            "countedUnits": "Contado",
+            "trackedItems": "Artigos contados"
+        },
+        "labels": {
+            "property": "Propriedade",
+            "countedDate": "Data da contagem",
+            "notes": "Notas",
+            "countShort": "Quantidade",
+            "countedOn": "Contado {{date}}",
+            "noDate": "Sem data",
+            "unnamedProperty": "Propriedade sem nome",
+            "trackedItems": "Artigos contados",
+            "totalCounted": "Total contado",
+            "customItems": "Outros artigos de roupa",
+            "customItemName": "Artigo",
+            "customItemFallback": "Outro artigo"
+        },
+        "form": {
+            "helper": "Escolha a propriedade, defina a data e introduza as quantidades contadas.",
+            "propertyPlaceholder": "Comece a escrever a propriedade",
+            "notesPlaceholder": "Notas opcionais para housekeeping",
+            "customItemPlaceholder": "Escrever nome do artigo"
+        },
+        "filters": {
+            "searchPlaceholder": "Pesquisar propriedade, data ou artigo"
+        },
+        "actions": {
+            "save": "Guardar contagem",
+            "update": "Atualizar contagem",
+            "reset": "Limpar formulario",
+            "clearDate": "Limpar data",
+            "clearCount": "Limpar",
+            "markCountedToday": "Contado hoje",
+            "edit": "Abrir registo",
+            "delete": "Eliminar",
+            "clearFilters": "Limpar filtros",
+            "addCustomItem": "Adicionar outro artigo",
+            "removeCustomItem": "Remover"
+        },
+        "status": {
+            "empty": "Vazio",
+            "counted": "Contado"
+        },
+        "summary": {
+            "recordStatus": "Resumo da contagem",
+            "counted": "Contado: {{count}}",
+            "items": "Artigos: {{count}}"
+        },
+        "counts": {
+            "records": {
+                "one": "{{count}} inventario de alojamento",
+                "other": "{{count}} inventarios de alojamento"
+            }
+        },
+        "empty": {
+            "records": "Nao existem inventarios de roupa com os filtros atuais.",
+            "customItems": "Nenhum artigo extra adicionado."
+        },
+        "messages": {
+            "propertyRequired": "Escolha uma propriedade antes de guardar.",
+            "countRequired": "Adicione pelo menos uma quantidade contada antes de guardar.",
+            "saved": "Contagem de roupa guardada.",
+            "updated": "Contagem de roupa atualizada.",
+            "deleted": "Contagem de roupa eliminada.",
+            "saveFailed": "Nao foi possivel guardar a contagem de roupa agora.",
+            "deleteFailed": "Nao foi possivel eliminar a contagem de roupa agora.",
+            "loadFailed": "Nao foi possivel carregar as contagens de roupa agora."
+        },
+        "confirm": {
+            "delete": "Eliminar esta contagem de roupa?"
+        },
+        "states": {
+            "restrictedTitle": "O Inventario de Roupa nao esta disponivel no modo tablet partilhado.",
+            "restrictedBody": "Abra esta pagina numa conta pessoal ou de gestor."
+        },
+        "sections": {
+            "doubleBed": "Cama de casal",
+            "singleBed": "Cama de solteiro",
+            "towels": "Toalhas",
+            "pillows": "Almofadas",
+            "other": "Outros"
+        },
+        "items": {
+            "doubleMattressProtector": "Resguardos de colchao",
+            "doubleFittedSheet": "Lencois de baixo",
+            "doubleTopSheet": "Lencois de cima",
+            "doubleDuvet": "Edredoes",
+            "doubleDuvetCover": "Capas de edredao",
+            "singleMattressProtector": "Resguardos de colchao solteiro",
+            "singleFittedSheet": "Lencois de baixo solteiro",
+            "singleTopSheet": "Lencois de cima solteiro",
+            "singleDuvet": "Edredoes solteiro",
+            "singleDuvetCover": "Capas de edredao solteiro",
             "bathTowel": "Toalhas de banho",
             "faceTowel": "Toalhas de rosto",
             "poolTowel": "Toalhas de piscina",
