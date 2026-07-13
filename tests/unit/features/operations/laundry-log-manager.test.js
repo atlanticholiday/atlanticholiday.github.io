@@ -35,7 +35,7 @@ describe("LaundryLogManager", () => {
     assert.ok(!document.getElementById("laundry-log-property-input"));
 
     manager.switchWorkspace("returns");
-    assert.ok(document.querySelector("[data-laundry-action='edit']"));
+    assert.ok(document.querySelector("[data-laundry-action='review-return']"));
     assert.ok(!document.getElementById("laundry-log-property-input"));
 
     manager.switchWorkspace("entry");
@@ -43,7 +43,11 @@ describe("LaundryLogManager", () => {
     assert.ok(!document.getElementById("laundry-log-form-card").open);
     assert.ok(document.getElementById("laundry-log-property-input"));
     assert.ok(!document.getElementById("laundry-log-received-date-input"));
+    assert.ok(document.getElementById("laundry-log-form-card").compareDocumentPosition(
+      document.querySelector("[data-laundry-action='jump-section']")
+    ) & Node.DOCUMENT_POSITION_FOLLOWING);
     assert.equal(document.querySelectorAll("[data-laundry-action='jump-section']").length, 5);
+    assert.equal(document.querySelectorAll("[data-laundry-action='review-return']").length, 0);
     assert.ok(document.querySelector("[data-laundry-action='add-custom-item']"));
   });
 
@@ -111,6 +115,153 @@ describe("LaundryLogManager", () => {
     assert.ok(document.getElementById("laundry-log-received-date-input"));
     assert.ok(!document.querySelector("#laundry-log-return-editor [data-laundry-item-field='delivered']"));
     assert.ok(document.querySelector("#laundry-log-return-editor [data-laundry-item-field='received']"));
+    assert.includes(document.getElementById("laundry-log-return-editor").textContent, "4");
+  });
+
+  test("keeps mismatches out of returns and shows them in a counted mismatch workspace", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+
+    const manager = new LaundryLogManager(null, {
+      getProperties: () => [{ id: "p1", name: "Atlantic View" }]
+    });
+
+    manager.ensureDomScaffold();
+    manager.records = [
+      {
+        id: "pending",
+        ...createLaundryLogRecord({
+          propertyName: "Atlantic View",
+          deliveryDate: "2026-04-10",
+          items: {
+            bathTowel: { delivered: 4, received: 0 }
+          }
+        }, {
+          now: () => "2026-04-10T10:00:00.000Z"
+        })
+      },
+      {
+        id: "mismatch",
+        ...createLaundryLogRecord({
+          propertyName: "Art Studio",
+          deliveryDate: "2026-04-11",
+          receivedDate: "2026-04-13",
+          items: {
+            bathTowel: { delivered: 4, received: 3 }
+          }
+        }, {
+          now: () => "2026-04-11T10:00:00.000Z"
+        })
+      }
+    ];
+
+    manager.activeWorkspace = "returns";
+    manager.render();
+
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Atlantic View");
+    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Art Studio"));
+    assert.ok(document.querySelector("[data-workspace='mismatches']").textContent.includes("1"));
+
+    manager.switchWorkspace("mismatches");
+
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Art Studio");
+    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Atlantic View"));
+  });
+
+  test("shows a clear saved confirmation banner", () => {
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.currentLang = "en";
+    i18n.translations = {
+      en: {
+        laundryLog: {
+          messages: {
+            savedTitle: "Saved",
+            errorTitle: "Needs attention",
+            noticeTitle: "Notice",
+            savedDetailsTitle: "Saved details",
+            savedItemsTitle: "Items saved",
+            saved: "Laundry handoff saved."
+          },
+          labels: {
+            property: "Property",
+            deliveryDate: "Delivery date",
+            receivedDate: "Received date",
+            notes: "Notes",
+            customItemFallback: "Other item"
+          },
+          summary: {
+            delivered: "Out: {{count}}",
+            received: "Back: {{count}}"
+          },
+          items: {
+            bathTowel: "Bath towels",
+            pillowCases: "Pillowcases"
+          },
+          stats: {
+            summaryToggle: "Quick Summary",
+            summaryHint: "{{count}} records, {{pending}} pending",
+            totalRecords: "Records",
+            pending: "Pending",
+            matched: "Matched",
+            unitsDelivered: "Units out",
+            unitsReceived: "Units back"
+          },
+          views: {
+            entryWorkspace: "Entry",
+            returnsWorkspace: "Returns",
+            completedWorkspace: "Completed",
+            sectionNavTitle: "Laundry sections",
+            formTitle: "New laundry handoff"
+          },
+          form: {
+            openHelper: "Tap to register a new handoff."
+          },
+          actions: {
+            openForm: "New handoff"
+          }
+        }
+      }
+    };
+
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+
+    try {
+      const manager = new LaundryLogManager(null, {
+        getProperties: () => [{ id: "p1", name: "Atlantic View" }]
+      });
+      manager.ensureDomScaffold();
+      const savedDetails = manager.buildSavedStatusDetails(manager.createDefaultDraft({
+        propertyName: "Atlantic View",
+        deliveryDate: "2026-04-10",
+        items: {
+          bathTowel: { delivered: 4, received: 0 },
+          pillowCases: { delivered: 2, received: 2 }
+        },
+        customItems: [{ name: "Beach bags", delivered: 1, received: 0 }]
+      }));
+      manager.setStatus("Laundry handoff saved.", "success", savedDetails);
+      manager.render();
+
+      const banner = document.getElementById("laundry-log-status-message");
+      assert.ok(banner);
+      assert.includes(banner.textContent, "Saved");
+      assert.includes(banner.textContent, "Laundry handoff saved.");
+      assert.includes(banner.textContent, "Atlantic View");
+      assert.includes(banner.textContent, "Bath towels");
+      assert.includes(banner.textContent, "Out: 4");
+      assert.includes(banner.textContent, "Pillowcases");
+      assert.includes(banner.textContent, "Back: 2");
+      assert.includes(banner.textContent, "Beach bags");
+    } finally {
+      i18n.translations = previousTranslations;
+      i18n.currentLang = previousLang;
+    }
   });
 
   test("warns when collected laundry return counts do not match what went out", () => {
@@ -161,14 +312,14 @@ describe("LaundryLogManager", () => {
         }
       ];
 
-      manager.activeWorkspace = "returns";
-      manager.render();
+      manager.startReturnReview("current");
 
-      const html = document.getElementById("laundry-log-root").innerHTML;
-      assert.includes(html, "Laundry return mismatch");
-      assert.includes(html, "Bath towels");
-      assert.includes(html, "Missing: 1");
-      assert.ok(!html.includes("Face towels"));
+      const warning = document.querySelector("[data-laundry-return-mismatch-warning='true']");
+      assert.ok(warning);
+      assert.includes(warning.textContent, "Laundry return mismatch");
+      assert.includes(warning.textContent, "Bath towels");
+      assert.includes(warning.textContent, "Missing: 1");
+      assert.ok(!warning.textContent.includes("Face towels"));
     } finally {
       i18n.translations = previousTranslations;
       i18n.currentLang = previousLang;

@@ -9,8 +9,10 @@ import {
 
 import { i18n, t } from "../../core/i18n.js";
 import {
+    createEmptyBedroomLayout,
     createEmptyCustomLinenInventoryItems,
     createEmptyLinenInventoryItems,
+    createEmptyLinenInventorySections,
     createLinenInventoryRecord,
     filterLinenInventoryRecords,
     LINEN_INVENTORY_GROUPS,
@@ -47,6 +49,19 @@ function getTodayIsoDate() {
 
 function toInputNumber(value) {
     return value === null || value === undefined || value === 0 ? "" : String(value);
+}
+
+function getSectionKeysWithCounts(items = {}, customItems = []) {
+    const selected = new Set();
+    LINEN_INVENTORY_GROUPS.forEach((section) => {
+        if (section.items.some((item) => Number(items[item.key]?.count || 0) > 0)) {
+            selected.add(section.key);
+        }
+    });
+    if (customItems.length) {
+        selected.add("other");
+    }
+    return [...selected];
 }
 
 function toneClass(tone) {
@@ -113,8 +128,13 @@ export class LinenInventoryManager {
             notes: "",
             countedDate: getTodayIsoDate(),
             ...overrides,
+            bedrooms: createEmptyBedroomLayout(overrides.bedrooms),
+            sections: createEmptyLinenInventorySections(overrides.sections),
             items: createEmptyLinenInventoryItems(overrides.items),
-            customItems: createEmptyCustomLinenInventoryItems(overrides.customItems)
+            customItems: createEmptyCustomLinenInventoryItems(overrides.customItems),
+            activeSections: Array.isArray(overrides.activeSections)
+                ? [...new Set(overrides.activeSections)]
+                : getSectionKeysWithCounts(createEmptyLinenInventoryItems(overrides.items), createEmptyCustomLinenInventoryItems(overrides.customItems))
         };
     }
 
@@ -124,8 +144,11 @@ export class LinenInventoryManager {
             propertyName: record.propertyName || "",
             notes: record.notes || "",
             countedDate: record.countedDate || record.lastCountedAt || getTodayIsoDate(),
+            bedrooms: createEmptyBedroomLayout(record.bedrooms),
+            sections: createEmptyLinenInventorySections(record.sections),
             items: createEmptyLinenInventoryItems(record.items),
-            customItems: createEmptyCustomLinenInventoryItems(record.customItems)
+            customItems: createEmptyCustomLinenInventoryItems(record.customItems),
+            activeSections: Array.isArray(record.activeSections) ? record.activeSections : undefined
         });
     }
 
@@ -353,6 +376,10 @@ export class LinenInventoryManager {
         const propertyName = normalizeLabel(document.getElementById("linen-inventory-property-input")?.value || this.draft.propertyName);
         const matchedProperty = this.findPropertyByName(propertyName);
         const items = createEmptyLinenInventoryItems();
+        const sections = createEmptyLinenInventorySections();
+        const activeSections = [
+            ...document.querySelectorAll("[data-linen-section-key]")
+        ].map((section) => section.dataset.linenSectionKey).filter(Boolean);
 
         document.querySelectorAll("[data-linen-item-key][data-linen-item-field]").forEach((input) => {
             const itemKey = input.dataset.linenItemKey;
@@ -360,7 +387,22 @@ export class LinenInventoryManager {
             if (!itemKey || !field || !items[itemKey]) {
                 return;
             }
-            items[itemKey][field] = Number(input.value || 0);
+            if (field === "count") {
+                items[itemKey][field] = Number(input.value || 0);
+            }
+        });
+
+        document.querySelectorAll("[data-linen-section-key][data-linen-section-field]").forEach((input) => {
+            const sectionKey = input.dataset.linenSectionKey;
+            const field = input.dataset.linenSectionField;
+            if (!sectionKey || !field || !sections[sectionKey]) {
+                return;
+            }
+            if (field === "bedroomCount") {
+                sections[sectionKey].bedroomCount = Number(input.value || 1);
+            } else if (field === "bedSize") {
+                sections[sectionKey].bedSize = input.value || "";
+            }
         });
 
         const customItemsByIndex = new Map();
@@ -379,12 +421,46 @@ export class LinenInventoryManager {
             customItemsByIndex.set(index, customItem);
         });
 
+        const bedroomsByIndex = new Map();
+        document.querySelectorAll("[data-linen-bedroom-index][data-linen-bedroom-field]").forEach((input) => {
+            const index = Number(input.dataset.linenBedroomIndex);
+            const field = input.dataset.linenBedroomField;
+            if (!Number.isInteger(index) || index < 0 || !field) {
+                return;
+            }
+            const bedroom = bedroomsByIndex.get(index) || { name: "", beds: [] };
+            if (field === "name") {
+                bedroom.name = input.value || "";
+            }
+            bedroomsByIndex.set(index, bedroom);
+        });
+        document.querySelectorAll("[data-linen-bedroom-index][data-linen-bed-index][data-linen-bed-field]").forEach((input) => {
+            const bedroomIndex = Number(input.dataset.linenBedroomIndex);
+            const bedIndex = Number(input.dataset.linenBedIndex);
+            const field = input.dataset.linenBedField;
+            if (!Number.isInteger(bedroomIndex) || bedroomIndex < 0 || !Number.isInteger(bedIndex) || bedIndex < 0 || !field) {
+                return;
+            }
+            const bedroom = bedroomsByIndex.get(bedroomIndex) || { name: "", beds: [] };
+            const bed = bedroom.beds[bedIndex] || { type: "", size: "" };
+            if (field === "type" || field === "size") {
+                bed[field] = input.value || "";
+            }
+            bedroom.beds[bedIndex] = bed;
+            bedroomsByIndex.set(bedroomIndex, bedroom);
+        });
+
         return this.createDefaultDraft({
             propertyId: matchedProperty?.id || "",
             propertyName: matchedProperty?.name || propertyName,
             notes: document.getElementById("linen-inventory-notes-input")?.value || "",
             countedDate: document.getElementById("linen-inventory-counted-input")?.value || "",
             items,
+            sections,
+            activeSections,
+            bedrooms: [...bedroomsByIndex.keys()]
+                .sort((left, right) => left - right)
+                .map((index) => bedroomsByIndex.get(index)),
             customItems: [...customItemsByIndex.keys()]
                 .sort((left, right) => left - right)
                 .map((index) => customItemsByIndex.get(index))
@@ -510,6 +586,7 @@ export class LinenInventoryManager {
 
     addCustomItem() {
         const draft = this.readDraftFromDom();
+        draft.activeSections = [...new Set([...(draft.activeSections || []), "other"])];
         draft.customItems.push({ name: "", count: 0 });
         this.draft = draft;
         this.render();
@@ -525,6 +602,63 @@ export class LinenInventoryManager {
             return;
         }
         draft.customItems.splice(index, 1);
+        this.draft = draft;
+        this.render();
+    }
+
+    addSection(sectionKey) {
+        if (!LINEN_INVENTORY_GROUPS.some((section) => section.key === sectionKey)) {
+            return;
+        }
+        const draft = this.readDraftFromDom();
+        draft.activeSections = [...new Set([...(draft.activeSections || []), sectionKey])];
+        this.draft = draft;
+        this.render();
+    }
+
+    removeSection(sectionKey) {
+        const draft = this.readDraftFromDom();
+        draft.activeSections = (draft.activeSections || []).filter((key) => key !== sectionKey);
+        this.draft = draft;
+        this.render();
+    }
+
+    addBedroom() {
+        const draft = this.readDraftFromDom();
+        draft.bedrooms.push({
+            name: this.tr("labels.bedroomDefaultName", { number: draft.bedrooms.length + 1 }),
+            beds: [{ type: "", size: "" }]
+        });
+        this.draft = draft;
+        this.render();
+    }
+
+    removeBedroom(index) {
+        const draft = this.readDraftFromDom();
+        if (index < 0 || index >= draft.bedrooms.length) {
+            return;
+        }
+        draft.bedrooms.splice(index, 1);
+        this.draft = draft;
+        this.render();
+    }
+
+    addBed(bedroomIndex) {
+        const draft = this.readDraftFromDom();
+        if (!draft.bedrooms?.[bedroomIndex]) {
+            return;
+        }
+        draft.bedrooms[bedroomIndex].beds.push({ type: "", size: "" });
+        this.draft = draft;
+        this.render();
+    }
+
+    removeBed(bedroomIndex, bedIndex) {
+        const draft = this.readDraftFromDom();
+        if (!draft.bedrooms?.[bedroomIndex]?.beds?.[bedIndex]) {
+            return;
+        }
+        draft.bedrooms[bedroomIndex].beds.splice(bedIndex, 1);
         this.draft = draft;
         this.render();
     }
@@ -570,7 +704,10 @@ export class LinenInventoryManager {
         const recordId = target.dataset.recordId || "";
         const itemKey = target.dataset.itemKey || "";
         const field = target.dataset.field || "";
+        const sectionKey = target.dataset.sectionKey || "";
         const customIndex = Number(target.dataset.customIndex);
+        const bedroomIndex = Number(target.dataset.bedroomIndex);
+        const bedIndex = Number(target.dataset.bedIndex);
         if (action === "save") return void this.saveDraft();
         if (action === "reset") return void this.resetDraft();
         if (action === "counted-today") return void this.markCountedToday();
@@ -578,6 +715,12 @@ export class LinenInventoryManager {
         if (action === "clear-count" && itemKey && field) return void this.clearItemCount(itemKey, field);
         if (action === "add-custom-item") return void this.addCustomItem();
         if (action === "remove-custom-item" && Number.isInteger(customIndex)) return void this.removeCustomItem(customIndex);
+        if (action === "add-section" && sectionKey) return void this.addSection(sectionKey);
+        if (action === "remove-section" && sectionKey) return void this.removeSection(sectionKey);
+        if (action === "add-bedroom") return void this.addBedroom();
+        if (action === "remove-bedroom" && Number.isInteger(bedroomIndex)) return void this.removeBedroom(bedroomIndex);
+        if (action === "add-bed" && Number.isInteger(bedroomIndex)) return void this.addBed(bedroomIndex);
+        if (action === "remove-bed" && Number.isInteger(bedroomIndex) && Number.isInteger(bedIndex)) return void this.removeBed(bedroomIndex, bedIndex);
         if (action === "clear-custom-count" && Number.isInteger(customIndex) && field) return void this.clearCustomItemCount(customIndex, field);
         if (action === "edit" && recordId) return void this.startEditing(recordId);
         if (action === "delete" && recordId) return void this.deleteRecord(recordId);
@@ -663,28 +806,77 @@ export class LinenInventoryManager {
         `;
     }
 
+    renderSectionPicker(activeSections) {
+        const active = new Set(activeSections || []);
+        const availableSections = LINEN_INVENTORY_GROUPS.filter((section) => !active.has(section.key));
+
+        if (!availableSections.length) {
+            return "";
+        }
+
+        return `
+            <section class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("sectionsPicker.title"))}</h3>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("sectionsPicker.helper"))}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${availableSections.map((section) => `
+                            <button type="button" data-linen-action="add-section" data-section-key="${escapeHtml(section.key)}" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100">${escapeHtml(this.tr(section.labelKey))}</button>
+                        `).join("")}
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+    renderSectionMeta(section, sectionSummary) {
+        if (section.key !== "doubleBed" && section.key !== "singleBed") {
+            return "";
+        }
+
+        return `
+            <div class="flex flex-wrap items-end gap-2">
+                <label class="block w-24 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                    ${escapeHtml(this.tr("labels.bedroomCount"))}
+                    <input type="number" min="1" inputmode="numeric" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedroomCount" value="${escapeHtml(toInputNumber(sectionSummary.bedroomCount) || "1")}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                </label>
+                <label class="block w-40 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                    ${escapeHtml(this.tr("labels.bedSize"))}
+                    <input type="text" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedSize" value="${escapeHtml(sectionSummary.bedSize)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                </label>
+            </div>
+        `;
+    }
+
     renderSection(section, sectionSummary, items, customItems) {
         return `
-            <section class="rounded-2xl border border-slate-200 bg-white p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr(section.labelKey))}</h3>
+            <section data-linen-section-key="${escapeHtml(section.key)}" class="rounded-xl border border-slate-200 bg-white p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-end gap-4">
+                            <h3 class="pb-2 text-sm font-semibold text-slate-900">${escapeHtml(this.tr(section.labelKey))}</h3>
+                            ${this.renderSectionMeta(section, sectionSummary)}
+                        </div>
                         <div class="mt-1 text-xs text-slate-500">
                             ${escapeHtml(this.tr("summary.counted", { count: sectionSummary.count }))}
                         </div>
                     </div>
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">${escapeHtml(this.tr("summary.items", { count: sectionSummary.itemCount }))}</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">${escapeHtml(this.tr("summary.items", { count: sectionSummary.itemCount }))}</span>
+                        <button type="button" data-linen-action="remove-section" data-section-key="${escapeHtml(section.key)}" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.removeSection"))}</button>
+                    </div>
                 </div>
-                <div class="mt-3 divide-y divide-slate-100">
+                <div class="mt-2 divide-y divide-slate-100">
                     ${section.items.map((item) => {
                         const counts = items[item.key] || { count: 0 };
                         return `
-                            <div class="grid gap-3 py-3 sm:grid-cols-[minmax(180px,1fr)_130px] sm:items-start">
+                            <div class="grid gap-2 py-2 sm:grid-cols-[minmax(180px,1fr)_90px] sm:items-center">
                                 <div class="text-sm font-medium text-slate-800">${escapeHtml(this.tr(item.labelKey))}</div>
-                                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                <label class="block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.countShort"))}
-                                    <input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="count" value="${escapeHtml(toInputNumber(counts.count))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
-                                    <button type="button" data-linen-action="clear-count" data-item-key="${escapeHtml(item.key)}" data-field="count" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearCount"))}</button>
+                                    <input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="count" value="${escapeHtml(toInputNumber(counts.count))}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
                                 </label>
                             </div>
                         `;
@@ -703,11 +895,73 @@ export class LinenInventoryManager {
         `;
     }
 
+    renderBedroomLayout(bedrooms) {
+        if (!bedrooms.length) {
+            return "";
+        }
+
+        return `
+            <section class="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("bedrooms.title"))}</h3>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("bedrooms.helper"))}</p>
+                    </div>
+                    <button type="button" data-linen-action="add-bedroom" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.addBedroom"))}</button>
+                </div>
+                <div class="mt-4 space-y-4">
+                    ${bedrooms.map((bedroom, bedroomIndex) => `
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_auto] sm:items-end">
+                                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                    ${escapeHtml(this.tr("labels.bedroomName"))}
+                                    <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bedroom-field="name" value="${escapeHtml(bedroom.name)}" placeholder="${escapeHtml(this.tr("form.bedroomPlaceholder", { number: bedroomIndex + 1 }))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                </label>
+                                <button type="button" data-linen-action="remove-bedroom" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">${escapeHtml(this.tr("actions.removeBedroom"))}</button>
+                            </div>
+                            <div class="mt-3 space-y-3">
+                                ${(bedroom.beds || []).map((bed, bedIndex) => `
+                                    <div class="grid gap-3 sm:grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_auto] sm:items-end">
+                                        <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                            ${escapeHtml(this.tr("labels.bedType"))}
+                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="type" value="${escapeHtml(bed.type)}" placeholder="${escapeHtml(this.tr("form.bedTypePlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                        </label>
+                                        <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                            ${escapeHtml(this.tr("labels.bedSize"))}
+                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="size" value="${escapeHtml(bed.size)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                        </label>
+                                        <button type="button" data-linen-action="remove-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-bed-index="${escapeHtml(String(bedIndex))}" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.removeBed"))}</button>
+                                    </div>
+                                `).join("")}
+                            </div>
+                            <button type="button" data-linen-action="add-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="mt-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.addBed"))}</button>
+                        </div>
+                    `).join("")}
+                </div>
+            </section>
+        `;
+    }
+
     renderRecordCard(record) {
         const detail = record.summary.sectionSummaries
             .filter((section) => section.count > 0)
             .slice(0, 3)
-            .map((section) => `${this.tr(section.labelKey)} ${section.count}`)
+            .map((section) => {
+                const bedDetail = section.bedSize
+                    ? ` (${section.bedroomCount} ${this.tr("labels.bedroomCount").toLocaleLowerCase()}: ${section.bedSize})`
+                    : "";
+                return `${this.tr(section.labelKey)} ${section.count}${bedDetail}`;
+            })
+            .join(" - ");
+        const bedroomDetail = (record.bedrooms || [])
+            .map((bedroom, index) => {
+                const bedroomName = bedroom.name || this.tr("labels.bedroomDefaultName", { number: index + 1 });
+                const beds = (bedroom.beds || [])
+                    .map((bed) => [bed.type, bed.size].filter(Boolean).join(" "))
+                    .filter(Boolean)
+                    .join(", ");
+                return beds ? `${bedroomName}: ${beds}` : bedroomName;
+            })
             .join(" - ");
 
         return `
@@ -730,6 +984,7 @@ export class LinenInventoryManager {
                     </div>
                 </div>
                 ${detail ? `<p class="mt-3 text-sm text-slate-600">${escapeHtml(detail)}</p>` : ""}
+                ${bedroomDetail ? `<p class="mt-2 text-sm text-slate-600">${escapeHtml(bedroomDetail)}</p>` : ""}
                 ${record.notes ? `<p class="mt-2 text-sm text-slate-500">${escapeHtml(record.notes)}</p>` : ""}
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button type="button" data-linen-action="edit" data-record-id="${escapeHtml(record.id)}" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
@@ -771,10 +1026,12 @@ export class LinenInventoryManager {
                 </div>
                 <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button type="button" data-linen-action="counted-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.markCountedToday"))}</button>
-                    <button type="button" data-linen-action="add-custom-item" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.addCustomItem"))}</button>
+                    <button type="button" data-linen-action="add-bedroom" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.addBedroom"))}</button>
                 </div>
+                ${this.renderBedroomLayout(this.draft.bedrooms)}
+                ${this.renderSectionPicker(this.draft.activeSections)}
                 <div class="mt-6 grid gap-4 2xl:grid-cols-2">
-                    ${LINEN_INVENTORY_GROUPS.map((section) => {
+                    ${LINEN_INVENTORY_GROUPS.filter((section) => (this.draft.activeSections || []).includes(section.key)).map((section) => {
                         const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { count: 0, itemCount: 0 };
                         return this.renderSection(section, summary, this.draft.items, this.draft.customItems);
                     }).join("")}

@@ -83,12 +83,54 @@ function normalizeItemCount(rawValue = {}) {
     return normalizeCount(rawValue.setup) + normalizeCount(rawValue.spare);
 }
 
+export function createEmptyBedroomLayout(overrides = []) {
+    if (!Array.isArray(overrides)) {
+        return [];
+    }
+
+    return overrides
+        .map((bedroom) => {
+            const beds = Array.isArray(bedroom?.beds) ? bedroom.beds : [];
+            return {
+                name: normalizeText(bedroom?.name),
+                beds: beds
+                    .map((bed) => ({
+                        type: normalizeText(bed?.type),
+                        size: normalizeText(bed?.size)
+                    }))
+                    .filter((bed) => bed.type || bed.size)
+            };
+        })
+        .filter((bedroom) => bedroom.name || bedroom.beds.length > 0);
+}
+
+function normalizeBedroomCount(value) {
+    const count = normalizeCount(value);
+    return count > 0 ? count : 1;
+}
+
+export function createEmptyLinenInventorySections(overrides = {}) {
+    const normalized = {};
+    ITEM_GROUPS.forEach((group) => {
+        normalized[group.key] = {
+            bedroomCount: normalizeBedroomCount(overrides[group.key]?.bedroomCount),
+            bedSize: normalizeText(overrides[group.key]?.bedSize || overrides[group.key]?.size)
+        };
+    });
+    return normalized;
+}
+
 function buildSearchText(record = {}) {
     return [
         record.propertyName,
         record.notes,
         record.countedDate,
         record.lastCountedAt,
+        ...(record.bedrooms || []).flatMap((bedroom) => [
+            bedroom.name,
+            ...(bedroom.beds || []).flatMap((bed) => [bed.type, bed.size])
+        ]),
+        ...Object.values(record.sections || {}).map((section) => section?.bedSize),
         ...(record.customItems || []).map((item) => item.name)
     ]
         .map((value) => normalizeText(value).toLocaleLowerCase())
@@ -122,6 +164,7 @@ export function createEmptyCustomLinenInventoryItems(overrides = []) {
 export function summarizeLinenInventoryRecord(record = {}) {
     const items = createEmptyLinenInventoryItems(record.items);
     const customItems = createEmptyCustomLinenInventoryItems(record.customItems);
+    const sections = createEmptyLinenInventorySections(record.sections);
     const sectionSummaries = LINEN_INVENTORY_GROUPS.map((group) => {
         let rows = group.items.map((item) => {
             const count = items[item.key]?.count || 0;
@@ -147,6 +190,8 @@ export function summarizeLinenInventoryRecord(record = {}) {
         return {
             key: group.key,
             labelKey: group.labelKey,
+            bedroomCount: sections[group.key]?.bedroomCount || 1,
+            bedSize: sections[group.key]?.bedSize || "",
             count: rows.reduce((sum, row) => sum + row.count, 0),
             itemCount: rows.filter((row) => row.count > 0).length,
             items: rows
@@ -170,6 +215,8 @@ export function createLinenInventoryRecord(input = {}, { now = () => new Date().
         propertyName: normalizeText(input.propertyName),
         countedDate: normalizeText(input.countedDate || input.lastCountedAt),
         notes: normalizeText(input.notes),
+        bedrooms: createEmptyBedroomLayout(input.bedrooms),
+        sections: createEmptyLinenInventorySections(input.sections),
         items: createEmptyLinenInventoryItems(input.items),
         customItems: createEmptyCustomLinenInventoryItems(input.customItems),
         createdAt: normalizeText(input.createdAt) || now(),

@@ -265,12 +265,14 @@
     "views": {
       "entryWorkspace": "Entry",
       "returnsWorkspace": "Returns",
+      "mismatchesWorkspace": "Mismatches",
       "completedWorkspace": "Completed",
       "formTitle": "New laundry handoff",
       "editTitle": "Update laundry handoff",
       "pendingTitle": "Pending returns",
       "recordsTitle": "Recent records",
       "returnsTitle": "Returns to check",
+      "mismatchesTitle": "Mismatches to resolve",
       "completedTitle": "Completed returns",
       "sectionNavTitle": "Laundry sections"
     },
@@ -360,6 +362,10 @@
         "one": "{{count}} return to check",
         "other": "{{count}} returns to check"
       },
+      "mismatchRecords": {
+        "one": "{{count}} mismatch",
+        "other": "{{count}} mismatches"
+      },
       "completedRecords": {
         "one": "{{count}} completed record",
         "other": "{{count}} completed records"
@@ -368,6 +374,7 @@
     "empty": {
       "pending": "No pending returns right now.",
       "returns": "No return records match the current filters.",
+      "mismatches": "No mismatches match the current filters.",
       "completed": "No completed records match the current filters.",
       "records": "No records match the current filters.",
       "customItems": "No extra items added."
@@ -376,6 +383,11 @@
       "propertyRequired": "Choose a property before saving.",
       "deliveryDateRequired": "Add the delivery date before saving.",
       "countRequired": "Add at least one delivered or received quantity before saving.",
+      "savedTitle": "Saved",
+      "errorTitle": "Needs attention",
+      "noticeTitle": "Notice",
+      "savedDetailsTitle": "Saved details",
+      "savedItemsTitle": "Items saved",
       "saved": "Laundry handoff saved.",
       "updated": "Laundry handoff updated.",
       "deleted": "Laundry handoff deleted.",
@@ -450,13 +462,30 @@
       "totalCounted": "Total counted",
       "customItems": "Other linen items",
       "customItemName": "Item",
-      "customItemFallback": "Other item"
+      "customItemFallback": "Other item",
+      "bedroomName": "Bedroom",
+      "bedroomCount": "Bedrooms",
+      "bedroomDefaultName": "Bedroom {{number}}",
+      "bedType": "Bed type",
+      "bedSize": "Bed size"
     },
     "form": {
       "helper": "Choose a property, set the count date, and enter the quantities counted.",
       "propertyPlaceholder": "Start typing a property",
       "notesPlaceholder": "Optional notes for housekeeping",
-      "customItemPlaceholder": "Write item name"
+      "customItemPlaceholder": "Write item name",
+      "bedroomPlaceholder": "Bedroom {{number}}",
+      "bedTypePlaceholder": "Double, single, sofa bed...",
+      "bedSizePlaceholder": "160x200, 180x200..."
+    },
+    "bedrooms": {
+      "title": "Bedroom sizes",
+      "emptyHelper": "Optional. Add this only when you need to record bed sizes.",
+      "helper": "Add each bedroom and each bed size separately."
+    },
+    "sectionsPicker": {
+      "title": "Choose sections",
+      "helper": "Add only the linen sections you need for this count."
     },
     "filters": {
       "searchPlaceholder": "Search property, date, or item"
@@ -472,7 +501,12 @@
       "delete": "Delete",
       "clearFilters": "Clear filters",
       "addCustomItem": "Add other item",
-      "removeCustomItem": "Remove"
+      "removeCustomItem": "Remove",
+      "addBedroom": "Add bedroom",
+      "removeBedroom": "Remove bedroom",
+      "addBed": "Add bed",
+      "removeBed": "Remove",
+      "removeSection": "Remove section"
     },
     "status": {
       "empty": "Empty",

@@ -11,6 +11,9 @@ describe("Linen Inventory utilities", () => {
         const record = createLinenInventoryRecord({
             propertyName: "Atlantic View",
             countedDate: "2026-04-12",
+            sections: {
+                doubleBed: { bedroomCount: 2, bedSize: "160x200" }
+            },
             items: {
                 bathTowel: { count: 6 },
                 pillowCases: { count: 10 }
@@ -18,6 +21,15 @@ describe("Linen Inventory utilities", () => {
             customItems: [
                 { name: "Beach bags", count: 2 },
                 { name: "", count: 0 }
+            ],
+            bedrooms: [
+                {
+                    name: "Bedroom 1",
+                    beds: [
+                        { type: "Double", size: "160x200" },
+                        { type: "Double", size: "180x200" }
+                    ]
+                }
             ]
         }, {
             now: () => "2026-04-12T10:00:00.000Z"
@@ -28,7 +40,11 @@ describe("Linen Inventory utilities", () => {
         assert.equal(record.countedDate, "2026-04-12");
         assert.equal(record.countedUnits, 18);
         assert.equal(record.trackedItems, 3);
+        assert.equal(record.sections.doubleBed.bedroomCount, 2);
+        assert.equal(record.sections.doubleBed.bedSize, "160x200");
         assert.equal(record.customItems.length, 1);
+        assert.equal(record.bedrooms[0].beds.length, 2);
+        assert.equal(record.bedrooms[0].beds[1].size, "180x200");
         assert.equal(summary.sectionSummaries.find((section) => section.key === "towels").count, 6);
     });
 
@@ -76,6 +92,9 @@ describe("Linen Inventory utilities", () => {
                 ...createLinenInventoryRecord({
                     propertyName: "Calas Loft",
                     countedDate: "2026-04-13",
+                    sections: {
+                        doubleBed: { bedroomCount: 1, bedSize: "180x200" }
+                    },
                     items: {
                         pillowCases: { count: 8 }
                     }
@@ -86,10 +105,13 @@ describe("Linen Inventory utilities", () => {
         ];
 
         const filtered = filterLinenInventoryRecords(records, { query: "calas" });
+        const byBedSize = filterLinenInventoryRecords(records, { query: "180x200" });
         const summary = summarizeLinenInventoryRecords(records);
 
         assert.equal(filtered.length, 1);
         assert.equal(filtered[0].id, "calas");
+        assert.equal(byBedSize.length, 1);
+        assert.equal(byBedSize[0].id, "calas");
         assert.equal(summary.totals.count, 2);
         assert.equal(summary.totals.countedUnits, 12);
         assert.equal(summary.totals.trackedItems, 2);

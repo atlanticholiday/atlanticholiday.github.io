@@ -269,12 +269,14 @@
         "views": {
             "entryWorkspace": "Entrada",
             "returnsWorkspace": "Devoluções",
+            "mismatchesWorkspace": "Diferenças",
             "completedWorkspace": "Concluídos",
             "formTitle": "Nova entrega de lavandaria",
             "editTitle": "Atualizar entrega de lavandaria",
             "pendingTitle": "Devoluções pendentes",
             "recordsTitle": "Registos recentes",
             "returnsTitle": "Devoluções para conferir",
+            "mismatchesTitle": "Diferenças para resolver",
             "completedTitle": "Devoluções concluídas",
             "sectionNavTitle": "Secções da roupa"
         },
@@ -364,6 +366,10 @@
                 "one": "{{count}} devolução para conferir",
                 "other": "{{count}} devoluções para conferir"
             },
+            "mismatchRecords": {
+                "one": "{{count}} diferença",
+                "other": "{{count}} diferenças"
+            },
             "completedRecords": {
                 "one": "{{count}} registo concluído",
                 "other": "{{count}} registos concluídos"
@@ -372,6 +378,7 @@
         "empty": {
             "pending": "Não existem devoluções pendentes neste momento.",
             "returns": "Não existem devoluções para conferir com os filtros atuais.",
+            "mismatches": "Não existem diferenças com os filtros atuais.",
             "completed": "Não existem registos concluídos com os filtros atuais.",
             "records": "Não existem registos com os filtros atuais.",
             "customItems": "Nenhum artigo extra adicionado."
@@ -380,6 +387,11 @@
             "propertyRequired": "Escolha uma propriedade antes de guardar.",
             "deliveryDateRequired": "Adicione a data de entrega antes de guardar.",
             "countRequired": "Adicione pelo menos uma quantidade de saída ou entrada antes de guardar.",
+            "savedTitle": "Guardado",
+            "errorTitle": "Precisa de atenção",
+            "noticeTitle": "Aviso",
+            "savedDetailsTitle": "Detalhes guardados",
+            "savedItemsTitle": "Artigos guardados",
             "saved": "Registo de lavandaria guardado.",
             "updated": "Registo de lavandaria atualizado.",
             "deleted": "Registo de lavandaria eliminado.",
@@ -454,13 +466,30 @@
             "totalCounted": "Total contado",
             "customItems": "Outros artigos de roupa",
             "customItemName": "Artigo",
-            "customItemFallback": "Outro artigo"
+            "customItemFallback": "Outro artigo",
+            "bedroomName": "Quarto",
+            "bedroomCount": "Quartos",
+            "bedroomDefaultName": "Quarto {{number}}",
+            "bedType": "Tipo de cama",
+            "bedSize": "Tamanho da cama"
         },
         "form": {
             "helper": "Escolha a propriedade, defina a data e introduza as quantidades contadas.",
             "propertyPlaceholder": "Comece a escrever a propriedade",
             "notesPlaceholder": "Notas opcionais para housekeeping",
-            "customItemPlaceholder": "Escrever nome do artigo"
+            "customItemPlaceholder": "Escrever nome do artigo",
+            "bedroomPlaceholder": "Quarto {{number}}",
+            "bedTypePlaceholder": "Casal, solteiro, sofa cama...",
+            "bedSizePlaceholder": "160x200, 180x200..."
+        },
+        "bedrooms": {
+            "title": "Tamanhos dos quartos",
+            "emptyHelper": "Opcional. Adicione apenas quando precisar de registar tamanhos de camas.",
+            "helper": "Adicione cada quarto e cada tamanho de cama em separado."
+        },
+        "sectionsPicker": {
+            "title": "Escolher seccoes",
+            "helper": "Adicione apenas as seccoes de roupa necessarias para esta contagem."
         },
         "filters": {
             "searchPlaceholder": "Pesquisar propriedade, data ou artigo"
@@ -476,7 +505,12 @@
             "delete": "Eliminar",
             "clearFilters": "Limpar filtros",
             "addCustomItem": "Adicionar outro artigo",
-            "removeCustomItem": "Remover"
+            "removeCustomItem": "Remover",
+            "addBedroom": "Adicionar quarto",
+            "removeBedroom": "Remover quarto",
+            "addBed": "Adicionar cama",
+            "removeBed": "Remover",
+            "removeSection": "Remover seccao"
         },
         "status": {
             "empty": "Vazio",

@@ -51,12 +51,34 @@ function toInputNumber(value) {
 
 function toneClass(tone) {
     if (tone === "success") {
-        return "border-emerald-200 bg-emerald-50 text-emerald-800";
+        return "border-emerald-300 bg-emerald-50 text-emerald-900";
     }
     if (tone === "danger") {
         return "border-rose-200 bg-rose-50 text-rose-800";
     }
     return "border-sky-200 bg-sky-50 text-sky-800";
+}
+
+function statusIcon(tone) {
+    if (tone === "success") {
+        return `
+            <svg class="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+        `;
+    }
+    if (tone === "danger") {
+        return `
+            <svg class="h-5 w-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+        `;
+    }
+    return `
+        <svg class="h-5 w-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z" />
+        </svg>
+    `;
 }
 
 export class LaundryLogManager {
@@ -78,6 +100,7 @@ export class LaundryLogManager {
         this.draft = this.createDefaultDraft();
         this.statusMessage = "";
         this.statusTone = "info";
+        this.statusDetails = null;
 
         if (typeof window !== "undefined") {
             window.setTimeout(() => this.ensureDomScaffold(), 50);
@@ -341,13 +364,17 @@ export class LaundryLogManager {
 
     getPendingRecords() {
         return this.getFilteredRecords("all")
-            .filter((record) => record.status !== "matched")
+            .filter((record) => record.status === "pending")
             .slice(0, 5);
     }
 
     getReturnRecords() {
         return this.getFilteredRecords("all")
-            .filter((record) => record.status !== "matched");
+            .filter((record) => record.status === "pending");
+    }
+
+    getMismatchRecords() {
+        return this.getFilteredRecords("mismatch");
     }
 
     getCompletedRecords() {
@@ -383,9 +410,49 @@ export class LaundryLogManager {
         }).format(new Date(year, month - 1, 1));
     }
 
-    setStatus(message = "", tone = "info") {
+    setStatus(message = "", tone = "info", details = null) {
         this.statusMessage = message;
         this.statusTone = tone;
+        this.statusDetails = details;
+    }
+
+    buildSavedStatusDetails(record = {}) {
+        const items = createEmptyLaundryLogItems(record.items);
+        const customItems = createEmptyCustomLaundryLogItems(record.customItems);
+        const savedItems = [];
+
+        LAUNDRY_LOG_GROUPS.forEach((group) => {
+            group.items.forEach((item) => {
+                const counts = items[item.key] || { delivered: 0, received: 0 };
+                if (counts.delivered <= 0 && counts.received <= 0) {
+                    return;
+                }
+                savedItems.push({
+                    name: this.tr(item.labelKey),
+                    delivered: counts.delivered,
+                    received: counts.received
+                });
+            });
+        });
+
+        customItems.forEach((item) => {
+            if (item.delivered <= 0 && item.received <= 0) {
+                return;
+            }
+            savedItems.push({
+                name: item.name || this.tr("labels.customItemFallback"),
+                delivered: item.delivered,
+                received: item.received
+            });
+        });
+
+        return {
+            propertyName: record.propertyName || "",
+            deliveryDate: record.deliveryDate || "",
+            receivedDate: record.receivedDate || "",
+            notes: record.notes || "",
+            items: savedItems
+        };
     }
 
     scrollFormIntoView() {
@@ -489,6 +556,7 @@ export class LaundryLogManager {
             ...draft,
             createdAt: original?.createdAt || ""
         });
+        const savedDetails = this.buildSavedStatusDetails(draft);
 
         try {
             const recordsRef = this.getCollectionRef();
@@ -498,10 +566,10 @@ export class LaundryLogManager {
 
             if (this.editingRecordId) {
                 await updateDoc(doc(recordsRef, this.editingRecordId), payload);
-                this.setStatus(this.tr("messages.updated"), "success");
+                this.setStatus(this.tr("messages.updated"), "success", savedDetails);
             } else {
                 await addDoc(recordsRef, payload);
-                this.setStatus(this.tr("messages.saved"), "success");
+                this.setStatus(this.tr("messages.saved"), "success", savedDetails);
             }
 
             this.editingRecordId = null;
@@ -509,6 +577,7 @@ export class LaundryLogManager {
             this.draft = this.createDefaultDraft();
             this.entryFormExpanded = false;
             this.render();
+            this.scrollToSelector("#laundry-log-status-message");
         } catch (error) {
             console.error("[Laundry Log] failed to save record:", error);
             this.setStatus(this.tr("messages.saveFailed"), "danger");
@@ -822,13 +891,60 @@ export class LaundryLogManager {
         `;
     }
 
+    renderStatusDetails() {
+        if (!this.statusDetails || this.statusTone !== "success") {
+            return "";
+        }
+
+        const detail = this.statusDetails;
+        const metadata = [
+            detail.propertyName ? [this.tr("labels.property"), detail.propertyName] : null,
+            detail.deliveryDate ? [this.tr("labels.deliveryDate"), this.formatDate(detail.deliveryDate)] : null,
+            detail.receivedDate ? [this.tr("labels.receivedDate"), this.formatDate(detail.receivedDate)] : null,
+            detail.notes ? [this.tr("labels.notes"), detail.notes] : null
+        ].filter(Boolean);
+
+        const itemRows = Array.isArray(detail.items) ? detail.items : [];
+        return `
+            <div class="mt-4 rounded-2xl border border-emerald-200 bg-white/80 p-4 text-slate-800">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">${escapeHtml(this.tr("messages.savedDetailsTitle"))}</div>
+                ${metadata.length ? `
+                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
+                        ${metadata.map(([label, value]) => `
+                            <div>
+                                <dt class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(label)}</dt>
+                                <dd class="mt-1 text-sm font-semibold text-slate-900">${escapeHtml(value)}</dd>
+                            </div>
+                        `).join("")}
+                    </dl>
+                ` : ""}
+                ${itemRows.length ? `
+                    <div class="mt-4">
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("messages.savedItemsTitle"))}</div>
+                        <div class="mt-2 grid gap-2 md:grid-cols-2">
+                            ${itemRows.map((item) => `
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                    <div class="text-sm font-semibold text-slate-900">${escapeHtml(item.name)}</div>
+                                    <div class="mt-1 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+                                        ${item.delivered > 0 ? `<span class="rounded-full bg-white px-2 py-1">${escapeHtml(this.tr("summary.delivered", { count: item.delivered }))}</span>` : ""}
+                                        ${item.received > 0 ? `<span class="rounded-full bg-white px-2 py-1">${escapeHtml(this.tr("summary.received", { count: item.received }))}</span>` : ""}
+                                    </div>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                ` : ""}
+            </div>
+        `;
+    }
+
     renderReturnMismatchWarning(summary = {}) {
         if (!summary.receivedStarted || !summary.mismatches?.length) {
             return "";
         }
 
         return `
-            <section class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            <section data-laundry-return-mismatch-warning="true" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
                 <div class="font-semibold">${escapeHtml(this.tr("warnings.returnMismatchTitle"))}</div>
                 <p class="mt-1 text-rose-800">${escapeHtml(this.tr("warnings.returnMismatchBody"))}</p>
                 <div class="mt-3 grid gap-2 sm:grid-cols-2">
@@ -869,6 +985,7 @@ export class LaundryLogManager {
                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     ${escapeHtml(this.tr("labels.customItemName"))}
                     <input type="text" data-laundry-custom-index="${escapeHtml(String(index))}" data-laundry-custom-field="name" value="${escapeHtml(item.name)}" placeholder="${escapeHtml(this.tr("form.customItemPlaceholder"))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    ${mode === "return" ? `<span class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold normal-case tracking-normal text-slate-700">${escapeHtml(this.tr("summary.delivered", { count: item.delivered }))}</span>` : ""}
                 </label>
                 ${showDelivered ? `
                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
@@ -915,7 +1032,10 @@ export class LaundryLogManager {
                         const counts = items[item.key] || { delivered: 0, received: 0 };
                         return `
                             <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 ${rowColumnsClass}">
-                                <div class="text-sm font-medium text-slate-900">${escapeHtml(this.tr(item.labelKey))}</div>
+                                <div class="text-sm font-medium text-slate-900">
+                                    ${escapeHtml(this.tr(item.labelKey))}
+                                    ${mode === "return" ? `<div class="mt-2"><span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">${escapeHtml(this.tr("summary.delivered", { count: counts.delivered }))}</span></div>` : ""}
+                                </div>
                                 ${showDelivered ? `
                                 <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                                     ${escapeHtml(this.tr("labels.deliveredShort"))}
@@ -955,9 +1075,14 @@ export class LaundryLogManager {
     }
 
     renderWorkspaceTabs() {
+        const mismatchCount = filterLaundryLogRecords(this.records, {
+            status: "mismatch",
+            month: this.selectedMonth
+        }).length;
         const tabs = [
             { key: "entry", label: this.tr("views.entryWorkspace") },
             { key: "returns", label: this.tr("views.returnsWorkspace") },
+            { key: "mismatches", label: this.tr("views.mismatchesWorkspace"), count: mismatchCount, alert: mismatchCount > 0 },
             { key: "completed", label: this.tr("views.completedWorkspace") }
         ];
 
@@ -976,6 +1101,11 @@ export class LaundryLogManager {
                                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"}"
                             >
                                 ${escapeHtml(tab.label)}
+                                ${tab.count ? `
+                                    <span class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${active ? "bg-white text-rose-700" : "bg-rose-600 text-white"}">
+                                        ${escapeHtml(String(tab.count))}
+                                    </span>
+                                ` : ""}
                             </button>
                         `;
                     }).join("")}
@@ -1172,9 +1302,7 @@ export class LaundryLogManager {
 
         return `
             <section class="grid gap-6">
-                ${this.renderSectionNavigator()}
-                <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.36fr)] 2xl:items-start">
-                    <details id="laundry-log-form-card" class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" ${formOpen ? "open" : ""}>
+                <details id="laundry-log-form-card" class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6" ${formOpen ? "open" : ""}>
                         <summary class="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("header.kicker"))}</div>
@@ -1234,20 +1362,8 @@ export class LaundryLogManager {
                             <button type="button" data-laundry-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
                             <button type="button" data-laundry-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
                         </div>
-                    </details>
-                    <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 2xl:sticky 2xl:top-24">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">${escapeHtml(this.tr("views.pendingTitle"))}</div>
-                                <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.trCount("counts.pendingRecords", pendingRecords.length))}</h2>
-                            </div>
-                            <button type="button" data-laundry-action="workspace" data-workspace="returns" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.viewAllReturns"))}</button>
-                        </div>
-                        <div class="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-1">
-                            ${pendingRecords.length ? pendingRecords.map((record) => this.renderPendingCard(record)).join("") : `<p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">${escapeHtml(this.tr("empty.pending"))}</p>`}
-                        </div>
-                    </section>
-                </div>
+                </details>
+                ${this.renderSectionNavigator()}
             </section>
         `;
     }
@@ -1346,6 +1462,39 @@ export class LaundryLogManager {
         `;
     }
 
+    renderMismatchesWorkspace({ mismatchRecords, monthOptions }) {
+        return `
+            <section class="rounded-[28px] border border-rose-200 bg-white p-5 shadow-sm sm:p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("views.mismatchesTitle"))}</div>
+                        <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.trCount("counts.mismatchRecords", mismatchRecords.length))}</h2>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block text-sm font-medium text-slate-600">
+                            ${escapeHtml(t("common.search"))}
+                            <input id="laundry-log-search-input" type="search" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                        </label>
+                        <label class="block text-sm font-medium text-slate-600">
+                            ${escapeHtml(this.tr("filters.month"))}
+                            <select id="laundry-log-month-filter" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                <option value="all" ${this.selectedMonth === "all" ? "selected" : ""}>${escapeHtml(this.tr("filters.allMonths"))}</option>
+                                ${monthOptions.map((option) => `<option value="${escapeHtml(option.value)}" ${this.selectedMonth === option.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-3">
+                    <button type="button" data-laundry-action="clear-filters" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearFilters"))}</button>
+                    <button type="button" data-laundry-action="workspace" data-workspace="returns" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.openReturns"))}</button>
+                </div>
+                <div class="mt-6 space-y-4">
+                    ${mismatchRecords.length ? mismatchRecords.map((record) => this.renderRecordCard(record)).join("") : `<p class="rounded-2xl border border-dashed border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">${escapeHtml(this.tr("empty.mismatches"))}</p>`}
+                </div>
+            </section>
+        `;
+    }
+
     renderCompletedWorkspace({ completedRecords, monthOptions }) {
         return `
             <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -1399,6 +1548,7 @@ export class LaundryLogManager {
         const totals = summarizeLaundryLogRecords(this.records).totals;
         const pendingRecords = this.getPendingRecords();
         const returnRecords = this.getReturnRecords();
+        const mismatchRecords = this.getMismatchRecords();
         const completedRecords = this.getCompletedRecords();
         const propertyOptions = this.getKnownPropertyNames();
         const monthOptions = this.getMonthOptions();
@@ -1406,13 +1556,28 @@ export class LaundryLogManager {
         const titleKey = this.editingRecordId ? "views.editTitle" : "views.formTitle";
 
         root.innerHTML = `
-            ${this.statusMessage ? `<section id="laundry-log-status-message" class="rounded-2xl border px-4 py-3 text-sm font-medium ${toneClass(this.statusTone)}">${escapeHtml(this.statusMessage)}</section>` : ""}
+            ${this.statusMessage ? `
+                <section id="laundry-log-status-message" class="rounded-2xl border px-4 py-4 text-sm font-medium shadow-sm ${toneClass(this.statusTone)}" role="status" aria-live="polite" tabindex="-1">
+                    <div class="flex items-start gap-3">
+                        <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80">
+                            ${statusIcon(this.statusTone)}
+                        </span>
+                        <div>
+                            <div class="text-base font-semibold">${escapeHtml(this.statusTone === "success" ? this.tr("messages.savedTitle") : this.statusTone === "danger" ? this.tr("messages.errorTitle") : this.tr("messages.noticeTitle"))}</div>
+                            <div class="mt-1">${escapeHtml(this.statusMessage)}</div>
+                            ${this.renderStatusDetails()}
+                        </div>
+                    </div>
+                </section>
+            ` : ""}
             ${this.renderMetricsSection(totals)}
             ${this.renderWorkspaceTabs()}
             ${this.activeWorkspace === "entry"
                 ? this.renderEntryWorkspace({ draftSummary, propertyOptions, pendingRecords, titleKey })
                 : this.activeWorkspace === "returns"
                 ? this.renderReturnsWorkspace({ returnRecords, monthOptions, pendingRecords })
+                : this.activeWorkspace === "mismatches"
+                ? this.renderMismatchesWorkspace({ mismatchRecords, monthOptions })
                 : this.renderCompletedWorkspace({ completedRecords, monthOptions })}
         `;
     }
