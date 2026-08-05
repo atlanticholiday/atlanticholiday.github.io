@@ -4,6 +4,7 @@ import "./unit/core/config.test.js";
 import "./unit/core/i18n.test.js";
 import "./unit/shared/change-notifier.test.js";
 import "./unit/shared/access-roles.test.js";
+import "./unit/shared/access-control.test.js";
 import "./unit/shared/email.test.js";
 import "./unit/shared/enums.test.js";
 import "./unit/shared/locations.test.js";

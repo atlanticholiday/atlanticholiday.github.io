@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -12,8 +13,7 @@ const DEFAULT_BROWSER_CANDIDATES = [
   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
 ].filter(Boolean);
 
-const DEFAULT_PROFILE_DIR = path.resolve(".airbnb-playwright");
-const DEFAULT_DOWNLOADS_DIR = path.resolve("downloads", "airbnb-invoices");
+const DEFAULT_DOWNLOADS_DIR = path.resolve(process.env.USERPROFILE || process.env.HOME || ".", "Downloads", "airbnb-invoices");
 const DEFAULT_START_URL = "https://www.airbnb.com/hosting/reservations";
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -28,7 +28,7 @@ Options:
   --from YYYY-MM            First month to export. Defaults to the last 6 months.
   --to YYYY-MM              Last month to export. Defaults to the current month.
   --format pdf|csv          Export format. Default: pdf
-  --profile-dir PATH        Persistent browser profile directory.
+  --profile-dir PATH        Explicitly retain a reusable browser session (higher risk).
   --downloads-dir PATH      Target directory for downloaded files.
   --browser-path PATH       Override browser executable path.
   --start-url URL           Reservations page URL. Default: ${DEFAULT_START_URL}
@@ -41,7 +41,9 @@ Options:
 Notes:
   - First run is intentionally semi-manual: log into Airbnb and open the host
     Reservations page with the Export button visible, then press Enter.
-  - The script reuses the saved browser profile on later runs.
+  - By default, the browser profile is temporary and removed after each run.
+  - A persistent profile contains reusable Airbnb session credentials. Only opt in
+    with --profile-dir on an encrypted, access-controlled workstation.
   - Airbnb's bulk VAT invoice export is officially limited to the past 6 months
     in supported regions, so older invoices may need a different workflow.
 `);
@@ -50,7 +52,7 @@ Notes:
 function parseArgs(argv) {
   const options = {
     format: "pdf",
-    profileDir: DEFAULT_PROFILE_DIR,
+    profileDir: null,
     downloadsDir: DEFAULT_DOWNLOADS_DIR,
     browserPath: "",
     startUrl: DEFAULT_START_URL,
@@ -126,6 +128,10 @@ function parseArgs(argv) {
 
   if (options.limit !== null && (!Number.isInteger(options.limit) || options.limit < 1)) {
     throw new Error("--limit must be a positive integer.");
+  }
+
+  if ((options.headless || options.skipLoginPrompt) && !options.profileDir) {
+    throw new Error("--headless and --skip-login-prompt require an explicit --profile-dir. Temporary profiles require an interactive login.");
   }
 
   return options;
@@ -269,6 +275,28 @@ function logStep(message) {
 
 async function ensureDirectory(directoryPath) {
   await fs.promises.mkdir(directoryPath, { recursive: true });
+}
+
+async function prepareBrowserProfile(explicitProfileDir) {
+  if (explicitProfileDir) {
+    await ensureDirectory(explicitProfileDir);
+    logStep("SECURITY WARNING: using a persistent Airbnb browser profile. Treat this directory as a live credential.");
+    return { profileDir: explicitProfileDir, cleanup: async () => {} };
+  }
+
+  const temporaryRoot = path.resolve(os.tmpdir());
+  const profileDir = await fs.promises.mkdtemp(path.join(temporaryRoot, "horario-airbnb-"));
+  return {
+    profileDir,
+    cleanup: async () => {
+      const resolved = path.resolve(profileDir);
+      const expectedPrefix = `${temporaryRoot}${path.sep}`;
+      if (!resolved.startsWith(expectedPrefix) || !path.basename(resolved).startsWith("horario-airbnb-")) {
+        throw new Error(`Refusing to remove unexpected browser profile path: ${resolved}`);
+      }
+      await fs.promises.rm(resolved, { recursive: true, force: true });
+    }
+  };
 }
 
 async function pageHasVisibleDialog(page) {
@@ -533,15 +561,6 @@ async function configureExport(page, monthDate, format) {
   await page.waitForTimeout(500);
 }
 
-async function saveDebugScreenshot(page, downloadsDir, label) {
-  const filePath = path.join(
-    downloadsDir,
-    `debug-${normalizeForFileName(label)}-${Date.now()}.png`
-  );
-  await page.screenshot({ path: filePath, fullPage: true }).catch(() => null);
-  return filePath;
-}
-
 async function run() {
   const options = parseArgs(process.argv.slice(2));
 
@@ -569,30 +588,29 @@ async function run() {
     return;
   }
 
-  await ensureDirectory(options.profileDir);
   await ensureDirectory(options.downloadsDir);
 
   const browserPath = resolveBrowserPath(options.browserPath);
   logStep(`Using browser: ${browserPath}`);
-
-  const context = await chromium.launchPersistentContext(options.profileDir, {
-    executablePath: browserPath,
-    headless: options.headless,
-    acceptDownloads: true
-  });
-
-  context.setDefaultTimeout(DEFAULT_TIMEOUT_MS);
-
-  const page = context.pages()[0] || (await context.newPage());
-  const manifest = {
-    generatedAt: new Date().toISOString(),
-    format: options.format,
-    downloadsDir: options.downloadsDir,
-    startUrl: options.startUrl,
-    files: []
-  };
-
+  const browserProfile = await prepareBrowserProfile(options.profileDir);
+  let context = null;
   try {
+    context = await chromium.launchPersistentContext(browserProfile.profileDir, {
+      executablePath: browserPath,
+      headless: options.headless,
+      acceptDownloads: true
+    });
+    context.setDefaultTimeout(DEFAULT_TIMEOUT_MS);
+
+    const page = context.pages()[0] || (await context.newPage());
+    const manifest = {
+      generatedAt: new Date().toISOString(),
+      format: options.format,
+      downloadsDir: options.downloadsDir,
+      startUrl: options.startUrl,
+      files: []
+    };
+
     await page.goto("https://www.airbnb.com/", { waitUntil: "domcontentloaded" });
     await dismissCommonOverlays(page);
 
@@ -656,12 +674,10 @@ async function run() {
 
         logStep(`Saved ${targetPath}`);
       } catch (error) {
-        const screenshotPath = await saveDebugScreenshot(page, options.downloadsDir, `failed-${monthValue}`);
         throw new Error(
           [
             `Export failed for ${monthValue}.`,
-            error instanceof Error ? error.message : String(error),
-            `Debug screenshot: ${screenshotPath}`
+            error instanceof Error ? error.message : String(error)
           ].join(" ")
         );
       }
@@ -671,7 +687,10 @@ async function run() {
     await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
     logStep(`Wrote manifest: ${manifestPath}`);
   } finally {
-    await context.close();
+    await context?.close().catch(() => {});
+    await browserProfile.cleanup().catch((error) => {
+      console.warn(`Could not remove the temporary Airbnb browser profile: ${error.message}`);
+    });
   }
 }
 

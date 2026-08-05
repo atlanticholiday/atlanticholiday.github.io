@@ -32,6 +32,7 @@ import { canonicalizeEmail } from '../../shared/email.js';
 import {
     canAccessSelfServiceSchedule,
     canAccessSharedVacationBoard,
+    hasRole,
     hasPrivilegedRole,
     isSelfServiceEmployeeUser,
     SELF_SERVICE_SCHEDULE_VIEWS,
@@ -83,7 +84,7 @@ export class DataManager {
             email: null,
             emailCanonical: null,
             roles: [],
-            allowedApps: null,
+            allowedApps: [],
             linkedEmployee: null
         };
 
@@ -97,13 +98,13 @@ export class DataManager {
         this.userId = userId;
     }
 
-    setCurrentUserContext({ uid = null, email = null, roles = [], allowedApps = null, linkedEmployee = null } = {}) {
+    setCurrentUserContext({ uid = null, email = null, roles = [], allowedApps = [], linkedEmployee = null } = {}) {
         this.currentUserContext = {
             uid,
             email: typeof email === 'string' ? email.trim().toLowerCase() : null,
             emailCanonical: canonicalizeEmail(email),
             roles: Array.isArray(roles) ? roles : [],
-            allowedApps: normalizeAllowedApps(allowedApps),
+            allowedApps: normalizeAllowedApps(allowedApps) || [],
             linkedEmployee: linkedEmployee?.id ? {
                 id: linkedEmployee.id,
                 name: linkedEmployee.name || '',
@@ -775,6 +776,10 @@ export class DataManager {
         return hasPrivilegedRole(this.getCurrentUserRoles());
     }
 
+    hasAdminRole() {
+        return hasRole(this.getCurrentUserRoles(), 'admin');
+    }
+
     isTimeClockStationUser() {
         return hasTimeClockStationRole(this.getCurrentUserRoles());
     }
@@ -843,7 +848,7 @@ export class DataManager {
             return allowedApps.length > 0;
         }
 
-        return !this.isClockOnlyUser();
+        return false;
     }
 
     canAccessApp(appKey = '') {
@@ -863,7 +868,7 @@ export class DataManager {
             return allowedApps.includes(appKey);
         }
 
-        return !this.isClockOnlyUser();
+        return false;
     }
 
     canAccessWorkSchedule() {
@@ -1353,18 +1358,9 @@ export class DataManager {
      * @param {string} icalUrl - The iCal URL (can be empty to remove)
      */
     async updatePropertyIcalUrl(propertyId, icalUrl) {
-        try {
-            const propertyRef = doc(this.db, "properties", propertyId);
-            await updateDoc(propertyRef, {
-                icalUrl: icalUrl || null,
-                icalLastSync: null, // Reset last sync when URL changes
-                updatedAt: new Date()
-            });
-            console.log(`[DataManager] Updated iCal URL for property ${propertyId}`);
-        } catch (error) {
-            console.error('[DataManager] Error updating property iCal URL:', error);
-            throw error;
-        }
+        void propertyId;
+        void icalUrl;
+        throw new Error('Browser-side iCal URL storage is disabled. Configure calendar secrets through the secure backend.');
     }
 
     /**

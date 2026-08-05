@@ -51,20 +51,17 @@ export class ChecklistsManager {
 
   _loadState() {
     try {
-      const raw = localStorage.getItem(this.storageKey);
-      if (!raw) return {};
-      return JSON.parse(raw);
+      localStorage.removeItem(this.storageKey);
     } catch (e) {
-      console.warn('Failed to load checklist state:', e);
-      return {};
+      console.warn('Failed to clear legacy checklist browser state:', e);
     }
+    return {};
   }
 
   _saveState() {
     try {
       // Bump client-side updated timestamp
       this.state._updatedAtMs = Date.now();
-      localStorage.setItem(this.storageKey, JSON.stringify(this.state));
       this._updateProgressSummary();
       // Queue remote sync if available
       this._queueRemoteSave();
@@ -163,7 +160,6 @@ export class ChecklistsManager {
       if (remoteHasProjects) {
         this._applyingRemote = true;
         this.state = remote;
-        localStorage.setItem(this.storageKey, JSON.stringify(this.state));
         this._applyingRemote = false;
         this._updateProgressSummary();
         this._setSyncStatus('Synced');
@@ -181,7 +177,6 @@ export class ChecklistsManager {
         if (this._lastPushedJson && incomingJson === this._lastPushedJson) return; // ignore our own write
         this._applyingRemote = true;
         this.state = incoming;
-        localStorage.setItem(this.storageKey, JSON.stringify(this.state));
         this._applyingRemote = false;
         this._updateProgressSummary();
         const page = document.getElementById('checklists-page');

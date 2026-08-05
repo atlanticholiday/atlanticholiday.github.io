@@ -1120,23 +1120,17 @@ export class ReservationsManager {
 
     persistLocalImport() {
         try {
-            localStorage.setItem('reservations_import_preview', JSON.stringify({
-                name: this.currentImportName,
-                records: this.importedRecords
-            }));
+            localStorage.removeItem('reservations_import_preview');
         } catch (error) {
-            console.warn('[ReservationsManager] Could not persist import preview', error);
+            console.warn('[ReservationsManager] Could not clear legacy import preview', error);
         }
     }
 
     restoreLocalImport() {
         try {
-            const payload = JSON.parse(localStorage.getItem('reservations_import_preview') || 'null');
-            if (!payload?.records?.length) return;
-            this.currentImportName = normalizeText(payload.name);
-            this.importedRecords = payload.records.map(normalizeRawReservationDocument);
+            localStorage.removeItem('reservations_import_preview');
         } catch (error) {
-            console.warn('[ReservationsManager] Could not restore import preview', error);
+            console.warn('[ReservationsManager] Could not clear legacy import preview', error);
         }
     }
 

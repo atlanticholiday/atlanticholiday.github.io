@@ -4,6 +4,7 @@ import {
     filterPlenoHotelRecords,
     getRecordReminders,
     getWorkflowStage,
+    mergePlenoHotelRecords,
     normalizeBooleanStatus,
     normalizePlenoHotelRecord,
     parseBedSizes,
@@ -96,5 +97,18 @@ describe("PlenoHotel utilities", () => {
         assert.includes(quoteEmail.body, "1 - 160x200cm");
         assert.equal(ownerEmail.to, "owner@example.com");
         assert.includes(ownerEmail.body, "350,00");
+    });
+
+    test("preserves secure Storage paths when records are merged", () => {
+        const merged = mergePlenoHotelRecords({
+            propertyName: "Ocean View",
+            quoteLinks: [{ label: "quote.pdf", storagePath: "plenohotel/ocean/quotes/quote.pdf" }]
+        }, {
+            propertyName: "Ocean View",
+            quoteLinks: [{ label: "quote.pdf", storagePath: "plenohotel/ocean/quotes/quote.pdf" }]
+        });
+
+        assert.equal(merged.quoteLinks.length, 1);
+        assert.equal(merged.quoteLinks[0].storagePath, "plenohotel/ocean/quotes/quote.pdf");
     });
 });

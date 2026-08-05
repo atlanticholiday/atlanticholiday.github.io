@@ -848,85 +848,8 @@ export class PropertiesManager {
     }
 
     async importFromGoogleSheets(onProgress = () => { }) {
-        const SHEET_ID = '1mDZFHWcE29tQS-xzrfpJrgz3EEAaptYN70pmk4U7da0';
-        const GID = '1575728761';
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
-
-        try {
-            console.log(`🔄 [SHEETS] Fetching from ${CSV_URL}`);
-            const response = await fetch(CSV_URL);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch sheet: ${response.status} ${response.statusText}`);
-            }
-            const csvText = await response.text();
-
-            // Parse CSV
-            const lines = csvText.split('\n');
-            // Remove first 2 header lines as per requirement (start from B3/etc, so row 3 is index 2)
-            const dataLines = lines.slice(2);
-
-            const propertiesToImport = [];
-            const errors = [];
-
-            dataLines.forEach((line, index) => {
-                if (!line.trim()) return;
-
-                // CSV parsing handling quotes is complex, but assuming simple comma separation for now
-                // Any commas inside values will break this. Stronger regex needed?
-                // Using a regex to split by comma but ignoring commas within quotes
-                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(part => {
-                    return part.trim().replace(/^"|"$/g, '').trim(); // Remove surrounding quotes
-                });
-
-                // Column mapping (0-indexed): 
-                // A=0, B=1 (Name), C=2 (Location), D=3 (Typology)
-                const name = parts[1];
-                const location = parts[2];
-                const typology = parts[3];
-
-                if (name && location && typology) {
-                    // Normalize Typology (T2 -> T2, T 2 -> T2)
-                    const cleanTypology = typology.toUpperCase().replace(/\s+/g, '');
-
-                    // Parse bedrooms from typology
-                    let rooms = 0;
-                    const match = cleanTypology.match(/\d+/);
-                    if (match) {
-                        rooms = parseInt(match[0]);
-                    }
-
-                    // Determine type
-                    let type = 'other';
-                    if (cleanTypology.startsWith('T')) type = 'apartment';
-                    else if (cleanTypology.startsWith('V')) type = 'villa';
-
-                    propertiesToImport.push({
-                        name: name,
-                        location: location,
-                        typology: cleanTypology,
-                        type: type,
-                        rooms: rooms,
-                        // Defaults
-                        wifiSpeed: 'standard',
-                        smartTv: 'no',
-                        energySource: 'electric',
-                        status: 'available'
-                    });
-                }
-            });
-
-            console.log(`🔄 [SHEETS] Found ${propertiesToImport.length} properties to import.`);
-
-            if (propertiesToImport.length === 0) {
-                return { successful: 0, failed: 0, errors: ['No valid properties found in sheet.'] };
-            }
-
-            return await this.bulkAddProperties(propertiesToImport, onProgress);
-
-        } catch (error) {
-            console.error('Error importing from Google Sheets:', error);
-            throw error;
-        }
+        void onProgress;
+        throw new Error('Public Google Sheets imports are disabled. Import property data through a protected backend.');
     }
 
     initializeEventListeners() {

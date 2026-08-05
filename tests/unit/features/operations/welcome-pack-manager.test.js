@@ -64,6 +64,68 @@ describe("WelcomePackManager", () => {
     assert.equal(reservations[1].summary, "Reserved");
   });
 
+  test("blocks browser-side iCal requests", async () => {
+    const manager = new WelcomePackManager({});
+    let rejected = false;
+
+    try {
+      await manager.fetchAndParseIcal("https://example.test/private.ics", "Sea Breeze");
+    } catch (error) {
+      rejected = true;
+      assert.includes(error.message, "protected backend");
+    }
+
+    assert.equal(rejected, true);
+  });
+
+  test("loads minimal reservation data through the protected service without browser caching", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`
+      <div id="wp-reservations-list"></div>
+      <button id="wp-sync-reservations-btn"></button>
+      <span id="wp-last-sync-label"></span>
+      <span id="wp-today-count"></span>
+      <span id="wp-week-count"></span>
+      <span id="wp-period-count"></span>
+    `);
+    localStorage.removeItem("wp_reservations");
+    localStorage.removeItem("wp_last_sync");
+
+    const requestedDays = [];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const checkout = new Date(tomorrow);
+    checkout.setDate(checkout.getDate() + 2);
+    const propertyName = 'Sea <img src=x onerror="window.__guestXss=true"> Breeze';
+    const manager = new WelcomePackManager({
+      async getAllProperties() {
+        return [{ id: "p1", name: propertyName, welcomePackEnabled: true }];
+      }
+    }, {
+      async getUpcomingReservations(payload) {
+        requestedDays.push(payload.days);
+        return {
+          data: {
+            reservations: [{
+              propertyName,
+              checkIn: tomorrow.toISOString(),
+              checkOut: checkout.toISOString(),
+              portal: "Airbnb"
+            }]
+          }
+        };
+      }
+    });
+
+    await manager.syncAndDisplayReservations(false);
+
+    assert.deepEqual(requestedDays, [7]);
+    assert.equal(document.querySelector("#wp-reservations-list img"), null);
+    assert.includes(document.getElementById("wp-reservations-list").textContent, propertyName);
+    assert.equal(localStorage.getItem("wp_reservations"), null);
+    assert.equal(localStorage.getItem("wp_last_sync"), null);
+  });
+
   test("invalidates either one cache bucket or an array of buckets", () => {
     const manager = new WelcomePackManager({});
     manager.cache.logs = [1];

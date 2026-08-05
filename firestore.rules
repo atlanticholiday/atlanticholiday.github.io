@@ -1,0 +1,290 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function accessPath() {
+      return /databases/$(database)/documents/userAccess/$(request.auth.uid);
+    }
+
+    function approved() {
+      return signedIn()
+        && exists(accessPath())
+        && get(accessPath()).data.active == true;
+    }
+
+    function accessData() {
+      return get(accessPath()).data;
+    }
+
+    function hasRole(role) {
+      return approved()
+        && accessData().roles is list
+        && role in accessData().roles;
+    }
+
+    function privileged() {
+      return hasRole('admin') || hasRole('manager') || hasRole('supervisor');
+    }
+
+    function adminOnly() {
+      return hasRole('admin');
+    }
+
+    function hasApp(appKey) {
+      return approved()
+        && accessData().allowedApps is list
+        && appKey in accessData().allowedApps;
+    }
+
+    function isOwnAttendance(data) {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && data.employeeId == accessData().linkedEmployeeId;
+    }
+
+    function ownsNewRecord() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+
+    function ownsExistingRecord() {
+      return resource.data.userId == request.auth.uid;
+    }
+
+    function canReadPropertyDirectory() {
+      return privileged()
+        || hasApp('properties')
+        || hasApp('allinfo')
+        || hasApp('welcomePacks')
+        || hasApp('owners')
+        || hasApp('safety')
+        || hasApp('reservations')
+        || hasApp('heatedPools')
+        || hasApp('inventory');
+    }
+
+    function propertySecretsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'icalUrl',
+        'airbnbApiToken',
+        'avantioApiToken',
+        'bookingApiToken',
+        'apiKey',
+        'apiSecret'
+      ]);
+    }
+
+    match /userAccess/{uid} {
+      allow read: if approved() && (request.auth.uid == uid || adminOnly());
+      allow write: if false;
+    }
+
+    match /allowedEmails/{emailKey} {
+      allow read: if adminOnly();
+      allow write: if false;
+    }
+
+    match /roles/{roleKey} {
+      allow read: if adminOnly();
+      allow write: if false;
+    }
+
+    match /securityAudit/{entryId} {
+      allow read: if adminOnly();
+      allow write: if false;
+    }
+
+    match /guestDataAccessAudit/{entryId} {
+      allow read: if adminOnly();
+      allow write: if false;
+    }
+
+    match /nukiDoorAudit/{entryId} {
+      allow read: if adminOnly();
+      allow write: if false;
+    }
+
+    match /nukiDoors/{doorId} {
+      allow read, write: if false;
+    }
+
+    match /reservations/{reservationId} {
+      allow read: if privileged()
+        || (hasApp('reservations') && ownsExistingRecord());
+      allow create: if (privileged() || hasApp('reservations')) && ownsNewRecord();
+      allow update: if privileged()
+        || (hasApp('reservations') && ownsExistingRecord() && ownsNewRecord());
+      allow delete: if privileged()
+        || (hasApp('reservations') && ownsExistingRecord());
+    }
+
+    match /properties/{propertyId} {
+      allow read: if canReadPropertyDirectory();
+      allow create: if (privileged() || hasApp('properties'))
+        && !request.resource.data.keys().hasAny([
+          'icalUrl',
+          'airbnbApiToken',
+          'avantioApiToken',
+          'bookingApiToken',
+          'apiKey',
+          'apiSecret'
+        ]);
+      allow update: if (
+          (privileged() || hasApp('properties') || hasApp('allinfo'))
+          && propertySecretsUnchanged()
+        ) || (
+          hasApp('welcomePacks')
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['welcomePackEnabled', 'updatedAt'])
+        ) || (
+          hasApp('owners')
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['ownerId', 'updatedAt'])
+        );
+      allow delete: if privileged() || hasApp('properties');
+    }
+
+    match /propertyImportReports/{reportId} {
+      allow read, write: if privileged() || hasApp('properties');
+    }
+
+    match /owners/{ownerId} {
+      allow read, write: if privileged() || hasApp('owners');
+
+      match /secure/{secureDocument} {
+        allow read, write: if privileged() || hasApp('owners');
+      }
+    }
+
+    match /welcome_pack_items/{itemId} {
+      allow read, write: if privileged() || hasApp('welcomePacks');
+    }
+
+    match /welcome_pack_logs/{logId} {
+      allow read, write: if privileged() || hasApp('welcomePacks');
+    }
+
+    match /welcome_pack_presets/{presetId} {
+      allow read, write: if privileged() || hasApp('welcomePacks');
+    }
+
+    match /heatedPools/{recordId} {
+      allow read, write: if privileged() || hasApp('heatedPools') || hasApp('reservations');
+    }
+
+    match /laundryHandoffRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('laundryLog');
+    }
+
+    match /linenInventoryRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('linenInventory');
+    }
+
+    match /cleaningAhRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('cleaningAh');
+    }
+
+    match /cleaningAhLaundryRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('cleaningAh');
+    }
+
+    match /cleaningAhSpecialCleaningRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('cleaningAh');
+    }
+
+    match /inventoryEssentials/{documentId} {
+      allow read, write: if privileged() || hasApp('inventory');
+    }
+
+    match /essentialsLists/{listId} {
+      allow read, write: if privileged() || hasApp('inventory');
+    }
+
+    match /plenoHotelRecords/{recordId} {
+      allow read, write: if privileged() || hasApp('inventory');
+    }
+
+    match /operations/{recordId} {
+      allow read: if privileged()
+        || (approved() && ownsExistingRecord());
+      allow create: if privileged() || (approved() && ownsNewRecord());
+      allow update: if privileged()
+        || (approved() && ownsExistingRecord() && ownsNewRecord());
+      allow delete: if privileged()
+        || (approved() && ownsExistingRecord());
+    }
+
+    match /rnal_data/{recordId} {
+      allow read: if privileged()
+        || (hasApp('rnal') && ownsExistingRecord());
+      allow create: if (privileged() || hasApp('rnal')) && ownsNewRecord();
+      allow update: if privileged()
+        || (hasApp('rnal') && ownsExistingRecord() && ownsNewRecord());
+      allow delete: if privileged()
+        || (hasApp('rnal') && ownsExistingRecord());
+    }
+
+    match /employees/{employeeId} {
+      allow read: if privileged()
+        || hasApp('staff')
+        || hasRole('employee')
+        || hasRole('time-clock-station');
+      allow write: if privileged() || hasApp('staff');
+    }
+
+    match /attendance_records/{recordId} {
+      allow read: if privileged()
+        || hasApp('staff')
+        || hasRole('employee')
+        || hasRole('time-clock-station');
+      allow create: if privileged()
+        || hasApp('staff')
+        || hasRole('time-clock-station')
+        || (hasRole('employee') && isOwnAttendance(request.resource.data));
+      allow update: if privileged()
+        || hasApp('staff')
+        || hasRole('time-clock-station')
+        || (hasRole('employee')
+          && isOwnAttendance(resource.data)
+          && isOwnAttendance(request.resource.data));
+      allow delete: if privileged()
+        || hasApp('staff')
+        || (hasRole('employee') && isOwnAttendance(resource.data));
+    }
+
+    match /daily_notes/{recordId} {
+      allow read: if privileged() || hasApp('staff') || hasRole('employee');
+      allow write: if privileged() || hasApp('staff');
+    }
+
+    match /shift_presets/{presetId} {
+      allow read: if privileged() || hasApp('staff') || hasRole('employee');
+      allow write: if privileged() || hasApp('staff');
+    }
+
+    match /vacation_records/{recordId} {
+      allow read: if privileged() || hasApp('staff') || hasRole('employee');
+      allow write: if privileged() || hasApp('staff');
+    }
+
+    match /settings/{settingId} {
+      allow read: if approved();
+      allow write: if privileged();
+    }
+
+    match /users/{uid} {
+      allow read, write: if approved() && (request.auth.uid == uid || privileged());
+
+      match /{nestedDocument=**} {
+        allow read, write: if approved() && (request.auth.uid == uid || privileged());
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

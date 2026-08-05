@@ -261,9 +261,6 @@ export class SafetyManager {
         // Find the property and navigate to property settings page
         const property = this.properties.find(p => p.id === propertyId);
         if (property && window.propertiesManager) {
-            // Store the property data in sessionStorage for the settings page
-            sessionStorage.setItem('currentProperty', JSON.stringify(property));
-            
             // Navigate to property settings page
             window.location.href = `property-settings.html?propertyId=${propertyId}`;
         } else {
@@ -396,4 +393,4 @@ export class SafetyManager {
     cleanup() {
         // No cleanup needed since we're listening to property changes through PropertiesManager
     }
-} 
+}

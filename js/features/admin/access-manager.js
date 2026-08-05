@@ -1,12 +1,27 @@
-import { collection, doc, getDoc, getDocs, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getEmailLookupKeys, getNormalizedEmailDisplay } from "../../shared/email.js";
 import { normalizeAllowedApps } from "../../shared/app-access.js";
 
 export class AccessManager {
-    constructor(db) {
+    constructor(db, functionsInstance = null) {
         this.db = db;
+        this.functionsInstance = functionsInstance;
         this.collectionPath = "allowedEmails";
+    }
+
+    async callProtectedFunction(name, data = {}) {
+        if (!this.functionsInstance) {
+            throw new Error('Protected access management is unavailable. Deploy and configure Firebase Functions first.');
+        }
+
+        const result = await httpsCallable(this.functionsInstance, name)(data);
+        return result.data || {};
+    }
+
+    async getCurrentAccess() {
+        const result = await this.callProtectedFunction('getMyAccess');
+        return result.authorized ? result.access || null : null;
     }
 
     async listEmails() {
@@ -42,22 +57,16 @@ export class AccessManager {
 
     async addEmail(email, { allowedApps } = {}) {
         const normalizedAllowedApps = normalizeAllowedApps(allowedApps);
-        const [primaryKey] = getEmailLookupKeys(email);
-        const payload = {
-            addedAt: new Date(),
-            displayEmail: getNormalizedEmailDisplay(email)
-        };
-
-        if (normalizedAllowedApps !== null) {
-            payload.allowedApps = normalizedAllowedApps;
-        }
-
-        await setDoc(doc(this.db, this.collectionPath, primaryKey), payload, { merge: true });
+        await this.callProtectedFunction('adminAddAccess', {
+            email: getNormalizedEmailDisplay(email),
+            allowedApps: normalizedAllowedApps || []
+        });
     }
 
     async removeEmail(email) {
-        const keys = getEmailLookupKeys(email);
-        await Promise.all(keys.map((key) => deleteDoc(doc(this.db, this.collectionPath, key))));
+        await this.callProtectedFunction('adminRemoveAccess', {
+            email: getNormalizedEmailDisplay(email)
+        });
     }
 
     /**
@@ -79,20 +88,18 @@ export class AccessManager {
      * @param roles Array of role keys
      */
     async setRoles(email, roles) {
-        const [primaryKey] = getEmailLookupKeys(email);
-        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
-            roles,
-            displayEmail: getNormalizedEmailDisplay(email)
-        }, { merge: true });
+        await this.callProtectedFunction('adminSetRoles', {
+            email: getNormalizedEmailDisplay(email),
+            roles: Array.isArray(roles) ? roles : []
+        });
     }
 
     async setAllowedApps(email, allowedApps) {
         const normalizedAllowedApps = normalizeAllowedApps(allowedApps) || [];
-        const [primaryKey] = getEmailLookupKeys(email);
-        await setDoc(doc(this.db, this.collectionPath, primaryKey), {
-            allowedApps: normalizedAllowedApps,
-            displayEmail: getNormalizedEmailDisplay(email)
-        }, { merge: true });
+        await this.callProtectedFunction('adminSetAllowedApps', {
+            email: getNormalizedEmailDisplay(email),
+            allowedApps: normalizedAllowedApps
+        });
     }
 
     async isEmailAllowed(email) {
@@ -107,23 +114,14 @@ export class AccessManager {
     }
 
     async syncEmployeeLink(email, employee = null) {
-        const [primaryKey] = getEmailLookupKeys(email);
-        const payload = {
-            displayEmail: getNormalizedEmailDisplay(email)
-        };
-
-        if (employee?.id) {
-            payload.linkedEmployeeId = employee.id;
-            payload.linkedEmployeeName = employee.name || '';
-            payload.linkedEmployeeEmail = getNormalizedEmailDisplay(employee.email || email);
-            payload.linkedEmployeeArchived = Boolean(employee.isArchived);
-        } else {
-            payload.linkedEmployeeId = deleteField();
-            payload.linkedEmployeeName = deleteField();
-            payload.linkedEmployeeEmail = deleteField();
-            payload.linkedEmployeeArchived = deleteField();
-        }
-
-        await setDoc(doc(this.db, this.collectionPath, primaryKey), payload, { merge: true });
+        await this.callProtectedFunction('adminSyncEmployeeLink', {
+            email: getNormalizedEmailDisplay(email),
+            employee: employee?.id ? {
+                id: String(employee.id),
+                name: String(employee.name || ''),
+                email: getNormalizedEmailDisplay(employee.email || email),
+                isArchived: Boolean(employee.isArchived)
+            } : null
+        });
     }
-} 
+}

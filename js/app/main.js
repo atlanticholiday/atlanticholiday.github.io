@@ -1,6 +1,6 @@
-import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, enableIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, clearIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 import { Config } from '../core/config.js';
@@ -58,16 +58,32 @@ let pendingMigrationTimeoutId = null;
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
 
-async function createSecondaryAuthUser(email, password) {
-    const secondaryAppName = `secondary-auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const secondaryApp = initializeApp(Config.firebaseConfig, secondaryAppName);
-    const secondaryAuth = getAuth(secondaryApp);
-
+function clearSensitiveBrowserState() {
     try {
-        await createUserWithEmailAndPassword(secondaryAuth, email, password);
-        await signOut(secondaryAuth).catch(() => {});
-    } finally {
-        await deleteApp(secondaryApp).catch(() => {});
+        const exactSensitiveKeys = new Set([
+            'wp_reservations',
+            'wp_last_sync',
+            'firestore_properties',
+            'inventory:essentialsLists',
+            'inventory:essentialsTemplate',
+            'plenohotel:localRecords',
+            'plenohotel:supplierEmail'
+        ]);
+        const keysToRemove = [];
+        for (let index = 0; index < window.localStorage.length; index += 1) {
+            const key = window.localStorage.key(index);
+            if (key && (
+                exactSensitiveKeys.has(key)
+                || key.toLowerCase().startsWith('reservations')
+                || key.toLowerCase().startsWith('checklists:')
+            )) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+        window.sessionStorage.removeItem('currentProperty');
+    } catch (error) {
+        console.warn('Could not clear sensitive browser state:', error);
     }
 }
 
@@ -111,7 +127,7 @@ async function ensureEmployeeForAccess({ name, email, notes = '' } = {}) {
 }
 
 async function syncEmployeeAccessLinks() {
-    if (!accessManager || !dataManager?.hasPrivilegedRole?.()) {
+    if (!accessManager || !dataManager?.hasAdminRole?.()) {
         return;
     }
 
@@ -151,7 +167,7 @@ function scheduleInitialEmployeeAccessLinkSync() {
     unsubscribePendingAccessLinkSync = null;
 
     const attemptSync = async () => {
-        if (!dataManager.hasPrivilegedRole()) {
+        if (!dataManager.hasAdminRole()) {
             return false;
         }
 
@@ -216,7 +232,7 @@ function syncAccessModeUi() {
             const shouldHide = buttonId === 'go-to-schedule-btn'
                 ? (stationMode || !canAccessWorkSchedule)
                 : buttonId === 'go-to-user-management-btn'
-                ? (!dataManager.hasPrivilegedRole())
+                ? (!dataManager.hasAdminRole())
                 : appOption
                 ? (!dataManager.canAccessApp(appOption.key))
                 : limitedTimeClockMode;
@@ -319,25 +335,22 @@ function routeCurrentUserAccess() {
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        clearSensitiveBrowserState();
         const app = initializeApp(Config.firebaseConfig);
         db = getFirestore(app);
         functionsInstance = getFunctions(app);
-        // Enable offline data persistence to cache Firestore data across page reloads
-        enableIndexedDbPersistence(db).catch(err => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Offline persistence failed - multiple tabs open');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Offline persistence not supported by this browser');
+        await clearIndexedDbPersistence(db).catch((error) => {
+            if (error?.code !== 'failed-precondition' && error?.code !== 'unimplemented') {
+                console.warn('Could not clear the previous Firestore browser cache:', error);
             }
         });
         auth = getAuth(app);
         // Initialize access manager for allowed email checks
-        accessManager = new AccessManager(db);
+        accessManager = new AccessManager(db, functionsInstance);
         window.accessManager = accessManager;
-        roleManager = new RoleManager(db);
+        roleManager = new RoleManager(db, functionsInstance);
         window.roleManager = roleManager;
-        // Persist auth session locally so refreshes use the saved session and avoid extra sign-ins
-        await setPersistence(auth, browserLocalPersistence);
+        await setPersistence(auth, browserSessionPersistence);
 
         // Initialize i18n (internationalization) system
         await i18n.init();
@@ -389,7 +402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         safetyManager = new SafetyManager(db);
 
         // Initialize Welcome Pack Manager (Correctly placed)
-        welcomePackManager = new WelcomePackManager(dataManager);
+        welcomePackManager = new WelcomePackManager(dataManager, {
+            getUpcomingReservations: httpsCallable(functionsInstance, 'getUpcomingGuestReservations')
+        });
         window.welcomePackManager = welcomePackManager;
         airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();
         window.airbnbReservationInvoicesManager = airbnbReservationInvoicesManager;
@@ -448,7 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         window.linenInventoryManager = linenInventoryManager;
         try { linenInventoryManager.ensureDomScaffold?.(); } catch { }
-        // Initialize Checklists manager (localStorage-backed + Firestore sync)
+        // Initialize Checklists manager (memory + protected Firestore sync)
         checklistsManager = new ChecklistsManager(userId); // Reverted to original
         window.checklistsManager = checklistsManager;
         // Provide Firestore DB so it can start syncing once user is set
@@ -534,23 +549,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const userManagementController = new UserManagementController({
             accessManager,
             roleManager,
-            createAuthUser: (email, password) => createSecondaryAuthUser(email, password),
+            createAuthUser: async (email, password) => {
+                const result = await httpsCallable(functionsInstance, 'adminCreateAuthUser')({ email, password });
+                return result.data || {};
+            },
             sendPasswordReset: async (email) => {
-                if (functionsInstance) {
-                    try {
-                        const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
-                        const result = await createPasswordResetLink({ email });
-                        return result.data || {};
-                    } catch (error) {
-                        if (error?.code !== 'functions/not-found' && error?.code !== 'functions/unavailable') {
-                            throw error;
-                        }
-                        console.warn('Password reset link function unavailable; falling back to Firebase email reset.', error);
-                    }
-                }
-
-                await sendPasswordResetEmail(auth, email);
-                return { emailRequested: true };
+                const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
+                const result = await createPasswordResetLink({ email });
+                return result.data || {};
             },
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
             ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload)
@@ -560,27 +566,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Setup authentication listener
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Allow all authenticated Firebase Auth users
-                // If you want to require verified emails, uncomment below:
-                // if (!user.emailVerified) {
-                //     await signOut(auth);
-                //     document.getElementById('login-error').textContent = 'Please verify your email.';
-                //     return;
-                // }
+                let accessEntry = null;
+                try {
+                    accessEntry = await accessManager.getCurrentAccess();
+                } catch (error) {
+                    console.error('Failed to verify current-user access:', error);
+                }
+
+                if (!accessEntry) {
+                    clearSensitiveBrowserState();
+                    dataManager?.clearCurrentUserContext?.();
+                    const loginError = document.getElementById('login-error');
+                    if (loginError) {
+                        loginError.textContent = 'This account is not authorized to access the application.';
+                    }
+                    await signOut(auth).catch((error) => {
+                        console.error('Failed to sign out an unauthorized account:', error);
+                    });
+                    return;
+                }
+
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 timeClockAutoOpenedForUser = false;
-                const accessEntry = user.email
-                    ? await accessManager.getAccessEntry(user.email).catch((error) => {
-                        console.warn('Failed to load access entry for current user:', error);
-                        return null;
-                    })
-                    : null;
                 dataManager.setCurrentUserContext({
                     uid: user.uid,
                     email: user.email,
                     roles: accessEntry?.roles || [],
-                    allowedApps: accessEntry?.allowedApps ?? null,
+                    allowedApps: accessEntry?.allowedApps || [],
                     linkedEmployee: accessEntry?.linkedEmployeeId ? {
                         id: accessEntry.linkedEmployeeId,
                         name: accessEntry.linkedEmployeeName || '',
@@ -660,6 +673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 2000); // Wait 2 seconds for properties to load
             } else {
                 console.log(`🔐 [INITIALIZATION] User logged out`);
+                clearSensitiveBrowserState();
                 userId = null;
                 timeClockAutoOpenedForUser = false;
                 if (pendingMigrationTimeoutId) {

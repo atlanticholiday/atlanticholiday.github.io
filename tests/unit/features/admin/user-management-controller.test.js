@@ -16,16 +16,10 @@ function createFixture() {
     <section data-user-management-main-view="accounts"></section>
     <section data-user-management-main-view="colleagues" hidden></section>
     <button data-user-management-side-view-target="roles">Roles</button>
-    <button data-user-management-side-view-target="test-users">Tests</button>
     <button data-user-management-side-view-target="rollout">Rollout</button>
     <section data-user-management-side-view="roles"></section>
-    <section data-user-management-side-view="test-users" hidden></section>
     <section data-user-management-side-view="rollout" hidden></section>
     <ul id="user-list"></ul>
-    <ul id="test-user-presets"></ul>
-    <strong id="test-user-password"></strong>
-    <button id="create-test-users-btn">Create Test Users</button>
-    <p id="test-user-feedback"></p>
     <ul id="roles-list"></ul>
     <div id="access-link-overview"></div>
     <input id="new-user-email">
@@ -269,76 +263,11 @@ describe("UserManagementController", () => {
     document.getElementById("user-management-menu-toggle-btn").click();
     assert.equal(document.getElementById("user-management-drawer").getAttribute("aria-hidden"), "false");
 
-    document.querySelector('[data-user-management-side-view-target="test-users"]').click();
+    document.querySelector('[data-user-management-side-view-target="rollout"]').click();
 
     assert.equal(document.getElementById("user-management-drawer").getAttribute("aria-hidden"), "false");
     assert.equal(document.querySelector('[data-user-management-side-view="roles"]').hidden, true);
-    assert.equal(document.querySelector('[data-user-management-side-view="test-users"]').hidden, false);
-  });
-
-  test("creates preset test users without linking employee records", async () => {
-    createFixture();
-
-    const createdAuthUsers = [];
-    const addedEmails = [];
-    const assignedRoles = [];
-    const ensuredEmployees = [];
-    const syncEmployeeLinkCalls = [];
-
-    const controller = new UserManagementController({
-      accessManager: {
-        async listEmails() {
-          return addedEmails;
-        },
-        async getRoles(email) {
-          const found = assignedRoles.find((entry) => entry.email === email);
-          return found ? found.roles : [];
-        },
-        async getAllowedApps() {
-          return [];
-        },
-        async setRoles(email, roles) {
-          assignedRoles.push({ email, roles });
-        },
-        async setAllowedApps() {},
-        async removeEmail() {},
-        async addEmail(email) {
-          if (!addedEmails.includes(email)) {
-            addedEmails.push(email);
-          }
-        },
-        async syncEmployeeLink(email, employee) {
-          syncEmployeeLinkCalls.push({ email, employee });
-        }
-      },
-      roleManager: {
-        async listRoles() {
-          return [];
-        },
-        async addRole() {}
-      },
-      createAuthUser: async (email, password) => {
-        createdAuthUsers.push({ email, password });
-      },
-      sendPasswordReset: async () => {},
-      ensureEmployeeForAccess: async (payload) => {
-        ensuredEmployees.push(payload);
-      },
-      windowRef: { alert() {}, confirm() { return true; } }
-    });
-
-    controller.init();
-    await controller.handleCreateTestUsers();
-
-    assert.equal(createdAuthUsers.length, 4);
-    assert.equal(addedEmails.length, 4);
-    assert.equal(assignedRoles.length, 4);
-    assert.equal(ensuredEmployees.length, 0);
-    assert.equal(syncEmployeeLinkCalls.length, 4);
-    assert.ok(syncEmployeeLinkCalls.every((entry) => entry.employee === null));
-    assert.includes(document.getElementById("test-user-feedback").textContent, "Test users ready");
-    assert.includes(document.getElementById("test-user-presets").textContent, "test-admin@horario.test");
-    assert.equal(document.getElementById("test-user-password").textContent, "Test1234!");
+    assert.equal(document.querySelector('[data-user-management-side-view="rollout"]').hidden, false);
   });
 
   test("creates a user, clears the form, and refreshes the full admin list", async () => {
@@ -382,13 +311,13 @@ describe("UserManagementController", () => {
     });
 
     document.getElementById("new-user-email").value = "new@example.com";
-    document.getElementById("new-user-password").value = "secret";
+    document.getElementById("new-user-password").value = "temporary-strong-password";
 
     await controller.handleCreateUser();
 
     assert.equal(createdUsers.length, 1);
     assert.equal(createdUsers[0].email, "new@example.com");
-    assert.equal(createdUsers[0].password, "secret");
+    assert.equal(createdUsers[0].password, "temporary-strong-password");
     assert.equal(document.getElementById("new-user-email").value, "");
     assert.equal(document.getElementById("new-user-password").value, "");
     assert.equal(document.getElementById("create-user-error").textContent, "");
@@ -442,7 +371,7 @@ describe("UserManagementController", () => {
     });
 
     document.getElementById("new-user-email").value = "existing@example.com";
-    document.getElementById("new-user-password").value = "secret";
+    document.getElementById("new-user-password").value = "temporary-strong-password";
 
     await controller.handleCreateUser();
 

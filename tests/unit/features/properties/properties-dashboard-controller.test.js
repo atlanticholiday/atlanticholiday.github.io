@@ -37,7 +37,7 @@ describe("PropertiesDashboardController", () => {
     await windowRef.deleteProperty("p1");
 
     assert.equal(windowRef.location.href, "property-settings.html?propertyId=p1");
-    assert.includes(sessionStorageRef.getItem("currentProperty"), "\"id\":\"p1\"");
+    assert.equal(sessionStorageRef.getItem("currentProperty"), null);
     assert.equal(deletedIds.length, 1);
     assert.equal(deletedIds[0], "p1");
   });

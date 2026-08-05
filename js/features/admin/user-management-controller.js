@@ -12,14 +12,6 @@ const PRESET_ROLES = [
     { key: TIME_CLOCK_STATION_ROLE, title: 'Time Clock Station' }
 ];
 
-const TEST_USER_PASSWORD = 'Test1234!';
-const TEST_USER_PRESETS = [
-    { key: 'admin', title: 'Administrator', email: 'test-admin@horario.test' },
-    { key: 'manager', title: 'Manager', email: 'test-manager@horario.test' },
-    { key: 'supervisor', title: 'Supervisor', email: 'test-supervisor@horario.test' },
-    { key: 'employee', title: 'Employee', email: 'test-employee@horario.test' }
-];
-
 const ROLE_UI_META = Object.freeze({
     admin: {
         tone: 'privileged',
@@ -51,7 +43,9 @@ const ROLE_UI_META = Object.freeze({
 const PRIVILEGED_ROLE_SET = new Set(PRIVILEGED_ROLE_KEYS);
 
 function isEmailAlreadyInUseError(error) {
-    return error?.code === 'auth/email-already-in-use';
+    return error?.code === 'auth/email-already-in-use'
+        || error?.code === 'functions/already-exists'
+        || error?.code === 'already-exists';
 }
 
 export class UserManagementController {
@@ -83,8 +77,6 @@ export class UserManagementController {
         this.setupMainViewNavigation();
         this.setupSideViewNavigation();
         this.setupDrawerControls();
-        this.renderTestUserPresets();
-
         this.document.addEventListener('userManagementPageOpened', () => {
             this.setActiveMainView(this.currentMainView);
             this.setActiveSideView(this.currentSideView);
@@ -114,15 +106,6 @@ export class UserManagementController {
             addRoleButton.addEventListener('click', () => {
                 this.handleAddRole().catch((error) => {
                     this.setText('add-role-error', error.message || 'Failed to add role.');
-                });
-            });
-        }
-
-        const createTestUsersButton = this.document.getElementById('create-test-users-btn');
-        if (createTestUsersButton) {
-            createTestUsersButton.addEventListener('click', () => {
-                this.handleCreateTestUsers().catch((error) => {
-                    this.setText('test-user-feedback', error.message || 'Failed to create test users.');
                 });
             });
         }
@@ -450,23 +433,6 @@ export class UserManagementController {
         `).join('');
     }
 
-    renderTestUserPresets() {
-        const listElement = this.document.getElementById('test-user-presets');
-        if (listElement) {
-            listElement.innerHTML = TEST_USER_PRESETS.map((preset) => `
-                <li class="user-management-test-user-item">
-                    <strong>${this.getRoleDisplayTitle(preset)}</strong>
-                    <span>${preset.email}</span>
-                </li>
-            `).join('');
-        }
-
-        const passwordElement = this.document.getElementById('test-user-password');
-        if (passwordElement) {
-            passwordElement.textContent = TEST_USER_PASSWORD;
-        }
-    }
-
     createUserListItem(user, roles, linkedEmployee = null) {
         const listItem = this.document.createElement('li');
         listItem.className = 'user-management-user-card';
@@ -485,9 +451,6 @@ export class UserManagementController {
         const meta = this.document.createElement('div');
         meta.className = 'user-management-user-meta';
         meta.appendChild(this.createMetaPill(linkedEmployee ? 'Linked colleague' : 'Standalone access', linkedEmployee ? 'neutral' : 'warning'));
-        if (user.email.endsWith('@horario.test')) {
-            meta.appendChild(this.createMetaPill('Test account', 'accent'));
-        }
         if (user.roles.includes(TIME_CLOCK_STATION_ROLE)) {
             meta.appendChild(this.createMetaPill('Shared station', 'info'));
         }
@@ -781,7 +744,7 @@ export class UserManagementController {
     }
 
     renderStaticUserManagementCopy() {
-        this.setText('create-test-users-btn', this.translate('userManagement.testUsers.createButton', 'Create Test Users'));
+        // Static copy is rendered through data-i18n attributes.
     }
 
     createMetaPill(text, tone = 'neutral') {
@@ -862,8 +825,8 @@ export class UserManagementController {
             return;
         }
 
-        if (!password) {
-            this.setText('create-user-error', 'Please enter a password.');
+        if (!password || password.length < 12) {
+            this.setText('create-user-error', 'Use a temporary password with at least 12 characters.');
             return;
         }
 
@@ -910,28 +873,6 @@ export class UserManagementController {
         if (keyInput) keyInput.value = '';
         if (titleInput) titleInput.value = '';
 
-        await this.refreshUserList();
-    }
-
-    async handleCreateTestUsers() {
-        this.setText('test-user-feedback', '');
-
-        for (const preset of TEST_USER_PRESETS) {
-            await this.roleManager.addRole(preset.key, preset.title);
-
-            try {
-                await this.createAuthUser(preset.email, TEST_USER_PASSWORD);
-            } catch (error) {
-                if (!isEmailAlreadyInUseError(error)) {
-                    throw error;
-                }
-            }
-
-            await this.accessManager.addEmail(preset.email);
-            await this.accessManager.setRoles(preset.email, [preset.key]);
-        }
-
-        this.setText('test-user-feedback', `Test users ready. Shared password: ${TEST_USER_PASSWORD}`);
         await this.refreshUserList();
     }
 

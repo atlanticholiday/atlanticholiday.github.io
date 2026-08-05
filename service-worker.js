@@ -1,4 +1,4 @@
-const CACHE_NAME = "horario-pwa-v8";
+const CACHE_NAME = "horario-pwa-v9-security";
 
 const APP_SHELL_URLS = [
   "./",

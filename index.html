@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#ef6b79">
     <meta name="application-name" content="Atlantic Holiday">
     <meta name="apple-mobile-web-app-title" content="Atlantic Holiday">
@@ -13,26 +14,22 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.14/dist/index.global.js" integrity="sha384-dH7TBga7BsOsDta/sdwqwndf7ZtSI0sUEMtRh1ARrSp/DiPLQnyEha5ibQUQ9Tup" crossorigin="anonymous"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- PDF Generation Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
 
     <!-- Tippy.js & Popper.js for Tooltips -->
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
-    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css" />
-    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/tippy.js@6.3.7/dist/tippy.umd.min.js" integrity="sha384-pjtv4LzKGI/lGxchW/wd/upB/HsGOP/Q2iPYyDU8qo2bp4JLbN34hQkdAArvidZX" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/scale.css" integrity="sha384-8N4IYsfQ62z/mL0F4DjUmQ/Zf5ezlpJAEwFWjgA0uLAtYXBZjyTiTARsn1MbBlRQ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/light-border.css" integrity="sha384-oAnSdqFEFRIeYi0SBLHb5HS5ALP/C8FjjBKFAHpjn/9cXWK3iKVrWaxJRz3t9a91" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="styles/main.css">
     <!-- Extra styles for All Info page -->
     <link rel="stylesheet" href="styles/allinfo.css">
     <link rel="stylesheet" href="styles/reservations-enhanced.css">
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles/fullcalendar.css">
 </head>
 
@@ -692,7 +689,7 @@
                                     </div>
                                     <div class="mb-4">
                                         <label for="new-user-password" class="user-management-field-label" data-i18n="userManagement.create.passwordLabel">Temporary password</label>
-                                        <input type="password" id="new-user-password" placeholder="Password"
+                                        <input type="password" id="new-user-password" placeholder="Password" minlength="12" maxlength="128" autocomplete="new-password"
                                             class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm transition-all focus-ring"
                                             data-i18n="userManagement.create.passwordPlaceholder" data-i18n-attr="placeholder">
                                     </div>
@@ -747,34 +744,11 @@
                                 <span class="user-management-menu-button__label" data-i18n="userManagement.nav.roles">Profiles</span>
                                 <span class="user-management-menu-button__meta" data-i18n="userManagement.workspace.menuRolesMeta">Role meaning and setup</span>
                             </button>
-                            <button type="button" class="user-management-menu-button" data-user-management-side-view-target="test-users">
-                                <span class="user-management-menu-button__label" data-i18n="userManagement.nav.testUsers">Test Users</span>
-                                <span class="user-management-menu-button__meta" data-i18n="userManagement.workspace.menuTestUsersMeta">Safe preset logins</span>
-                            </button>
                             <button type="button" class="user-management-menu-button" data-user-management-side-view-target="rollout">
                                 <span class="user-management-menu-button__label" data-i18n="userManagement.nav.rollout">Go Live</span>
                                 <span class="user-management-menu-button__meta" data-i18n="userManagement.workspace.menuRolloutMeta">Tablet rollout checklist</span>
                             </button>
                         </div>
-                    </div>
-                    <div class="user-management-panel user-management-side-view" data-user-management-side-view="test-users" hidden>
-                        <div class="user-management-section-head">
-                            <div>
-                                <p class="user-management-eyebrow" data-i18n="userManagement.testUsers.eyebrow">Presets</p>
-                                <h2 class="text-xl font-semibold text-slate-950" data-i18n="userManagement.testUsers.title">Test Users</h2>
-                            </div>
-                        </div>
-                        <p class="mb-4 text-sm text-slate-600" data-i18n="userManagement.testUsers.description">Create one safe test login for each preset role. These are meant for checking what each access level sees in the app.</p>
-                        <div class="user-management-side-scroll-region">
-                            <ul id="test-user-presets" class="space-y-2 text-sm text-slate-700"></ul>
-                        </div>
-                        <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                            <span data-i18n="userManagement.testUsers.passwordLabel">Shared password:</span> <strong id="test-user-password"></strong>
-                        </div>
-                        <button id="create-test-users-btn" class="btn-primary mt-4 px-6 py-3 rounded-2xl transition-all hover-lift">
-                            Create Test Users
-                        </button>
-                        <p id="test-user-feedback" class="mt-3 text-sm text-gray-600"></p>
                     </div>
                     <div class="user-management-panel user-management-side-view" data-user-management-side-view="rollout" hidden>
                         <div class="user-management-section-head">
@@ -3743,12 +3717,12 @@ Mountain Villa, Sintra Hills, V4"
         }
     </style>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js" integrity="sha384-GwHhSt8QjC7J+v0zZ0Flfho/T76YHEcCL9w4rvjTIUHauh6gWJeBSIi3vWXxNhtA" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.8/dist/jspdf.plugin.autotable.min.js" integrity="sha384-5jk55M0XWoAw7LyhlXJe19ErOr3doBAPzxw9vahPFbvolqWa2yDk4fhHa2zuYeOa" crossorigin="anonymous"></script>
     <!-- Papa Parse for CSV parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.5.4/papaparse.min.js" integrity="sha384-cLjG6lwXwNDhUhTjXK3ohZ0rY1kC099EjtQic90lF92kT8M0+eD45d1inP5youpY" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js" integrity="sha384-n4VL2mHw6ER8HxL4KH/pGa4ZTDkXrXtr5VHKdtXrgvrbP5MrydzsAFLP5kV9h9VY" crossorigin="anonymous"></script>
     <script>
         (() => {
             const isLocalDevHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost';

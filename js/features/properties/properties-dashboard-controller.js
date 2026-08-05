@@ -435,7 +435,6 @@ export class PropertiesDashboardController {
         }
 
         this.sessionStorageRef?.removeItem?.('currentProperty');
-        this.sessionStorageRef?.setItem?.('currentProperty', JSON.stringify({ ...property }));
         this.windowRef.location.href = `property-settings.html?propertyId=${propertyId}${anchor}`;
     }
 }

@@ -9,6 +9,6 @@
     "airbnb:download-reservation-invoices": "node scripts/airbnb/reservation-invoice-downloader.mjs"
   },
   "devDependencies": {
-    "playwright-core": "^1.58.2"
+    "playwright-core": "1.58.2"
   }
 }

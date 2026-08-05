@@ -8,6 +8,15 @@ import {
 } from './welcome-pack-utils.js';
 import { i18n, t } from '../../core/i18n.js';
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
 const PT_WELCOME_PACK_TRANSLATIONS = {
     header: {
         title: 'Welcome Packs',
@@ -451,8 +460,9 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
 };
 
 export class WelcomePackManager {
-    constructor(dataManager) {
+    constructor(dataManager, { getUpcomingReservations = null } = {}) {
         this.dataManager = dataManager;
+        this.getUpcomingReservations = getUpcomingReservations;
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
         this.currentView = 'dashboard'; // dashboard, inventory, log, reservations, presets
         this.cart = [];
@@ -1971,12 +1981,6 @@ export class WelcomePackManager {
 
         const filterDays = this.reservationsDateFilter;
 
-        // Load cached last sync time
-        const lastSync = localStorage.getItem('wp_last_sync');
-        const lastSyncText = lastSync
-            ? this.tr('reservations.upcoming.lastUpdated', { time: this.formatDisplayTime(lastSync) })
-            : '';
-
         container.innerHTML = `
             <!-- Header with Sync Button -->
             <div class="flex justify-between items-center mb-6">
@@ -1985,7 +1989,7 @@ export class WelcomePackManager {
                     <p class="text-sm text-gray-500">${this.tr('reservations.upcoming.summary', { enabled: configuredCount, total: totalCount })}</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span id="wp-last-sync-label" class="text-xs text-gray-400 font-medium">${lastSyncText}</span>
+                    <span id="wp-last-sync-label" class="text-xs text-gray-400 font-medium"></span>
                     <button id="wp-sync-reservations-btn" style="background-color: #ef4444 !important; color: white !important;" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
                         <i class="fas fa-sync-alt"></i> ${this.tr('reservations.upcoming.syncNow')}
                     </button>
@@ -2008,11 +2012,6 @@ export class WelcomePackManager {
                 ? 'bg-red-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="30" style="${filterDays === 30 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
                     ${this.tr('reservations.upcoming.filters.next30')}
-                </button>
-                <button class="wp-date-filter px-4 py-2 rounded-lg font-medium transition-colors ${filterDays === 365
-                ? 'bg-red-500 text-white'
-                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}" data-days="365" style="${filterDays === 365 ? 'background-color: #ef4444 !important; color: white !important;' : ''}">
-                    ${this.tr('reservations.upcoming.filters.viewAll')}
                 </button>
             </div>
 
@@ -2051,24 +2050,8 @@ export class WelcomePackManager {
             };
         });
 
-        // AUTO-SYNC LOGIC
-        // 1. Try to load from cache immediately
-        const cachedData = localStorage.getItem('wp_reservations');
-        if (cachedData) {
-            try {
-                const parsedData = JSON.parse(cachedData);
-                // Render with cached data immediately
-                this.displayReservationsList(parsedData, properties);
-            } catch (e) {
-                console.error('Error parsing cached reservations', e);
-            }
-        } else {
-            // If no cache, standard loading state is already in HTML
-        }
-
-        // 2. Trigger background sync
-        // Pass 'true' for isBackground to avoid showing the loading spinner if cache exists
-        this.syncAndDisplayReservations(!!cachedData);
+        // Guest data is loaded on demand and kept in memory only for this view.
+        this.syncAndDisplayReservations(false);
     }
 
     /**
@@ -2143,13 +2126,13 @@ export class WelcomePackManager {
                         ${properties.filter(p => p.welcomePackEnabled).map(property => `
                             <div class="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-lg">
                                 <div class="flex-1">
-                                    <span class="font-medium text-gray-800">${property.name || property.id}</span>
+                                    <span class="font-medium text-gray-800">${escapeHtml(property.name || property.id)}</span>
                                     <span class="ml-2 text-xs text-green-600">
                                         <i class="fas fa-check-circle"></i> ${this.tr('reservations.settings.enabledBadge')}
                                     </span>
                                 </div>
-                                <button class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                                    onclick="welcomePackManager.toggleWelcomePack('${property.id}', false)">
+                                <button type="button" class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                                    data-wp-property-id="${escapeHtml(property.id)}" data-wp-property-enabled="false">
                                     <i class="fas fa-times mr-1"></i> ${this.tr('reservations.search.disable')}
                                 </button>
                             </div>
@@ -2164,6 +2147,8 @@ export class WelcomePackManager {
                 `}
             </div>
         `;
+
+        this.bindPropertyToggleButtons(container);
 
         // Property search with debounce
         let searchTimeout = null;
@@ -2213,7 +2198,7 @@ export class WelcomePackManager {
                 resultsContainer.innerHTML = `
                     <div class="p-4 text-center text-gray-500">
                         <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
-                        <p>${this.tr('reservations.search.noMatch', { query })}</p>
+                        <p>${escapeHtml(this.tr('reservations.search.noMatch', { query }))}</p>
                     </div>
                 `;
                 return;
@@ -2222,7 +2207,7 @@ export class WelcomePackManager {
             resultsContainer.innerHTML = matches.map(property => `
                 <div class="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
                     <div class="flex-1">
-                        <span class="font-medium text-gray-800">${property.name || property.id}</span>
+                        <span class="font-medium text-gray-800">${escapeHtml(property.name || property.id)}</span>
                         ${property.welcomePackEnabled
                     ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
                                 <i class="fas fa-check-circle"></i> ${this.tr('reservations.search.enabled')}
@@ -2232,18 +2217,18 @@ export class WelcomePackManager {
                               </span>`
                 }
                     </div>
-                    <button class="px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                    <button type="button" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors
                         ${property.welcomePackEnabled
                     ? 'bg-red-100 text-red-700 hover:bg-red-200'
                     : 'bg-green-500 text-white hover:bg-green-600'
-                }"
-                        onclick="welcomePackManager.toggleWelcomePack('${property.id}', ${!property.welcomePackEnabled})">
+                }" data-wp-property-id="${escapeHtml(property.id)}" data-wp-property-enabled="${String(!property.welcomePackEnabled)}">
                         ${property.welcomePackEnabled
                     ? `<i class="fas fa-times mr-1"></i> ${this.tr('reservations.search.disable')}`
                     : `<i class="fas fa-check mr-1"></i> ${this.tr('reservations.search.enable')}`}
                     </button>
                 </div>
             `).join('');
+            this.bindPropertyToggleButtons(resultsContainer);
 
         } catch (error) {
             console.error('[WelcomePack] Error searching properties:', error);
@@ -2269,79 +2254,35 @@ export class WelcomePackManager {
         }
     }
 
+    bindPropertyToggleButtons(container) {
+        container?.querySelectorAll?.('[data-wp-property-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.toggleWelcomePack(
+                    button.dataset.wpPropertyId || '',
+                    button.dataset.wpPropertyEnabled === 'true'
+                );
+            });
+        });
+    }
+
 
     /**
      * Search properties for iCal configuration
      */
     async searchPropertiesForIcal(query) {
+        void query;
         const resultsContainer = document.getElementById('wp-ical-search-results');
         const emptyState = document.getElementById('wp-ical-search-empty');
 
         if (!resultsContainer) return;
-
-        // Show loading
         resultsContainer.classList.remove('hidden');
-        emptyState.classList.add('hidden');
+        emptyState?.classList.add('hidden');
         resultsContainer.innerHTML = `
-            <div class="p-4 text-center text-gray-500">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> ${this.tr('reservations.search.loading')}
+            <div class="p-4 text-center text-amber-700 bg-amber-50">
+                <i class="fas fa-shield-alt mr-2"></i>
+                Browser-side calendar configuration is disabled. Ask an administrator to use the protected backend.
             </div>
         `;
-
-        try {
-            const properties = await this._fetchData('properties');
-            const lowerQuery = query.toLowerCase();
-
-            // Filter properties by name
-            const matches = properties.filter(p =>
-                (p.name && p.name.toLowerCase().includes(lowerQuery)) ||
-                (p.id && p.id.toLowerCase().includes(lowerQuery))
-            ).slice(0, 10); // Limit to 10 results
-
-            if (matches.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="p-4 text-center text-gray-500">
-                        <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
-                        <p>${this.tr('reservations.search.noMatch', { query })}</p>
-                    </div>
-                `;
-                return;
-            }
-
-            resultsContainer.innerHTML = matches.map(property => `
-                <div class="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                    <div class="flex-1">
-                        <span class="font-medium text-gray-800">${property.name || property.id}</span>
-                        ${property.icalUrl
-                    ? `<span class="ml-2 inline-flex items-center gap-1 text-green-600 text-xs">
-                                <i class="fas fa-check-circle"></i> ${this.tr('ical.search.connected')}
-                              </span>`
-                    : `<span class="ml-2 inline-flex items-center gap-1 text-gray-400 text-xs">
-                                <i class="fas fa-times-circle"></i> ${this.tr('ical.search.notConnected')}
-                              </span>`
-                }
-                    </div>
-                    <button class="px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                        ${property.icalUrl
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    : 'bg-[#e94b5a] text-white hover:bg-[#d3414f]'
-                }"
-                        onclick="welcomePackManager.showIcalConfigModal('${property.id}', '${(property.name || '').replace(/'/g, "\\'")}', '${(property.icalUrl || '').replace(/'/g, "\\'")}')">
-                        ${property.icalUrl
-                    ? `<i class="fas fa-edit mr-1"></i> ${this.tr('ical.search.edit')}`
-                    : `<i class="fas fa-plus mr-1"></i> ${this.tr('ical.search.add')}`}
-                    </button>
-                </div>
-            `).join('');
-
-        } catch (error) {
-            console.error('[WelcomePack] Error searching properties:', error);
-            resultsContainer.innerHTML = `
-                <div class="p-4 text-center text-red-500">
-                    <i class="fas fa-exclamation-circle mr-2"></i> ${this.tr('reservations.search.error')}
-                </div>
-            `;
-        }
     }
 
     /**
@@ -2398,20 +2339,19 @@ export class WelcomePackManager {
                 console.warn('[WelcomePack] Could not fetch properties:', e);
             }
 
-            // 2. Fetch Reservations (Google Sheets)
-            const allReservations = [];
-            try {
-                const sheetsReservations = await this.fetchGoogleSheetsReservations();
-                allReservations.push(...sheetsReservations);
-                console.log(`[WelcomePack] Fetched ${sheetsReservations.length} reservations from Google Sheets`);
-            } catch (error) {
-                console.error('[WelcomePack] Error fetching from Google Sheets:', error);
+            // 2. Fetch the minimum reservation fields through the protected backend.
+            if (typeof this.getUpcomingReservations !== 'function') {
+                throw new Error('The protected reservation service is unavailable.');
             }
+            const result = await this.getUpcomingReservations({
+                days: Math.min(31, Math.max(1, Number(this.reservationsDateFilter) || 7))
+            });
+            const allReservations = Array.isArray(result?.data?.reservations)
+                ? result.data.reservations
+                : [];
 
-            // 3. Cache Data & Timestamp
-            localStorage.setItem('wp_reservations', JSON.stringify(allReservations));
+            // 3. Update the in-memory view only. Guest data is never written to browser storage.
             const now = new Date();
-            localStorage.setItem('wp_last_sync', now.toISOString());
 
             // 4. Update UI
             if (lastSyncLabel) {
@@ -2429,7 +2369,7 @@ export class WelcomePackManager {
                     <div class="text-center py-12 text-red-500">
                         <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
                         <p class="text-lg font-medium">${this.tr('reservations.upcoming.syncErrorTitle')}</p>
-                        <p class="text-sm">${error.message}</p>
+                        <p class="text-sm">The protected reservation service could not be reached.</p>
                     </div>
                 `;
             }
@@ -2534,6 +2474,11 @@ export class WelcomePackManager {
             const isToday = checkInDate.toISOString().split('T')[0] === todayStr;
             const isTomorrow = checkInDate.toISOString().split('T')[0] === new Date(today.getTime() + 86400000).toISOString().split('T')[0];
             const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+            const propertyName = String(reservation.propertyName || '');
+            const guestName = String(reservation.guestName || '');
+            const summary = String(reservation.summary || '');
+            const portal = String(reservation.portal || '');
+            const portalKey = portal.toLowerCase();
 
             html += `
             <div class="bg-white border ${isToday ? 'border-green-300 bg-green-50' : 'border-gray-200'} rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -2542,7 +2487,7 @@ export class WelcomePackManager {
                         <div class="flex items-center gap-2 mb-1">
                             ${isToday ? `<span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">${this.tr('reservations.upcoming.badges.today')}</span>` : ''}
                             ${isTomorrow ? `<span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">${this.tr('reservations.upcoming.badges.tomorrow')}</span>` : ''}
-                            <span class="font-medium text-gray-800">${reservation.propertyName}</span>
+                            <span class="font-medium text-gray-800">${escapeHtml(propertyName)}</span>
                         </div>
                         <div class="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
                             <div>
@@ -2562,23 +2507,23 @@ export class WelcomePackManager {
                         </div>
                         <div class="flex items-center gap-3 text-xs text-gray-500">
                             <span class="bg-gray-100 px-2 py-1 rounded">${this.pluralize('reservations.upcoming.nights', nights)}</span>
-                            ${reservation.guestName
-                    ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${reservation.guestName}</span>`
-                    : (reservation.summary && reservation.summary !== 'UNAVAILABLE')
-                        ? `<span><i class="fas fa-user mr-1"></i>${reservation.summary}</span>`
+                            ${guestName
+                    ? `<span class="font-medium text-gray-700"><i class="fas fa-user mr-1"></i>${escapeHtml(guestName)}</span>`
+                    : (summary && summary !== 'UNAVAILABLE')
+                        ? `<span><i class="fas fa-user mr-1"></i>${escapeHtml(summary)}</span>`
                         : `<span class="text-gray-400"><i class="fas fa-lock mr-1"></i>${this.tr('reservations.upcoming.blockedReserved')}</span>`
                 }
-                            ${reservation.portal
-                    ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${reservation.portal.toLowerCase().includes('airbnb') ? 'bg-red-100 text-red-700' :
-                        reservation.portal.toLowerCase().includes('booking') ? 'bg-blue-100 text-blue-700' :
+                            ${portal
+                    ? `<span class="px-2 py-0.5 rounded text-xs font-medium ${portalKey.includes('airbnb') ? 'bg-red-100 text-red-700' :
+                        portalKey.includes('booking') ? 'bg-blue-100 text-blue-700' :
                             'bg-gray-100 text-gray-600'
-                    }">${reservation.portal}</span>`
+                    }">${escapeHtml(portal)}</span>`
                     : ''
                 }
                         </div>
 
                     </div>
-                    <button onclick="welcomePackManager.logPackForReservation('${reservation.propertyName.replace(/'/g, "\\'")}')"
+                    <button type="button" data-wp-reservation-property="${escapeHtml(propertyName)}"
                             class="px-3 py-2 bg-[#e94b5a] text-white text-sm rounded-lg hover:bg-[#d3414f] transition-colors flex items-center gap-1 ml-4">
                     <i class="fas fa-gift"></i> ${this.tr('reservations.upcoming.assignPack')}
                 </button>
@@ -2589,32 +2534,20 @@ export class WelcomePackManager {
 
         html += '</div>';
         listContainer.innerHTML = html;
+        listContainer.querySelectorAll('[data-wp-reservation-property]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.logPackForReservation(button.dataset.wpReservationProperty || '');
+            });
+        });
     }
 
     /**
      * Fetch and parse iCal data from a URL
      */
     async fetchAndParseIcal(icalUrl, propertyName) {
-        // Use CORS proxy for cross-origin requests
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(icalUrl)}`;
-
-        let response;
-        try {
-            // Try direct fetch first
-            response = await fetch(icalUrl);
-            if (!response.ok) throw new Error('Direct fetch failed');
-        } catch (e) {
-            // Fall back to CORS proxy
-            console.log(`[WelcomePack] Using CORS proxy for ${propertyName}`);
-            response = await fetch(proxyUrl);
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch calendar: ${response.status}`);
-        }
-
-        const icalText = await response.text();
-        return this.parseIcalData(icalText, propertyName);
+        void icalUrl;
+        void propertyName;
+        throw new Error('Browser-side iCal access is disabled. Calendar feeds must be fetched by a protected backend.');
     }
 
     /**
@@ -2670,22 +2603,7 @@ export class WelcomePackManager {
      * The script automatically aggregates all sheets and returns JSON
      */
     async fetchGoogleSheetsReservations() {
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvIkBDhwZ3MxOW8aQUlD5qx3UV9l8wS-dMg8PcixJIrJ7-eXAid6vo6stchkBNfGpA/exec';
-
-        try {
-            const response = await fetch(APPS_SCRIPT_URL);
-
-            if (!response.ok) {
-                throw new Error(`Script returned status: ${response.status}`);
-            }
-
-            const reservations = await response.json();
-            return reservations;
-
-        } catch (error) {
-            console.error('[WelcomePack] Error fetching from Apps Script:', error);
-            return [];
-        }
+        throw new Error('Public reservation feeds are disabled. Use the protected reservation service.');
     }
 
 
@@ -2707,99 +2625,10 @@ export class WelcomePackManager {
      * Show modal to configure iCal URL for a property
      */
     showIcalConfigModal(propertyId, propertyName, currentUrl) {
-        const modalHtml = `
-            <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center" id="wp-ical-config-modal">
-                <div class="relative p-5 border w-[500px] shadow-lg rounded-xl bg-white">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">${this.tr('ical.modal.title')}</h3>
-                    <p class="text-sm text-gray-600 mb-4">${this.tr('ical.modal.property', { property: propertyName || propertyId })}</p>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">${this.tr('ical.modal.urlLabel')}</label>
-                            <input type="url" id="wp-ical-url-input" value="${currentUrl}" 
-                                placeholder="${this.tr('ical.modal.urlPlaceholder')}" 
-                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <p class="text-xs text-gray-500 mt-1">
-                                ${this.tr('ical.modal.urlHelp')}
-                            </p>
-                        </div>
-                        
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>${this.tr('ical.modal.howToFind')}</p>
-                            <ul class="text-xs text-blue-700 mt-2 space-y-1 ml-4">
-                                <li>${this.tr('ical.modal.providers.airbnb')}</li>
-                                <li>${this.tr('ical.modal.providers.booking')}</li>
-                                <li>${this.tr('ical.modal.providers.vrbo')}</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="flex justify-end gap-2">
-                            <button id="wp-ical-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">${this.tr('actions.cancel')}</button>
-                            <button id="wp-ical-test-btn" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">${this.tr('ical.modal.test')}</button>
-                            <button id="wp-ical-save-btn" class="px-4 py-2 bg-[#e94b5a] text-white rounded hover:bg-[#d3414f]">${this.tr('ical.modal.save')}</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        document.getElementById('wp-ical-cancel-btn').onclick = () => {
-            document.getElementById('wp-ical-config-modal').remove();
-        };
-
-        document.getElementById('wp-ical-test-btn').onclick = async () => {
-            const url = document.getElementById('wp-ical-url-input').value.trim();
-            if (!url) {
-                alert(this.tr('ical.messages.enterUrl'));
-                return;
-            }
-
-            const btn = document.getElementById('wp-ical-test-btn');
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${this.tr('ical.modal.testing')}`;
-            btn.disabled = true;
-
-            try {
-                // Try to fetch the URL
-                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-                const text = await response.text();
-
-                if (text.includes('BEGIN:VCALENDAR')) {
-                    alert(this.tr('ical.messages.valid'));
-                } else {
-                    alert(this.tr('ical.messages.invalid'));
-                }
-            } catch (error) {
-                alert(this.tr('ical.messages.fetchFailed'));
-            } finally {
-                btn.innerHTML = this.tr('ical.modal.test');
-                btn.disabled = false;
-            }
-        };
-
-        document.getElementById('wp-ical-save-btn').onclick = async () => {
-            const url = document.getElementById('wp-ical-url-input').value.trim();
-
-            try {
-                // Save iCal URL to property (you'll need to add this method to DataManager)
-                if (this.dataManager.updatePropertyIcalUrl) {
-                    await this.dataManager.updatePropertyIcalUrl(propertyId, url);
-                } else {
-                    // Fallback: store in a separate collection
-                    console.warn('[WelcomePack] updatePropertyIcalUrl not available, storing separately');
-                    // For now, just close and show message
-                    alert(this.tr('ical.messages.savedFallback'));
-                }
-
-                this._invalidateCache('properties');
-                document.getElementById('wp-ical-config-modal').remove();
-                this.render();
-            } catch (error) {
-                console.error('[WelcomePack] Error saving iCal URL:', error);
-                alert(this.tr('ical.messages.saveFailed'));
-            }
-        };
+        void propertyId;
+        void propertyName;
+        void currentUrl;
+        alert('Browser-side calendar configuration is disabled. Ask an administrator to configure the protected backend feed.');
     }
 
 

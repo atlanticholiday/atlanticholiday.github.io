@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function accessPath() {
+      return /databases/(default)/documents/userAccess/$(request.auth.uid);
+    }
+
+    function approved() {
+      return signedIn()
+        && firestore.exists(accessPath())
+        && firestore.get(accessPath()).data.active == true;
+    }
+
+    function accessData() {
+      return firestore.get(accessPath()).data;
+    }
+
+    function hasRole(role) {
+      return approved()
+        && accessData().roles is list
+        && role in accessData().roles;
+    }
+
+    function privileged() {
+      return hasRole('admin') || hasRole('manager') || hasRole('supervisor');
+    }
+
+    function hasInventoryAccess() {
+      return approved()
+        && accessData().allowedApps is list
+        && 'inventory' in accessData().allowedApps;
+    }
+
+    function allowedAttachmentType() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType == 'application/pdf'
+        || request.resource.contentType == 'text/csv'
+        || request.resource.contentType == 'application/vnd.ms-excel'
+        || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+
+    match /plenohotel/{recordId}/{attachmentType}/{fileName} {
+      allow read: if privileged() || hasInventoryAccess();
+      allow create, update: if (privileged() || hasInventoryAccess())
+        && request.resource.size < 10 * 1024 * 1024
+        && allowedAttachmentType();
+      allow delete: if privileged() || hasInventoryAccess();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

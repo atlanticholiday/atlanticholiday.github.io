@@ -6,6 +6,13 @@
 
 # Firebase configuration files (if auto-generated)
 firebase-config.js
+firebase-adminsdk-*.json
+*service-account*.json
+*serviceAccount*.json
+credentials/
+secrets/
+*.pem
+*.key
 
 # Node modules (if using npm/yarn)
 node_modules/

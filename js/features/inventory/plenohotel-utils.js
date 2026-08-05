@@ -268,15 +268,15 @@ export function mergePlenoHotelRecords(left = {}, right = {}) {
         ...(Array.isArray(left.quoteLinks) ? left.quoteLinks : []),
         ...(Array.isArray(right.quoteLinks) ? right.quoteLinks : [])
     ].filter((link, index, links) => {
-        const url = normalizeLabel(link?.url);
-        return url && links.findIndex((entry) => normalizeLabel(entry?.url) === url) === index;
+        const key = normalizeLabel(link?.storagePath || link?.url);
+        return key && links.findIndex((entry) => normalizeLabel(entry?.storagePath || entry?.url) === key) === index;
     });
     merged.invoiceLinks = [
         ...(Array.isArray(left.invoiceLinks) ? left.invoiceLinks : []),
         ...(Array.isArray(right.invoiceLinks) ? right.invoiceLinks : [])
     ].filter((link, index, links) => {
-        const url = normalizeLabel(link?.url);
-        return url && links.findIndex((entry) => normalizeLabel(entry?.url) === url) === index;
+        const key = normalizeLabel(link?.storagePath || link?.url);
+        return key && links.findIndex((entry) => normalizeLabel(entry?.storagePath || entry?.url) === key) === index;
     });
     return normalizePlenoHotelRecord(merged);
 }

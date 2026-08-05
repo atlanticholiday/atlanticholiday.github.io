@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -12,7 +14,6 @@ const DEFAULT_BROWSER_CANDIDATES = [
   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
 ].filter(Boolean);
 
-const DEFAULT_PROFILE_DIR = path.resolve(".airbnb-playwright");
 const DEFAULT_DOWNLOADS_DIR = path.resolve(process.env.USERPROFILE || process.env.HOME || ".", "Downloads", "airbnb-reservation-invoices");
 const DEFAULT_START_URL = "https://www.airbnb.pt/hosting/reservations/completed";
 const DEFAULT_CONCURRENCY = 10;
@@ -31,15 +32,15 @@ Usage:
   npm run airbnb:download-reservation-invoices -- --limit 5
 
 Workflow:
-  1. The browser opens with your saved Airbnb profile.
-  2. You log in if needed.
+  1. The browser opens with a temporary Airbnb profile.
+  2. You log in.
   3. You manually open Completed Reservations and apply the exact filters/date range you want.
   4. You press Enter in the terminal.
   5. The script reads Airbnb's reservations API for the currently prepared list.
   6. It extracts each host VAT invoice URL and saves the invoice page to PDF directly.
 
 Options:
-  --profile-dir PATH
+  --profile-dir PATH (explicitly retain a reusable session; higher risk)
   --downloads-dir PATH
   --browser-path PATH
   --start-url URL
@@ -55,6 +56,9 @@ Options:
 
 Notes:
   - --headless only makes sense with --skip-login-prompt.
+  - By default, the browser profile is temporary and removed after each run.
+  - A persistent profile contains reusable Airbnb session credentials. Only opt in
+    with --profile-dir on an encrypted, access-controlled workstation.
   - The exporter uses the exact reservations API request visible on the prepared page,
     then replays it with the same logged-in browser session.
   - Invoice exports run with 10 parallel browser workers by default.
@@ -71,7 +75,7 @@ function expectValue(flag, value) {
 
 function parseArgs(argv) {
   const options = {
-    profileDir: DEFAULT_PROFILE_DIR,
+    profileDir: null,
     downloadsDir: DEFAULT_DOWNLOADS_DIR,
     browserPath: "",
     startUrl: DEFAULT_START_URL,
@@ -161,6 +165,10 @@ function parseArgs(argv) {
     throw new Error("--headless requires --skip-login-prompt because the live preparation step needs a visible browser.");
   }
 
+  if ((options.headless || options.skipLoginPrompt) && !options.profileDir) {
+    throw new Error("--headless and --skip-login-prompt require an explicit --profile-dir. Temporary profiles require an interactive login.");
+  }
+
   return options;
 }
 
@@ -183,6 +191,28 @@ function resolveBrowserPath(preferredPath) {
 
 async function ensureDirectory(directoryPath) {
   await fs.promises.mkdir(directoryPath, { recursive: true });
+}
+
+async function prepareBrowserProfile(explicitProfileDir) {
+  if (explicitProfileDir) {
+    await ensureDirectory(explicitProfileDir);
+    logStep("SECURITY WARNING: using a persistent Airbnb browser profile. Treat this directory as a live credential.");
+    return { profileDir: explicitProfileDir, cleanup: async () => {} };
+  }
+
+  const temporaryRoot = path.resolve(os.tmpdir());
+  const profileDir = await fs.promises.mkdtemp(path.join(temporaryRoot, "horario-airbnb-"));
+  return {
+    profileDir,
+    cleanup: async () => {
+      const resolved = path.resolve(profileDir);
+      const expectedPrefix = `${temporaryRoot}${path.sep}`;
+      if (!resolved.startsWith(expectedPrefix) || !path.basename(resolved).startsWith("horario-airbnb-")) {
+        throw new Error(`Refusing to remove unexpected browser profile path: ${resolved}`);
+      }
+      await fs.promises.rm(resolved, { recursive: true, force: true });
+    }
+  };
 }
 
 async function promptForEnter(message) {
@@ -208,20 +238,6 @@ async function pauseBeforeClose(message, options) {
   }
 
   await promptForEnter(message);
-}
-
-function normalizeFileName(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/\p{M}+/gu, "")
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase();
-}
-
-function buildRequestId() {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
 function toAbsoluteAirbnbUrl(value) {
@@ -254,22 +270,9 @@ function findExistingInvoice(downloadsDir, item) {
 }
 
 function buildInvoiceFilePath(downloadsDir, item) {
-  const parts = [item.code || "reservation", "vat-invoice"];
-  if (item.invoiceNumber) {
-    parts.push(normalizeFileName(item.invoiceNumber));
-  } else if (item.invoicePath) {
-    const invoiceSlug = String(item.invoicePath).split("/").filter(Boolean).at(-1);
-    if (invoiceSlug) {
-      parts.push(normalizeFileName(invoiceSlug));
-    }
-  }
-  return path.join(downloadsDir, `${parts.join("__")}.pdf`);
-}
-
-async function saveDebugScreenshot(page, downloadsDir, label) {
-  const filePath = path.join(downloadsDir, `debug-${normalizeFileName(label)}-${Date.now()}.png`);
-  await page.screenshot({ path: filePath, fullPage: true }).catch(() => null);
-  return filePath;
+  const privateReference = String(item.invoicePath || item.invoiceUrl || "invoice");
+  const opaqueId = createHash("sha256").update(privateReference).digest("hex").slice(0, 16);
+  return path.join(downloadsDir, `vat-invoice__${opaqueId}.pdf`);
 }
 
 async function smartClickByText(page, labels, options = {}) {
@@ -476,19 +479,8 @@ function normalizeReservationCandidates(payload) {
       }
 
       candidates.push({
-        code: reservation.confirmation_code || null,
-        invoiceNumber: invoice.invoice_number || null,
         invoicePath: invoice.invoice_url,
-        invoiceUrl: toAbsoluteAirbnbUrl(invoice.invoice_url),
-        reservationUrl: reservation.confirmation_code
-          ? `https://www.airbnb.pt/hosting/reservations/details/${reservation.confirmation_code}`
-          : null,
-        guestName: reservation.guest_user?.full_name || reservation.guest_user?.first_name || "",
-        listingName: reservation.listing_name || "",
-        bookedDate: reservation.booked_date || "",
-        startDate: reservation.start_date || "",
-        endDate: reservation.end_date || "",
-        earnings: reservation.earnings || ""
+        invoiceUrl: toAbsoluteAirbnbUrl(invoice.invoice_url)
       });
     }
   }
@@ -522,7 +514,7 @@ async function collectInvoiceCandidates(page, runtimeConfig, options) {
     }
 
     for (const item of pageResult.candidates) {
-      const key = `${item.code || "unknown"}::${item.invoiceNumber || item.invoiceUrl}`;
+      const key = item.invoiceUrl;
       if (seenKeys.has(key)) {
         continue;
       }
@@ -637,18 +629,10 @@ async function exportInvoices(browserPath, options, runtimeConfig) {
       throw new Error("No VAT invoice URLs were found for the prepared reservations list.");
     }
 
-    logStep(
-      `Found ${candidates.length} invoice candidate(s): ${candidates
-        .map((item) => item.code || item.invoiceNumber || item.invoiceUrl)
-        .join(" | ")}`
-    );
+    logStep(`Found ${candidates.length} invoice candidate(s). Guest and reservation identifiers are suppressed.`);
 
     if (options.dryRun) {
-      for (const item of candidates) {
-        console.log(
-          `- ${item.code || "unknown"} | ${item.invoiceNumber || "no-invoice-number"} | ${item.invoiceUrl}`
-        );
-      }
+      logStep("Dry run complete; no guest or reservation identifiers were printed.");
       return;
     }
 
@@ -694,15 +678,8 @@ async function exportInvoices(browserPath, options, runtimeConfig) {
               completedCount += 1;
               logStep(`Downloaded ${completedCount} / ${pendingItems.length}`);
             } catch (error) {
-              const screenshotPath = await saveDebugScreenshot(
-                workerPage,
-                options.downloadsDir,
-                `invoice-failed-${workerLabel}-${item.code || item.invoiceNumber || "unknown"}`
-              );
               throw new Error(
-                `Failed to export invoice ${item.invoiceNumber || item.invoiceUrl} for ${item.code || "unknown"}. ${
-                  error instanceof Error ? error.message : error
-                } Debug screenshot: ${screenshotPath}`
+                `Failed to export an invoice in ${workerLabel}. Sensitive URL and reservation identifiers were suppressed.`
               );
             }
           }
@@ -723,33 +700,40 @@ async function run() {
     return;
   }
 
-  await ensureDirectory(options.profileDir);
   await ensureDirectory(options.downloadsDir);
 
   const browserPath = resolveBrowserPath(options.browserPath);
   logStep(`Using browser: ${browserPath}`);
+  const browserProfile = await prepareBrowserProfile(options.profileDir);
+  options.profileDir = browserProfile.profileDir;
 
-  const runtimeConfig = options.skipLoginPrompt
-    ? {
-        pageUrl: options.startUrl,
-        reservationsApiUrl: null,
-        apiKey: null
+  try {
+    const runtimeConfig = options.skipLoginPrompt
+      ? {
+          pageUrl: options.startUrl,
+          reservationsApiUrl: null,
+          apiKey: null
+        }
+      : await captureRuntimeConfigInteractively(browserPath, options);
+
+    if (options.skipLoginPrompt) {
+      const context = await createContext(options.profileDir, browserPath, true);
+      try {
+        const page = context.pages()[0] || (await context.newPage());
+        await page.goto(options.startUrl, { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(DEFAULT_PAGE_WAIT_MS);
+        Object.assign(runtimeConfig, await extractRuntimeConfig(page));
+      } finally {
+        await context.close().catch(() => {});
       }
-    : await captureRuntimeConfigInteractively(browserPath, options);
-
-  if (options.skipLoginPrompt) {
-    const context = await createContext(options.profileDir, browserPath, true);
-    try {
-      const page = context.pages()[0] || (await context.newPage());
-      await page.goto(options.startUrl, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(DEFAULT_PAGE_WAIT_MS);
-      Object.assign(runtimeConfig, await extractRuntimeConfig(page));
-    } finally {
-      await context.close().catch(() => {});
     }
-  }
 
-  await exportInvoices(browserPath, options, runtimeConfig);
+    await exportInvoices(browserPath, options, runtimeConfig);
+  } finally {
+    await browserProfile.cleanup().catch((error) => {
+      console.warn(`Could not remove the temporary Airbnb browser profile: ${error.message}`);
+    });
+  }
 }
 
 run().catch((error) => {

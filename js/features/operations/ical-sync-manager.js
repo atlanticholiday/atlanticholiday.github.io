@@ -113,24 +113,8 @@ export class ICalSyncManager {
      * Note: Direct fetching from client-side may fail due to CORS
      */
     async fetchICalFromUrl(url) {
-        try {
-            // Try direct fetch first
-            let response = await fetch(url);
-
-            if (!response.ok) {
-                // Try with CORS proxy
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-                response = await fetch(proxyUrl);
-            }
-
-            if (response.ok) {
-                return await response.text();
-            }
-        } catch (error) {
-            console.error('[ICalSync] Failed to fetch iCal:', error);
-        }
-
-        return null;
+        void url;
+        throw new Error('Browser-side iCal access is disabled. Fetch calendar data through a protected backend.');
     }
 
     /**

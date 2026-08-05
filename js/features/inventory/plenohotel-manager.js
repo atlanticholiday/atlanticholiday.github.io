@@ -7,7 +7,7 @@
     setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import {
-    getDownloadURL,
+    getBlob,
     ref as storageRef,
     uploadBytes
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
@@ -354,7 +354,19 @@ function linesToLinks(value) {
 }
 
 function linksToLines(links) {
-    return Array.isArray(links) ? links.map((link) => link.url || link.label || "").filter(Boolean).join("\n") : "";
+    return Array.isArray(links)
+        ? links.filter((link) => !link?.storagePath).map((link) => link.url || "").filter(Boolean).join("\n")
+        : "";
+}
+
+function getSecureStorageLinks(links) {
+    return Array.isArray(links)
+        ? links.filter((link) => link?.storagePath).map((link) => ({
+            label: String(link.label || 'Attachment'),
+            storagePath: String(link.storagePath),
+            uploadedAt: link.uploadedAt || null
+        }))
+        : [];
 }
 
 function bedSizesToText(bedSizes) {
@@ -372,7 +384,7 @@ export class PlenoHotelManager {
         this.selectedId = null;
         this.statusMessage = "";
         this.statusTone = "info";
-        this.supplierEmail = localStorage.getItem("plenohotel:supplierEmail") || "";
+        this.supplierEmail = "";
         this.emailComposerOpen = false;
         this.localStorageKey = "plenohotel:localRecords";
     }
@@ -438,6 +450,7 @@ export class PlenoHotelManager {
                 id: entry.id,
                 ...entry.data()
             }));
+            this.scrubPersistedStorageTokens(snapshot.docs);
             if (!this.selectedId && this.records.length) {
                 this.selectedId = filterPlenoHotelRecords(this.records, {
                     query: this.query,
@@ -448,6 +461,33 @@ export class PlenoHotelManager {
         }, (error) => {
             console.error("[PlenoHotel] listener failed:", error);
             this.setStatus(this.tr("messages", "loadFailed"), "danger");
+        });
+    }
+
+    scrubPersistedStorageTokens(documents) {
+        documents.forEach((documentSnapshot) => {
+            const data = documentSnapshot.data() || {};
+            const hasPersistedToken = ['quoteLinks', 'invoiceLinks'].some((field) => {
+                return Array.isArray(data[field]) && data[field].some((link) => link?.storagePath && link?.url);
+            });
+            if (!hasPersistedToken) return;
+
+            const sanitizeLinks = (links) => (Array.isArray(links) ? links.map((link) => {
+                if (!link?.storagePath) return link;
+                return {
+                    label: String(link.label || 'Attachment'),
+                    storagePath: String(link.storagePath),
+                    uploadedAt: link.uploadedAt || null
+                };
+            }) : []);
+
+            setDoc(documentSnapshot.ref, {
+                quoteLinks: sanitizeLinks(data.quoteLinks),
+                invoiceLinks: sanitizeLinks(data.invoiceLinks),
+                updatedAt: serverTimestamp()
+            }, { merge: true }).catch((error) => {
+                console.warn('[PlenoHotel] Failed to remove a persisted Storage download URL:', error);
+            });
         });
     }
 
@@ -482,7 +522,8 @@ export class PlenoHotelManager {
         });
 
         this.root.addEventListener("click", (event) => {
-            const action = event.target.closest("[data-plenohotel-action]")?.dataset.plenohotelAction;
+            const actionTarget = event.target.closest("[data-plenohotel-action]");
+            const action = actionTarget?.dataset.plenohotelAction;
             const rowId = event.target.closest("[data-record-id]")?.dataset.recordId;
             if (!action && rowId) {
                 this.selectedId = rowId;
@@ -500,6 +541,12 @@ export class PlenoHotelManager {
             if (action === "generate-email") this.generateEmail();
             if (action === "copy-email") this.copyEmail();
             if (action === "open-email") this.openEmail();
+            if (action === "download-attachment") {
+                this.downloadAttachment(
+                    actionTarget.dataset.storagePath || "",
+                    actionTarget.dataset.attachmentLabel || "attachment"
+                );
+            }
         });
     }
 
@@ -537,24 +584,13 @@ export class PlenoHotelManager {
     }
 
     loadLocalRecords() {
-        try {
-            const parsed = JSON.parse(localStorage.getItem(this.localStorageKey) || "[]");
-            this.records = Array.isArray(parsed) ? parsed.map(normalizePlenoHotelRecord) : [];
-            this.selectedId = this.records[0]?.id || null;
-        } catch (error) {
-            console.warn("[PlenoHotel] local records failed to load:", error);
-            this.records = [];
-            this.selectedId = null;
-        }
+        localStorage.removeItem(this.localStorageKey);
+        this.records = [];
+        this.selectedId = null;
     }
 
     saveLocalRecords() {
-        try {
-            const saved = this.records.filter((record) => !record.id?.startsWith("new-"));
-            localStorage.setItem(this.localStorageKey, JSON.stringify(saved));
-        } catch (error) {
-            console.warn("[PlenoHotel] local records failed to save:", error);
-        }
+        localStorage.removeItem(this.localStorageKey);
     }
 
     async upsertRecord(record) {
@@ -615,8 +651,14 @@ export class PlenoHotelManager {
             commissionAmount,
             ownerChargeTotal: get("ownerChargeTotal") ? parseMoney(get("ownerChargeTotal")) : subtotal + commissionAmount,
             bedSizes: parseBedSizes(get("bedSizes").split(/\n+/)),
-            quoteLinks: linesToLinks(get("quoteLinks")),
-            invoiceLinks: linesToLinks(get("invoiceLinks"))
+            quoteLinks: [
+                ...getSecureStorageLinks(current.quoteLinks),
+                ...linesToLinks(get("quoteLinks"))
+            ],
+            invoiceLinks: [
+                ...getSecureStorageLinks(current.invoiceLinks),
+                ...linesToLinks(get("invoiceLinks"))
+            ]
         });
     }
 
@@ -628,7 +670,6 @@ export class PlenoHotelManager {
                 return;
             }
             this.supplierEmail = record.supplierEmail || "";
-            localStorage.setItem("plenohotel:supplierEmail", this.supplierEmail);
             if (this.db) {
                 await this.upsertRecord(record);
             } else {
@@ -742,10 +783,8 @@ export class PlenoHotelManager {
             await uploadBytes(fileRef, file, {
                 contentType: file.type || "application/octet-stream"
             });
-            const url = await getDownloadURL(fileRef);
             const link = {
                 label: file.name,
-                url,
                 storagePath: path,
                 uploadedAt: new Date().toISOString()
             };
@@ -760,6 +799,26 @@ export class PlenoHotelManager {
         } catch (error) {
             console.error("[PlenoHotel] attachment upload failed:", error);
             this.setStatus(this.tr("messages", "uploadFailed"), "danger");
+        }
+    }
+
+    async downloadAttachment(path, label) {
+        if (!this.storage || !path) return;
+
+        try {
+            const blob = await getBlob(storageRef(this.storage, path));
+            const objectUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = objectUrl;
+            anchor.download = String(label || 'attachment').replace(/[^a-zA-Z0-9._-]+/g, '-');
+            anchor.rel = 'noopener';
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        } catch (error) {
+            console.error('[PlenoHotel] Secure attachment download failed:', error);
+            this.setStatus(this.tr('messages', 'loadFailed'), 'danger');
         }
     }
 
@@ -1201,6 +1260,20 @@ export class PlenoHotelManager {
         `;
     }
 
+    renderSecureAttachmentButtons(links) {
+        const secureLinks = getSecureStorageLinks(links);
+        if (!secureLinks.length) return '';
+
+        return `<div class="mt-2 flex flex-wrap gap-2">${secureLinks.map((link) => `
+            <button type="button" data-plenohotel-action="download-attachment"
+                data-storage-path="${escapeHtml(link.storagePath)}"
+                data-attachment-label="${escapeHtml(link.label)}"
+                class="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200">
+                <i class="fas fa-download mr-1"></i>${escapeHtml(link.label)}
+            </button>
+        `).join('')}</div>`;
+    }
+
     renderAttachmentFields(record) {
         return `
             <section class="space-y-3">
@@ -1212,6 +1285,7 @@ export class PlenoHotelManager {
                             <i class="fas fa-paperclip mr-2"></i>${this.tr("ui", "uploadQuotation")}
                             <input id="plenohotel-quote-upload" type="file" class="sr-only">
                         </span>
+                        ${this.renderSecureAttachmentButtons(record.quoteLinks)}
                     </label>
                     <label class="text-sm">
                         <span class="mb-1 block text-slate-600">${this.tr("ui", "invoiceLinks")}</span>
@@ -1220,6 +1294,7 @@ export class PlenoHotelManager {
                             <i class="fas fa-paperclip mr-2"></i>${this.tr("ui", "uploadInvoice")}
                             <input id="plenohotel-invoice-upload" type="file" class="sr-only">
                         </span>
+                        ${this.renderSecureAttachmentButtons(record.invoiceLinks)}
                     </label>
                 </div>
                 <label class="text-sm">

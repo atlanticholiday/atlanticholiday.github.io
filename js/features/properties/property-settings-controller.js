@@ -1,16 +1,50 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { clearIndexedDbPersistence, getFirestore, collection, doc, getDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { Config } from '../../core/config.js';
 import { LOCATIONS } from '../../shared/locations.js';
+import { AccessManager } from '../admin/access-manager.js';
+import { canAccessApplication } from '../../shared/access-control.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔧 [PROPERTY SETTINGS] Page loaded, initializing...');
     
     // Initialize Firebase with v11 syntax
     const app = initializeApp(Config.firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    await clearIndexedDbPersistence(db).catch((error) => {
+        if (error?.code !== 'failed-precondition' && error?.code !== 'unimplemented') {
+            console.warn('[PROPERTY SETTINGS] Could not clear the previous Firestore browser cache:', error);
+        }
+    });
+
+    const currentUser = await new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe();
+            resolve(user);
+        });
+    });
+    if (!currentUser) {
+        window.location.replace('index.html?reason=loginRequired');
+        return;
+    }
+
+    const accessManager = new AccessManager(db, getFunctions(app));
+    const accessEntry = await accessManager.getCurrentAccess().catch((error) => {
+        console.error('[PROPERTY SETTINGS] Access verification failed:', error);
+        return null;
+    });
+    if (!accessEntry) {
+        await signOut(auth).catch(() => {});
+        window.location.replace('index.html?reason=accessDenied');
+        return;
+    }
+    if (!canAccessApplication(accessEntry, 'properties')) {
+        window.location.replace('index.html?reason=propertiesAccessDenied');
+        return;
+    }
 
     // Get propertyId from URL - support both 'propertyId' and 'id' parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -251,16 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const newId = e.target.value;
                     if (!newId || newId === propertyId) return;
                     propertyId = newId;
-
-                    // Update sessionStorage cache for faster load
-                    const selected = allProperties.find(p => p.id === newId);
-                    if (selected) {
-                        try {
-                            sessionStorage.setItem('currentProperty', JSON.stringify(selected));
-                        } catch (err) {
-                            console.warn('🔧 [PROPERTY SETTINGS] Failed to set sessionStorage currentProperty', err);
-                        }
-                    }
 
                     // Update URL without navigating back
                     const url = new URL(window.location.href);
@@ -561,76 +585,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log(`🔧 [PROPERTY SETTINGS] Loading property data for ID: ${propertyId}`);
             
-            // Try to get data from sessionStorage first (if passed from main app)
-            let propertyData = null;
-            const sessionDataKey = 'currentProperty';
-            const sessionData = sessionStorage.getItem(sessionDataKey);
-            
-            console.log('🔧 [PROPERTY SETTINGS] SessionStorage data:', sessionData);
-            
-            if (sessionData) {
-                try {
-                    const parsed = JSON.parse(sessionData);
-                    console.log('🔧 [PROPERTY SETTINGS] Parsed sessionStorage data:', parsed);
-                    
-                    // IMPORTANT: Check if the sessionStorage property matches the URL propertyId
-                    if (parsed && parsed.id === propertyId) {
-                        propertyData = parsed;
-                        console.log('🔧 [PROPERTY SETTINGS] ✅ SessionStorage property ID matches URL - using sessionStorage data');
-                    } else {
-                        console.warn('🔧 [PROPERTY SETTINGS] ⚠️ SessionStorage property ID does not match URL:', {
-                            sessionId: parsed?.id,
-                            urlPropertyId: propertyId
-                        });
-                        // Clear stale sessionStorage data
-                        sessionStorage.removeItem(sessionDataKey);
-                    }
-                } catch (e) {
-                    console.warn('🔧 [PROPERTY SETTINGS] Failed to parse sessionStorage data:', e);
-                    sessionStorage.removeItem(sessionDataKey);
-                }
-            }
-
-            // If no valid sessionStorage data, wait for authentication and then load from Firestore
-            if (!propertyData) {
-                console.log('🔧 [PROPERTY SETTINGS] No valid sessionStorage data, waiting for authentication...');
-                
-                // Wait for auth state to be determined
-                const user = await new Promise((resolve) => {
-                    const unsubscribe = onAuthStateChanged(auth, (user) => {
-                        unsubscribe();
-                        resolve(user);
-                    });
-                });
-
-                if (user) {
-                    console.log('🔧 [PROPERTY SETTINGS] User authenticated, loading from Firestore...');
-                    const docRef = doc(db, 'properties', propertyId);
-                    const docSnap = await getDoc(docRef);
-                    
-                    if (docSnap.exists()) {
-                        propertyData = { id: docSnap.id, ...docSnap.data() };
-                        console.log('🔧 [PROPERTY SETTINGS] ✅ Loaded property data from Firestore:', propertyData);
-                    } else {
-                        console.error('🔧 [PROPERTY SETTINGS] Property not found in Firestore');
-                    }
-                } else {
-                    console.error('🔧 [PROPERTY SETTINGS] User not authenticated');
-                    alert('You must be logged in to edit properties. Please log in and try again.');
-                    window.location.href = 'index.html';
-                    return;
-                }
-            }
-
-            // If still no data, try localStorage as last resort
-            if (!propertyData) {
-                console.log('🔧 [PROPERTY SETTINGS] No Firestore data, trying localStorage...');
-                const properties = JSON.parse(localStorage.getItem('firestore_properties') || '[]');
-                propertyData = properties.find(p => p.id === propertyId);
-                if (propertyData) {
-                    console.log('🔧 [PROPERTY SETTINGS] ✅ Loaded property data from localStorage:', propertyData);
-                }
-            }
+            // Sensitive property records are always loaded from Firestore after authorization.
+            sessionStorage.removeItem('currentProperty');
+            localStorage.removeItem('firestore_properties');
+            const propertyRef = doc(db, 'properties', propertyId);
+            const propertySnapshot = await getDoc(propertyRef);
+            const propertyData = propertySnapshot.exists()
+                ? { id: propertySnapshot.id, ...propertySnapshot.data() }
+                : null;
 
             if (propertyData) {
                 populatePage(propertyData);
@@ -684,18 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('🔧 [PROPERTY SETTINGS] ✅ Settings saved successfully');
             alert('Settings saved successfully!');
             
-            // Update sessionStorage if it exists
-            const sessionData = sessionStorage.getItem('currentProperty');
-            if (sessionData) {
-                try {
-                    const currentProperty = JSON.parse(sessionData);
-                    const updatedProperty = { ...currentProperty, ...updates };
-                    sessionStorage.setItem('currentProperty', JSON.stringify(updatedProperty));
-                    console.log('🔧 [PROPERTY SETTINGS] Updated sessionStorage with new data');
-                } catch (e) {
-                    console.warn('🔧 [PROPERTY SETTINGS] Failed to update sessionStorage:', e);
-                }
-            }
+            sessionStorage.removeItem('currentProperty');
         } catch (error) {
             console.error("🔧 [PROPERTY SETTINGS] Error saving settings:", error);
             alert('Error saving settings: ' + error.message);
