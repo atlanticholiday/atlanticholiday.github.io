@@ -30,6 +30,8 @@ During the 2026-08-05 review, the retired property spreadsheet export still retu
 
 Use a maintenance window. Existing clients may temporarily lose access when the deny-by-default rules become active.
 
+Projects on the free Spark plan cannot deploy Cloud Functions. Until the project is upgraded, the client falls back to reading only the signed-in user's exact `allowedEmails/{email}` document. The matching Firestore rules preserve the same fail-closed allowlist and exclude `@horario.test` accounts. Protected administration, reservation projection, password-reset-link, and door-control functions remain unavailable on Spark.
+
 1. Deploy Firebase Functions so `getMyAccess` and the protected administration/reservation functions exist.
    - The functions runtime is upgraded to Node.js 22 and uses the modular Firebase Admin SDK.
    - If Nuki doors currently exist only in deprecated `functions.config()`, migrate the door list to `nukiDoors` or `NUKI_DOORS_JSON` before deployment. Keep `NUKI_API_TOKEN` in Secret Manager.

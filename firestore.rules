@@ -10,14 +10,33 @@ service cloud.firestore {
       return /databases/$(database)/documents/userAccess/$(request.auth.uid);
     }
 
+    function emailAccessPath() {
+      return /databases/$(database)/documents/allowedEmails/$(request.auth.token.email);
+    }
+
+    function hasMaterializedAccess() {
+      return signedIn() && exists(accessPath());
+    }
+
+    function hasEmailAllowlistAccess() {
+      return signedIn()
+        && request.auth.token.email is string
+        && !request.auth.token.email.matches('.*@horario\\.test$')
+        && exists(emailAccessPath());
+    }
+
     function approved() {
       return signedIn()
-        && exists(accessPath())
-        && get(accessPath()).data.active == true;
+        && (
+          (hasMaterializedAccess() && get(accessPath()).data.active == true)
+          || (!hasMaterializedAccess() && hasEmailAllowlistAccess())
+        );
     }
 
     function accessData() {
-      return get(accessPath()).data;
+      return hasMaterializedAccess()
+        ? get(accessPath()).data
+        : get(emailAccessPath()).data;
     }
 
     function hasRole(role) {
@@ -83,7 +102,11 @@ service cloud.firestore {
     }
 
     match /allowedEmails/{emailKey} {
-      allow read: if adminOnly();
+      allow read: if adminOnly()
+        || (signedIn()
+          && request.auth.token.email is string
+          && request.auth.token.email == emailKey
+          && !request.auth.token.email.matches('.*@horario\\.test$'));
       allow write: if false;
     }
 

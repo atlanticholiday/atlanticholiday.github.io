@@ -32,3 +32,12 @@ export function getEmailLookupKeys(value) {
 export function getNormalizedEmailDisplay(value) {
     return normalizeRawEmail(value);
 }
+
+export function isProductionAccessEmail(value) {
+    const normalized = normalizeRawEmail(value);
+    return Boolean(
+        normalized
+        && normalized.includes('@')
+        && !normalized.endsWith('@horario.test')
+    );
+}

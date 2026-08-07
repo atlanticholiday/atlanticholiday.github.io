@@ -1,5 +1,10 @@
 import { describe, test, assert } from "../../test-harness.js";
-import { canonicalizeEmail, getEmailLookupKeys, getNormalizedEmailDisplay } from "../../../js/shared/email.js";
+import {
+  canonicalizeEmail,
+  getEmailLookupKeys,
+  getNormalizedEmailDisplay,
+  isProductionAccessEmail
+} from "../../../js/shared/email.js";
 
 describe("Email helpers", () => {
   test("normalizes standard email casing and spacing", () => {
@@ -19,5 +24,11 @@ describe("Email helpers", () => {
       getEmailLookupKeys("Name.With.Dots+tag@gmail.com"),
       ["namewithdots@gmail.com", "name.with.dots+tag@gmail.com"]
     );
+  });
+
+  test("allows production emails and rejects access-only test accounts", () => {
+    assert.equal(isProductionAccessEmail(" INFO@AtlanticHoliday.net "), true);
+    assert.equal(isProductionAccessEmail("test-admin@horario.test"), false);
+    assert.equal(isProductionAccessEmail("missing-domain"), false);
   });
 });

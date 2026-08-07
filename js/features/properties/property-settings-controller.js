@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const accessManager = new AccessManager(db, getFunctions(app));
-    const accessEntry = await accessManager.getCurrentAccess().catch((error) => {
+    const accessEntry = await accessManager.getCurrentAccess(currentUser.email).catch((error) => {
         console.error('[PROPERTY SETTINGS] Access verification failed:', error);
         return null;
     });

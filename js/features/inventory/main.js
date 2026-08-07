@@ -65,7 +65,7 @@ async function authorizeInventoryAccess() {
     }
 
     const accessManager = new AccessManager(db, getFunctions(app));
-    const accessEntry = await accessManager.getCurrentAccess().catch((error) => {
+    const accessEntry = await accessManager.getCurrentAccess(user.email).catch((error) => {
         console.error('[Inventory] Access verification failed:', error);
         return null;
     });

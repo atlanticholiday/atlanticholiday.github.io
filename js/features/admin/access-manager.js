@@ -1,6 +1,10 @@
 import { collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { getEmailLookupKeys, getNormalizedEmailDisplay } from "../../shared/email.js";
+import {
+    getEmailLookupKeys,
+    getNormalizedEmailDisplay,
+    isProductionAccessEmail
+} from "../../shared/email.js";
 import { normalizeAllowedApps } from "../../shared/app-access.js";
 
 export class AccessManager {
@@ -19,9 +23,22 @@ export class AccessManager {
         return result.data || {};
     }
 
-    async getCurrentAccess() {
-        const result = await this.callProtectedFunction('getMyAccess');
-        return result.authorized ? result.access || null : null;
+    async getCurrentAccess(email) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        if (!isProductionAccessEmail(normalizedEmail)) {
+            return null;
+        }
+
+        try {
+            const result = await this.callProtectedFunction('getMyAccess');
+            return result.authorized ? result.access || null : null;
+        } catch (error) {
+            console.warn(
+                'Protected access verification is unavailable; checking the signed-in user allowlist record.',
+                error
+            );
+            return this.getAccessEntry(normalizedEmail, { exact: true });
+        }
     }
 
     async listEmails() {
@@ -29,8 +46,9 @@ export class AccessManager {
         return snapshot.docs.map((docSnapshot) => docSnapshot.data().displayEmail || docSnapshot.id);
     }
 
-    async getAccessEntry(email) {
-        const keys = getEmailLookupKeys(email);
+    async getAccessEntry(email, { exact = false } = {}) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const keys = exact ? [normalizedEmail].filter(Boolean) : getEmailLookupKeys(email);
 
         for (const key of keys) {
             const snap = await getDoc(doc(this.db, this.collectionPath, key));

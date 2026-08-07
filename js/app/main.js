@@ -567,9 +567,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 let accessEntry = null;
+                let accessVerificationError = null;
                 try {
-                    accessEntry = await accessManager.getCurrentAccess();
+                    accessEntry = await accessManager.getCurrentAccess(user.email);
                 } catch (error) {
+                    accessVerificationError = error;
                     console.error('Failed to verify current-user access:', error);
                 }
 
@@ -578,7 +580,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dataManager?.clearCurrentUserContext?.();
                     const loginError = document.getElementById('login-error');
                     if (loginError) {
-                        loginError.textContent = 'This account is not authorized to access the application.';
+                        loginError.textContent = accessVerificationError
+                            ? 'Access verification is temporarily unavailable. Please try again.'
+                            : 'This account is not authorized to access the application.';
                     }
                     await signOut(auth).catch((error) => {
                         console.error('Failed to sign out an unauthorized account:', error);
