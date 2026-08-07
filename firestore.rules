@@ -199,7 +199,8 @@ service cloud.firestore {
     }
 
     match /laundryHandoffRecords/{recordId} {
-      allow read, write: if privileged() || hasApp('laundryLog');
+      allow read, create, update: if privileged() || hasApp('laundryLog');
+      allow delete: if privileged();
     }
 
     match /linenInventoryRecords/{recordId} {

@@ -5,6 +5,140 @@ import { LaundryLogManager } from "../../../../js/features/operations/laundry-lo
 import { createLaundryLogRecord } from "../../../../js/features/operations/laundry-log-utils.js";
 
 describe("LaundryLogManager", () => {
+  function createCleanerDataManager() {
+    return {
+      canAccessApp: (appKey) => appKey === "laundryLog",
+      hasPrivilegedRole: () => false,
+      getCurrentUserContext: () => ({
+        uid: "cleaner-1",
+        email: "rita@example.com"
+      }),
+      getCurrentUserEmployee: () => ({
+        id: "employee-1",
+        name: "Rita"
+      })
+    };
+  }
+
+  test("renders a reduced phone workflow for non-privileged laundry users", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+    window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
+
+    const dataManager = createCleanerDataManager();
+    const manager = new LaundryLogManager(null, {
+      getDataManager: () => dataManager,
+      getProperties: () => [
+        { id: "p1", name: "Atlantic View" },
+        { id: "p2", name: "Calas Loft" }
+      ]
+    });
+
+    manager.ensureDomScaffold();
+    manager.render();
+
+    assert.ok(document.getElementById("laundry-cleaner-property-search"));
+    assert.ok(document.querySelector("[data-workspace='entry']"));
+    assert.ok(document.querySelector("[data-workspace='returns']"));
+    assert.ok(!document.querySelector("[data-workspace='completed']"));
+    assert.ok(!document.querySelector("[data-laundry-action='jump-section']"));
+
+    document.querySelector("[data-laundry-action='select-property'][data-property-id='p1']").click();
+
+    assert.ok(document.getElementById("laundry-cleaner-send-form"));
+    assert.equal(document.getElementById("laundry-log-property-input").value, "Atlantic View");
+    const saveButton = document.querySelector("[data-laundry-action='save']");
+    assert.ok(saveButton.disabled);
+
+    document.querySelector("[data-laundry-action='adjust-count'][data-item-key='bathTowel'][data-delta='1']").click();
+
+    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='delivered']").value, "1");
+    assert.ok(!document.querySelector("[data-laundry-action='save']").disabled);
+    window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
+  });
+
+  test("lets cleaners reuse the previous property load and review only return counts", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+    window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
+
+    const dataManager = createCleanerDataManager();
+    const manager = new LaundryLogManager(null, {
+      getDataManager: () => dataManager,
+      getProperties: () => [{ id: "p1", name: "Atlantic View" }]
+    });
+    manager.records = [
+      {
+        id: "handoff-1",
+        ...createLaundryLogRecord({
+          propertyId: "p1",
+          propertyName: "Atlantic View",
+          deliveryDate: "2026-04-10",
+          items: {
+            bathTowel: { delivered: 4, received: 0 },
+            pillowCases: { delivered: 2, received: 0 }
+          }
+        }, {
+          now: () => "2026-04-10T10:00:00.000Z"
+        })
+      }
+    ];
+
+    manager.ensureDomScaffold();
+    manager.render();
+    document.querySelector("[data-laundry-action='select-property'][data-property-id='p1']").click();
+    document.querySelector("[data-laundry-action='use-previous-load']").click();
+
+    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='delivered']").value, "4");
+    assert.equal(document.querySelector("[data-laundry-item-key='pillowCases'][data-laundry-item-field='delivered']").value, "2");
+    assert.ok(!document.querySelector("[data-laundry-item-field='received']"));
+
+    manager.switchWorkspace("returns");
+    document.querySelector("[data-laundry-action='review-return'][data-record-id='handoff-1']").click();
+
+    assert.ok(document.getElementById("laundry-cleaner-return-editor"));
+    assert.ok(!document.querySelector("#laundry-cleaner-return-editor [data-laundry-item-field='delivered']"));
+    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='received']").value, "4");
+    assert.equal(document.querySelector("[data-laundry-item-key='pillowCases'][data-laundry-item-field='received']").value, "2");
+    window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
+  });
+
+  test("adds the signed-in cleaner to sent and received audit metadata", () => {
+    const dataManager = createCleanerDataManager();
+    const manager = new LaundryLogManager(null, {
+      getDataManager: () => dataManager
+    });
+    const original = {
+      createdAt: "2026-04-10T10:00:00.000Z",
+      createdBy: { uid: "manager-1", email: "manager@example.com", name: "Manager" },
+      sentBy: { uid: "cleaner-2", email: "ana@example.com", name: "Ana" },
+      sentAt: "2026-04-10T10:00:00.000Z"
+    };
+    const draft = manager.createDefaultDraft({
+      propertyName: "Atlantic View",
+      deliveryDate: "2026-04-10",
+      receivedDate: "2026-04-12",
+      items: {
+        bathTowel: { delivered: 4, received: 4 }
+      }
+    });
+
+    const payload = manager.buildAuditedPayload(draft, original, {
+      markReceived: true,
+      now: () => "2026-04-12T09:30:00.000Z"
+    });
+
+    assert.equal(payload.sentBy.name, "Ana");
+    assert.equal(payload.receivedBy.name, "Rita");
+    assert.equal(payload.updatedBy.uid, "cleaner-1");
+    assert.equal(payload.receivedAt, "2026-04-12T09:30:00.000Z");
+    assert.equal(payload.status, "matched");
+  });
+
   test("renders separate entry, returns, and completed workspaces with section navigation", () => {
     resetDom(`
       <div id="landing-page"></div>
