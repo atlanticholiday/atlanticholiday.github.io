@@ -3244,6 +3244,1062 @@ header h1, header h2, header h3 {
     white-space: nowrap;
 }
 
+/* User Management — directory workspace */
+.user-management-page-shell {
+    min-height: 100svh;
+    background: #f4f6f8;
+}
+
+.user-management-page-shell .user-management-shell-container {
+    width: min(1440px, calc(100vw - 32px));
+}
+
+.user-management-page-shell .user-management-header {
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+}
+
+.user-management-page-shell .user-management-header .container {
+    min-height: 76px;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+}
+
+.user-management-page-shell .user-management-header-actions {
+    gap: 0.55rem;
+}
+
+.user-management-page-shell .user-management-menu-toggle,
+.user-management-page-shell .user-management-signout {
+    min-height: 40px;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.55rem 0.75rem;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-language-switcher {
+    min-height: 40px;
+    border-radius: 10px;
+    background: #f8fafc;
+    box-shadow: none;
+}
+
+.user-management-page-shell > .user-management-shell-container {
+    padding-top: 1.25rem;
+    padding-bottom: 2.5rem;
+}
+
+.user-management-page-shell .user-management-main-column {
+    gap: 1rem;
+}
+
+.user-management-page-shell .user-management-main-nav-panel {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #dbe2ea;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.user-management-page-shell .user-management-main-tabs {
+    gap: 1.5rem;
+}
+
+.user-management-page-shell .user-management-main-tab {
+    position: relative;
+    min-height: 42px;
+    border: 0;
+    border-radius: 0;
+    padding: 0.55rem 0.1rem 0.8rem;
+    color: #64748b;
+    background: transparent;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-main-tab::after {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: transparent;
+    content: '';
+    transform: scaleX(0.55);
+    transition: 160ms ease;
+}
+
+.user-management-page-shell .user-management-main-tab:hover {
+    background: transparent;
+    color: #0f172a;
+}
+
+.user-management-page-shell .user-management-main-tab-active {
+    border: 0;
+    background: transparent;
+    color: #0f172a;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-main-tab-active::after {
+    background: #e54855;
+    transform: scaleX(1);
+}
+
+.user-management-directory-shell {
+    overflow: hidden;
+    border: 1px solid #dbe2ea;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.user-management-directory-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.1rem;
+}
+
+.user-management-directory-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.user-management-directory-heading .user-management-eyebrow {
+    margin-bottom: 0.15rem;
+}
+
+.user-management-directory-heading h2 {
+    color: #0f172a;
+    font-size: 1.25rem;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+.user-management-directory-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    padding: 0.3rem 0.6rem;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.user-management-directory-count strong {
+    color: #334155;
+}
+
+.user-management-directory-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.user-management-search-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: min(260px, 30vw);
+    min-height: 40px;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0 0.75rem;
+    color: #94a3b8;
+    transition: 150ms ease;
+}
+
+.user-management-search-field:focus-within {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.12);
+}
+
+.user-management-search-field input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.84rem;
+}
+
+.user-management-filter-select {
+    min-height: 40px;
+    max-width: 190px;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0 2rem 0 0.75rem;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.user-management-primary-action,
+.user-management-secondary-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 40px;
+    border-radius: 10px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 750;
+    transition: 150ms ease;
+}
+
+.user-management-primary-action {
+    border: 1px solid #e54855;
+    background: #e54855;
+    color: #fff;
+}
+
+.user-management-primary-action:hover:not(:disabled) {
+    border-color: #d83948;
+    background: #d83948;
+    transform: translateY(-1px);
+}
+
+.user-management-primary-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.user-management-secondary-action {
+    border: 1px solid #dbe2ea;
+    background: #fff;
+    color: #334155;
+}
+
+.user-management-secondary-action:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.user-management-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(390px, 0.85fr);
+    min-height: 600px;
+}
+
+.user-management-directory-panel {
+    min-width: 0;
+    border-right: 1px solid #e2e8f0;
+}
+
+.user-management-table-head,
+.user-management-user-row-button {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.45fr) minmax(140px, 0.9fr) 64px 105px 18px;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.user-management-table-head {
+    min-height: 40px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0 0.9rem;
+    color: #94a3b8;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+}
+
+.user-management-table-head::after {
+    content: '';
+}
+
+.user-management-page-shell .user-management-user-list {
+    display: block;
+    max-height: calc(100svh - 265px);
+    min-height: 500px;
+    overflow: auto;
+}
+
+.user-management-user-row {
+    border-bottom: 1px solid #edf1f5;
+}
+
+.user-management-user-row-button {
+    position: relative;
+    width: 100%;
+    min-height: 70px;
+    border: 0;
+    background: transparent;
+    padding: 0.7rem 0.9rem;
+    color: #475569;
+    text-align: left;
+    transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.user-management-user-row-button:hover {
+    background: #f8fafc;
+}
+
+.user-management-user-row-button:focus-visible {
+    z-index: 1;
+    outline: 2px solid rgba(229, 72, 85, 0.35);
+    outline-offset: -2px;
+}
+
+.user-management-user-row-selected .user-management-user-row-button {
+    background: #fff7f7;
+    box-shadow: inset 3px 0 #e54855;
+}
+
+.user-management-user-cell {
+    display: grid;
+    min-width: 0;
+    gap: 0.2rem;
+}
+
+.user-management-user-cell strong {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-management-user-cell small {
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.74rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-management-table-cell {
+    min-width: 0;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.user-management-app-count-cell {
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.user-management-directory-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.user-management-directory-status::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    content: '';
+}
+
+.user-management-directory-status.is-linked::before {
+    background: #22c55e;
+}
+
+.user-management-directory-status.is-standalone::before {
+    background: #f59e0b;
+}
+
+.user-management-row-chevron {
+    width: 16px;
+    color: #cbd5e1;
+}
+
+.user-management-user-row-selected .user-management-row-chevron {
+    color: #e54855;
+}
+
+.user-management-filter-summary {
+    border-top: 1px solid #e2e8f0;
+    padding: 0.65rem 0.9rem;
+    color: #94a3b8;
+    font-size: 0.72rem;
+}
+
+.user-management-page-shell .user-management-empty-state {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 2.5rem 1rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.user-management-inspector {
+    min-width: 0;
+    max-height: calc(100svh - 195px);
+    overflow-y: auto;
+    background: #fff;
+}
+
+.user-management-inspector-empty {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-height: 520px;
+    padding: 2rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.user-management-inspector-empty[hidden] {
+    display: none;
+}
+
+.user-management-inspector-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.85rem;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.user-management-inspector-empty h3 {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+.user-management-inspector-empty p {
+    margin-top: 0.3rem;
+    max-width: 15rem;
+    font-size: 0.8rem;
+}
+
+.user-management-inspector-header {
+    position: relative;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.1rem;
+}
+
+.user-management-inspector-identity h3 {
+    color: #0f172a;
+    font-size: 1.12rem;
+    font-weight: 760;
+    letter-spacing: -0.025em;
+}
+
+.user-management-inspector-identity > p:last-child {
+    margin-top: 0.2rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.user-management-inspector-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    border-radius: 9px;
+    background: #f8fafc;
+    padding: 0.65rem 0.75rem;
+}
+
+.user-management-inspector-summary span {
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 750;
+}
+
+.user-management-inspector-summary small {
+    color: #64748b;
+    font-size: 0.7rem;
+    text-align: right;
+}
+
+.user-management-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid #dbe2ea;
+    border-radius: 9px;
+    background: #fff;
+    color: #64748b;
+    transition: 150ms ease;
+}
+
+.user-management-icon-button:hover {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.user-management-inspector-close {
+    display: none;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.user-management-inspector-section {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.05rem 1.1rem;
+}
+
+.user-management-inspector-section-head {
+    margin-bottom: 0.75rem;
+}
+
+.user-management-inspector-section-head h4,
+.user-management-account-actions h4 {
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.user-management-inspector-section-head p,
+.user-management-account-actions p {
+    margin-top: 0.18rem;
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.user-management-inspector-role-list {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.user-management-inspector-option,
+.user-management-app-option {
+    position: relative;
+}
+
+.user-management-inspector-option input,
+.user-management-app-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.user-management-inspector-option label {
+    display: grid;
+    gap: 0.12rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    padding: 0.62rem 0.7rem 0.62rem 2rem;
+    cursor: pointer;
+    transition: 140ms ease;
+}
+
+.user-management-inspector-option label::before,
+.user-management-app-option label::before {
+    position: absolute;
+    top: 50%;
+    left: 0.68rem;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #fff;
+    content: '';
+    transform: translateY(-50%);
+}
+
+.user-management-inspector-option label span {
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 750;
+}
+
+.user-management-inspector-option label small {
+    color: #64748b;
+    font-size: 0.68rem;
+    line-height: 1.35;
+}
+
+.user-management-inspector-option input:checked + label,
+.user-management-app-option input:checked + label {
+    border-color: #fecdd3;
+    background: #fff7f7;
+}
+
+.user-management-inspector-option input:checked + label::before,
+.user-management-app-option input:checked + label::before {
+    border-color: #e54855;
+    background: #e54855;
+    box-shadow: inset 0 0 0 3px #fff;
+}
+
+.user-management-inspector-option input:focus-visible + label,
+.user-management-app-option input:focus-visible + label {
+    outline: 2px solid rgba(229, 72, 85, 0.32);
+    outline-offset: 2px;
+}
+
+.user-management-inspector-app-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.38rem;
+}
+
+.user-management-app-option label {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.45rem 0.55rem 0.45rem 1.8rem;
+    color: #475569;
+    font-size: 0.69rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 140ms ease;
+}
+
+.user-management-app-option label::before {
+    left: 0.48rem;
+    width: 12px;
+    height: 12px;
+}
+
+.user-management-app-option input:disabled + label {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.user-management-inspector-note {
+    margin-top: 0.65rem;
+    border-left: 2px solid #fda4af;
+    padding-left: 0.65rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    line-height: 1.45;
+}
+
+.user-management-inspector-savebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.85rem 1.1rem;
+}
+
+.user-management-inspector-savebar > div:first-child {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.user-management-save-state {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
+.user-management-save-state.is-dirty {
+    color: #b45309;
+}
+
+#user-inspector-notice {
+    color: #15803d;
+    font-size: 0.67rem;
+}
+
+.user-management-inspector-primary-actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.user-management-account-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem 1.25rem;
+}
+
+#user-inspector-account-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.user-management-inspector .user-management-button {
+    min-height: 36px;
+    border-radius: 9px;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.7rem;
+}
+
+.user-management-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+}
+
+.user-management-dialog.hidden {
+    display: none;
+}
+
+.user-management-dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(5px);
+    animation: user-access-preview-fade 150ms ease-out both;
+}
+
+.user-management-dialog-panel {
+    position: relative;
+    width: min(510px, 100%);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+    animation: user-access-preview-enter 190ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.user-management-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.2rem 1.25rem;
+}
+
+.user-management-dialog-header h2 {
+    color: #0f172a;
+    font-size: 1.25rem;
+    font-weight: 760;
+    letter-spacing: -0.025em;
+}
+
+.user-management-dialog-header p:last-child {
+    margin-top: 0.35rem;
+    max-width: 25rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.user-management-dialog-body {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1.25rem;
+}
+
+.user-management-dialog-field {
+    display: grid;
+    gap: 0.38rem;
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 750;
+}
+
+.user-management-dialog-field input {
+    min-height: 44px;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    padding: 0 0.8rem;
+    outline: 0;
+    color: #0f172a;
+    font-size: 0.84rem;
+    font-weight: 500;
+}
+
+.user-management-dialog-field input:focus {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.12);
+}
+
+.user-management-dialog-help,
+.user-management-dialog-error {
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.user-management-dialog-help {
+    color: #64748b;
+}
+
+.user-management-dialog-error {
+    color: #dc2626;
+}
+
+.user-management-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.85rem 1.25rem;
+}
+
+.user-management-page-shell .user-management-panel-colleagues {
+    border: 1px solid #dbe2ea;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.user-management-page-shell .user-management-overview-card {
+    border-radius: 10px;
+    background: #fff;
+}
+
+.user-management-page-shell .user-management-drawer-inner {
+    border: 1px solid #dbe2ea;
+    border-radius: 16px 0 0 16px;
+    background: #f8fafc;
+    box-shadow: -18px 0 60px rgba(15, 23, 42, 0.18);
+}
+
+.user-management-page-shell .user-management-drawer-topbar h3,
+.user-management-page-shell .user-management-drawer-topbar .user-management-eyebrow {
+    color: #0f172a;
+}
+
+.user-management-page-shell .user-management-menu-close {
+    border-color: #dbe2ea;
+    background: #fff;
+    color: #475569;
+}
+
+.user-management-page-shell .user-management-menu-panel {
+    border: 1px solid #dbe2ea;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-menu-panel .user-management-eyebrow {
+    color: #e54855;
+}
+
+.user-management-page-shell .user-management-menu-button {
+    border-color: #e2e8f0;
+    border-radius: 9px;
+    background: #fff;
+    color: #334155;
+}
+
+.user-management-page-shell .user-management-menu-button:hover,
+.user-management-page-shell .user-management-menu-button-active {
+    border-color: #fecdd3;
+    background: #fff7f7;
+    box-shadow: none;
+}
+
+.user-management-page-shell .user-management-menu-button__meta {
+    color: #64748b;
+}
+
+.user-management-page-shell .user-management-drawer .user-management-panel {
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: none;
+}
+
+@media (max-width: 1100px) {
+    .user-management-directory-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .user-management-directory-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .user-management-search-field {
+        flex: 1 1 240px;
+        min-width: 0;
+    }
+
+    .user-management-workspace {
+        grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+    }
+
+    .user-management-table-head,
+    .user-management-user-row-button {
+        grid-template-columns: minmax(190px, 1.2fr) minmax(120px, 0.8fr) 48px 92px 16px;
+        gap: 0.55rem;
+    }
+}
+
+@media (max-width: 850px) {
+    .user-management-workspace {
+        display: block;
+        min-height: 0;
+    }
+
+    .user-management-directory-panel {
+        border-right: 0;
+    }
+
+    .user-management-page-shell .user-management-user-list {
+        max-height: none;
+        min-height: 0;
+    }
+
+    .user-management-inspector {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        max-height: 100svh;
+        visibility: hidden;
+        transform: translateX(100%);
+        transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1), visibility 210ms;
+    }
+
+    .user-management-page-shell.user-management-inspector-open .user-management-inspector {
+        visibility: visible;
+        transform: translateX(0);
+    }
+
+    .user-management-inspector-close {
+        display: inline-flex;
+    }
+
+    .user-management-inspector-identity {
+        padding-right: 3rem;
+    }
+
+    .user-management-inspector-section,
+    .user-management-inspector-header,
+    .user-management-inspector-savebar,
+    .user-management-account-actions {
+        padding-right: max(1.1rem, env(safe-area-inset-right));
+        padding-left: max(1.1rem, env(safe-area-inset-left));
+    }
+}
+
+@media (max-width: 640px) {
+    .user-management-page-shell .user-management-shell-container {
+        width: min(100%, calc(100vw - 18px));
+    }
+
+    .user-management-page-shell .user-management-header .container {
+        align-items: center;
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+
+    .user-management-page-shell .user-management-header-actions {
+        width: 100%;
+    }
+
+    .user-management-page-shell .user-management-menu-toggle,
+    .user-management-page-shell .user-management-signout {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .user-management-page-shell > .user-management-shell-container {
+        padding-top: 0.85rem;
+    }
+
+    .user-management-directory-shell,
+    .user-management-page-shell .user-management-panel-colleagues {
+        border-radius: 12px;
+    }
+
+    .user-management-directory-controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+    }
+
+    .user-management-search-field {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .user-management-filter-select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .user-management-table-head {
+        display: none;
+    }
+
+    .user-management-user-row-button {
+        grid-template-areas:
+            'user status chevron'
+            'profile apps chevron';
+        grid-template-columns: minmax(0, 1fr) auto 16px;
+        gap: 0.3rem 0.65rem;
+        min-height: 78px;
+    }
+
+    .user-management-user-cell { grid-area: user; }
+    .user-management-profile-cell { grid-area: profile; }
+    .user-management-app-count-cell { grid-area: apps; text-align: right; }
+    .user-management-status-cell { grid-area: status; }
+    .user-management-row-chevron { grid-area: chevron; }
+
+    .user-management-profile-cell,
+    .user-management-app-count-cell {
+        color: #64748b;
+        font-size: 0.7rem;
+    }
+
+    .user-management-inspector-app-list {
+        grid-template-columns: 1fr;
+    }
+
+    .user-management-inspector-savebar,
+    .user-management-account-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .user-management-inspector-primary-actions,
+    #user-inspector-account-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .user-management-dialog {
+        align-items: end;
+        padding: 0;
+    }
+
+    .user-management-dialog-panel {
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+    }
+}
+
 .landing-search-btn.hidden {
     display: none;
 }
@@ -6641,4 +7697,8 @@ header h1, header h2, header h3 {
     .quick-search-result {
         grid-template-columns: 4.8rem minmax(0, 1fr);
     }
+}
+
+.user-management-page-shell.user-management-page-shell {
+    background: #f4f6f8;
 }

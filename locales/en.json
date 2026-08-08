@@ -1683,10 +1683,11 @@
   "userManagement": {
     "header": {
       "title": "User Management",
-      "subtitle": "List and add application users"
+      "subtitle": "Manage accounts and permissions"
     },
     "workspace": {
       "menuEyebrow": "Quick Menu",
+      "referenceEyebrow": "Reference",
       "menuRolesMeta": "Role meaning and setup",
       "menuLinksMeta": "Email and login diagnostics",
       "menuTestUsersMeta": "Safe preset logins",
@@ -1698,6 +1699,7 @@
     },
     "nav": {
       "menu": "Menu",
+      "accessGuide": "Access guide",
       "roles": "Profiles",
       "links": "Colleague Links",
       "testUsers": "Test Users",
@@ -1705,11 +1707,58 @@
     },
     "users": {
       "eyebrow": "Directory",
-      "title": "Existing Users",
+      "title": "Users",
       "description": "Manage login access, assign roles, and keep colleague permissions consistent across admin, self-service, and shared-tablet flows.",
       "countLabel": "Total access accounts",
+      "accountsLabel": "accounts",
       "empty": "No access accounts created yet.",
       "resetPassword": "Reset Password"
+    },
+    "directory": {
+      "searchPlaceholder": "Search name or email",
+      "filterLabel": "Filter users",
+      "addUser": "Add user",
+      "noResults": "No users match this search or filter.",
+      "summaryAll": "{{count}} accounts",
+      "summaryFiltered": "{{visible}} of {{total}} accounts",
+      "columns": {
+        "user": "User",
+        "profile": "Profile",
+        "apps": "Apps",
+        "status": "Status"
+      },
+      "filters": {
+        "all": "All access",
+        "linked": "Linked colleagues",
+        "standalone": "Standalone access",
+        "privileged": "Privileged",
+        "station": "Shared stations",
+        "noApps": "No dashboard apps"
+      },
+      "status": {
+        "linked": "Linked",
+        "standalone": "Standalone"
+      }
+    },
+    "inspector": {
+      "emptyTitle": "Select a user",
+      "emptyDescription": "Choose an account to review and edit its access.",
+      "eyebrow": "Selected account",
+      "close": "Close user editor",
+      "profileTitle": "Profile",
+      "profileDescription": "Profiles control the core workspace and whether all apps are granted automatically.",
+      "appsDescription": "Choose only the operational apps this account needs.",
+      "appCount": "{{count}} dashboard apps",
+      "reservationsNote": "Weekly Reservations also makes Heated Pools visible automatically.",
+      "unsaved": "Unsaved changes",
+      "saved": "Access is up to date",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "savedNotice": "Changes saved.",
+      "saveFailed": "Changes could not be saved.",
+      "loginTitle": "Login access",
+      "linkedStatus": "Linked to a colleague record.",
+      "standaloneStatus": "Standalone login; no matching colleague email."
     },
     "preview": {
       "button": "Preview Access",
@@ -1829,13 +1878,15 @@
     "create": {
       "eyebrow": "Create Access",
       "title": "Add New Access",
-      "description": "Create a new login with a temporary password, then link the same email to the colleague profile and trigger a reset email.",
+      "description": "Create a login with a temporary password. You can assign permissions immediately afterwards.",
       "emailLabel": "Email address",
       "emailPlaceholder": "Email address",
       "passwordLabel": "Temporary password",
       "passwordPlaceholder": "Password",
       "button": "Add Access",
-      "help": "Use a strong temporary password. The user should switch to their own password through email reset."
+      "help": "Use a strong temporary password. The user should switch to their own password through email reset.",
+      "createdNotice": "Access account created. Assign a profile and apps, then save.",
+      "existingNotice": "This login already existed. Access was restored, but its password was not changed."
     },
     "testUsers": {
       "eyebrow": "Presets",

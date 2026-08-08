@@ -1691,10 +1691,11 @@
     "userManagement": {
         "header": {
             "title": "Gestão de Utilizadores",
-            "subtitle": "Listar e adicionar utilizadores da aplicação"
+            "subtitle": "Gerir contas e permissões"
         },
         "workspace": {
             "menuEyebrow": "Menu Rápido",
+            "referenceEyebrow": "Referência",
             "menuRolesMeta": "Significado dos perfis e configuração",
             "menuLinksMeta": "Diagnóstico de emails e logins",
             "menuTestUsersMeta": "Logins de teste seguros",
@@ -1706,6 +1707,7 @@
         },
         "nav": {
             "menu": "Menu",
+            "accessGuide": "Guia de acessos",
             "roles": "Perfis",
             "links": "Ligações",
             "testUsers": "Teste",
@@ -1713,11 +1715,58 @@
         },
         "users": {
             "eyebrow": "Diretório",
-            "title": "Utilizadores Existentes",
+            "title": "Utilizadores",
             "description": "Gerir acessos, atribuir perfis e manter permissões coerentes entre administração, autoatendimento e tablet partilhado.",
             "countLabel": "Total de acessos",
+            "accountsLabel": "contas",
             "empty": "Ainda não existem contas de acesso.",
             "resetPassword": "Repor Password"
+        },
+        "directory": {
+            "searchPlaceholder": "Pesquisar nome ou email",
+            "filterLabel": "Filtrar utilizadores",
+            "addUser": "Adicionar utilizador",
+            "noResults": "Nenhum utilizador corresponde à pesquisa ou filtro.",
+            "summaryAll": "{{count}} contas",
+            "summaryFiltered": "{{visible}} de {{total}} contas",
+            "columns": {
+                "user": "Utilizador",
+                "profile": "Perfil",
+                "apps": "Apps",
+                "status": "Estado"
+            },
+            "filters": {
+                "all": "Todos os acessos",
+                "linked": "Colegas ligados",
+                "standalone": "Acessos independentes",
+                "privileged": "Privilegiados",
+                "station": "Estações partilhadas",
+                "noApps": "Sem apps do painel"
+            },
+            "status": {
+                "linked": "Ligado",
+                "standalone": "Independente"
+            }
+        },
+        "inspector": {
+            "emptyTitle": "Selecione um utilizador",
+            "emptyDescription": "Escolha uma conta para rever e editar o respetivo acesso.",
+            "eyebrow": "Conta selecionada",
+            "close": "Fechar editor do utilizador",
+            "profileTitle": "Perfil",
+            "profileDescription": "Os perfis controlam a área principal e se todas as apps são atribuídas automaticamente.",
+            "appsDescription": "Selecione apenas as apps operacionais necessárias para esta conta.",
+            "appCount": "{{count}} apps do painel",
+            "reservationsNote": "Reservas Semanais também torna Piscinas Aquecidas visível automaticamente.",
+            "unsaved": "Alterações por guardar",
+            "saved": "O acesso está atualizado",
+            "save": "Guardar alterações",
+            "saving": "A guardar…",
+            "savedNotice": "Alterações guardadas.",
+            "saveFailed": "Não foi possível guardar as alterações.",
+            "loginTitle": "Acesso ao login",
+            "linkedStatus": "Ligado a uma ficha de colega.",
+            "standaloneStatus": "Login independente; sem email de colega correspondente."
         },
         "preview": {
             "button": "Pré-visualizar Acesso",
@@ -1837,13 +1886,15 @@
         "create": {
             "eyebrow": "Criar Acesso",
             "title": "Adicionar Novo Acesso",
-            "description": "Crie um novo login com password temporária, ligue o mesmo email ao registo do colega e depois envie o email de reposição.",
+            "description": "Crie um login com uma password temporária. Pode atribuir as permissões logo a seguir.",
             "emailLabel": "Endereço de email",
             "emailPlaceholder": "Endereço de email",
             "passwordLabel": "Password temporária",
             "passwordPlaceholder": "Password",
             "button": "Adicionar Acesso",
-            "help": "Use uma password temporária forte. O utilizador deve passar para a password dele através do email de reposição."
+            "help": "Use uma password temporária forte. O utilizador deve passar para a password dele através do email de reposição.",
+            "createdNotice": "Conta de acesso criada. Atribua um perfil e apps e depois guarde.",
+            "existingNotice": "Este login já existia. O acesso foi restaurado, mas a password não foi alterada."
         },
         "testUsers": {
             "eyebrow": "Presets",

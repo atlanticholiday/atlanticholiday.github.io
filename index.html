@@ -617,7 +617,7 @@
                         class="dashboard-logo" />
                     <div class="leading-tight">
                         <div class="brand-name brand-red" data-i18n="userManagement.header.title">User Management</div>
-                        <div class="page-mini" data-i18n="userManagement.header.subtitle">List and add application users</div>
+                        <div class="page-mini" data-i18n="userManagement.header.subtitle">Manage accounts and permissions</div>
                     </div>
                 </div>
                 <div class="user-management-header-actions">
@@ -625,9 +625,9 @@
                         class="user-management-menu-toggle text-sm text-slate-700 transition-colors hover:text-brand"
                         aria-controls="user-management-drawer" aria-expanded="false">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.25a4.75 4.75 0 00-8.5-2.9v14.4a4.75 4.75 0 018.5 2.9m0-14.4a4.75 4.75 0 018.5-2.9v14.4a4.75 4.75 0 00-8.5 2.9m0-14.4v14.4" />
                         </svg>
-                        <span data-i18n="userManagement.nav.menu">Menu</span>
+                        <span data-i18n="userManagement.nav.accessGuide">Access guide</span>
                     </button>
                     <div class="language-switcher user-management-language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
                         <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
@@ -655,55 +655,101 @@
                     </div>
 
                     <div class="user-management-main-view user-management-main-view-active" data-user-management-main-view="accounts">
-                        <div class="user-management-main-view-grid">
-                            <div class="user-management-panel user-management-panel-accounts modal-content">
-                                <div class="user-management-section-head">
+                        <section class="user-management-directory-shell" aria-labelledby="user-management-directory-title">
+                            <div class="user-management-directory-toolbar">
+                                <div class="user-management-directory-heading">
                                     <div>
                                         <p class="user-management-eyebrow" data-i18n="userManagement.users.eyebrow">Directory</p>
-                                        <h2 class="text-2xl font-semibold text-slate-950" data-i18n="userManagement.users.title">Existing Users</h2>
-                                        <p class="mt-2 max-w-2xl text-sm text-slate-600" data-i18n="userManagement.users.description">Manage login access, assign roles, and keep colleague permissions consistent across admin, self-service, and shared-tablet flows.</p>
+                                        <h2 id="user-management-directory-title" data-i18n="userManagement.users.title">Users</h2>
                                     </div>
-                                    <div class="user-management-stat">
-                                        <span class="user-management-stat-label" data-i18n="userManagement.users.countLabel">Total access accounts</span>
-                                        <strong id="user-count" class="user-management-stat-value">0</strong>
-                                    </div>
+                                    <span class="user-management-directory-count"><strong id="user-count">0</strong> <span data-i18n="userManagement.users.accountsLabel">accounts</span></span>
                                 </div>
-                                <div class="user-management-scroll-region">
-                                    <ul id="user-list" class="user-management-user-list"></ul>
-                                </div>
-                            </div>
-                            <div class="user-management-panel user-management-panel-create modal-content">
-                                <div class="user-management-section-head">
-                                    <div>
-                                        <p class="user-management-eyebrow" data-i18n="userManagement.create.eyebrow">Create Access</p>
-                                        <h2 class="text-2xl font-semibold text-slate-950" data-i18n="userManagement.create.title">Add New Access</h2>
-                                        <p class="mt-2 max-w-2xl text-sm text-slate-600" data-i18n="userManagement.create.description">Create a new login with a temporary password, then link the same email to the colleague profile and trigger a reset email.</p>
-                                    </div>
-                                </div>
-                                <div class="user-management-form-grid">
-                                    <div class="mb-4">
-                                        <label for="new-user-email" class="user-management-field-label" data-i18n="userManagement.create.emailLabel">Email address</label>
-                                        <input type="email" id="new-user-email" placeholder="Email address"
-                                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm transition-all focus-ring"
-                                            data-i18n="userManagement.create.emailPlaceholder" data-i18n-attr="placeholder">
-                                    </div>
-                                    <div class="mb-4">
-                                        <label for="new-user-password" class="user-management-field-label" data-i18n="userManagement.create.passwordLabel">Temporary password</label>
-                                        <input type="password" id="new-user-password" placeholder="Password" minlength="12" maxlength="128" autocomplete="new-password"
-                                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm transition-all focus-ring"
-                                            data-i18n="userManagement.create.passwordPlaceholder" data-i18n-attr="placeholder">
-                                    </div>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-3">
-                                    <button id="create-user-btn" class="btn-primary px-6 py-3 rounded-2xl transition-all hover-lift">
-                                        <i class="fas fa-user-plus mr-2"></i>
-                                        <span data-i18n="userManagement.create.button">Add Access</span>
+                                <div class="user-management-directory-controls">
+                                    <label class="user-management-search-field" for="user-management-search">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0Z" />
+                                        </svg>
+                                        <input id="user-management-search" type="search" autocomplete="off" placeholder="Search name or email" data-i18n="userManagement.directory.searchPlaceholder" data-i18n-attr="placeholder">
+                                    </label>
+                                    <select id="user-management-status-filter" class="user-management-filter-select" aria-label="Filter users" data-i18n="userManagement.directory.filterLabel" data-i18n-attr="aria-label">
+                                        <option value="all" data-i18n="userManagement.directory.filters.all">All access</option>
+                                        <option value="linked" data-i18n="userManagement.directory.filters.linked">Linked colleagues</option>
+                                        <option value="standalone" data-i18n="userManagement.directory.filters.standalone">Standalone access</option>
+                                        <option value="privileged" data-i18n="userManagement.directory.filters.privileged">Privileged</option>
+                                        <option value="station" data-i18n="userManagement.directory.filters.station">Shared stations</option>
+                                        <option value="no-apps" data-i18n="userManagement.directory.filters.noApps">No dashboard apps</option>
+                                    </select>
+                                    <button id="open-create-user-btn" type="button" class="user-management-primary-action">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                                        </svg>
+                                        <span data-i18n="userManagement.directory.addUser">Add user</span>
                                     </button>
-                                    <p class="text-sm text-slate-500" data-i18n="userManagement.create.help">Use a strong temporary password. The user should switch to their own password through email reset.</p>
                                 </div>
-                                <p id="create-user-error" class="mt-3 text-sm text-red-500"></p>
                             </div>
-                        </div>
+
+                            <div class="user-management-workspace">
+                                <section class="user-management-directory-panel" aria-label="Access accounts">
+                                    <div class="user-management-table-head" aria-hidden="true">
+                                        <span data-i18n="userManagement.directory.columns.user">User</span>
+                                        <span data-i18n="userManagement.directory.columns.profile">Profile</span>
+                                        <span data-i18n="userManagement.directory.columns.apps">Apps</span>
+                                        <span data-i18n="userManagement.directory.columns.status">Status</span>
+                                    </div>
+                                    <ul id="user-list" class="user-management-user-list"></ul>
+                                    <p id="user-filter-summary" class="user-management-filter-summary" aria-live="polite"></p>
+                                </section>
+
+                                <aside id="user-inspector" class="user-management-inspector" aria-label="Selected user permissions">
+                                    <div id="user-inspector-empty" class="user-management-inspector-empty">
+                                        <div class="user-management-inspector-empty-icon" aria-hidden="true">
+                                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0ZM4.5 20.25a7.5 7.5 0 0115 0" />
+                                            </svg>
+                                        </div>
+                                        <h3 data-i18n="userManagement.inspector.emptyTitle">Select a user</h3>
+                                        <p data-i18n="userManagement.inspector.emptyDescription">Choose an account to review and edit its access.</p>
+                                    </div>
+                                    <div id="user-inspector-content"></div>
+                                </aside>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div id="create-user-modal" class="user-management-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="create-user-dialog-title" aria-hidden="true">
+                        <button id="create-user-backdrop" type="button" class="user-management-dialog-backdrop" aria-label="Close add user"></button>
+                        <section class="user-management-dialog-panel">
+                            <header class="user-management-dialog-header">
+                                <div>
+                                    <p class="user-management-eyebrow" data-i18n="userManagement.create.eyebrow">Create Access</p>
+                                    <h2 id="create-user-dialog-title" data-i18n="userManagement.create.title">Add New Access</h2>
+                                    <p data-i18n="userManagement.create.description">Create a login with a temporary password. You can assign permissions immediately afterwards.</p>
+                                </div>
+                                <button id="close-create-user-btn" type="button" class="user-management-icon-button" aria-label="Close">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </header>
+                            <div class="user-management-dialog-body">
+                                <label class="user-management-dialog-field" for="new-user-email">
+                                    <span data-i18n="userManagement.create.emailLabel">Email address</span>
+                                    <input type="email" id="new-user-email" placeholder="Email address" autocomplete="email" data-i18n="userManagement.create.emailPlaceholder" data-i18n-attr="placeholder">
+                                </label>
+                                <label class="user-management-dialog-field" for="new-user-password">
+                                    <span data-i18n="userManagement.create.passwordLabel">Temporary password</span>
+                                    <input type="password" id="new-user-password" placeholder="Password" minlength="12" maxlength="128" autocomplete="new-password" data-i18n="userManagement.create.passwordPlaceholder" data-i18n-attr="placeholder">
+                                </label>
+                                <p class="user-management-dialog-help" data-i18n="userManagement.create.help">Use a strong temporary password. The user should switch to their own password through email reset.</p>
+                                <p id="create-user-error" class="user-management-dialog-error" aria-live="polite"></p>
+                            </div>
+                            <footer class="user-management-dialog-actions">
+                                <button id="cancel-create-user-btn" type="button" class="user-management-secondary-action" data-i18n="common.cancel">Cancel</button>
+                                <button id="create-user-btn" type="button" class="user-management-primary-action">
+                                    <span data-i18n="userManagement.create.button">Add Access</span>
+                                </button>
+                            </footer>
+                        </section>
                     </div>
 
                     <div class="user-management-main-view" data-user-management-main-view="colleagues" hidden>
@@ -728,8 +774,8 @@
                     <div class="user-management-drawer-inner">
                     <div class="user-management-drawer-topbar">
                         <div>
-                            <p class="user-management-eyebrow" data-i18n="userManagement.workspace.menuEyebrow">Quick Menu</p>
-                            <h3 class="text-xl font-semibold text-white" data-i18n="userManagement.nav.menu">Menu</h3>
+                            <p class="user-management-eyebrow" data-i18n="userManagement.roles.eyebrow">Permissions</p>
+                            <h3 class="text-xl font-semibold text-white" data-i18n="userManagement.preview.guide.title">Access guide</h3>
                         </div>
                         <button id="user-management-menu-close-btn" type="button" class="user-management-menu-close" aria-label="Close">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -738,7 +784,7 @@
                         </button>
                     </div>
                     <div class="user-management-menu-panel">
-                        <p class="user-management-eyebrow" data-i18n="userManagement.workspace.menuEyebrow">Quick Menu</p>
+                        <p class="user-management-eyebrow" data-i18n="userManagement.workspace.referenceEyebrow">Reference</p>
                         <div class="user-management-rail-menu">
                             <button type="button" class="user-management-menu-button user-management-menu-button-active" data-user-management-side-view-target="roles">
                                 <span class="user-management-menu-button__label" data-i18n="userManagement.nav.roles">Profiles</span>

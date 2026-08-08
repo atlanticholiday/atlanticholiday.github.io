@@ -24,9 +24,23 @@ function createFixture() {
     <button data-user-management-side-view-target="rollout">Rollout</button>
     <section data-user-management-side-view="roles"></section>
     <section data-user-management-side-view="rollout" hidden></section>
+    <input id="user-management-search">
+    <select id="user-management-status-filter"><option value="all">All</option><option value="linked">Linked</option><option value="standalone">Standalone</option><option value="privileged">Privileged</option><option value="station">Station</option><option value="no-apps">No apps</option></select>
+    <button id="open-create-user-btn">Add user</button>
+    <span id="user-count"></span>
     <ul id="user-list"></ul>
+    <p id="user-filter-summary"></p>
+    <aside id="user-inspector">
+      <div id="user-inspector-empty"></div>
+      <div id="user-inspector-content"></div>
+    </aside>
     <ul id="roles-list"></ul>
     <div id="access-link-overview"></div>
+    <div id="create-user-modal" class="hidden" aria-hidden="true">
+      <button id="create-user-backdrop">Backdrop</button>
+      <button id="close-create-user-btn">Close</button>
+      <button id="cancel-create-user-btn">Cancel</button>
+    </div>
     <input id="new-user-email">
     <input id="new-user-password">
     <p id="create-user-error"></p>
@@ -115,23 +129,26 @@ describe("UserManagementController", () => {
     const renderedItems = document.querySelectorAll("#user-list li");
     assert.equal(renderedItems.length, 1);
     assert.includes(renderedItems[0].textContent, "ana@example.com");
-    assert.includes(renderedItems[0].textContent, "Reset Password");
-    assert.includes(renderedItems[0].textContent, "Delete");
+    assert.includes(document.getElementById("user-inspector-content").textContent, "Reset Password");
+    assert.includes(document.getElementById("user-inspector-content").textContent, "Delete");
 
-    const opsCheckbox = document.getElementById("role-ana@example.com-ops");
+    const opsCheckbox = document.getElementById("inspector-role-ops");
     opsCheckbox.checked = true;
     opsCheckbox.dispatchEvent(new Event("change"));
+    assert.equal(setRolesCalls.length, 0);
+
+    const laundryCheckbox = document.getElementById("inspector-app-laundryLog");
+    laundryCheckbox.checked = true;
+    laundryCheckbox.dispatchEvent(new Event("change"));
+    assert.equal(setAllowedAppsCalls.length, 0);
+
+    document.getElementById("save-user-access-btn").click();
+    await flushAsyncWork();
     await flushAsyncWork();
 
     assert.equal(setRolesCalls.length, 1);
     assert.equal(setRolesCalls[0].email, "ana@example.com");
     assert.deepEqual(setRolesCalls[0].roles, ["employee", "ops"]);
-
-    const laundryCheckbox = document.getElementById("app-ana@example.com-laundryLog");
-    laundryCheckbox.checked = true;
-    laundryCheckbox.dispatchEvent(new Event("change"));
-    await flushAsyncWork();
-
     assert.equal(setAllowedAppsCalls.length, 1);
     assert.equal(setAllowedAppsCalls[0].email, "ana@example.com");
     assert.deepEqual(setAllowedAppsCalls[0].allowedApps, ["laundryLog"]);
@@ -184,6 +201,60 @@ describe("UserManagementController", () => {
     assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
   });
 
+  test("filters the directory and opens the focused add-user dialog", async () => {
+    createFixture();
+
+    const users = {
+      "ana@example.com": { roles: ["employee"], allowedApps: ["laundryLog"] },
+      "manager@example.com": { roles: ["manager"], allowedApps: [] },
+      "station@example.com": { roles: ["time-clock-station"], allowedApps: [] }
+    };
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() { return Object.keys(users); },
+        async getRoles(email) { return users[email].roles; },
+        async getAllowedApps(email) { return users[email].allowedApps; },
+        async syncEmployeeLink() {},
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() { return [{ key: "employee", title: "Employee" }, { key: "manager", title: "Manager" }]; },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      getEmployees: () => [{ id: "emp-1", name: "Ana Silva", email: "ana@example.com" }],
+      windowRef: { alert() {}, confirm() { return true; }, addEventListener() {} }
+    });
+
+    controller.init();
+    await controller.refreshUserList();
+
+    const search = document.getElementById("user-management-search");
+    search.value = "manager";
+    search.dispatchEvent(new Event("input"));
+    assert.equal(document.querySelectorAll("#user-list .user-management-user-row").length, 1);
+    assert.includes(document.getElementById("user-list").textContent, "manager@example.com");
+    assert.includes(document.getElementById("user-filter-summary").textContent, "1 of 3");
+    assert.includes(document.getElementById("user-inspector-content").textContent, "manager@example.com");
+
+    search.value = "";
+    search.dispatchEvent(new Event("input"));
+    const filter = document.getElementById("user-management-status-filter");
+    filter.value = "linked";
+    filter.dispatchEvent(new Event("change"));
+    assert.equal(document.querySelectorAll("#user-list .user-management-user-row").length, 1);
+    assert.includes(document.getElementById("user-list").textContent, "Ana Silva");
+
+    document.getElementById("open-create-user-btn").click();
+    assert.equal(document.getElementById("create-user-modal").classList.contains("hidden"), false);
+    document.getElementById("cancel-create-user-btn").click();
+    assert.equal(document.getElementById("create-user-modal").classList.contains("hidden"), true);
+  });
+
   test("previews the effective workspace and inside-app scope for a colleague", async () => {
     createFixture();
 
@@ -217,7 +288,8 @@ describe("UserManagementController", () => {
     });
 
     await controller.refreshUserList();
-    document.querySelector(".user-management-button-preview").click();
+    assert.includes(document.getElementById("user-inspector-content").textContent, "Heated Pools visible automatically");
+    document.getElementById("inspector-preview-btn").click();
 
     const modal = document.getElementById("access-preview-modal");
     const previewText = document.getElementById("access-preview-content").textContent;
@@ -352,7 +424,7 @@ describe("UserManagementController", () => {
 
     await controller.refreshUserList();
 
-    assert.equal(document.getElementById("app-manager@example.com-laundryLog").disabled, true);
+    assert.equal(document.getElementById("inspector-app-laundryLog").disabled, true);
   });
 
   test("switches the main workspace tabs and keeps drawer tool panels visible when selected", () => {
@@ -446,7 +518,8 @@ describe("UserManagementController", () => {
     const renderedItems = document.querySelectorAll("#user-list li");
     assert.equal(renderedItems.length, 1);
     assert.includes(renderedItems[0].textContent, "new@example.com");
-    assert.includes(renderedItems[0].textContent, "Reset Password");
+    assert.includes(document.getElementById("user-inspector-content").textContent, "Reset Password");
+    assert.includes(document.getElementById("user-inspector-notice").textContent, "Access account created");
   });
 
   test("re-adds access when the auth login already exists", async () => {
@@ -499,14 +572,8 @@ describe("UserManagementController", () => {
     assert.deepEqual(allowedEmails, ["existing@example.com"]);
     assert.equal(document.getElementById("new-user-email").value, "");
     assert.equal(document.getElementById("new-user-password").value, "");
-    assert.includes(
-      document.getElementById("create-user-error").textContent,
-      "already existed in Firebase Auth"
-    );
-    assert.includes(
-      document.getElementById("create-user-error").textContent,
-      "password entered here was not changed"
-    );
+    assert.includes(document.getElementById("user-inspector-notice").textContent, "login already existed");
+    assert.includes(document.getElementById("user-inspector-notice").textContent, "password was not changed");
 
     const renderedItems = document.querySelectorAll("#user-list li");
     assert.equal(renderedItems.length, 1);
@@ -557,7 +624,7 @@ describe("UserManagementController", () => {
 
     await controller.refreshUserList();
 
-    const resetButton = document.querySelector("#user-list li .user-management-button-secondary");
+    const resetButton = document.querySelector("#user-inspector-account-actions .user-management-button-secondary");
     resetButton.click();
     await flushAsyncWork();
 
@@ -622,7 +689,7 @@ describe("UserManagementController", () => {
 
     await controller.refreshUserList();
 
-    const resetButton = document.querySelector("#user-list li .user-management-button-secondary");
+    const resetButton = document.querySelector("#user-inspector-account-actions .user-management-button-secondary");
     resetButton.click();
     await flushAsyncWork();
 

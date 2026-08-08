@@ -68,6 +68,12 @@ export class UserManagementController {
         this.ensureEmployeeForAccess = ensureEmployeeForAccess;
         this.document = documentRef;
         this.window = windowRef;
+        this.selectedUserEmail = null;
+        this.directorySearchQuery = '';
+        this.directoryStatusFilter = 'all';
+        this.inspectorDraft = null;
+        this.inspectorNotice = '';
+        this.isCreateUserOpen = false;
     }
 
     init() {
@@ -75,11 +81,18 @@ export class UserManagementController {
         this.currentSideView = 'roles';
         this.isDrawerOpen = false;
         this.previewState = null;
+        this.selectedUserEmail = null;
+        this.directorySearchQuery = '';
+        this.directoryStatusFilter = 'all';
+        this.inspectorDraft = null;
+        this.inspectorNotice = '';
+        this.isCreateUserOpen = false;
         this.setupRolePresetInputs();
         this.setupMainViewNavigation();
         this.setupSideViewNavigation();
         this.setupDrawerControls();
         this.setupPreviewControls();
+        this.setupDirectoryControls();
         this.document.addEventListener('userManagementPageOpened', () => {
             this.setActiveMainView(this.currentMainView);
             this.setActiveSideView(this.currentSideView);
@@ -118,6 +131,7 @@ export class UserManagementController {
         this.setActiveMainView(this.currentMainView);
         this.setActiveSideView(this.currentSideView);
         this.setDrawerOpen(false);
+        this.setCreateUserOpen(false);
     }
 
     setupRolePresetInputs() {
@@ -200,6 +214,14 @@ export class UserManagementController {
                     this.closeAccessPreview();
                     return;
                 }
+                if (event.key === 'Escape' && this.isCreateUserOpen) {
+                    this.setCreateUserOpen(false);
+                    return;
+                }
+                if (event.key === 'Escape' && this.document.getElementById('user-management-page')?.classList.contains('user-management-inspector-open')) {
+                    this.setInspectorOpen(false);
+                    return;
+                }
                 if (event.key === 'Escape' && this.isDrawerOpen) {
                     this.setDrawerOpen(false);
                 }
@@ -213,6 +235,37 @@ export class UserManagementController {
         });
         this.document.getElementById('access-preview-backdrop')?.addEventListener('click', () => {
             this.closeAccessPreview();
+        });
+    }
+
+    setupDirectoryControls() {
+        const searchInput = this.document.getElementById('user-management-search');
+        const statusFilter = this.document.getElementById('user-management-status-filter');
+
+        searchInput?.addEventListener('input', () => {
+            this.directorySearchQuery = searchInput.value.trim().toLocaleLowerCase();
+            this.renderFromCachedState();
+        });
+        statusFilter?.addEventListener('change', () => {
+            this.directoryStatusFilter = statusFilter.value || 'all';
+            this.renderFromCachedState();
+        });
+
+        this.document.getElementById('open-create-user-btn')?.addEventListener('click', () => {
+            this.setCreateUserOpen(true);
+        });
+        ['close-create-user-btn', 'cancel-create-user-btn', 'create-user-backdrop'].forEach((id) => {
+            this.document.getElementById(id)?.addEventListener('click', () => {
+                this.setCreateUserOpen(false);
+            });
+        });
+        ['new-user-email', 'new-user-password'].forEach((id) => {
+            this.document.getElementById(id)?.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.document.getElementById('create-user-btn')?.click();
+                }
+            });
         });
     }
 
@@ -278,6 +331,24 @@ export class UserManagementController {
         if (this.isDrawerOpen) {
             this.revealActiveSideView({ behavior: 'auto' });
         }
+    }
+
+    setCreateUserOpen(isOpen) {
+        this.isCreateUserOpen = Boolean(isOpen);
+        const modal = this.document.getElementById('create-user-modal');
+        modal?.classList.toggle('hidden', !this.isCreateUserOpen);
+        modal?.setAttribute('aria-hidden', this.isCreateUserOpen ? 'false' : 'true');
+        this.document.body?.classList.toggle('overflow-hidden', this.isCreateUserOpen);
+
+        if (this.isCreateUserOpen) {
+            this.setText('create-user-error', '');
+            this.document.getElementById('new-user-email')?.focus?.();
+        }
+    }
+
+    setInspectorOpen(isOpen) {
+        const page = this.document.getElementById('user-management-page');
+        page?.classList.toggle('user-management-inspector-open', Boolean(isOpen));
     }
 
     revealActiveSideView({ behavior = 'smooth' } = {}) {
@@ -395,17 +466,77 @@ export class UserManagementController {
         }
 
         if (!users.length) {
+            this.selectedUserEmail = null;
+            this.inspectorDraft = null;
             listElement.innerHTML = `<li class="user-management-empty-state">${this.translate('userManagement.users.empty', 'No access accounts created yet.')}</li>`;
+            this.updateDirectoryFilterSummary(0, 0);
+            this.renderUserInspector();
             return;
         }
 
-        users
+        const filteredUsers = users
             .slice()
             .sort((left, right) => left.email.localeCompare(right.email))
-            .forEach((user) => {
+            .filter((user) => this.matchesDirectoryFilters(
+                user,
+                employeesByEmail.get(canonicalizeEmail(user.email)) || null
+            ));
+
+        const selectedStillExists = users.some((user) => canonicalizeEmail(user.email) === canonicalizeEmail(this.selectedUserEmail));
+        if (!selectedStillExists) {
+            this.selectedUserEmail = (filteredUsers[0] || users[0])?.email || null;
+            this.inspectorDraft = null;
+        } else {
+            const selectedIsVisible = filteredUsers.some((user) => canonicalizeEmail(user.email) === canonicalizeEmail(this.selectedUserEmail));
+            if (!selectedIsVisible && filteredUsers.length && !this.inspectorDraft?.dirty) {
+                this.selectedUserEmail = filteredUsers[0].email;
+                this.inspectorDraft = null;
+                this.inspectorNotice = '';
+            }
+        }
+
+        if (!filteredUsers.length) {
+            listElement.innerHTML = `<li class="user-management-empty-state">${this.translate('userManagement.directory.noResults', 'No users match this search or filter.')}</li>`;
+        } else {
+            filteredUsers.forEach((user) => {
                 const linkedEmployee = employeesByEmail.get(canonicalizeEmail(user.email)) || null;
                 listElement.appendChild(this.createUserListItem(user, roles, linkedEmployee));
             });
+        }
+
+        this.updateDirectoryFilterSummary(filteredUsers.length, users.length);
+        this.renderUserInspector();
+    }
+
+    matchesDirectoryFilters(user, linkedEmployee = null) {
+        const query = this.directorySearchQuery || '';
+        if (query) {
+            const searchableText = [
+                user.email,
+                linkedEmployee?.name,
+                ...(Array.isArray(user.roles) ? user.roles : [])
+            ].filter(Boolean).join(' ').toLocaleLowerCase();
+            if (!searchableText.includes(query)) return false;
+        }
+
+        const filter = this.directoryStatusFilter || 'all';
+        if (filter === 'all') return true;
+
+        const preview = buildEffectiveAccessPreview(user, { hasEmployeeLink: Boolean(linkedEmployee) });
+        if (filter === 'linked') return Boolean(linkedEmployee);
+        if (filter === 'standalone') return !linkedEmployee;
+        if (filter === 'privileged') return preview.isPrivileged;
+        if (filter === 'station') return preview.isStation;
+        if (filter === 'no-apps') return preview.appScopes.length === 0;
+        return true;
+    }
+
+    updateDirectoryFilterSummary(visibleCount, totalCount) {
+        const summary = this.document.getElementById('user-filter-summary');
+        if (!summary) return;
+        summary.textContent = visibleCount === totalCount
+            ? this.translate('userManagement.directory.summaryAll', `${totalCount} accounts`, { count: totalCount })
+            : this.translate('userManagement.directory.summaryFiltered', `${visibleCount} of ${totalCount} accounts`, { visible: visibleCount, total: totalCount });
     }
 
     renderRolesList(roles) {
@@ -473,78 +604,222 @@ export class UserManagementController {
 
     createUserListItem(user, roles, linkedEmployee = null) {
         const listItem = this.document.createElement('li');
-        listItem.className = 'user-management-user-card';
+        const isSelected = canonicalizeEmail(user.email) === canonicalizeEmail(this.selectedUserEmail);
+        const preview = buildEffectiveAccessPreview(user, { hasEmployeeLink: Boolean(linkedEmployee) });
+        const statusLabel = linkedEmployee
+            ? this.translate('userManagement.directory.status.linked', 'Linked')
+            : this.translate('userManagement.directory.status.standalone', 'Standalone');
+        const appsLabel = preview.isPrivileged
+            ? this.translate('userManagement.appAccess.allShort', 'All')
+            : (preview.isStation ? '—' : String(preview.appScopes.length));
 
-        const identity = this.document.createElement('div');
-        identity.className = 'user-management-identity';
+        listItem.className = `user-management-user-row ${isSelected ? 'user-management-user-row-selected' : ''}`;
 
-        const title = this.document.createElement('div');
-        title.className = 'user-management-user-title';
-        title.textContent = linkedEmployee?.name || this.formatEmailLabel(user.email);
-
-        const emailLabel = this.document.createElement('div');
-        emailLabel.className = 'user-management-user-email';
-        emailLabel.textContent = user.email;
-
-        const meta = this.document.createElement('div');
-        meta.className = 'user-management-user-meta';
-        meta.appendChild(this.createMetaPill(linkedEmployee ? 'Linked colleague' : 'Standalone access', linkedEmployee ? 'neutral' : 'warning'));
-        if (user.roles.includes(TIME_CLOCK_STATION_ROLE)) {
-            meta.appendChild(this.createMetaPill('Shared station', 'info'));
-        }
-
-        identity.appendChild(title);
-        identity.appendChild(emailLabel);
-        identity.appendChild(meta);
-
-        const permissionsContainer = this.document.createElement('div');
-        permissionsContainer.className = 'user-management-access-columns';
-
-        const rolesBlock = this.document.createElement('section');
-        rolesBlock.className = 'user-management-access-block';
-        rolesBlock.appendChild(this.createAccessHeading(this.translate('userManagement.roles.title', 'Roles')));
-
-        const rolesContainer = this.document.createElement('div');
-        rolesContainer.className = 'user-management-role-grid';
-        roles.forEach((role) => {
-            rolesContainer.appendChild(this.createRoleCheckbox(user, role, rolesContainer));
+        const button = this.document.createElement('button');
+        button.type = 'button';
+        button.className = 'user-management-user-row-button';
+        button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        button.innerHTML = `
+            <span class="user-management-user-cell">
+                <strong>${this.escapeHtml(linkedEmployee?.name || this.formatEmailLabel(user.email))}</strong>
+                <small>${this.escapeHtml(user.email)}</small>
+            </span>
+            <span class="user-management-table-cell user-management-profile-cell">${this.escapeHtml(this.getPreviewLevelLabel(preview.accessLevel))}</span>
+            <span class="user-management-table-cell user-management-app-count-cell">${this.escapeHtml(appsLabel)}</span>
+            <span class="user-management-table-cell user-management-status-cell"><span class="user-management-directory-status ${linkedEmployee ? 'is-linked' : 'is-standalone'}">${this.escapeHtml(statusLabel)}</span></span>
+            <svg class="user-management-row-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6" />
+            </svg>
+        `;
+        button.addEventListener('click', () => {
+            this.selectedUserEmail = user.email;
+            this.inspectorDraft = null;
+            this.inspectorNotice = '';
+            this.renderUserList(this.lastUsers || [], this.lastRoles || roles, this.lastEmployeesByEmail || new Map());
+            this.setInspectorOpen(true);
         });
-        rolesBlock.appendChild(rolesContainer);
 
-        const appsBlock = this.document.createElement('section');
-        appsBlock.className = 'user-management-access-block';
-        appsBlock.appendChild(this.createAccessHeading(this.translate('userManagement.appAccess.title', 'App Access')));
-
-        const appAccessState = this.getUserAppAccessState(user, linkedEmployee);
-        const appsContainer = this.document.createElement('div');
-        appsContainer.className = 'user-management-role-grid';
-
-        getAppAccessOptions().forEach((appOption) => {
-            appsContainer.appendChild(this.createAppCheckbox(user, appOption, appsContainer, appAccessState));
-        });
-        appsBlock.appendChild(appsContainer);
-
-        if (appAccessState.note) {
-            const note = this.document.createElement('p');
-            note.className = 'user-management-app-note';
-            note.textContent = appAccessState.note;
-            appsBlock.appendChild(note);
-        }
-
-        permissionsContainer.appendChild(rolesBlock);
-        permissionsContainer.appendChild(appsBlock);
-
-        const buttonGroup = this.document.createElement('div');
-        buttonGroup.className = 'user-management-action-group';
-        buttonGroup.appendChild(this.createPreviewAccessButton(user, linkedEmployee));
-        buttonGroup.appendChild(this.createResetPasswordButton(user.email));
-        buttonGroup.appendChild(this.createDeleteAccessButton(user.email));
-
-        listItem.appendChild(identity);
-        listItem.appendChild(permissionsContainer);
-        listItem.appendChild(buttonGroup);
+        listItem.appendChild(button);
 
         return listItem;
+    }
+
+    renderUserInspector() {
+        const container = this.document.getElementById('user-inspector-content');
+        const emptyState = this.document.getElementById('user-inspector-empty');
+        if (!container || !emptyState) return;
+
+        const user = (this.lastUsers || []).find((candidate) => canonicalizeEmail(candidate.email) === canonicalizeEmail(this.selectedUserEmail));
+        if (!user) {
+            container.innerHTML = '';
+            emptyState.hidden = false;
+            return;
+        }
+
+        emptyState.hidden = true;
+        const linkedEmployee = this.lastEmployeesByEmail?.get(canonicalizeEmail(user.email)) || null;
+        if (!this.inspectorDraft || canonicalizeEmail(this.inspectorDraft.email) !== canonicalizeEmail(user.email)) {
+            this.inspectorDraft = {
+                email: user.email,
+                roles: Array.isArray(user.roles) ? [...user.roles] : [],
+                allowedApps: normalizeAllowedApps(user.allowedApps) || [],
+                dirty: false
+            };
+        }
+
+        const draftUser = {
+            ...user,
+            roles: [...this.inspectorDraft.roles],
+            allowedApps: [...this.inspectorDraft.allowedApps]
+        };
+        const preview = buildEffectiveAccessPreview(draftUser, { hasEmployeeLink: Boolean(linkedEmployee) });
+        const appAccessState = this.getUserAppAccessState(draftUser, linkedEmployee);
+        const displayName = linkedEmployee?.name || this.formatEmailLabel(user.email);
+        const roleMarkup = (this.lastRoles || []).map((role) => `
+            <div class="user-management-inspector-option">
+                <input id="inspector-role-${this.escapeHtml(role.key)}" type="checkbox" value="${this.escapeHtml(role.key)}" data-inspector-role ${this.inspectorDraft.roles.includes(role.key) ? 'checked' : ''}>
+                <label for="inspector-role-${this.escapeHtml(role.key)}">
+                    <span>${this.escapeHtml(this.getRoleDisplayTitle(role))}</span>
+                    <small>${this.escapeHtml(this.getRoleDescription(role))}</small>
+                </label>
+            </div>
+        `).join('');
+        const appMarkup = getAppAccessOptions().map((appOption) => `
+            <div class="user-management-app-option">
+                <input id="inspector-app-${this.escapeHtml(appOption.key)}" type="checkbox" value="${this.escapeHtml(appOption.key)}" data-inspector-app ${appAccessState.selectedApps.includes(appOption.key) ? 'checked' : ''} ${appAccessState.editable ? '' : 'disabled'}>
+                <label for="inspector-app-${this.escapeHtml(appOption.key)}">${this.escapeHtml(this.getAppLabel(appOption))}</label>
+            </div>
+        `).join('');
+        const appCountLabel = preview.isPrivileged
+            ? this.translate('userManagement.appAccess.all', 'All dashboard apps')
+            : this.translate('userManagement.inspector.appCount', `${preview.appScopes.length} dashboard apps`, { count: preview.appScopes.length });
+        const implicitReservationNote = appAccessState.editable
+            && this.inspectorDraft.allowedApps.includes('reservations')
+            && !this.inspectorDraft.allowedApps.includes('heatedPools')
+            ? this.translate('userManagement.inspector.reservationsNote', 'Weekly Reservations also makes Heated Pools visible automatically.')
+            : '';
+        const appNotes = [appAccessState.note, implicitReservationNote].filter(Boolean);
+
+        container.innerHTML = `
+            <div class="user-management-inspector-header">
+                <div class="user-management-inspector-identity">
+                    <p class="user-management-eyebrow">${this.escapeHtml(this.translate('userManagement.inspector.eyebrow', 'Selected account'))}</p>
+                    <h3>${this.escapeHtml(displayName)}</h3>
+                    <p>${this.escapeHtml(user.email)}</p>
+                </div>
+                <button id="close-user-inspector-btn" type="button" class="user-management-icon-button user-management-inspector-close" aria-label="${this.escapeHtml(this.translate('userManagement.inspector.close', 'Close user editor'))}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" /></svg>
+                </button>
+                <div class="user-management-inspector-summary">
+                    <span>${this.escapeHtml(this.getPreviewLevelLabel(preview.accessLevel))}</span>
+                    <small>${this.escapeHtml(appCountLabel)}</small>
+                </div>
+            </div>
+
+            <section class="user-management-inspector-section">
+                <div class="user-management-inspector-section-head">
+                    <div>
+                        <h4>${this.escapeHtml(this.translate('userManagement.inspector.profileTitle', 'Profile'))}</h4>
+                        <p>${this.escapeHtml(this.translate('userManagement.inspector.profileDescription', 'Profiles control the core workspace and whether all apps are granted automatically.'))}</p>
+                    </div>
+                </div>
+                <div class="user-management-inspector-role-list">${roleMarkup}</div>
+            </section>
+
+            <section class="user-management-inspector-section">
+                <div class="user-management-inspector-section-head">
+                    <div>
+                        <h4>${this.escapeHtml(this.translate('userManagement.appAccess.title', 'App access'))}</h4>
+                        <p>${this.escapeHtml(this.translate('userManagement.inspector.appsDescription', 'Choose only the operational apps this account needs.'))}</p>
+                    </div>
+                </div>
+                <div class="user-management-inspector-app-list">${appMarkup}</div>
+                ${appNotes.map((note) => `<p class="user-management-inspector-note">${this.escapeHtml(note)}</p>`).join('')}
+            </section>
+
+            <div class="user-management-inspector-savebar">
+                <div>
+                    <span class="user-management-save-state ${this.inspectorDraft.dirty ? 'is-dirty' : ''}">${this.escapeHtml(this.inspectorDraft.dirty ? this.translate('userManagement.inspector.unsaved', 'Unsaved changes') : this.translate('userManagement.inspector.saved', 'Access is up to date'))}</span>
+                    <small id="user-inspector-notice" aria-live="polite">${this.escapeHtml(this.inspectorNotice || '')}</small>
+                </div>
+                <div class="user-management-inspector-primary-actions">
+                    <button id="inspector-preview-btn" type="button" class="user-management-secondary-action">${this.escapeHtml(this.translate('userManagement.preview.button', 'Preview access'))}</button>
+                    <button id="save-user-access-btn" type="button" class="user-management-primary-action" ${this.inspectorDraft.dirty ? '' : 'disabled'}>${this.escapeHtml(this.translate('userManagement.inspector.save', 'Save changes'))}</button>
+                </div>
+            </div>
+
+            <section class="user-management-account-actions">
+                <div>
+                    <h4>${this.escapeHtml(this.translate('userManagement.inspector.loginTitle', 'Login access'))}</h4>
+                    <p>${this.escapeHtml(linkedEmployee ? this.translate('userManagement.inspector.linkedStatus', 'Linked to a colleague record.') : this.translate('userManagement.inspector.standaloneStatus', 'Standalone login; no matching colleague email.'))}</p>
+                </div>
+                <div id="user-inspector-account-actions"></div>
+            </section>
+        `;
+
+        container.querySelectorAll('[data-inspector-role]').forEach((input) => {
+            input.addEventListener('change', () => {
+                this.inspectorDraft.roles = Array.from(container.querySelectorAll('[data-inspector-role]:checked')).map((checkbox) => checkbox.value);
+                this.inspectorDraft.dirty = true;
+                this.inspectorNotice = '';
+                this.renderUserInspector();
+            });
+        });
+        container.querySelectorAll('[data-inspector-app]').forEach((input) => {
+            input.addEventListener('change', () => {
+                this.inspectorDraft.allowedApps = Array.from(container.querySelectorAll('[data-inspector-app]:checked')).map((checkbox) => checkbox.value);
+                this.inspectorDraft.dirty = true;
+                this.inspectorNotice = '';
+                this.renderUserInspector();
+            });
+        });
+        container.querySelector('#close-user-inspector-btn')?.addEventListener('click', () => this.setInspectorOpen(false));
+        container.querySelector('#save-user-access-btn')?.addEventListener('click', () => {
+            this.handleSaveSelectedUser().catch((error) => {
+                console.error('Failed to save selected user:', error);
+            });
+        });
+        container.querySelector('#inspector-preview-btn')?.addEventListener('click', (event) => {
+            this.openAccessPreview(draftUser, linkedEmployee, event.currentTarget);
+        });
+
+        const accountActions = container.querySelector('#user-inspector-account-actions');
+        accountActions?.appendChild(this.createResetPasswordButton(user.email));
+        accountActions?.appendChild(this.createDeleteAccessButton(user.email));
+    }
+
+    async handleSaveSelectedUser() {
+        if (!this.inspectorDraft?.dirty) return;
+        const user = (this.lastUsers || []).find((candidate) => canonicalizeEmail(candidate.email) === canonicalizeEmail(this.inspectorDraft.email));
+        if (!user) return;
+
+        const linkedEmployee = this.lastEmployeesByEmail?.get(canonicalizeEmail(user.email)) || null;
+        const nextUser = {
+            ...user,
+            roles: [...this.inspectorDraft.roles],
+            allowedApps: [...this.inspectorDraft.allowedApps]
+        };
+        const nextAppState = this.getUserAppAccessState(nextUser, linkedEmployee);
+        const saveButton = this.document.getElementById('save-user-access-btn');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = this.translate('userManagement.inspector.saving', 'Saving…');
+        }
+
+        try {
+            await this.accessManager.setRoles(user.email, nextUser.roles);
+            if (nextAppState.editable) {
+                await this.accessManager.setAllowedApps(user.email, nextUser.allowedApps);
+            }
+            this.inspectorDraft = null;
+            this.inspectorNotice = this.translate('userManagement.inspector.savedNotice', 'Changes saved.');
+            await this.refreshUserList();
+        } catch (error) {
+            this.inspectorNotice = error?.message || this.translate('userManagement.inspector.saveFailed', 'Changes could not be saved.');
+            this.renderUserInspector();
+            this.window.alert(`${this.translate('userManagement.inspector.saveFailed', 'Changes could not be saved.')}: ${error.message}`);
+            throw error;
+        }
     }
 
     createPreviewAccessButton(user, linkedEmployee = null) {
@@ -1171,14 +1446,14 @@ export class UserManagementController {
         if (emailInput) emailInput.value = '';
         if (passwordInput) passwordInput.value = '';
 
+        this.selectedUserEmail = email;
+        this.inspectorDraft = null;
+        this.inspectorNotice = reusedExistingAuthUser
+            ? this.translate('userManagement.create.existingNotice', 'This login already existed. Access was restored, but its password was not changed.')
+            : this.translate('userManagement.create.createdNotice', 'Access account created. Assign a profile and apps, then save.');
         await this.refreshUserList();
-
-        if (reusedExistingAuthUser) {
-            this.setText(
-                'create-user-error',
-                'This login already existed in Firebase Auth, so it was added back to User Management. The password entered here was not changed. Use the old password or Reset Password.'
-            );
-        }
+        this.setCreateUserOpen(false);
+        this.setInspectorOpen(true);
     }
 
     async handleAddRole() {
