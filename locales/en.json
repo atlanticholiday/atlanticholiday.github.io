@@ -1723,6 +1723,7 @@
       "noCoreAccess": "No time clock, schedule, or administration workspace is currently assigned.",
       "appsTitle": "Dashboard apps",
       "appsCount": "{{count}} visible",
+      "expandHint": "Select an app for details",
       "noApps": "No dashboard apps selected.",
       "note": "This is a read-only permission preview. It does not sign in as the colleague or change their access.",
       "levels": {
@@ -1753,6 +1754,76 @@
         "colleagueWorkflow": "Colleague workflow",
         "operatorOnly": "Operator access",
         "ownRecords": "Own records only"
+      },
+      "guide": {
+        "title": "Access guide",
+        "description": "Compare the profiles. App badges above describe what changes inside each selected app.",
+        "current": "Current",
+        "columns": {
+          "profile": "Profile",
+          "core": "Core workspace",
+          "apps": "Dashboard apps"
+        },
+        "roles": {
+          "admin": {
+            "title": "Administrator",
+            "core": "Team time clock, full schedule, and User Management.",
+            "apps": "Every app with its privileged view where one exists."
+          },
+          "privileged": {
+            "title": "Manager / Supervisor",
+            "core": "Team time clock and full schedule. No User Management.",
+            "apps": "Every app with its privileged view where one exists."
+          },
+          "employee": {
+            "title": "Employee",
+            "core": "Own time clock and read-only monthly schedule when linked to a colleague.",
+            "apps": "Only selected apps; restricted colleague views apply in supported apps."
+          },
+          "station": {
+            "title": "Time Clock Station",
+            "core": "Shared colleague picker for clock-in and clock-out only.",
+            "apps": "No dashboard apps. This profile overrides other roles and app selections."
+          },
+          "appOnly": {
+            "title": "Selected apps only",
+            "core": "No time clock or schedule without an Employee role or colleague link.",
+            "apps": "Only selected apps, using the same restricted scopes as an employee."
+          }
+        },
+        "footnote": "Most apps currently have one operational view. Laundry Log, Linen Inventory, Nuki Doors, Weekly Reservations, and RNAL change what users can do according to profile."
+      },
+      "appDetails": {
+        "generic": {
+          "manager": "Opens the app for team operations. This app currently has no separate manager-only view.",
+          "standard": "Opens the app’s standard operational workspace. This app currently has no separate colleague and manager views."
+        },
+        "laundryLog": {
+          "manager": "Can review the team log and use manager controls, including deletion.",
+          "colleague": "Can record colleague entries. Manager review and deletion controls are hidden."
+        },
+        "linenInventory": {
+          "manager": "Can review team submissions and use manager controls, including deletion.",
+          "colleague": "Can submit inventory entries. Manager review and deletion controls are hidden."
+        },
+        "nukiDoors": {
+          "manager": "Can use door operations and privileged configuration or management controls.",
+          "operator": "Can use available door operations. Configuration and management controls are hidden."
+        },
+        "reservations": {
+          "manager": "Can view and work with all reservation records.",
+          "own": "Can create and view only reservation records attributed to this account. Heated Pools is also shown automatically."
+        },
+        "rnal": {
+          "manager": "Can view and work with all RNAL records.",
+          "own": "Can create and view only RNAL records attributed to this account."
+        },
+        "heatedPools": {
+          "standard": "Opens the standard Heated Pools workspace. It is also granted automatically with Weekly Reservations."
+        },
+        "staff": {
+          "standard": "Opens the Staff operational workspace. This does not grant access to User Management."
+        }
       }
     },
     "create": {

@@ -229,6 +229,23 @@ describe("UserManagementController", () => {
     assert.includes(previewText, "Colleague workflow");
     assert.includes(previewText, "Own records only");
     assert.includes(previewText, "Heated Pools");
+    assert.includes(previewText, "Access guide");
+    assert.includes(previewText, "Manager / Supervisor");
+    assert.includes(previewText, "No User Management");
+    assert.includes(previewText, "restricted colleague views");
+    assert.equal(document.querySelectorAll(".user-access-preview__guide-row").length, 5);
+    assert.includes(
+      document.querySelector(".user-access-preview__guide-row-current").textContent,
+      "Employee"
+    );
+
+    const laundryDetails = Array.from(document.querySelectorAll(".user-access-preview__app"))
+      .find((element) => element.textContent.includes("Laundry Log"));
+    assert.ok(laundryDetails);
+    assert.includes(laundryDetails.textContent, "Manager review and deletion controls are hidden");
+    assert.equal(laundryDetails.open, false);
+    laundryDetails.querySelector("summary").click();
+    assert.equal(laundryDetails.open, true);
   });
 
   test("renders the access directory when employee-link synchronization is unavailable", async () => {

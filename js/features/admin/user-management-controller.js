@@ -834,10 +834,13 @@ export class UserManagementController {
             const appOption = getAppAccessOptions().find((option) => option.key === key);
             const appLabel = appOption ? this.getAppLabel(appOption) : key;
             return `
-                <div class="user-access-preview__app">
-                    <span class="user-access-preview__app-name">${this.escapeHtml(appLabel)}</span>
-                    <span class="user-access-preview__scope ${scope === 'manager' ? 'user-access-preview__scope-manager' : ''}">${this.escapeHtml(this.getPreviewScopeLabel(scope))}</span>
-                </div>
+                <details class="user-access-preview__app">
+                    <summary class="user-access-preview__app-summary">
+                        <span class="user-access-preview__app-name">${this.escapeHtml(appLabel)}</span>
+                        <span class="user-access-preview__scope ${scope === 'manager' ? 'user-access-preview__scope-manager' : ''}">${this.escapeHtml(this.getPreviewScopeLabel(scope))}</span>
+                    </summary>
+                    <p class="user-access-preview__app-detail">${this.escapeHtml(this.getPreviewAppDetail(key, scope))}</p>
+                </details>
             `;
         }).join('');
 
@@ -862,12 +865,90 @@ export class UserManagementController {
             <section class="user-access-preview__section">
                 <div class="user-access-preview__section-head">
                     <h3 class="user-access-preview__section-title">${this.escapeHtml(this.translate('userManagement.preview.appsTitle', 'Dashboard apps'))}</h3>
-                    <span class="user-access-preview__section-meta">${this.escapeHtml(this.translate('userManagement.preview.appsCount', `${preview.appScopes.length} visible`, { count: preview.appScopes.length }))}</span>
+                    <span class="user-access-preview__section-meta">${this.escapeHtml(this.translate('userManagement.preview.appsCount', `${preview.appScopes.length} visible`, { count: preview.appScopes.length }))} · ${this.escapeHtml(this.translate('userManagement.preview.expandHint', 'Select an app for details'))}</span>
                 </div>
                 ${appRows ? `<div class="user-access-preview__app-list">${appRows}</div>` : `<div class="user-access-preview__empty">${this.escapeHtml(this.translate('userManagement.preview.noApps', 'No dashboard apps selected.'))}</div>`}
             </section>
 
+            ${this.getAccessGuideMarkup(preview)}
+
             <p class="user-access-preview__note">${this.escapeHtml(this.translate('userManagement.preview.note', 'This is a read-only permission preview. It does not sign in as the colleague or change their access.'))}</p>
+        `;
+    }
+
+    getAccessGuideMarkup(preview) {
+        const activeGuideRow = preview.accessLevel === 'admin'
+            ? 'admin'
+            : (preview.accessLevel === 'manager'
+                ? 'privileged'
+                : (preview.accessLevel === 'station'
+                    ? 'station'
+                    : (['employee', 'employee-with-apps'].includes(preview.accessLevel) ? 'employee' : 'app-only')));
+        const rows = [
+            {
+                key: 'admin',
+                title: this.translate('userManagement.preview.guide.roles.admin.title', 'Administrator'),
+                core: this.translate('userManagement.preview.guide.roles.admin.core', 'Team time clock, full schedule, and User Management.'),
+                apps: this.translate('userManagement.preview.guide.roles.admin.apps', 'Every app with its privileged view where one exists.')
+            },
+            {
+                key: 'privileged',
+                title: this.translate('userManagement.preview.guide.roles.privileged.title', 'Manager / Supervisor'),
+                core: this.translate('userManagement.preview.guide.roles.privileged.core', 'Team time clock and full schedule. No User Management.'),
+                apps: this.translate('userManagement.preview.guide.roles.privileged.apps', 'Every app with its privileged view where one exists.')
+            },
+            {
+                key: 'employee',
+                title: this.translate('userManagement.preview.guide.roles.employee.title', 'Employee'),
+                core: this.translate('userManagement.preview.guide.roles.employee.core', 'Own time clock and read-only monthly schedule when linked to a colleague.'),
+                apps: this.translate('userManagement.preview.guide.roles.employee.apps', 'Only selected apps; restricted colleague views apply in supported apps.')
+            },
+            {
+                key: 'station',
+                title: this.translate('userManagement.preview.guide.roles.station.title', 'Time Clock Station'),
+                core: this.translate('userManagement.preview.guide.roles.station.core', 'Shared colleague picker for clock-in and clock-out only.'),
+                apps: this.translate('userManagement.preview.guide.roles.station.apps', 'No dashboard apps. This profile overrides other roles and app selections.')
+            },
+            {
+                key: 'app-only',
+                title: this.translate('userManagement.preview.guide.roles.appOnly.title', 'Selected apps only'),
+                core: this.translate('userManagement.preview.guide.roles.appOnly.core', 'No time clock or schedule without an Employee role or colleague link.'),
+                apps: this.translate('userManagement.preview.guide.roles.appOnly.apps', 'Only selected apps, using the same restricted scopes as an employee.')
+            }
+        ];
+        const currentLabel = this.translate('userManagement.preview.guide.current', 'Current');
+        const profileColumn = this.translate('userManagement.preview.guide.columns.profile', 'Profile');
+        const coreColumn = this.translate('userManagement.preview.guide.columns.core', 'Core workspace');
+        const appsColumn = this.translate('userManagement.preview.guide.columns.apps', 'Dashboard apps');
+        const rowMarkup = rows.map((row) => `
+            <div class="user-access-preview__guide-row ${row.key === activeGuideRow ? 'user-access-preview__guide-row-current' : ''}">
+                <div class="user-access-preview__guide-role">
+                    <strong>${this.escapeHtml(row.title)}</strong>
+                    ${row.key === activeGuideRow ? `<span>${this.escapeHtml(currentLabel)}</span>` : ''}
+                </div>
+                <p data-label="${this.escapeHtml(coreColumn)}">${this.escapeHtml(row.core)}</p>
+                <p data-label="${this.escapeHtml(appsColumn)}">${this.escapeHtml(row.apps)}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="user-access-preview__section user-access-preview__guide-section">
+                <div class="user-access-preview__section-head">
+                    <div>
+                        <h3 class="user-access-preview__section-title">${this.escapeHtml(this.translate('userManagement.preview.guide.title', 'Access guide'))}</h3>
+                        <p class="user-access-preview__guide-intro">${this.escapeHtml(this.translate('userManagement.preview.guide.description', 'Compare the profiles. App badges above describe what changes inside each selected app.'))}</p>
+                    </div>
+                </div>
+                <div class="user-access-preview__guide-table">
+                    <div class="user-access-preview__guide-head" aria-hidden="true">
+                        <span>${this.escapeHtml(profileColumn)}</span>
+                        <span>${this.escapeHtml(coreColumn)}</span>
+                        <span>${this.escapeHtml(appsColumn)}</span>
+                    </div>
+                    ${rowMarkup}
+                </div>
+                <p class="user-access-preview__guide-footnote">${this.escapeHtml(this.translate('userManagement.preview.guide.footnote', 'Most apps currently have one operational view. Laundry Log, Linen Inventory, Nuki Doors, Weekly Reservations, and RNAL change what users can do according to profile.'))}</p>
+            </section>
         `;
     }
 
@@ -926,6 +1007,42 @@ export class UserManagementController {
             'own-records': ['userManagement.preview.scopes.ownRecords', 'Own records only']
         };
         const [key, fallback] = scopes[scope] || scopes.standard;
+        return this.translate(key, fallback);
+    }
+
+    getPreviewAppDetail(appKey, scope) {
+        const specialDetails = {
+            laundryLog: {
+                manager: ['userManagement.preview.appDetails.laundryLog.manager', 'Can review the team log and use manager controls, including deletion.'],
+                'colleague-workflow': ['userManagement.preview.appDetails.laundryLog.colleague', 'Can record colleague entries. Manager review and deletion controls are hidden.']
+            },
+            linenInventory: {
+                manager: ['userManagement.preview.appDetails.linenInventory.manager', 'Can review team submissions and use manager controls, including deletion.'],
+                'colleague-workflow': ['userManagement.preview.appDetails.linenInventory.colleague', 'Can submit inventory entries. Manager review and deletion controls are hidden.']
+            },
+            nukiDoors: {
+                manager: ['userManagement.preview.appDetails.nukiDoors.manager', 'Can use door operations and privileged configuration or management controls.'],
+                'operator-only': ['userManagement.preview.appDetails.nukiDoors.operator', 'Can use available door operations. Configuration and management controls are hidden.']
+            },
+            reservations: {
+                manager: ['userManagement.preview.appDetails.reservations.manager', 'Can view and work with all reservation records.'],
+                'own-records': ['userManagement.preview.appDetails.reservations.own', 'Can create and view only reservation records attributed to this account. Heated Pools is also shown automatically.']
+            },
+            rnal: {
+                manager: ['userManagement.preview.appDetails.rnal.manager', 'Can view and work with all RNAL records.'],
+                'own-records': ['userManagement.preview.appDetails.rnal.own', 'Can create and view only RNAL records attributed to this account.']
+            },
+            heatedPools: {
+                standard: ['userManagement.preview.appDetails.heatedPools.standard', 'Opens the standard Heated Pools workspace. It is also granted automatically with Weekly Reservations.']
+            },
+            staff: {
+                standard: ['userManagement.preview.appDetails.staff.standard', 'Opens the Staff operational workspace. This does not grant access to User Management.']
+            }
+        };
+        const [key, fallback] = specialDetails[appKey]?.[scope]
+            || (scope === 'manager'
+                ? ['userManagement.preview.appDetails.generic.manager', 'Opens the app for team operations. This app currently has no separate manager-only view.']
+                : ['userManagement.preview.appDetails.generic.standard', 'Opens the app’s standard operational workspace. This app currently has no separate colleague and manager views.']);
         return this.translate(key, fallback);
     }
 

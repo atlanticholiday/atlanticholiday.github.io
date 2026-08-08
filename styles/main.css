@@ -4526,7 +4526,7 @@ header h1, header h2, header h3 {
 }
 
 .user-access-preview__surface,
-.user-access-preview__app {
+.user-access-preview__app-summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -4541,6 +4541,47 @@ header h1, header h2, header h3 {
 
 .user-access-preview__app {
     border-bottom: 1px solid #e2e8f0;
+}
+
+.user-access-preview__app-summary {
+    position: relative;
+    cursor: pointer;
+    list-style: none;
+    padding-right: 2.75rem;
+    transition: background-color 150ms ease;
+}
+
+.user-access-preview__app-summary::-webkit-details-marker {
+    display: none;
+}
+
+.user-access-preview__app-summary::after {
+    position: absolute;
+    right: 1.05rem;
+    color: #94a3b8;
+    content: '+';
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 160ms ease, color 160ms ease;
+}
+
+.user-access-preview__app[open] .user-access-preview__app-summary::after {
+    color: #e54855;
+    transform: rotate(45deg);
+}
+
+.user-access-preview__app-summary:hover,
+.user-access-preview__app-summary:focus-visible {
+    background: #f8fafc;
+    outline: none;
+}
+
+.user-access-preview__app-detail {
+    margin: -0.15rem 2.75rem 1rem 1.1rem;
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
 .user-access-preview__app:nth-child(odd) {
@@ -4573,6 +4614,91 @@ header h1, header h2, header h3 {
 .user-access-preview__scope-manager {
     background: #ffe4e6;
     color: #be123c;
+}
+
+.user-access-preview__guide-section {
+    margin-top: 1.6rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.user-access-preview__guide-intro {
+    margin-top: 0.35rem;
+    max-width: 44rem;
+    color: #64748b;
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.user-access-preview__guide-table {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    background: #fff;
+}
+
+.user-access-preview__guide-head,
+.user-access-preview__guide-row {
+    display: grid;
+    grid-template-columns: minmax(9.5rem, 0.7fr) minmax(0, 1.25fr) minmax(0, 1.25fr);
+    gap: 1rem;
+    align-items: start;
+    padding: 0.85rem 1rem;
+}
+
+.user-access-preview__guide-head {
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.user-access-preview__guide-row {
+    color: #64748b;
+    font-size: 0.79rem;
+    line-height: 1.45;
+    transition: background-color 150ms ease;
+}
+
+.user-access-preview__guide-row + .user-access-preview__guide-row {
+    border-top: 1px solid #e2e8f0;
+}
+
+.user-access-preview__guide-row:hover {
+    background: #f8fafc;
+}
+
+.user-access-preview__guide-row-current {
+    background: #fff7f7;
+    box-shadow: inset 3px 0 #e54855;
+}
+
+.user-access-preview__guide-role {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    color: #0f172a;
+}
+
+.user-access-preview__guide-role span {
+    border-radius: 999px;
+    background: #ffe4e6;
+    padding: 0.2rem 0.45rem;
+    color: #be123c;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.user-access-preview__guide-footnote {
+    margin-top: 0.75rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    line-height: 1.5;
 }
 
 .user-access-preview__empty {
@@ -4913,6 +5039,27 @@ header h1, header h2, header h3 {
 
     .user-access-preview__app:nth-child(odd) {
         border-right: 0;
+    }
+
+    .user-access-preview__guide-head {
+        display: none;
+    }
+
+    .user-access-preview__guide-row {
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+        padding: 1rem;
+    }
+
+    .user-access-preview__guide-row p::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: #94a3b8;
+        content: attr(data-label);
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
     }
 
     .user-management-role-definition {

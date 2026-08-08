@@ -1731,6 +1731,7 @@
             "noCoreAccess": "Não está atribuído acesso ao relógio de ponto, horário ou administração.",
             "appsTitle": "Apps do painel",
             "appsCount": "{{count}} visíveis",
+            "expandHint": "Selecione uma app para ver os detalhes",
             "noApps": "Sem apps do painel selecionadas.",
             "note": "Esta pré-visualização é apenas de leitura. Não inicia sessão como o colega nem altera o acesso.",
             "levels": {
@@ -1761,6 +1762,76 @@
                 "colleagueWorkflow": "Fluxo de colaborador",
                 "operatorOnly": "Acesso de operador",
                 "ownRecords": "Apenas registos próprios"
+            },
+            "guide": {
+                "title": "Guia de acessos",
+                "description": "Compare os perfis. As etiquetas das apps acima explicam o que muda dentro de cada app selecionada.",
+                "current": "Atual",
+                "columns": {
+                    "profile": "Perfil",
+                    "core": "Área principal",
+                    "apps": "Apps do painel"
+                },
+                "roles": {
+                    "admin": {
+                        "title": "Administrador",
+                        "core": "Relógio de ponto da equipa, horário completo e Gestão de Utilizadores.",
+                        "apps": "Todas as apps, com a vista privilegiada quando existente."
+                    },
+                    "privileged": {
+                        "title": "Gestor / Supervisor",
+                        "core": "Relógio de ponto da equipa e horário completo. Sem Gestão de Utilizadores.",
+                        "apps": "Todas as apps, com a vista privilegiada quando existente."
+                    },
+                    "employee": {
+                        "title": "Colaborador",
+                        "core": "Relógio de ponto próprio e horário mensal apenas de leitura quando ligado a um colega.",
+                        "apps": "Apenas as apps selecionadas; aplicam-se vistas limitadas nas apps compatíveis."
+                    },
+                    "station": {
+                        "title": "Estação de Ponto",
+                        "core": "Seletor partilhado de colegas apenas para entradas e saídas.",
+                        "apps": "Sem apps do painel. Este perfil substitui outros perfis e seleções de apps."
+                    },
+                    "appOnly": {
+                        "title": "Apenas apps selecionadas",
+                        "core": "Sem relógio de ponto ou horário sem o perfil Colaborador ou ligação a um colega.",
+                        "apps": "Apenas as apps selecionadas, com as mesmas limitações de um colaborador."
+                    }
+                },
+                "footnote": "A maioria das apps tem atualmente uma única vista operacional. Registo de Lavandaria, Inventário de Roupa, Portas Nuki, Reservas Semanais e RNAL alteram as ações disponíveis conforme o perfil."
+            },
+            "appDetails": {
+                "generic": {
+                    "manager": "Abre a app para operações da equipa. Esta app ainda não tem uma vista exclusiva para gestores.",
+                    "standard": "Abre a área operacional normal da app. Esta app ainda não tem vistas diferentes para colaborador e gestor."
+                },
+                "laundryLog": {
+                    "manager": "Pode rever o registo da equipa e usar os controlos de gestão, incluindo eliminar.",
+                    "colleague": "Pode registar entradas de colaborador. Os controlos de revisão e eliminação de gestão ficam ocultos."
+                },
+                "linenInventory": {
+                    "manager": "Pode rever os envios da equipa e usar os controlos de gestão, incluindo eliminar.",
+                    "colleague": "Pode enviar registos de inventário. Os controlos de revisão e eliminação de gestão ficam ocultos."
+                },
+                "nukiDoors": {
+                    "manager": "Pode usar as operações das portas e os controlos privilegiados de configuração ou gestão.",
+                    "operator": "Pode usar as operações disponíveis das portas. Os controlos de configuração e gestão ficam ocultos."
+                },
+                "reservations": {
+                    "manager": "Pode ver e trabalhar com todos os registos de reservas.",
+                    "own": "Pode criar e ver apenas registos de reservas atribuídos a esta conta. Piscinas Aquecidas também aparece automaticamente."
+                },
+                "rnal": {
+                    "manager": "Pode ver e trabalhar com todos os registos RNAL.",
+                    "own": "Pode criar e ver apenas registos RNAL atribuídos a esta conta."
+                },
+                "heatedPools": {
+                    "standard": "Abre a área normal de Piscinas Aquecidas. Também é atribuída automaticamente com Reservas Semanais."
+                },
+                "staff": {
+                    "standard": "Abre a área operacional de Staff. Isto não concede acesso à Gestão de Utilizadores."
+                }
             }
         },
         "create": {
