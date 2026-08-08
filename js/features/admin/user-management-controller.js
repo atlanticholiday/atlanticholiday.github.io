@@ -1,4 +1,5 @@
 import { buildEmployeeAccessOverview } from './access-linking.js';
+import { buildEffectiveAccessPreview } from './access-preview.js';
 import { canonicalizeEmail } from '../../shared/email.js';
 import { PRIVILEGED_ROLE_KEYS, TIME_CLOCK_STATION_ROLE } from '../../shared/access-roles.js';
 import { t } from '../../core/i18n.js';
@@ -73,10 +74,12 @@ export class UserManagementController {
         this.currentMainView = 'accounts';
         this.currentSideView = 'roles';
         this.isDrawerOpen = false;
+        this.previewState = null;
         this.setupRolePresetInputs();
         this.setupMainViewNavigation();
         this.setupSideViewNavigation();
         this.setupDrawerControls();
+        this.setupPreviewControls();
         this.document.addEventListener('userManagementPageOpened', () => {
             this.setActiveMainView(this.currentMainView);
             this.setActiveSideView(this.currentSideView);
@@ -89,6 +92,7 @@ export class UserManagementController {
             this.window.addEventListener('languageChanged', () => {
                 this.renderStaticUserManagementCopy();
                 this.renderFromCachedState();
+                this.renderAccessPreview();
             });
         }
 
@@ -192,11 +196,24 @@ export class UserManagementController {
 
         if (typeof this.window?.addEventListener === 'function') {
             this.window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && this.previewState) {
+                    this.closeAccessPreview();
+                    return;
+                }
                 if (event.key === 'Escape' && this.isDrawerOpen) {
                     this.setDrawerOpen(false);
                 }
             });
         }
+    }
+
+    setupPreviewControls() {
+        this.document.getElementById('access-preview-close-btn')?.addEventListener('click', () => {
+            this.closeAccessPreview();
+        });
+        this.document.getElementById('access-preview-backdrop')?.addEventListener('click', () => {
+            this.closeAccessPreview();
+        });
     }
 
     setActiveSideView(view) {
@@ -341,6 +358,19 @@ export class UserManagementController {
         this.renderUserList(users, roles, employeesByEmail);
         this.renderRolesList(roles);
         this.renderAccessOverview(buildEmployeeAccessOverview(employees, users));
+
+        if (this.previewState) {
+            const previewUser = users.find((user) => canonicalizeEmail(user.email) === canonicalizeEmail(this.previewState.user.email));
+            if (previewUser) {
+                this.previewState = {
+                    user: previewUser,
+                    linkedEmployee: employeesByEmail.get(canonicalizeEmail(previewUser.email)) || null
+                };
+                this.renderAccessPreview();
+            } else {
+                this.closeAccessPreview();
+            }
+        }
     }
 
     renderFromCachedState() {
@@ -506,6 +536,7 @@ export class UserManagementController {
 
         const buttonGroup = this.document.createElement('div');
         buttonGroup.className = 'user-management-action-group';
+        buttonGroup.appendChild(this.createPreviewAccessButton(user, linkedEmployee));
         buttonGroup.appendChild(this.createResetPasswordButton(user.email));
         buttonGroup.appendChild(this.createDeleteAccessButton(user.email));
 
@@ -514,6 +545,17 @@ export class UserManagementController {
         listItem.appendChild(buttonGroup);
 
         return listItem;
+    }
+
+    createPreviewAccessButton(user, linkedEmployee = null) {
+        const button = this.document.createElement('button');
+        button.type = 'button';
+        button.textContent = this.translate('userManagement.preview.button', 'Preview Access');
+        button.className = 'user-management-button user-management-button-preview';
+        button.addEventListener('click', () => {
+            this.openAccessPreview(user, linkedEmployee, button);
+        });
+        return button;
     }
 
     createRoleCheckbox(user, role, rolesContainer) {
@@ -637,8 +679,8 @@ export class UserManagementController {
 
         return {
             editable: true,
-            selectedApps: getAllAppAccessKeys(),
-            note: this.translate('userManagement.appAccess.legacyNote', 'This older access login keeps the full dashboard until you choose a smaller set.')
+            selectedApps: [],
+            note: this.translate('userManagement.appAccess.legacyNote', 'No apps are selected for this older login. Choose only the apps this person needs.')
         };
     }
 
@@ -749,6 +791,165 @@ export class UserManagementController {
         });
 
         return button;
+    }
+
+    openAccessPreview(user, linkedEmployee = null, triggerElement = null) {
+        this.previewTriggerElement = triggerElement;
+        this.previewState = { user, linkedEmployee };
+        this.renderAccessPreview();
+
+        const modal = this.document.getElementById('access-preview-modal');
+        modal?.classList.remove('hidden');
+        modal?.setAttribute('aria-hidden', 'false');
+        this.document.body?.classList.add('overflow-hidden');
+        this.document.getElementById('access-preview-close-btn')?.focus?.();
+    }
+
+    closeAccessPreview() {
+        const modal = this.document.getElementById('access-preview-modal');
+        modal?.classList.add('hidden');
+        modal?.setAttribute('aria-hidden', 'true');
+        this.document.body?.classList.remove('overflow-hidden');
+        this.previewState = null;
+
+        const triggerElement = this.previewTriggerElement;
+        this.previewTriggerElement = null;
+        triggerElement?.focus?.();
+    }
+
+    renderAccessPreview() {
+        const container = this.document.getElementById('access-preview-content');
+        if (!container || !this.previewState) return;
+
+        const { user, linkedEmployee } = this.previewState;
+        const preview = buildEffectiveAccessPreview(user, {
+            hasEmployeeLink: Boolean(linkedEmployee)
+        });
+        const displayName = linkedEmployee?.name || this.formatEmailLabel(user.email);
+        const roleSummary = preview.roles.length
+            ? preview.roles.map((role) => this.getRoleDisplayTitle({ key: role, title: role })).join(', ')
+            : this.translate('userManagement.preview.noRole', 'No role assigned');
+        const surfaces = this.getPreviewSurfaces(preview);
+        const appRows = preview.appScopes.map(({ key, scope }) => {
+            const appOption = getAppAccessOptions().find((option) => option.key === key);
+            const appLabel = appOption ? this.getAppLabel(appOption) : key;
+            return `
+                <div class="user-access-preview__app">
+                    <span class="user-access-preview__app-name">${this.escapeHtml(appLabel)}</span>
+                    <span class="user-access-preview__scope ${scope === 'manager' ? 'user-access-preview__scope-manager' : ''}">${this.escapeHtml(this.getPreviewScopeLabel(scope))}</span>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="user-access-preview__identity">
+                <div>
+                    <div class="user-access-preview__name">${this.escapeHtml(displayName)}</div>
+                    <div class="user-access-preview__email">${this.escapeHtml(user.email)}</div>
+                    <div class="user-access-preview__email">${this.escapeHtml(this.translate('userManagement.preview.rolesLabel', 'Roles'))}: ${this.escapeHtml(roleSummary)}</div>
+                </div>
+                <span class="user-access-preview__level">${this.escapeHtml(this.getPreviewLevelLabel(preview.accessLevel))}</span>
+            </div>
+
+            <section class="user-access-preview__section">
+                <div class="user-access-preview__section-head">
+                    <h3 class="user-access-preview__section-title">${this.escapeHtml(this.translate('userManagement.preview.coreTitle', 'Core workspace'))}</h3>
+                    <span class="user-access-preview__section-meta">${this.escapeHtml(this.translate('userManagement.preview.coreMeta', 'Visible immediately after sign-in'))}</span>
+                </div>
+                ${surfaces.length ? `<div class="user-access-preview__surface-list">${surfaces.join('')}</div>` : `<div class="user-access-preview__empty">${this.escapeHtml(this.translate('userManagement.preview.noCoreAccess', 'No time clock, schedule, or administration workspace is currently assigned.'))}</div>`}
+            </section>
+
+            <section class="user-access-preview__section">
+                <div class="user-access-preview__section-head">
+                    <h3 class="user-access-preview__section-title">${this.escapeHtml(this.translate('userManagement.preview.appsTitle', 'Dashboard apps'))}</h3>
+                    <span class="user-access-preview__section-meta">${this.escapeHtml(this.translate('userManagement.preview.appsCount', `${preview.appScopes.length} visible`, { count: preview.appScopes.length }))}</span>
+                </div>
+                ${appRows ? `<div class="user-access-preview__app-list">${appRows}</div>` : `<div class="user-access-preview__empty">${this.escapeHtml(this.translate('userManagement.preview.noApps', 'No dashboard apps selected.'))}</div>`}
+            </section>
+
+            <p class="user-access-preview__note">${this.escapeHtml(this.translate('userManagement.preview.note', 'This is a read-only permission preview. It does not sign in as the colleague or change their access.'))}</p>
+        `;
+    }
+
+    getPreviewSurfaces(preview) {
+        const surfaces = [];
+        if (preview.surfaces.timeClock) {
+            surfaces.push(this.createPreviewSurfaceMarkup(
+                this.translate('userManagement.preview.surfaces.timeClock', 'Time Clock'),
+                this.getPreviewSurfaceDetail('timeClock', preview.surfaces.timeClock)
+            ));
+        }
+        if (preview.surfaces.schedule) {
+            surfaces.push(this.createPreviewSurfaceMarkup(
+                this.translate('userManagement.preview.surfaces.schedule', 'Work Schedule'),
+                this.getPreviewSurfaceDetail('schedule', preview.surfaces.schedule)
+            ));
+        }
+        if (preview.surfaces.userManagement) {
+            surfaces.push(this.createPreviewSurfaceMarkup(
+                this.translate('userManagement.preview.surfaces.userManagement', 'User Management'),
+                this.translate('userManagement.preview.surfaceDetails.userManagement', 'Can manage accounts, roles, and app access.')
+            ));
+        }
+        return surfaces;
+    }
+
+    createPreviewSurfaceMarkup(name, detail) {
+        return `
+            <div class="user-access-preview__surface">
+                <div>
+                    <div class="user-access-preview__surface-name">${this.escapeHtml(name)}</div>
+                    <div class="user-access-preview__surface-detail">${this.escapeHtml(detail)}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    getPreviewSurfaceDetail(surface, mode) {
+        const details = {
+            'timeClock:station': ['userManagement.preview.surfaceDetails.station', 'Shared colleague picker for clock-in and clock-out.'],
+            'timeClock:manager': ['userManagement.preview.surfaceDetails.managerClock', 'Team attendance, review, and correction tools.'],
+            'timeClock:self-service': ['userManagement.preview.surfaceDetails.selfClock', 'Own clock-in, breaks, clock-out, and attendance history.'],
+            'schedule:full': ['userManagement.preview.surfaceDetails.fullSchedule', 'Full schedule views, planning, and vacation tools.'],
+            'schedule:monthly-readonly': ['userManagement.preview.surfaceDetails.monthlySchedule', 'Read-only monthly schedule for the linked colleague.']
+        };
+        const [key, fallback] = details[`${surface}:${mode}`] || ['', mode];
+        return key ? this.translate(key, fallback) : fallback;
+    }
+
+    getPreviewScopeLabel(scope) {
+        const scopes = {
+            manager: ['userManagement.preview.scopes.manager', 'Full management'],
+            standard: ['userManagement.preview.scopes.standard', 'Standard app access'],
+            'colleague-workflow': ['userManagement.preview.scopes.colleagueWorkflow', 'Colleague workflow'],
+            'operator-only': ['userManagement.preview.scopes.operatorOnly', 'Operator access'],
+            'own-records': ['userManagement.preview.scopes.ownRecords', 'Own records only']
+        };
+        const [key, fallback] = scopes[scope] || scopes.standard;
+        return this.translate(key, fallback);
+    }
+
+    getPreviewLevelLabel(accessLevel) {
+        const levels = {
+            admin: ['userManagement.preview.levels.admin', 'Administrator'],
+            manager: ['userManagement.preview.levels.manager', 'Privileged manager'],
+            station: ['userManagement.preview.levels.station', 'Shared station'],
+            employee: ['userManagement.preview.levels.employee', 'Employee self-service'],
+            'employee-with-apps': ['userManagement.preview.levels.employeeWithApps', 'Employee + selected apps'],
+            'app-only': ['userManagement.preview.levels.appOnly', 'Selected apps only'],
+            'no-workspace': ['userManagement.preview.levels.noWorkspace', 'No workspace assigned']
+        };
+        const [key, fallback] = levels[accessLevel] || levels['no-workspace'];
+        return this.translate(key, fallback);
+    }
+
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
     }
 
     renderStaticUserManagementCopy() {

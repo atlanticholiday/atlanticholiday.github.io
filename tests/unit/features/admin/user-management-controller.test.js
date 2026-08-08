@@ -8,6 +8,11 @@ function createFixture() {
     <button id="user-management-menu-toggle-btn">Menu</button>
     <button id="user-management-menu-close-btn">Close</button>
     <button id="user-management-drawer-backdrop" hidden></button>
+    <div id="access-preview-modal" class="hidden" aria-hidden="true">
+      <button id="access-preview-backdrop">Backdrop</button>
+      <button id="access-preview-close-btn">Close preview</button>
+      <div id="access-preview-content"></div>
+    </div>
     <aside id="user-management-drawer" aria-hidden="true">
       <div class="user-management-drawer-inner"></div>
     </aside>
@@ -177,6 +182,53 @@ describe("UserManagementController", () => {
     assert.equal(syncEmployeeLinkCalls.length, 1);
     assert.equal(syncEmployeeLinkCalls[0].email, "nastassja.deaguiaratlantic+clock@gmail.com");
     assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
+  });
+
+  test("previews the effective workspace and inside-app scope for a colleague", async () => {
+    createFixture();
+
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["ana@example.com"];
+        },
+        async getRoles() {
+          return ["employee"];
+        },
+        async getAllowedApps() {
+          return ["laundryLog", "reservations"];
+        },
+        async syncEmployeeLink() {},
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [{ key: "employee", title: "Employee" }];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      getEmployees: () => [{ id: "emp-1", name: "Ana", email: "ana@example.com" }],
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    await controller.refreshUserList();
+    document.querySelector(".user-management-button-preview").click();
+
+    const modal = document.getElementById("access-preview-modal");
+    const previewText = document.getElementById("access-preview-content").textContent;
+    assert.equal(modal.classList.contains("hidden"), false);
+    assert.includes(previewText, "Ana");
+    assert.includes(previewText, "Employee + selected apps");
+    assert.includes(previewText, "Read-only monthly schedule");
+    assert.includes(previewText, "Laundry Log");
+    assert.includes(previewText, "Colleague workflow");
+    assert.includes(previewText, "Own records only");
+    assert.includes(previewText, "Heated Pools");
   });
 
   test("renders the access directory when employee-link synchronization is unavailable", async () => {

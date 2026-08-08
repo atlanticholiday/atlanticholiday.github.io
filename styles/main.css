@@ -4344,6 +4344,17 @@ header h1, header h2, header h3 {
     background: #dbeafe;
 }
 
+.user-management-button-preview {
+    border: 1px solid rgba(233, 75, 90, 0.32);
+    background: rgba(255, 241, 242, 0.98);
+    color: #be123c;
+}
+
+.user-management-button-preview:hover {
+    background: #ffe4e6;
+    transform: translateY(-1px);
+}
+
 .user-management-button-danger {
     border: 1px solid rgba(254, 202, 202, 0.95);
     background: rgba(254, 242, 242, 0.98);
@@ -4352,6 +4363,251 @@ header h1, header h2, header h3 {
 
 .user-management-button-danger:hover {
     background: #fee2e2;
+}
+
+.user-access-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    padding: clamp(0.75rem, 3vw, 2.5rem);
+}
+
+.user-access-preview.hidden {
+    display: none;
+}
+
+.user-access-preview__backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(8px);
+    animation: user-access-preview-fade 160ms ease-out both;
+}
+
+.user-access-preview__panel {
+    position: relative;
+    width: min(980px, 100%);
+    max-height: min(860px, calc(100vh - 2rem));
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 30px;
+    background: #f8fafc;
+    box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
+    animation: user-access-preview-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.user-access-preview__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 1.5rem clamp(1.25rem, 3vw, 2rem);
+}
+
+.user-access-preview__title {
+    margin-top: 0.2rem;
+    color: #0f172a;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.user-access-preview__intro {
+    margin-top: 0.45rem;
+    max-width: 42rem;
+    color: #64748b;
+    font-size: 0.92rem;
+}
+
+.user-access-preview__close {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    transition: 160ms ease;
+}
+
+.user-access-preview__close:hover {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: #be123c;
+    transform: rotate(3deg);
+}
+
+.user-access-preview__content {
+    max-height: calc(min(860px, 100vh - 2rem) - 150px);
+    overflow-y: auto;
+    padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.user-access-preview__identity {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 1.35rem;
+}
+
+.user-access-preview__name {
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.user-access-preview__email {
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.user-access-preview__level {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #0f172a;
+    padding: 0.55rem 0.9rem;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.user-access-preview__section {
+    padding-top: 1.5rem;
+}
+
+.user-access-preview__section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.user-access-preview__section-title {
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.user-access-preview__section-meta {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.user-access-preview__surface-list,
+.user-access-preview__app-list {
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    background: #fff;
+}
+
+.user-access-preview__app-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.user-access-preview__surface,
+.user-access-preview__app {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem 1.1rem;
+}
+
+.user-access-preview__surface + .user-access-preview__surface {
+    border-top: 1px solid #e2e8f0;
+}
+
+.user-access-preview__app {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.user-access-preview__app:nth-child(odd) {
+    border-right: 1px solid #e2e8f0;
+}
+
+.user-access-preview__app-name,
+.user-access-preview__surface-name {
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.user-access-preview__surface-detail {
+    margin-top: 0.22rem;
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.user-access-preview__scope {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #f1f5f9;
+    padding: 0.38rem 0.68rem;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.user-access-preview__scope-manager {
+    background: #ffe4e6;
+    color: #be123c;
+}
+
+.user-access-preview__empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 1.25rem;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.user-access-preview__note {
+    margin-top: 1.25rem;
+    border-left: 3px solid #fb7185;
+    padding: 0.15rem 0 0.15rem 1rem;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+@keyframes user-access-preview-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes user-access-preview-enter {
+    from { opacity: 0; transform: translateY(18px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .user-access-preview__backdrop,
+    .user-access-preview__panel {
+        animation: none;
+    }
 }
 
 .user-management-empty-state,
@@ -4628,6 +4884,35 @@ header h1, header h2, header h3 {
 
     .user-management-button {
         width: 100%;
+    }
+
+    .user-access-preview {
+        align-items: end;
+        padding: 0;
+    }
+
+    .user-access-preview__panel {
+        width: 100%;
+        max-height: calc(100vh - 0.5rem);
+        border-radius: 26px 26px 0 0;
+    }
+
+    .user-access-preview__content {
+        max-height: calc(100vh - 9.5rem);
+    }
+
+    .user-access-preview__identity,
+    .user-access-preview__section-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .user-access-preview__app-list {
+        grid-template-columns: 1fr;
+    }
+
+    .user-access-preview__app:nth-child(odd) {
+        border-right: 0;
     }
 
     .user-management-role-definition {

@@ -809,6 +809,25 @@
         </div>
         <button id="user-management-drawer-backdrop" type="button" class="user-management-drawer-backdrop" hidden aria-hidden="true"></button>
     </div>
+
+    <div id="access-preview-modal" class="user-access-preview hidden" role="dialog" aria-modal="true" aria-labelledby="access-preview-title">
+        <button id="access-preview-backdrop" type="button" class="user-access-preview__backdrop" aria-label="Close access preview"></button>
+        <section class="user-access-preview__panel">
+            <header class="user-access-preview__header">
+                <div>
+                    <p class="user-management-eyebrow" data-i18n="userManagement.preview.eyebrow">Access Preview</p>
+                    <h2 id="access-preview-title" class="user-access-preview__title" data-i18n="userManagement.preview.title">What this user will see</h2>
+                    <p class="user-access-preview__intro" data-i18n="userManagement.preview.description">A read-only preview calculated from the saved role, colleague link, and selected apps.</p>
+                </div>
+                <button id="access-preview-close-btn" type="button" class="user-access-preview__close" aria-label="Close access preview">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </header>
+            <div id="access-preview-content" class="user-access-preview__content"></div>
+        </section>
+    </div>
     <!-- End User Management Page -->
 
     <!-- Properties Management Page -->

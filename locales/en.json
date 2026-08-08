@@ -1711,6 +1711,50 @@
       "empty": "No access accounts created yet.",
       "resetPassword": "Reset Password"
     },
+    "preview": {
+      "button": "Preview Access",
+      "eyebrow": "Access Preview",
+      "title": "What this user will see",
+      "description": "A read-only preview calculated from the saved role, colleague link, and selected apps.",
+      "rolesLabel": "Roles",
+      "noRole": "No role assigned",
+      "coreTitle": "Core workspace",
+      "coreMeta": "Visible immediately after sign-in",
+      "noCoreAccess": "No time clock, schedule, or administration workspace is currently assigned.",
+      "appsTitle": "Dashboard apps",
+      "appsCount": "{{count}} visible",
+      "noApps": "No dashboard apps selected.",
+      "note": "This is a read-only permission preview. It does not sign in as the colleague or change their access.",
+      "levels": {
+        "admin": "Administrator",
+        "manager": "Privileged manager",
+        "station": "Shared station",
+        "employee": "Employee self-service",
+        "employeeWithApps": "Employee + selected apps",
+        "appOnly": "Selected apps only",
+        "noWorkspace": "No workspace assigned"
+      },
+      "surfaces": {
+        "timeClock": "Time Clock",
+        "schedule": "Work Schedule",
+        "userManagement": "User Management"
+      },
+      "surfaceDetails": {
+        "station": "Shared colleague picker for clock-in and clock-out.",
+        "managerClock": "Team attendance, review, and correction tools.",
+        "selfClock": "Own clock-in, breaks, clock-out, and attendance history.",
+        "fullSchedule": "Full schedule views, planning, and vacation tools.",
+        "monthlySchedule": "Read-only monthly schedule for the linked colleague.",
+        "userManagement": "Can manage accounts, roles, and app access."
+      },
+      "scopes": {
+        "manager": "Full management",
+        "standard": "Standard app access",
+        "colleagueWorkflow": "Colleague workflow",
+        "operatorOnly": "Operator access",
+        "ownRecords": "Own records only"
+      }
+    },
     "create": {
       "eyebrow": "Create Access",
       "title": "Add New Access",
@@ -1766,7 +1810,7 @@
       "emptyNote": "No extra apps selected. This colleague keeps only time clock and self-service schedule access.",
       "privilegedNote": "Privileged roles keep full app access.",
       "stationNote": "Shared station logins do not use dashboard app access.",
-      "legacyNote": "This older access login keeps the full dashboard until you choose a smaller set.",
+      "legacyNote": "No apps are selected for this older login. Choose only the apps this person needs.",
       "options": {
         "airbnbReservationInvoices": "Airbnb VAT Invoices",
         "operationalGuidelines": "Operational Guide",
