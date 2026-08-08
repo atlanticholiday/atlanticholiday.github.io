@@ -1309,6 +1309,12 @@ export class LaundryLogManager {
 
     handleRootInput(event) {
         const target = event.target;
+        if (target?.matches?.("[data-laundry-counter-input]")) {
+            const numericValue = String(target.value || "").replace(/[^0-9]/g, "");
+            if (target.value !== numericValue) {
+                target.value = numericValue;
+            }
+        }
         if (target?.id === "laundry-cleaner-property-search") {
             const query = normalizeKey(target.value);
             this.cleanerPropertyQuery = target.value;
@@ -1492,10 +1498,10 @@ export class LaundryLogManager {
                     <div class="text-sm font-medium leading-5 text-slate-900">${escapeHtml(label)}</div>
                     ${sentCount !== null ? `<div class="mt-0.5 text-xs font-medium text-slate-500">${escapeHtml(this.tr("cleaner.sentCount", { count: sentCount }))}</div>` : ""}
                 </div>
-                <div class="flex shrink-0 items-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <button type="button" data-laundry-action="${action}" ${targetAttributes} data-field="${escapeHtml(field)}" data-delta="-1" aria-label="${escapeHtml(this.tr("cleaner.decrease", { item: label }))}" class="flex h-12 w-12 items-center justify-center text-2xl font-medium text-slate-600 transition hover:bg-slate-50 active:bg-slate-100">&minus;</button>
-                    <input type="number" min="0" inputmode="numeric" aria-label="${escapeHtml(label)}" ${inputAttributes} value="${escapeHtml(String(value || 0))}" class="h-12 w-12 border-x border-slate-200 bg-slate-50 text-center text-base font-semibold text-slate-950 outline-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-rose-200 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
-                    <button type="button" data-laundry-action="${action}" ${targetAttributes} data-field="${escapeHtml(field)}" data-delta="1" aria-label="${escapeHtml(this.tr("cleaner.increase", { item: label }))}" class="flex h-12 w-12 items-center justify-center text-2xl font-medium text-rose-700 transition hover:bg-rose-50 active:bg-rose-100">+</button>
+                <div class="laundry-cleaner-counter-control flex shrink-0 items-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <button type="button" data-laundry-action="${action}" ${targetAttributes} data-field="${escapeHtml(field)}" data-delta="-1" aria-label="${escapeHtml(this.tr("cleaner.decrease", { item: label }))}" class="flex h-12 w-11 shrink-0 items-center justify-center text-2xl font-medium text-slate-600 transition hover:bg-slate-50 active:bg-slate-100">&minus;</button>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="off" data-laundry-counter-input="true" aria-label="${escapeHtml(label)}" ${inputAttributes} value="${escapeHtml(String(value || 0))}" class="laundry-cleaner-counter-input h-12 w-11 shrink-0 border-x border-slate-200 bg-slate-50 p-0 text-center text-base font-semibold text-slate-950 outline-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-rose-200">
+                    <button type="button" data-laundry-action="${action}" ${targetAttributes} data-field="${escapeHtml(field)}" data-delta="1" aria-label="${escapeHtml(this.tr("cleaner.increase", { item: label }))}" class="flex h-12 w-11 shrink-0 items-center justify-center text-2xl font-medium text-rose-700 transition hover:bg-rose-50 active:bg-rose-100">+</button>
                 </div>
             </div>
         `;
@@ -1603,7 +1609,7 @@ export class LaundryLogManager {
         const summary = summarizeLaundryLogRecord(this.draft);
         const previousLoad = this.getLatestPropertyLoad(this.draft.propertyName);
         return `
-            <section id="laundry-cleaner-send-form" class="scroll-mt-6 pb-24">
+            <section id="laundry-cleaner-send-form" class="laundry-mobile-action-host scroll-mt-6">
                 <input id="laundry-log-property-input" type="hidden" value="${escapeHtml(this.draft.propertyName)}">
                 <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
                     <div class="min-w-0">
@@ -1654,7 +1660,7 @@ export class LaundryLogManager {
                         </label>
                     </div>
                 </details>
-                <div class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:sticky sm:inset-x-auto sm:bottom-3 sm:mt-6 sm:rounded-2xl sm:border">
+                <div class="laundry-mobile-action-bar border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:mt-6 sm:rounded-2xl sm:border">
                     <div class="mx-auto flex max-w-2xl items-center gap-3">
                         <button type="button" data-laundry-action="cancel-cleaner-send" class="min-h-12 rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:text-slate-900">${escapeHtml(this.tr("cleaner.cancel"))}</button>
                         <button type="button" data-laundry-action="save" ${summary.deliveredUnits === 0 ? "disabled" : ""} class="min-h-12 flex-1 rounded-xl bg-rose-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">
@@ -1707,7 +1713,7 @@ export class LaundryLogManager {
         }
         const summary = summarizeLaundryLogRecord(this.draft);
         return `
-            <section id="laundry-cleaner-return-editor" class="scroll-mt-6 pb-24">
+            <section id="laundry-cleaner-return-editor" class="laundry-mobile-action-host scroll-mt-6">
                 <input id="laundry-log-property-input" type="hidden" value="${escapeHtml(this.draft.propertyName)}">
                 <input id="laundry-log-delivery-date-input" type="hidden" value="${escapeHtml(this.draft.deliveryDate)}">
                 <input id="laundry-log-received-date-input" type="hidden" value="${escapeHtml(this.draft.receivedDate || getTodayIsoDate())}">
@@ -1732,7 +1738,7 @@ export class LaundryLogManager {
                     }).join("")}
                 </div>
                 <div class="mt-5">${this.renderReturnMismatchWarning(summary)}</div>
-                <div class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:sticky sm:inset-x-auto sm:bottom-3 sm:mt-6 sm:rounded-2xl sm:border">
+                <div class="laundry-mobile-action-bar border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:mt-6 sm:rounded-2xl sm:border">
                     <div class="mx-auto max-w-2xl">
                         <button type="button" data-laundry-action="save" class="min-h-12 w-full rounded-xl bg-rose-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700">${escapeHtml(summary.differenceUnits
                             ? this.tr("cleaner.saveDifference")
@@ -2502,6 +2508,10 @@ export class LaundryLogManager {
         this.bindRootEvents();
 
         const cleanerView = this.isCleanerView();
+        const page = document.getElementById("laundry-log-page");
+        if (page) {
+            page.dataset.cleanerView = String(cleanerView);
+        }
         const shell = document.getElementById("laundry-log-shell");
         if (shell) {
             shell.className = cleanerView

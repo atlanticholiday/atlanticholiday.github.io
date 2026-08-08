@@ -39,6 +39,7 @@ describe("LaundryLogManager", () => {
     manager.ensureDomScaffold();
     manager.render();
 
+    assert.equal(document.getElementById("laundry-log-page").dataset.cleanerView, "true");
     assert.ok(document.getElementById("laundry-cleaner-property-search"));
     assert.ok(document.querySelector("[data-workspace='entry']"));
     assert.ok(document.querySelector("[data-workspace='returns']"));
@@ -48,13 +49,21 @@ describe("LaundryLogManager", () => {
     document.querySelector("[data-laundry-action='select-property'][data-property-id='p1']").click();
 
     assert.ok(document.getElementById("laundry-cleaner-send-form"));
+    assert.ok(document.querySelector(".laundry-mobile-action-bar"));
     assert.equal(document.getElementById("laundry-log-property-input").value, "Atlantic View");
     const saveButton = document.querySelector("[data-laundry-action='save']");
     assert.ok(saveButton.disabled);
 
+    const counterInput = document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='delivered']");
+    assert.equal(counterInput.type, "text");
+    assert.equal(counterInput.inputMode, "numeric");
+    counterInput.value = "1x2";
+    counterInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(counterInput.value, "12");
+
     document.querySelector("[data-laundry-action='adjust-count'][data-item-key='bathTowel'][data-delta='1']").click();
 
-    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='delivered']").value, "1");
+    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='delivered']").value, "13");
     assert.ok(!document.querySelector("[data-laundry-action='save']").disabled);
     window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
   });

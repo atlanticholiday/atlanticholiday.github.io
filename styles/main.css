@@ -5889,6 +5889,71 @@ header h1, header h2, header h3 {
     color: #64748b;
 }
 
+/* Keep cleaner counters legible on Android, where native number controls can
+   reserve space for browser decorations inside these compact steppers. */
+.laundry-cleaner-counter-control {
+    width: 8.25rem;
+    min-width: 8.25rem;
+}
+
+.laundry-cleaner-counter-control > button,
+.laundry-cleaner-counter-input {
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+    min-width: 2.75rem;
+}
+
+.laundry-cleaner-counter-input {
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    color: #0f172a;
+    -webkit-text-fill-color: #0f172a;
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    text-align: center;
+    opacity: 1;
+}
+
+.laundry-mobile-action-host {
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.laundry-mobile-action-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 90;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+    .laundry-mobile-action-host {
+        padding-bottom: 0;
+    }
+
+    .laundry-mobile-action-bar {
+        position: sticky;
+        right: auto;
+        bottom: 0.75rem;
+        left: auto;
+        z-index: 20;
+        padding-bottom: 0.75rem;
+    }
+}
+
+@media (max-width: 639px) {
+    /* Cleaner mode already has its own property picker. Removing the global
+       search trigger prevents it from covering the primary Save action. */
+    body:has(#laundry-log-page[data-cleaner-view="true"]:not(.hidden)) .quick-search-trigger {
+        display: none;
+    }
+}
+
 .quick-search-trigger {
     position: fixed;
     right: 1rem;
