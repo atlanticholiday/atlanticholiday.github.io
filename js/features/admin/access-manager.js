@@ -1,11 +1,24 @@
-import { collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    collection,
+    deleteField,
+    doc,
+    getDoc,
+    getDocs,
+    query,
+    serverTimestamp,
+    setDoc,
+    where,
+    writeBatch
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import {
+    canonicalizeEmail,
     getEmailLookupKeys,
     getNormalizedEmailDisplay,
     isProductionAccessEmail
 } from "../../shared/email.js";
 import { normalizeAllowedApps } from "../../shared/app-access.js";
+import { isCallableUnavailableError } from "./firebase-function-utils.js";
 
 export class AccessManager {
     constructor(db, functionsInstance = null) {
@@ -75,16 +88,41 @@ export class AccessManager {
 
     async addEmail(email, { allowedApps } = {}) {
         const normalizedAllowedApps = normalizeAllowedApps(allowedApps);
-        await this.callProtectedFunction('adminAddAccess', {
-            email: getNormalizedEmailDisplay(email),
-            allowedApps: normalizedAllowedApps || []
-        });
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        try {
+            await this.callProtectedFunction('adminAddAccess', {
+                email: normalizedEmail,
+                allowedApps: normalizedAllowedApps || []
+            });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+                displayEmail: normalizedEmail,
+                allowedApps: normalizedAllowedApps || [],
+                addedAt: serverTimestamp()
+            }, { merge: true });
+        }
     }
 
     async removeEmail(email) {
-        await this.callProtectedFunction('adminRemoveAccess', {
-            email: getNormalizedEmailDisplay(email)
-        });
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        try {
+            await this.callProtectedFunction('adminRemoveAccess', { email: normalizedEmail });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+
+            const batch = writeBatch(this.db);
+            getEmailLookupKeys(normalizedEmail).forEach((key) => {
+                batch.delete(doc(this.db, this.collectionPath, key));
+            });
+
+            const materializedAccess = await getDocs(query(
+                collection(this.db, 'userAccess'),
+                where('emailCanonical', '==', canonicalizeEmail(normalizedEmail))
+            ));
+            materializedAccess.docs.forEach((documentSnapshot) => batch.delete(documentSnapshot.ref));
+            await batch.commit();
+        }
     }
 
     /**
@@ -106,18 +144,37 @@ export class AccessManager {
      * @param roles Array of role keys
      */
     async setRoles(email, roles) {
-        await this.callProtectedFunction('adminSetRoles', {
-            email: getNormalizedEmailDisplay(email),
-            roles: Array.isArray(roles) ? roles : []
-        });
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const normalizedRoles = Array.isArray(roles) ? roles : [];
+        try {
+            await this.callProtectedFunction('adminSetRoles', {
+                email: normalizedEmail,
+                roles: normalizedRoles
+            });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+                displayEmail: normalizedEmail,
+                roles: normalizedRoles
+            }, { merge: true });
+        }
     }
 
     async setAllowedApps(email, allowedApps) {
         const normalizedAllowedApps = normalizeAllowedApps(allowedApps) || [];
-        await this.callProtectedFunction('adminSetAllowedApps', {
-            email: getNormalizedEmailDisplay(email),
-            allowedApps: normalizedAllowedApps
-        });
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        try {
+            await this.callProtectedFunction('adminSetAllowedApps', {
+                email: normalizedEmail,
+                allowedApps: normalizedAllowedApps
+            });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+                displayEmail: normalizedEmail,
+                allowedApps: normalizedAllowedApps
+            }, { merge: true });
+        }
     }
 
     async isEmailAllowed(email) {
@@ -132,14 +189,38 @@ export class AccessManager {
     }
 
     async syncEmployeeLink(email, employee = null) {
-        await this.callProtectedFunction('adminSyncEmployeeLink', {
-            email: getNormalizedEmailDisplay(email),
-            employee: employee?.id ? {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const normalizedEmployee = employee?.id ? {
                 id: String(employee.id),
                 name: String(employee.name || ''),
                 email: getNormalizedEmailDisplay(employee.email || email),
                 isArchived: Boolean(employee.isArchived)
-            } : null
-        });
+            } : null;
+
+        try {
+            await this.callProtectedFunction('adminSyncEmployeeLink', {
+                email: normalizedEmail,
+                employee: normalizedEmployee
+            });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+
+            const employeeLinkPatch = normalizedEmployee ? {
+                linkedEmployeeId: normalizedEmployee.id,
+                linkedEmployeeName: normalizedEmployee.name,
+                linkedEmployeeEmail: normalizedEmployee.email,
+                linkedEmployeeArchived: normalizedEmployee.isArchived
+            } : {
+                linkedEmployeeId: deleteField(),
+                linkedEmployeeName: deleteField(),
+                linkedEmployeeEmail: deleteField(),
+                linkedEmployeeArchived: deleteField()
+            };
+
+            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+                displayEmail: normalizedEmail,
+                ...employeeLinkPatch
+            }, { merge: true });
+        }
     }
 }

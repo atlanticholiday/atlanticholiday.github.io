@@ -179,6 +179,58 @@ describe("UserManagementController", () => {
     assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
   });
 
+  test("renders the access directory when employee-link synchronization is unavailable", async () => {
+    createFixture();
+
+    const originalWarn = console.warn;
+    const warnings = [];
+    console.warn = (...args) => warnings.push(args);
+
+    try {
+      const controller = new UserManagementController({
+        accessManager: {
+          async listEmails() {
+            return ["admin@example.com"];
+          },
+          async getRoles() {
+            return ["admin"];
+          },
+          async getAllowedApps() {
+            return [];
+          },
+          async syncEmployeeLink() {
+            throw new Error("Function not found");
+          },
+          async setRoles() {},
+          async setAllowedApps() {},
+          async removeEmail() {},
+          async addEmail() {}
+        },
+        roleManager: {
+          async listRoles() {
+            return [{ key: "admin", title: "Administrator" }];
+          },
+          async addRole() {}
+        },
+        createAuthUser: async () => {},
+        sendPasswordReset: async () => {},
+        getEmployees: () => [],
+        windowRef: { alert() {}, confirm() { return true; } }
+      });
+
+      await controller.refreshUserList();
+
+      const renderedItems = document.querySelectorAll("#user-list li");
+      assert.equal(renderedItems.length, 1);
+      assert.includes(renderedItems[0].textContent, "admin@example.com");
+      assert.ok(warnings.some((warning) => {
+        return String(warning[0]).includes("rendering the current access directory");
+      }));
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
   test("syncs preset role key and title dropdowns", () => {
     createFixture();
 

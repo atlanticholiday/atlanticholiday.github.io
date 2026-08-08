@@ -1,5 +1,6 @@
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { isCallableUnavailableError } from "./firebase-function-utils.js";
 
 export class RoleManager {
     constructor(db, functionsInstance = null) {
@@ -23,14 +24,31 @@ export class RoleManager {
     }
 
     async addRole(key, title) {
-        await this.callProtectedFunction('adminSaveRole', { key, title });
+        await this.saveRole(key, title);
     }
 
     async updateRole(key, title) {
-        await this.callProtectedFunction('adminSaveRole', { key, title });
+        await this.saveRole(key, title);
     }
 
     async removeRole(key) {
-        await this.callProtectedFunction('adminDeleteRole', { key });
+        try {
+            await this.callProtectedFunction('adminDeleteRole', { key });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+            await deleteDoc(doc(this.db, this.collectionPath, key));
+        }
+    }
+
+    async saveRole(key, title) {
+        try {
+            await this.callProtectedFunction('adminSaveRole', { key, title });
+        } catch (error) {
+            if (!isCallableUnavailableError(error)) throw error;
+            await setDoc(doc(this.db, this.collectionPath, key), {
+                title,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        }
     }
 }

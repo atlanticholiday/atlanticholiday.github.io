@@ -1,5 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { deleteApp, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { browserSessionPersistence, createUserWithEmailAndPassword, getAuth, inMemoryPersistence, onAuthStateChanged, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, clearIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
@@ -9,6 +9,7 @@ import { i18n, t } from '../core/i18n.js';
 import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
+import { isCallableUnavailableError } from '../features/admin/firebase-function-utils.js';
 import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
@@ -55,6 +56,25 @@ let migrationCompleted = false; // Flag to prevent repeated migration
 let timeClockAutoOpenedForUser = false;
 let unsubscribePendingAccessLinkSync = null;
 let pendingMigrationTimeoutId = null;
+
+async function createAuthUserWithoutCallable(email, password) {
+    const secondaryApp = initializeApp(
+        Config.firebaseConfig,
+        `user-management-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+
+    try {
+        const secondaryAuth = getAuth(secondaryApp);
+        await setPersistence(secondaryAuth, inMemoryPersistence);
+        const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+        return {
+            uid: credential.user.uid,
+            email: credential.user.email || email
+        };
+    } finally {
+        await deleteApp(secondaryApp);
+    }
+}
 
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
@@ -553,13 +573,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             accessManager,
             roleManager,
             createAuthUser: async (email, password) => {
-                const result = await httpsCallable(functionsInstance, 'adminCreateAuthUser')({ email, password });
-                return result.data || {};
+                try {
+                    const result = await httpsCallable(functionsInstance, 'adminCreateAuthUser')({ email, password });
+                    return result.data || {};
+                } catch (error) {
+                    if (!isCallableUnavailableError(error)) throw error;
+                    return createAuthUserWithoutCallable(email, password);
+                }
             },
             sendPasswordReset: async (email) => {
-                const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
-                const result = await createPasswordResetLink({ email });
-                return result.data || {};
+                try {
+                    const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
+                    const result = await createPasswordResetLink({ email });
+                    return result.data || {};
+                } catch (error) {
+                    if (!isCallableUnavailableError(error)) throw error;
+                    await sendPasswordResetEmail(auth, email);
+                    return {};
+                }
             },
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
             ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload)

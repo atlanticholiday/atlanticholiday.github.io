@@ -196,7 +196,7 @@ service cloud.firestore {
 
     match /userAccess/{uid} {
       allow read: if approved() && (request.auth.uid == uid || adminOnly());
-      allow write: if false;
+      allow create, update, delete: if adminOnly();
     }
 
     match /allowedEmails/{emailKey} {
@@ -205,12 +205,12 @@ service cloud.firestore {
           && request.auth.token.email is string
           && request.auth.token.email == emailKey
           && !request.auth.token.email.matches('.*@horario\\.test$'));
-      allow write: if false;
+      allow create, update, delete: if adminOnly();
     }
 
     match /roles/{roleKey} {
       allow read: if adminOnly();
-      allow write: if false;
+      allow create, update, delete: if adminOnly();
     }
 
     match /securityAudit/{entryId} {

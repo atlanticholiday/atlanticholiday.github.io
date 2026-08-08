@@ -318,12 +318,20 @@ export class UserManagementController {
                 .map((employee) => [canonicalizeEmail(employee.email), employee])
         );
 
-        await Promise.all(
+        const employeeLinkSyncResults = await Promise.allSettled(
             users.map((user) => this.accessManager.syncEmployeeLink?.(
                 user.email,
                 employeesByEmail.get(canonicalizeEmail(user.email)) || null
             ))
         );
+
+        const failedEmployeeLinkSyncs = employeeLinkSyncResults.filter((result) => result.status === 'rejected');
+        if (failedEmployeeLinkSyncs.length) {
+            console.warn(
+                `Failed to sync ${failedEmployeeLinkSyncs.length} employee access link(s); rendering the current access directory without synced links.`,
+                failedEmployeeLinkSyncs.map((result) => result.reason)
+            );
+        }
 
         this.lastUsers = users;
         this.lastRoles = roles;
