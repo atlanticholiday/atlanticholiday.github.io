@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, clearIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 import { Config } from '../core/config.js';
 import { i18n, t } from '../core/i18n.js';
@@ -458,8 +459,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.laundryLogManager = laundryLogManager;
         try { laundryLogManager.ensureDomScaffold?.(); } catch { }
         linenInventoryManager = new LinenInventoryManager(db, {
+            storage: getStorage(app),
             getDataManager: () => dataManager,
-            getProperties: () => propertiesManager?.properties || []
+            getProperties: () => propertiesManager?.properties || [],
+            getPropertyDirectory: httpsCallable(functionsInstance, 'getLinenInventoryPropertyDirectory')
         });
         window.linenInventoryManager = linenInventoryManager;
         try { linenInventoryManager.ensureDomScaffold?.(); } catch { }
@@ -625,7 +628,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Initialize properties manager for shared properties
                 console.log(`📋 [INITIALIZATION] Creating PropertiesManager...`);
-                if (!propertiesManager && dataManager.hasAnyGrantedAppAccess?.()) {
+                const propertyDirectoryApps = [
+                    'properties',
+                    'allinfo',
+                    'welcomePacks',
+                    'owners',
+                    'safety',
+                    'reservations',
+                    'heatedPools',
+                    'inventory'
+                ];
+                const canReadFullPropertyRecords = dataManager.hasPrivilegedRole?.()
+                    || propertyDirectoryApps.some((appKey) => dataManager.canAccessApp?.(appKey));
+                if (!propertiesManager && canReadFullPropertyRecords) {
                     propertiesManager = new PropertiesManager(db);
                     window.propertiesManager = propertiesManager;
                 }

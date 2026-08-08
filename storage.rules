@@ -36,6 +36,12 @@ service firebase.storage {
         && 'inventory' in accessData().allowedApps;
     }
 
+    function hasLinenInventoryAccess() {
+      return approved()
+        && accessData().allowedApps is list
+        && 'linenInventory' in accessData().allowedApps;
+    }
+
     function allowedAttachmentType() {
       return request.resource.contentType.matches('image/.*')
         || request.resource.contentType == 'application/pdf'
@@ -50,6 +56,18 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024
         && allowedAttachmentType();
       allow delete: if privileged() || hasInventoryAccess();
+    }
+
+    match /linen-inventory/{ownerUid}/{fileName} {
+      allow read: if privileged()
+        || (hasLinenInventoryAccess() && request.auth.uid == ownerUid);
+      allow create: if (
+          privileged()
+          || (hasLinenInventoryAccess() && request.auth.uid == ownerUid)
+        )
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update, delete: if privileged();
     }
 
     match /{allPaths=**} {

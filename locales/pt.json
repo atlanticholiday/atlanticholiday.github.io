@@ -502,7 +502,10 @@
         "stats": {
             "records": "Contagens",
             "countedUnits": "Contado",
-            "trackedItems": "Artigos contados"
+            "trackedItems": "Artigos contados",
+            "pendingReview": "A aguardar revisão",
+            "shortages": "Unidades em falta",
+            "issues": "Problemas comunicados"
         },
         "labels": {
             "property": "Propriedade",
@@ -521,7 +524,14 @@
             "bedroomCount": "Quartos",
             "bedroomDefaultName": "Quarto {{number}}",
             "bedType": "Tipo de cama",
-            "bedSize": "Tamanho da cama"
+            "bedSize": "Tamanho da cama",
+            "target": "Objetivo",
+            "issue": "Problema",
+            "issueNote": "Nota do problema",
+            "issues": "Problemas",
+            "shortage": "Em falta",
+            "reviewNote": "Nota da revisão",
+            "unknownColleague": "Colega desconhecido"
         },
         "form": {
             "helper": "Escolha a propriedade, defina a data e introduza as quantidades contadas.",
@@ -542,7 +552,11 @@
             "helper": "Adicione apenas as seccoes de roupa necessarias para esta contagem."
         },
         "filters": {
-            "searchPlaceholder": "Pesquisar propriedade, data ou artigo"
+            "searchPlaceholder": "Pesquisar propriedade, colega, data ou artigo",
+            "status": "Estado",
+            "allStatuses": "Todos os estados",
+            "dateFrom": "Data inicial",
+            "dateTo": "Data final"
         },
         "actions": {
             "save": "Guardar contagem",
@@ -560,7 +574,14 @@
             "removeBedroom": "Remover quarto",
             "addBed": "Adicionar cama",
             "removeBed": "Remover",
-            "removeSection": "Remover seccao"
+            "removeSection": "Remover secção",
+            "review": "Rever",
+            "archive": "Arquivar",
+            "export": "Exportar CSV",
+            "close": "Fechar",
+            "approve": "Aprovar contagem",
+            "requestCorrection": "Pedir correção",
+            "editCounts": "Editar quantidades"
         },
         "status": {
             "empty": "Vazio",
@@ -569,7 +590,9 @@
         "summary": {
             "recordStatus": "Resumo da contagem",
             "counted": "Contado: {{count}}",
-            "items": "Artigos: {{count}}"
+            "items": "Artigos: {{count}}",
+            "shortage": "Em falta: {{count}}",
+            "issues": "Problemas: {{count}}"
         },
         "counts": {
             "records": {
@@ -583,16 +606,104 @@
         },
         "messages": {
             "propertyRequired": "Escolha uma propriedade antes de guardar.",
+            "propertySelectionRequired": "Pesquise e selecione uma propriedade antes de guardar.",
             "countRequired": "Adicione pelo menos uma quantidade contada antes de guardar.",
+            "incompleteCount": "Termine os {{count}} artigos em falta ou marque a secção como não aplicável.",
+            "recordLocked": "Esta contagem já foi enviada e já não pode ser alterada por um colega.",
             "saved": "Contagem de roupa guardada.",
+            "draftSaved": "Rascunho guardado. Pode continuar mais tarde neste telemóvel.",
+            "submitted": "Contagem enviada para revisão dos administradores.",
             "updated": "Contagem de roupa atualizada.",
             "deleted": "Contagem de roupa eliminada.",
+            "deleteRestricted": "Apenas um administrador pode eliminar uma contagem.",
+            "correctionNoteRequired": "Escreva o que precisa de ser corrigido antes de devolver a contagem.",
+            "approved": "Contagem de roupa aprovada.",
+            "correctionRequested": "A contagem foi devolvida ao colega para correção.",
+            "reviewFailed": "Não foi possível atualizar a revisão agora.",
+            "archived": "Contagem de roupa arquivada.",
+            "archiveFailed": "Não foi possível arquivar a contagem agora.",
+            "photoUnavailable": "O envio de fotografias não está disponível agora.",
+            "photoAdded": "Fotografia adicionada à contagem.",
+            "photoInvalid": "Utilize uma imagem com menos de 5 MB.",
+            "photoFailed": "Não foi possível enviar a fotografia agora.",
+            "photoRemoveFailed": "Não foi possível remover a fotografia agora.",
             "saveFailed": "Nao foi possivel guardar a contagem de roupa agora.",
             "deleteFailed": "Nao foi possivel eliminar a contagem de roupa agora.",
             "loadFailed": "Nao foi possivel carregar as contagens de roupa agora."
         },
         "confirm": {
-            "delete": "Eliminar esta contagem de roupa?"
+            "delete": "Eliminar esta contagem de roupa?",
+            "archive": "Arquivar esta contagem? Continuará disponível no histórico."
+        },
+        "workflow": {
+            "draft": "Rascunho",
+            "submitted": "A aguardar revisão",
+            "needsCorrection": "Correção pedida",
+            "approved": "Aprovada",
+            "archived": "Arquivada"
+        },
+        "issues": {
+            "none": "Sem problema",
+            "missing": "Em falta",
+            "damaged": "Danificado"
+        },
+        "photos": {
+            "title": "Fotografias",
+            "helper": "Adicione uma fotografia quando houver danos, roupa em falta ou for necessário mostrar a arrumação.",
+            "photo": "Fotografia do inventário",
+            "remove": "Remover fotografia",
+            "uploading": "A enviar fotografia…",
+            "add": "Tirar ou adicionar fotografia"
+        },
+        "review": {
+            "kicker": "Revisão administrativa",
+            "submittedBy": "Enviada por {{name}} · {{date}}",
+            "notePlaceholder": "Explique uma correção ou deixe uma nota interna de revisão"
+        },
+        "cleaner": {
+            "countTab": "Nova contagem",
+            "historyTab": "As minhas contagens",
+            "workspaceLabel": "Vistas do Inventário de Roupa",
+            "newCountKicker": "Nova contagem de roupa",
+            "searchPropertyTitle": "Pesquisar a propriedade",
+            "searchPropertyHint": "Escreva parte do nome da propriedade e selecione o resultado correto.",
+            "searchProperties": "Pesquisar propriedades",
+            "loadingProperties": "A carregar a lista de propriedades...",
+            "typeToSearch": "Comece a escrever para encontrar a propriedade.",
+            "noProperties": "Nenhuma propriedade corresponde à pesquisa.",
+            "reportIssue": "Comunicar roupa em falta ou danificada",
+            "issueFor": "Problema em {{item}}",
+            "issueNotePlaceholder": "Explicação breve",
+            "checked": "Verificado",
+            "notChecked": "Ainda não verificado",
+            "decrease": "Diminuir {{item}}",
+            "increase": "Aumentar {{item}}",
+            "notApplicable": "Não aplicável",
+            "sectionProgress": "{{complete}} de {{total}} verificados",
+            "useSection": "Utilizar esta secção",
+            "markNotApplicable": "Não aplicável nesta propriedade",
+            "sectionSkipped": "Esta secção ficará registada como não aplicável.",
+            "bedDetails": "Detalhes opcionais das camas",
+            "editingCount": "A corrigir contagem",
+            "countingAt": "Contagem em",
+            "correctionRequested": "Pedido de correção do administrador",
+            "countItems": "Conte todos os artigos de roupa",
+            "countItemsHint": "Introduza zero quando verificou o artigo e não existe nenhum.",
+            "changeProperty": "Alterar",
+            "notesAndPhotos": "Notas, data e fotografias",
+            "saveDraft": "Guardar rascunho",
+            "reviewCount": "Rever {{count}} unidades",
+            "itemsRemaining": "Faltam {{count}} artigos",
+            "backToCount": "Voltar à contagem",
+            "reviewKicker": "Pronta para enviar",
+            "reviewHint": "Confirme os totais e os problemas antes de enviar a contagem aos administradores.",
+            "submitCount": "Enviar contagem aos administradores",
+            "historyKicker": "A sua atividade",
+            "historyTitle": "As minhas contagens enviadas",
+            "historyHint": "Os rascunhos podem ser editados. As contagens enviadas ficam bloqueadas até um administrador pedir uma correção.",
+            "correctCount": "Corrigir contagem",
+            "noHistoryTitle": "Ainda não existem contagens",
+            "noHistoryBody": "Os rascunhos e as contagens enviadas aparecerão aqui."
         },
         "states": {
             "restrictedTitle": "O Inventario de Roupa nao esta disponivel no modo tablet partilhado.",

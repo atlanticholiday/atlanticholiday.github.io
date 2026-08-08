@@ -248,6 +248,35 @@ exports.getUpcomingGuestReservations = onCall(async (request) => {
   return { reservations, startDate: startKey, endDate: endKey };
 });
 
+exports.getLinenInventoryPropertyDirectory = onCall(async (request) => {
+  await requireAppAccess(request, "linenInventory");
+
+  const snapshot = await firestore.collection("properties").get();
+  const properties = snapshot.docs
+    .map((document) => {
+      const data = document.data() || {};
+      const name = [
+        data.name,
+        data.displayName,
+        data.title,
+        data.reference,
+        data.code,
+        data.propertyName
+      ]
+        .map((value) => cleanGuestField(value, 200))
+        .find(Boolean);
+
+      return {
+        id: String(document.id || "").slice(0, 160),
+        name: name || ""
+      };
+    })
+    .filter((property) => property.id && property.name)
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  return { properties };
+});
+
 exports.createPasswordResetLink = onCall({ cors: true }, async (request) => {
   const access = await requireAdminAccess(request);
   const email = normalizeRawEmail(request.data?.email);

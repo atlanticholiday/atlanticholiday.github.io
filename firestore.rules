@@ -73,6 +73,104 @@ service cloud.firestore {
       return resource.data.userId == request.auth.uid;
     }
 
+    function ownsNewLinenInventoryRecord() {
+      return request.resource.data.createdBy is map
+        && request.resource.data.createdBy.uid == request.auth.uid;
+    }
+
+    function ownsExistingLinenInventoryRecord() {
+      return resource.data.createdBy is map
+        && resource.data.createdBy.uid == request.auth.uid;
+    }
+
+    function linenActorMatchesRequester(actor) {
+      return actor is map
+        && actor.uid == request.auth.uid
+        && request.auth.token.email is string
+        && actor.email == request.auth.token.email;
+    }
+
+    function linenCreateSubmissionAuditValid() {
+      return (
+          request.resource.data.workflowStatus == 'draft'
+          && request.resource.data.submittedBy is map
+          && request.resource.data.submittedBy.uid == ''
+          && request.resource.data.submittedAt == ''
+        ) || (
+          request.resource.data.workflowStatus == 'submitted'
+          && linenActorMatchesRequester(request.resource.data.submittedBy)
+          && request.resource.data.submittedAt is string
+          && request.resource.data.submittedAt.size() > 0
+        );
+    }
+
+    function linenUpdateSubmissionAuditValid() {
+      return (
+          request.resource.data.workflowStatus == 'submitted'
+          && linenActorMatchesRequester(request.resource.data.submittedBy)
+          && request.resource.data.submittedAt is string
+          && request.resource.data.submittedAt.size() > 0
+        ) || (
+          request.resource.data.workflowStatus == resource.data.workflowStatus
+          && request.resource.data.submittedBy == resource.data.submittedBy
+          && request.resource.data.submittedAt == resource.data.submittedAt
+        );
+    }
+
+    function linenTargetsAreEmpty() {
+      return request.resource.data.targets is map
+        && request.resource.data.targets.keys().size() == 0;
+    }
+
+    function linenTargetsUnchanged() {
+      return request.resource.data.targets == resource.data.targets;
+    }
+
+    function linenColleagueCreateAllowed() {
+      return hasApp('linenInventory')
+        && ownsNewLinenInventoryRecord()
+        && linenActorMatchesRequester(request.resource.data.createdBy)
+        && linenActorMatchesRequester(request.resource.data.updatedBy)
+        && request.resource.data.propertyId is string
+        && request.resource.data.propertyId.size() > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdAt.size() > 0
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() > 0
+        && request.resource.data.workflowStatus in ['draft', 'submitted']
+        && request.resource.data.reviewedBy is map
+        && request.resource.data.reviewedBy.uid == ''
+        && request.resource.data.reviewedAt == ''
+        && request.resource.data.reviewNote == ''
+        && request.resource.data.archivedAt == ''
+        && linenCreateSubmissionAuditValid()
+        && linenTargetsAreEmpty();
+    }
+
+    function linenColleagueUpdateAllowed() {
+      return hasApp('linenInventory')
+        && ownsExistingLinenInventoryRecord()
+        && ownsNewLinenInventoryRecord()
+        && resource.data.workflowStatus in ['draft', 'needsCorrection']
+        && (
+          request.resource.data.workflowStatus == resource.data.workflowStatus
+          || request.resource.data.workflowStatus == 'submitted'
+        )
+        && request.resource.data.propertyId == resource.data.propertyId
+        && request.resource.data.propertyName == resource.data.propertyName
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.reviewedBy == resource.data.reviewedBy
+        && request.resource.data.reviewedAt == resource.data.reviewedAt
+        && request.resource.data.reviewNote == resource.data.reviewNote
+        && request.resource.data.archivedAt == resource.data.archivedAt
+        && linenActorMatchesRequester(request.resource.data.updatedBy)
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() > 0
+        && linenUpdateSubmissionAuditValid()
+        && linenTargetsUnchanged();
+    }
+
     function canReadPropertyDirectory() {
       return privileged()
         || hasApp('properties')
@@ -204,7 +302,11 @@ service cloud.firestore {
     }
 
     match /linenInventoryRecords/{recordId} {
-      allow read, write: if privileged() || hasApp('linenInventory');
+      allow read: if privileged()
+        || (hasApp('linenInventory') && ownsExistingLinenInventoryRecord());
+      allow create: if privileged() || linenColleagueCreateAllowed();
+      allow update: if privileged() || linenColleagueUpdateAllowed();
+      allow delete: if privileged();
     }
 
     match /cleaningAhRecords/{recordId} {

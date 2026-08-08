@@ -2,6 +2,7 @@ import { describe, test, assert } from "../../../test-harness.js";
 import {
     createLinenInventoryRecord,
     filterLinenInventoryRecords,
+    isLinenInventoryRecordEditableByColleague,
     summarizeLinenInventoryRecord,
     summarizeLinenInventoryRecords
 } from "../../../../js/features/operations/linen-inventory-utils.js";
@@ -60,6 +61,56 @@ describe("Linen Inventory utilities", () => {
         assert.equal(summary.trackedItems, 0);
     });
 
+    test("distinguishes an explicitly counted zero from an unchecked item", () => {
+        const summary = summarizeLinenInventoryRecord({
+            items: {
+                bathTowel: { count: 0, checked: true },
+                faceTowel: { count: 0, checked: false }
+            }
+        });
+
+        assert.equal(summary.status, "counted");
+        assert.equal(summary.countedUnits, 0);
+        assert.equal(summary.trackedItems, 1);
+        assert.equal(summary.sectionSummaries.find((section) => section.key === "towels").itemCount, 1);
+    });
+
+    test("tracks completion, targets, shortages, issues, and skipped sections", () => {
+        const summary = summarizeLinenInventoryRecord({
+            sections: {
+                doubleBed: { notApplicable: true }
+            },
+            items: {
+                bathTowel: { count: 3, checked: true, target: 5, issue: "missing", note: "Two missing" }
+            }
+        });
+
+        assert.equal(summary.shortageUnits, 2);
+        assert.equal(summary.issueCount, 1);
+        assert.ok(summary.completion.completedItems > 1);
+        assert.ok(summary.completion.remainingItems > 0);
+    });
+
+    test("uses the immutable target snapshot instead of nested client target values", () => {
+        const untrusted = createLinenInventoryRecord({
+            targets: {},
+            items: {
+                bathTowel: { count: 3, checked: true, target: 99 }
+            }
+        });
+        const reviewed = createLinenInventoryRecord({
+            targets: { bathTowel: 5 },
+            items: {
+                bathTowel: { count: 3, checked: true, target: 99 }
+            }
+        });
+
+        assert.equal(untrusted.items.bathTowel.target, 0);
+        assert.equal(untrusted.shortageUnits, 0);
+        assert.equal(reviewed.items.bathTowel.target, 5);
+        assert.equal(reviewed.shortageUnits, 2);
+    });
+
     test("keeps old saved values readable as simple counts", () => {
         const summary = summarizeLinenInventoryRecord({
             items: {
@@ -115,5 +166,53 @@ describe("Linen Inventory utilities", () => {
         assert.equal(summary.totals.count, 2);
         assert.equal(summary.totals.countedUnits, 12);
         assert.equal(summary.totals.trackedItems, 2);
+    });
+
+    test("keeps workflow state and filters history by review status and date", () => {
+        const records = [
+            {
+                id: "submitted",
+                ...createLinenInventoryRecord({
+                    propertyName: "Atlantic View",
+                    countedDate: "2026-04-12",
+                    workflowStatus: "submitted",
+                    createdBy: { uid: "cleaner-1", name: "Ana" },
+                    items: { bathTowel: { count: 4, checked: true } }
+                }, { now: () => "2026-04-12T10:00:00.000Z" })
+            },
+            {
+                id: "approved",
+                ...createLinenInventoryRecord({
+                    propertyName: "Calas Loft",
+                    countedDate: "2026-05-03",
+                    workflowStatus: "approved",
+                    createdBy: { uid: "cleaner-2", name: "Beatriz" },
+                    items: { pillowCases: { count: 8, checked: true } }
+                }, { now: () => "2026-05-03T10:00:00.000Z" })
+            }
+        ];
+
+        const filtered = filterLinenInventoryRecords(records, {
+            workflowStatus: "submitted",
+            dateFrom: "2026-04-01",
+            dateTo: "2026-04-30"
+        });
+
+        assert.equal(filtered.length, 1);
+        assert.equal(filtered[0].id, "submitted");
+        assert.equal(filtered[0].workflowStatus, "submitted");
+        assert.equal(filterLinenInventoryRecords(records, { query: "beatriz" })[0].id, "approved");
+    });
+
+    test("only lets a colleague edit their own draft or returned count", () => {
+        const ownDraft = { workflowStatus: "draft", createdBy: { uid: "cleaner-1" } };
+        const ownReturned = { workflowStatus: "needsCorrection", createdBy: { uid: "cleaner-1" } };
+        const ownSubmitted = { workflowStatus: "submitted", createdBy: { uid: "cleaner-1" } };
+        const otherDraft = { workflowStatus: "draft", createdBy: { uid: "cleaner-2" } };
+
+        assert.equal(isLinenInventoryRecordEditableByColleague(ownDraft, "cleaner-1"), true);
+        assert.equal(isLinenInventoryRecordEditableByColleague(ownReturned, "cleaner-1"), true);
+        assert.equal(isLinenInventoryRecordEditableByColleague(ownSubmitted, "cleaner-1"), false);
+        assert.equal(isLinenInventoryRecordEditableByColleague(otherDraft, "cleaner-1"), false);
     });
 });

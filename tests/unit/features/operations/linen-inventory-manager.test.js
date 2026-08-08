@@ -73,6 +73,7 @@ describe("LinenInventoryManager", () => {
     assert.equal(draft.sections.doubleBed.bedroomCount, 2);
     assert.equal(draft.sections.doubleBed.bedSize, "160x200");
     assert.equal(draft.items.bathTowel.count, 4);
+    assert.equal(draft.items.bathTowel.checked, true);
     assert.equal(draft.bedrooms.length, 1);
     assert.equal(draft.bedrooms[0].name, "Main bedroom");
     assert.equal(draft.bedrooms[0].beds.length, 2);
@@ -129,5 +130,171 @@ describe("LinenInventoryManager", () => {
     assert.equal(manager.draft.sections.doubleBed.bedSize, "160x200");
     assert.equal(manager.draft.bedrooms[0].beds[0].size, "160x200");
     assert.equal(manager.draft.items.bathTowel.count, 4);
+  });
+
+  test("renders a search-first phone workflow for colleagues without admin controls", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-laundry-log-btn"></button>
+    `);
+
+    const manager = new LinenInventoryManager(null, {
+      getDataManager: () => ({
+        canAccessApp: () => true,
+        hasPrivilegedRole: () => false,
+        getCurrentUserContext: () => ({ uid: "cleaner-1", email: "ana@example.com" }),
+        getCurrentUserEmployee: () => ({ name: "Ana" })
+      }),
+      getProperties: () => [{ id: "secret", name: "Full property record" }]
+    });
+    manager.propertyDirectory = [
+      { id: "p1", name: "Atlantic View" },
+      { id: "p2", name: "Calas Loft" }
+    ];
+
+    manager.ensureDomScaffold();
+    manager.render();
+
+    assert.ok(document.getElementById("linen-cleaner-property-search"));
+    assert.ok(document.querySelector("[data-linen-property-option]").classList.contains("hidden"));
+    assert.ok(!document.getElementById("linen-inventory-root").textContent.includes("Full property record"));
+    assert.equal(document.querySelectorAll("[data-linen-action='delete']").length, 0);
+    assert.equal(document.querySelectorAll("[data-linen-admin-only]").length, 0);
+
+    manager.selectCleanerProperty("p1", "Atlantic View");
+
+    assert.ok(document.getElementById("linen-cleaner-count-form"));
+    assert.ok(document.querySelector("[data-linen-action='adjust-count'][data-item-key='bathTowel']"));
+    assert.ok(document.querySelector("[data-linen-action='open-submit-review']"));
+  });
+
+  test("loads a name-only property directory for the colleague search", async () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    const manager = new LinenInventoryManager(null, {
+      getDataManager: () => ({
+        canAccessApp: () => true,
+        hasPrivilegedRole: () => false,
+        getCurrentUserContext: () => ({ uid: "cleaner-1", email: "ana@example.com" })
+      }),
+      getPropertyDirectory: async () => ({
+        data: {
+          properties: [
+            { id: "p1", name: " Atlantic View ", icalUrl: "must-not-reach-the-ui" },
+            { id: "", name: "Invalid" }
+          ]
+        }
+      })
+    });
+
+    manager.ensureDomScaffold();
+    await manager.ensurePropertyDirectory();
+
+    assert.equal(manager.propertyDirectory.length, 1);
+    assert.equal(manager.propertyDirectory[0].id, "p1");
+    assert.equal(manager.propertyDirectory[0].name, "Atlantic View");
+    assert.equal(Object.keys(manager.propertyDirectory[0]).sort().join(","), "id,name");
+  });
+
+  test("clears colleague records, directory data, and in-memory drafts at sign-out", () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    const manager = new LinenInventoryManager(null);
+    manager.records = [{ id: "owned-count" }];
+    manager.propertyDirectory = [{ id: "p1", name: "Atlantic View" }];
+    manager.propertyDirectoryLoaded = true;
+    manager.editingRecordId = "owned-count";
+    manager.draft = manager.createDefaultDraft({ propertyId: "p1", propertyName: "Atlantic View" });
+
+    manager.stopListening();
+
+    assert.equal(manager.records.length, 0);
+    assert.equal(manager.propertyDirectory.length, 0);
+    assert.equal(manager.propertyDirectoryLoaded, false);
+    assert.equal(manager.editingRecordId, null);
+    assert.equal(manager.draft.propertyName, "");
+  });
+
+  test("builds owned audited payloads and keeps submitted records locked for colleagues", () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    const manager = new LinenInventoryManager(null, {
+      getDataManager: () => ({
+        canAccessApp: () => true,
+        hasPrivilegedRole: () => false,
+        getCurrentUserContext: () => ({ uid: "cleaner-1", email: "ana@example.com" }),
+        getCurrentUserEmployee: () => ({ name: "Ana" })
+      })
+    });
+
+    const payload = manager.buildAuditedPayload({
+      propertyId: "p1",
+      propertyName: "Atlantic View",
+      countedDate: "2026-08-07",
+      items: { bathTowel: { count: 0, checked: true } }
+    }, null, {
+      workflowStatus: "submitted",
+      now: () => "2026-08-07T12:00:00.000Z"
+    });
+
+    assert.equal(payload.createdBy.uid, "cleaner-1");
+    assert.equal(payload.submittedBy.uid, "cleaner-1");
+    assert.equal(payload.workflowStatus, "submitted");
+    assert.equal(manager.canEditRecord(payload), false);
+    assert.equal(manager.canDeleteRecord(payload), false);
+  });
+
+  test("carries the latest approved targets into a new admin review", () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    const manager = new LinenInventoryManager(null);
+    manager.records = [
+      {
+        id: "baseline",
+        ...createLinenInventoryRecord({
+          propertyId: "p1",
+          propertyName: "Atlantic View",
+          countedDate: "2026-07-01",
+          workflowStatus: "approved",
+          items: { bathTowel: { count: 8, checked: true, target: 8 } }
+        }, { now: () => "2026-07-01T10:00:00.000Z" })
+      },
+      {
+        id: "new-count",
+        ...createLinenInventoryRecord({
+          propertyId: "p1",
+          propertyName: "Atlantic View",
+          countedDate: "2026-08-07",
+          workflowStatus: "submitted",
+          items: { bathTowel: { count: 6, checked: true } }
+        }, { now: () => "2026-08-07T10:00:00.000Z" })
+      }
+    ];
+
+    const effective = manager.getRecordWithEffectiveTargets(manager.records[1]);
+
+    assert.equal(effective.items.bathTowel.target, 8);
+    assert.equal(effective.summary.shortageUnits, 2);
+  });
+
+  test("renders actor, shortage, issue, and review actions for admins", () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    const manager = new LinenInventoryManager(null);
+    manager.ensureDomScaffold();
+    manager.records = [{
+      id: "review-me",
+      ...createLinenInventoryRecord({
+        propertyId: "p1",
+        propertyName: "Atlantic View",
+        countedDate: "2026-08-07",
+        workflowStatus: "submitted",
+        submittedBy: { uid: "cleaner-1", name: "Ana" },
+        items: { bathTowel: { count: 4, checked: true, target: 6, issue: "missing" } }
+      }, { now: () => "2026-08-07T10:00:00.000Z" })
+    }];
+    manager.render();
+
+    const text = document.getElementById("linen-inventory-root").textContent;
+    assert.includes(text, "Atlantic View");
+    assert.includes(text, "Ana");
+    assert.ok(document.querySelector("[data-linen-action='review']"));
+    assert.ok(document.querySelector("[data-linen-action='archive']"));
+    assert.ok(document.querySelector("[data-linen-action='delete']"));
   });
 });

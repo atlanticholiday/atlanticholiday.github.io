@@ -45,6 +45,7 @@ import "./unit/features/scheduling/time-clock-station.test.js";
 import "./unit/features/scheduling/vacation-board-view-model.test.js";
 import "./unit/features/scheduling/vacation-records.test.js";
 import "./smoke/html-pages.test.js";
+import "./smoke/linen-inventory-security.test.js";
 import "./smoke/locales.test.js";
 import "./smoke/pwa.test.js";
 

@@ -498,7 +498,10 @@
     "stats": {
       "records": "Counts",
       "countedUnits": "Counted",
-      "trackedItems": "Items counted"
+      "trackedItems": "Items counted",
+      "pendingReview": "Waiting for review",
+      "shortages": "Shortage units",
+      "issues": "Reported issues"
     },
     "labels": {
       "property": "Property",
@@ -517,7 +520,14 @@
       "bedroomCount": "Bedrooms",
       "bedroomDefaultName": "Bedroom {{number}}",
       "bedType": "Bed type",
-      "bedSize": "Bed size"
+      "bedSize": "Bed size",
+      "target": "Target",
+      "issue": "Issue",
+      "issueNote": "Issue note",
+      "issues": "Issues",
+      "shortage": "Shortage",
+      "reviewNote": "Review note",
+      "unknownColleague": "Unknown colleague"
     },
     "form": {
       "helper": "Choose a property, set the count date, and enter the quantities counted.",
@@ -538,7 +548,11 @@
       "helper": "Add only the linen sections you need for this count."
     },
     "filters": {
-      "searchPlaceholder": "Search property, date, or item"
+      "searchPlaceholder": "Search property, colleague, date, or item",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "dateFrom": "From date",
+      "dateTo": "To date"
     },
     "actions": {
       "save": "Save count",
@@ -556,7 +570,14 @@
       "removeBedroom": "Remove bedroom",
       "addBed": "Add bed",
       "removeBed": "Remove",
-      "removeSection": "Remove section"
+      "removeSection": "Remove section",
+      "review": "Review",
+      "archive": "Archive",
+      "export": "Export CSV",
+      "close": "Close",
+      "approve": "Approve count",
+      "requestCorrection": "Request correction",
+      "editCounts": "Edit counts"
     },
     "status": {
       "empty": "Empty",
@@ -565,7 +586,9 @@
     "summary": {
       "recordStatus": "Live count summary",
       "counted": "Counted: {{count}}",
-      "items": "Items: {{count}}"
+      "items": "Items: {{count}}",
+      "shortage": "Shortage: {{count}}",
+      "issues": "Issues: {{count}}"
     },
     "counts": {
       "records": {
@@ -579,16 +602,104 @@
     },
     "messages": {
       "propertyRequired": "Choose a property before saving.",
+      "propertySelectionRequired": "Search for and select a property before saving.",
       "countRequired": "Add at least one counted quantity before saving.",
+      "incompleteCount": "Finish the remaining {{count}} items or mark their section as not applicable.",
+      "recordLocked": "This count has already been submitted and can no longer be changed by a colleague.",
       "saved": "Linen count saved.",
+      "draftSaved": "Draft saved. You can continue on this phone later.",
+      "submitted": "Linen count submitted for admin review.",
       "updated": "Linen count updated.",
       "deleted": "Linen count deleted.",
+      "deleteRestricted": "Only an admin can delete a linen count.",
+      "correctionNoteRequired": "Write what needs correcting before sending the count back.",
+      "approved": "Linen count approved.",
+      "correctionRequested": "The count was returned to the colleague for correction.",
+      "reviewFailed": "Could not update the review right now.",
+      "archived": "Linen count archived.",
+      "archiveFailed": "Could not archive the linen count right now.",
+      "photoUnavailable": "Photo upload is not available right now.",
+      "photoAdded": "Photo added to the count.",
+      "photoInvalid": "Use an image smaller than 5 MB.",
+      "photoFailed": "Could not upload the photo right now.",
+      "photoRemoveFailed": "Could not remove the photo right now.",
       "saveFailed": "Could not save the linen count right now.",
       "deleteFailed": "Could not delete the linen count right now.",
       "loadFailed": "Could not load linen counts right now."
     },
     "confirm": {
-      "delete": "Delete this linen count?"
+      "delete": "Delete this linen count?",
+      "archive": "Archive this linen count? It will remain in the history."
+    },
+    "workflow": {
+      "draft": "Draft",
+      "submitted": "Waiting for review",
+      "needsCorrection": "Correction requested",
+      "approved": "Approved",
+      "archived": "Archived"
+    },
+    "issues": {
+      "none": "No issue",
+      "missing": "Missing",
+      "damaged": "Damaged"
+    },
+    "photos": {
+      "title": "Photos",
+      "helper": "Add a photo when damage, missing stock, or the storage setup needs context.",
+      "photo": "Inventory photo",
+      "remove": "Remove photo",
+      "uploading": "Uploading photo…",
+      "add": "Take or add a photo"
+    },
+    "review": {
+      "kicker": "Admin review",
+      "submittedBy": "Submitted by {{name}} · {{date}}",
+      "notePlaceholder": "Explain a correction or leave an internal review note"
+    },
+    "cleaner": {
+      "countTab": "New count",
+      "historyTab": "My counts",
+      "workspaceLabel": "Linen Inventory views",
+      "newCountKicker": "New linen count",
+      "searchPropertyTitle": "Search for the property",
+      "searchPropertyHint": "Type part of the property name, then select the correct result.",
+      "searchProperties": "Search properties",
+      "loadingProperties": "Loading the property directory...",
+      "typeToSearch": "Start typing to find the property.",
+      "noProperties": "No property matches that search.",
+      "reportIssue": "Report missing or damaged linen",
+      "issueFor": "Issue for {{item}}",
+      "issueNotePlaceholder": "Short explanation",
+      "checked": "Checked",
+      "notChecked": "Not checked yet",
+      "decrease": "Decrease {{item}}",
+      "increase": "Increase {{item}}",
+      "notApplicable": "Not applicable",
+      "sectionProgress": "{{complete}} of {{total}} checked",
+      "useSection": "Use this section",
+      "markNotApplicable": "Not applicable at this property",
+      "sectionSkipped": "This section will be recorded as not applicable.",
+      "bedDetails": "Optional bed details",
+      "editingCount": "Correcting count",
+      "countingAt": "Counting at",
+      "correctionRequested": "Admin correction request",
+      "countItems": "Count every linen item",
+      "countItemsHint": "Enter zero when you checked an item and none are present.",
+      "changeProperty": "Change",
+      "notesAndPhotos": "Notes, date, and photos",
+      "saveDraft": "Save draft",
+      "reviewCount": "Review {{count}} units",
+      "itemsRemaining": "{{count}} items left",
+      "backToCount": "Back to the count",
+      "reviewKicker": "Ready to submit",
+      "reviewHint": "Check the totals and issues before sending this count to the admins.",
+      "submitCount": "Submit count to admins",
+      "historyKicker": "Your activity",
+      "historyTitle": "My submitted counts",
+      "historyHint": "Drafts can be edited. Submitted counts stay locked until an admin requests a correction.",
+      "correctCount": "Correct count",
+      "noHistoryTitle": "No counts yet",
+      "noHistoryBody": "Your saved and submitted linen counts will appear here."
     },
     "states": {
       "restrictedTitle": "Linen Inventory is not available in shared tablet mode.",
