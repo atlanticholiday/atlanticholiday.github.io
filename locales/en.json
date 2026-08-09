@@ -2033,15 +2033,13 @@
       "yearly": "Yearly",
       "vacationBoard": "Vacation Board",
       "madeiraHolidays": "Madeira Holidays",
-      "stats": "Stats",
-      "vacationPlanner": "Vacation Planner"
+      "stats": "Stats"
     },
     "viewDescriptions": {
       "monthly": "Scan staffing day by day, spot absences fast, and open any date for adjustments.",
       "monthlyShort": "Coverage at a glance",
       "yearly": "Review month-by-month totals for worked days, leave, absences, and extra hours.",
       "vacationBoard": "Share a read-only leave map by colleague, month, and department before anyone books time away.",
-      "vacation": "Review upcoming leave, book ranges, and keep the team aligned before approving time away.",
       "stats": "Check leave balances and yearly totals before exporting data for payroll or planning.",
       "madeiraHolidays": "Reference local public holidays and major island events while planning coverage."
     },

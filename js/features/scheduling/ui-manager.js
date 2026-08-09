@@ -701,8 +701,7 @@ export class UIManager {
             calendarMobile: document.getElementById('calendar-mobile-cards'),
             yearly: document.getElementById('yearly-summary-container'),
             madeiraHolidays: document.getElementById('madeira-holidays-container'),
-            stats: document.getElementById('stats-container'),
-            vacation: document.getElementById('vacation-planner-container')
+            stats: document.getElementById('stats-container')
         };
 
         // Hide all main content views first and clean up responsive classes
@@ -712,7 +711,7 @@ export class UIManager {
         });
 
         const currentView = this.dataManager.getCurrentView();
-        const showSidePanel = ['monthly', 'yearly', 'vacation'].includes(currentView);
+        const showSidePanel = ['monthly', 'yearly'].includes(currentView);
         const leftPanel = document.getElementById('schedule-side-panel');
         if (leftPanel) leftPanel.style.display = showSidePanel ? '' : 'none';
 
@@ -761,12 +760,6 @@ export class UIManager {
             if (summaryTitle) summaryTitle.textContent = t('schedule.navigation.reference');
             mainViews.madeiraHolidays.classList.remove('hidden');
             this.renderMadeiraHolidays();
-        } else if (currentView === 'vacation') {
-            if (summaryTitle) summaryTitle.textContent = t('schedule.vacation.title');
-            mainViews.vacation.classList.remove('hidden');
-            if (window.scheduleManager) {
-                window.scheduleManager.renderVacationPlanner();
-            }
         } else if (currentView === 'stats') {
             viewHeader.textContent = t('schedule.stats.title');
             if (summaryTitle) summaryTitle.textContent = t('schedule.stats.title');
@@ -777,7 +770,7 @@ export class UIManager {
 
     switchView(view) {
         const allowedViews = this.getAllowedScheduleViews();
-        if (this.isScheduleOnlyMode()) {
+        if (!allowedViews.includes(view)) {
             view = allowedViews[0] || 'monthly';
         }
 
@@ -2547,13 +2540,14 @@ export class UIManager {
         const scheduleOnlyMode = this.isScheduleOnlyMode();
         const allowedViews = this.getAllowedScheduleViews();
         const defaultView = allowedViews[0] || 'monthly';
-        const currentView = scheduleOnlyMode ? defaultView : this.dataManager.getCurrentView();
+        const requestedView = this.dataManager.getCurrentView();
+        const currentView = allowedViews.includes(requestedView) ? requestedView : defaultView;
         const currentDate = this.dataManager.getCurrentDate();
         const displayLocale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
         const viewMeta = getScheduleViewMeta(currentView);
 
-        if (scheduleOnlyMode && this.dataManager.getCurrentView() !== defaultView) {
-            this.dataManager.setCurrentView(defaultView);
+        if (requestedView !== currentView) {
+            this.dataManager.setCurrentView(currentView);
         }
 
         this.dataManager.ensureHolidaysForYear(currentDate.getFullYear());
@@ -2583,8 +2577,7 @@ export class UIManager {
             yearly: document.getElementById('yearly-summary-container'),
             vacationBoard: document.getElementById('vacation-board-container'),
             madeiraHolidays: document.getElementById('madeira-holidays-container'),
-            stats: document.getElementById('stats-container'),
-            vacation: document.getElementById('vacation-planner-container')
+            stats: document.getElementById('stats-container')
         };
 
         Object.values(mainViews).forEach((element) => {
@@ -2643,12 +2636,6 @@ export class UIManager {
         if (currentView === 'madeira-holidays') {
             mainViews.madeiraHolidays?.classList.remove('hidden');
             this.renderMadeiraHolidays();
-            return;
-        }
-
-        if (currentView === 'vacation') {
-            mainViews.vacation?.classList.remove('hidden');
-            window.scheduleManager?.renderVacationPlanner();
             return;
         }
 
@@ -2802,10 +2789,6 @@ export class UIManager {
                                 <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-chart-bar"></i></span>
                                 Statistics
                             </button>
-                            <button class="schedule-help-nav w-full text-left px-4 py-3 rounded-lg bg-white shadow-sm border border-gray-200 text-gray-700 font-medium flex items-center gap-3 transition-transform hover:translate-x-1 hover:text-red-600" data-section="vacation">
-                                <span class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"><i class="fas fa-umbrella-beach"></i></span>
-                                Vacation Planner
-                            </button>
                         </div>
 
                         <!-- Main Guide Content -->
@@ -2827,7 +2810,7 @@ export class UIManager {
                                         </div>
                                         <div>
                                             <h4 class="font-bold text-gray-800">View Tabs</h4>
-                                            <p class="text-sm text-gray-600">Use the tabs at the top to switch between <strong>Monthly</strong>, <strong>Yearly</strong>, <strong>Madeira Holidays</strong>, <strong>Stats</strong>, and <strong>Vacation Planner</strong> views.</p>
+                                            <p class="text-sm text-gray-600">Use the navigation to switch between <strong>Monthly</strong>, <strong>Yearly</strong>, <strong>Vacation Board</strong>, <strong>Madeira Holidays</strong>, and <strong>Stats</strong> views.</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-4 items-start">
@@ -2952,38 +2935,6 @@ export class UIManager {
                                     <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-400">
                                         <h4 class="font-bold text-green-800 mb-2">📤 Export to CSV</h4>
                                         <p class="text-sm text-green-700">Click the <strong>"Export Stats to CSV"</strong> button to download a spreadsheet file with all the statistics. Perfect for HR reporting or payroll calculations.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- SECTION: VACATION PLANNER -->
-                            <div id="help-section-vacation" class="schedule-help-section hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-umbrella-beach text-blue-500"></i> Vacation Planner
-                                </h3>
-                                <p class="text-gray-600 mb-4">Plan and manage team vacations with an interactive calendar.</p>
-                                
-                                <div class="space-y-4">
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <h4 class="font-bold text-gray-800 mb-2">📅 Calendar Display</h4>
-                                        <p class="text-sm text-gray-600">The vacation planner shows a full calendar view with all booked vacations displayed as colored bars. Each colleague has a unique color for easy identification.</p>
-                                    </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <h4 class="font-bold text-gray-800 mb-2">➕ Booking a Vacation</h4>
-                                        <ol class="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                                            <li>Click and drag on the calendar to select a date range</li>
-                                            <li>A booking modal will appear</li>
-                                            <li>Select the colleague and confirm the dates</li>
-                                            <li>Click "Book Vacation" to save</li>
-                                        </ol>
-                                    </div>
-                                    <div class="bg-gray-50 p-4 rounded-lg">
-                                        <h4 class="font-bold text-gray-800 mb-2">✏️ Editing/Deleting</h4>
-                                        <p class="text-sm text-gray-600">Click on any existing vacation bar to view details. From there, you can edit the dates or delete the vacation entry.</p>
-                                    </div>
-                                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                                        <h4 class="font-bold text-blue-800 mb-2">💡 Tip</h4>
-                                        <p class="text-sm text-blue-700">Vacation days are automatically reflected in the Monthly View and Stats. You don't need to manually mark vacation days in the calendar!</p>
                                     </div>
                                 </div>
                             </div>

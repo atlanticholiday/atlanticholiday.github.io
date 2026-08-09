@@ -2034,15 +2034,13 @@
             "yearly": "Anual",
             "vacationBoard": "Painel de Férias",
             "madeiraHolidays": "Feriados da Madeira",
-            "stats": "Estatísticas",
-            "vacationPlanner": "Planeador de Férias"
+            "stats": "Estatísticas"
         },
         "viewDescriptions": {
             "monthly": "Veja a cobertura dia a dia, detete ausências rapidamente e abra qualquer data para ajustes.",
             "monthlyShort": "Cobertura imediata",
             "yearly": "Reveja totais mensais de dias trabalhados, férias, ausências e horas extra.",
             "vacationBoard": "Partilhe um mapa de ausências em modo só de leitura por colega, mês e departamento antes de marcar novas férias.",
-            "vacation": "Reveja férias próximas, marque intervalos e alinhe a equipa antes de aprovar ausências.",
             "stats": "Confirme saldos de férias e totais anuais antes de exportar dados para payroll ou planeamento.",
             "madeiraHolidays": "Consulte feriados locais e eventos importantes da ilha ao planear a cobertura."
         },

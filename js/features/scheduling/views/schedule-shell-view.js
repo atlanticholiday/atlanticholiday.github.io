@@ -17,11 +17,6 @@ const VIEW_META = {
         titleKey: 'schedule.views.vacationBoard',
         descriptionKey: 'schedule.viewDescriptions.vacationBoard'
     },
-    vacation: {
-        categoryKey: 'schedule.navigation.planning',
-        titleKey: 'schedule.views.vacationPlanner',
-        descriptionKey: 'schedule.viewDescriptions.vacation'
-    },
     stats: {
         categoryKey: 'schedule.navigation.reference',
         titleKey: 'schedule.views.stats',
