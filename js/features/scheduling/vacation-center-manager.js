@@ -1,10 +1,11 @@
 import { i18n, t } from '../../core/i18n.js';
 import {
     calculateEmployeeLeaveBalanceForYear,
-    calculateEmployeeVacationUsageForYear,
+    calculateEmployeeLeaveUsageByTypeForYear,
     calculateVacationPlannerYearSummary,
     getLocalDateKey
 } from './views/schedule-view-helpers.js';
+import { LEAVE_TYPES, normalizeLeaveType } from './vacation-records.js';
 
 function escapeHtml(value = '') {
     return String(value)
@@ -44,6 +45,10 @@ export class VacationCenterManager {
         this.currentView = 'balances';
         this.selectedEmployeeId = null;
         this.searchQuery = '';
+        this.calendarDepartment = 'all';
+        this.calendarEmployee = 'all';
+        this.calendarLeaveType = 'all';
+        this.showYearPolicy = false;
         this.editingBalance = false;
         this.calendar = null;
         this.hasRendered = false;
@@ -117,7 +122,9 @@ export class VacationCenterManager {
 
         const employees = this.getEmployees();
         const entries = this.getVacationEntries();
-        const summary = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now());
+        const holidays = this.dataManager.getHolidaysForYear?.(this.currentYear) || {};
+        const summary = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now(), holidays);
+        const yearPolicy = this.dataManager.getVacationYearPolicy?.(this.currentYear) || null;
 
         if (!employees.some((employee) => employee.id === this.selectedEmployeeId)) {
             this.selectedEmployeeId = employees[0]?.id || null;
@@ -129,6 +136,7 @@ export class VacationCenterManager {
                     <nav class="vacation-center-view-switch" aria-label="${escapeHtml(t('vacationCenter.viewLabel'))}">
                         <button type="button" data-vc-view="balances" class="${this.currentView === 'balances' ? 'is-active' : ''}">${t('vacationCenter.balancesView')}</button>
                         <button type="button" data-vc-view="calendar" class="${this.currentView === 'calendar' ? 'is-active' : ''}">${t('vacationCenter.calendarView')}</button>
+                        <button type="button" data-vc-view="reports" class="${this.currentView === 'reports' ? 'is-active' : ''}">${t('vacationCenter.reportsView')}</button>
                     </nav>
                     <div class="vacation-center-toolbar__actions">
                         <div class="vacation-center-year-control">
@@ -145,6 +153,7 @@ export class VacationCenterManager {
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"></path></svg>
                             ${t('schedule.vacation.bookNew')}
                         </button>
+                        <button type="button" class="vacation-center-settings-button ${this.showYearPolicy ? 'is-active' : ''}" data-vc-toggle-policy>${t('vacationCenter.yearSettings')}</button>
                     </div>
                 </section>
 
@@ -155,14 +164,18 @@ export class VacationCenterManager {
                     ${this.renderTotal(t('schedule.vacation.remaining'), summary.unusedVacationDays, summary.overbookedDays > 0 ? 'warning' : 'positive')}
                 </section>
 
+                ${this.showYearPolicy ? this.renderYearPolicyPanel(yearPolicy) : ''}
+
                 ${this.currentView === 'calendar'
-                    ? this.renderCalendarWorkspace(entries)
-                    : this.renderBalancesWorkspace(employees, entries, summary.rows)}
+                    ? this.renderCalendarWorkspace(employees, entries)
+                    : (this.currentView === 'reports'
+                        ? this.renderReportsWorkspace(employees, summary, holidays, yearPolicy)
+                        : this.renderBalancesWorkspace(employees, entries, summary.rows, holidays))}
             </div>
         `;
 
         if (this.currentView === 'calendar') {
-            this.renderCalendar(entries);
+            this.renderCalendar(entries, employees, holidays);
         } else {
             this.applyRosterFilter(this.searchQuery);
         }
@@ -178,7 +191,48 @@ export class VacationCenterManager {
         `;
     }
 
-    renderBalancesWorkspace(employees, entries, rows) {
+    renderYearPolicyPanel(policy) {
+        const targetYear = this.currentYear + 1;
+        const defaultExpiry = `${targetYear}-03-31`;
+        if (policy?.closed) {
+            const totalCarried = Object.values(policy.carriedOverByEmployee || {})
+                .reduce((sum, value) => sum + (Number(value) || 0), 0);
+            return `
+                <section class="vacation-center-policy vacation-center-policy--closed">
+                    <div>
+                        <span class="vacation-center-policy__status">${t('vacationCenter.yearClosed')}</span>
+                        <strong>${t('vacationCenter.closedYearSummary', {
+                            year: this.currentYear,
+                            count: totalCarried,
+                            targetYear: policy.targetYear || targetYear
+                        })}</strong>
+                        <small>${t('vacationCenter.carryOverExpires', { date: this.formatDate(policy.expiryDate) })}</small>
+                    </div>
+                    <button type="button" data-vc-reopen-year>${t('vacationCenter.reopenYear')}</button>
+                </section>
+            `;
+        }
+
+        return `
+            <form class="vacation-center-policy" data-vc-close-year-form>
+                <div>
+                    <span class="vacation-center-policy__status">${t('vacationCenter.yearOpen')}</span>
+                    <strong>${t('vacationCenter.closeYearDescription', { year: this.currentYear, targetYear })}</strong>
+                </div>
+                <label>
+                    <span>${t('vacationCenter.carryOverLimit')}</span>
+                    <input type="number" name="carryOverLimit" min="0" max="30" step="1" value="${policy?.carryOverLimit ?? 5}">
+                </label>
+                <label>
+                    <span>${t('vacationCenter.expiryDate')}</span>
+                    <input type="date" name="expiryDate" value="${escapeHtml(policy?.expiryDate || defaultExpiry)}" min="${targetYear}-01-01" max="${targetYear}-12-31">
+                </label>
+                <button type="submit">${t('vacationCenter.closeYear')}</button>
+            </form>
+        `;
+    }
+
+    renderBalancesWorkspace(employees, entries, rows, holidays = {}) {
         const selectedEmployee = employees.find((employee) => employee.id === this.selectedEmployeeId) || null;
         const selectedRow = rows.find((row) => row.id === this.selectedEmployeeId) || null;
 
@@ -204,7 +258,7 @@ export class VacationCenterManager {
                 </section>
                 <aside class="vacation-center-inspector">
                     ${selectedEmployee && selectedRow
-                        ? this.renderInspector(selectedEmployee, selectedRow, entries)
+                        ? this.renderInspector(selectedEmployee, selectedRow, entries, holidays)
                         : `<div class="vacation-center-empty">${t('vacationCenter.selectColleague')}</div>`}
                 </aside>
             </div>
@@ -233,10 +287,14 @@ export class VacationCenterManager {
         `;
     }
 
-    renderInspector(employee, row, entries) {
+    renderInspector(employee, row, entries, holidays = {}) {
         const history = Array.from({ length: 4 }, (_, index) => {
             const year = this.currentYear - index;
-            const balance = calculateEmployeeLeaveBalanceForYear(employee, year);
+            const balance = calculateEmployeeLeaveBalanceForYear(
+                employee,
+                year,
+                this.dataManager.getHolidaysForYear?.(year) || {}
+            );
             return { year, ...balance };
         });
         const selectedEntries = entries
@@ -244,6 +302,7 @@ export class VacationCenterManager {
             .filter((entry) => entry.startDate <= `${this.currentYear}-12-31` && entry.endDate >= `${this.currentYear}-01-01`)
             .sort((left, right) => left.startDate.localeCompare(right.startDate));
         const tone = row.vacationBalance < 0 ? 'danger' : (row.vacationBalance <= 5 ? 'warning' : 'positive');
+        const yearClosed = this.dataManager.isVacationYearClosed?.(this.currentYear);
 
         return `
             <div class="vacation-center-inspector__head">
@@ -260,7 +319,7 @@ export class VacationCenterManager {
                     <strong>${row.vacationBalance}</strong>
                     <small>${t('schedule.vacation.weekdays')}</small>
                 </div>
-                <button type="button" data-vc-edit-balance>${t('schedule.vacation.editBalance')}</button>
+                <button type="button" data-vc-edit-balance ${yearClosed ? 'disabled' : ''}>${yearClosed ? t('vacationCenter.yearClosed') : t('schedule.vacation.editBalance')}</button>
             </section>
 
             ${this.editingBalance ? this.renderBalanceEditor(row) : ''}
@@ -295,8 +354,13 @@ export class VacationCenterManager {
                 <div class="vacation-center-person-leave__list">
                     ${selectedEntries.length ? selectedEntries.map((entry) => `
                         <button type="button" data-vc-open-vacation="${escapeHtml(entry.id)}" data-employee-id="${escapeHtml(entry.employeeId)}">
-                            <span>${this.formatRange(entry.startDate, entry.endDate)}</span>
-                            <strong>${calculateEmployeeVacationUsageForYear({ vacations: [entry] }, this.currentYear, this.now()).recordedDays}d</strong>
+                            <span><i class="vacation-center-type-dot vacation-center-type-dot--${normalizeLeaveType(entry.type)}"></i>${this.formatRange(entry.startDate, entry.endDate)} · ${t(`schedule.vacation.types.${normalizeLeaveType(entry.type)}`)}</span>
+                            <strong>${calculateEmployeeLeaveUsageByTypeForYear(
+                                { ...employee, vacations: [entry] },
+                                this.currentYear,
+                                this.now(),
+                                holidays
+                            )[normalizeLeaveType(entry.type)].recordedDays}d</strong>
                         </button>
                     `).join('') : `<p>${t('schedule.vacation.noYearRecords')}</p>`}
                 </div>
@@ -312,12 +376,13 @@ export class VacationCenterManager {
 
         const employees = this.getEmployees();
         const entries = this.getVacationEntries();
+        const holidays = this.dataManager.getHolidaysForYear?.(this.currentYear) || {};
         const employee = employees.find((item) => item.id === this.selectedEmployeeId) || null;
-        const row = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now()).rows
+        const row = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now(), holidays).rows
             .find((item) => item.id === this.selectedEmployeeId) || null;
 
         inspector.innerHTML = employee && row
-            ? this.renderInspector(employee, row, entries)
+            ? this.renderInspector(employee, row, entries, holidays)
             : `<div class="vacation-center-empty">${t('vacationCenter.selectColleague')}</div>`;
     }
 
@@ -347,7 +412,9 @@ export class VacationCenterManager {
         `;
     }
 
-    renderCalendarWorkspace() {
+    renderCalendarWorkspace(employees) {
+        const departments = [...new Set(employees.map((employee) => employee.department).filter(Boolean))]
+            .sort((left, right) => left.localeCompare(right));
         return `
             <section class="vacation-center-calendar-workspace">
                 <div class="vacation-center-calendar-heading">
@@ -355,34 +422,64 @@ export class VacationCenterManager {
                         <span>${this.currentYear}</span>
                         <h2>${t('vacationCenter.teamCalendar')}</h2>
                     </div>
-                    <div class="vacation-center-legend">
-                        <span><i class="is-taken"></i>${t('schedule.vacation.taken')}</span>
-                        <span><i class="is-planned"></i>${t('schedule.vacation.planned')}</span>
-                        <span><i class="is-away"></i>${t('schedule.vacation.awayToday')}</span>
+                    <div class="vacation-center-calendar-actions">
+                        <button type="button" data-vc-print-calendar>${t('vacationCenter.printCalendar')}</button>
                     </div>
+                </div>
+                <div class="vacation-center-calendar-filters">
+                    <label><span>${t('vacationCenter.departmentFilter')}</span><select data-vc-calendar-department>
+                        <option value="all">${t('vacationCenter.allDepartments')}</option>
+                        ${departments.map((department) => `<option value="${escapeHtml(department)}" ${department === this.calendarDepartment ? 'selected' : ''}>${escapeHtml(department)}</option>`).join('')}
+                    </select></label>
+                    <label><span>${t('vacationCenter.colleagueFilter')}</span><select data-vc-calendar-employee>
+                        <option value="all">${t('vacationCenter.allColleagues')}</option>
+                        ${employees.map((employee) => `<option value="${escapeHtml(employee.id)}" ${employee.id === this.calendarEmployee ? 'selected' : ''}>${escapeHtml(employee.name)}</option>`).join('')}
+                    </select></label>
+                    <label><span>${t('schedule.vacation.absenceType')}</span><select data-vc-calendar-type>
+                        <option value="all">${t('vacationCenter.allAbsenceTypes')}</option>
+                        ${LEAVE_TYPES.map((type) => `<option value="${type}" ${type === this.calendarLeaveType ? 'selected' : ''}>${t(`schedule.vacation.types.${type}`)}</option>`).join('')}
+                    </select></label>
+                    <div class="vacation-center-calendar-coverage" aria-live="polite">
+                        <span><strong data-vc-coverage-colleagues>0</strong>${t('vacationCenter.colleaguesAway')}</span>
+                        <span><strong data-vc-coverage-days>0</strong>${t('vacationCenter.leaveDays')}</span>
+                        <span><strong data-vc-coverage-records>0</strong>${t('vacationCenter.records')}</span>
+                    </div>
+                </div>
+                <div class="vacation-center-type-legend">
+                    ${LEAVE_TYPES.map((type) => `<span><i class="vacation-center-type-dot vacation-center-type-dot--${type}"></i>${t(`schedule.vacation.types.${type}`)}</span>`).join('')}
                 </div>
                 <div id="vacation-center-calendar"></div>
             </section>
         `;
     }
 
-    renderCalendar(entries) {
+    getFilteredCalendarEntries(entries) {
+        return entries.filter((entry) => {
+            if (this.calendarEmployee !== 'all' && entry.employeeId !== this.calendarEmployee) return false;
+            if (this.calendarDepartment !== 'all' && entry.employeeDepartment !== this.calendarDepartment) return false;
+            if (this.calendarLeaveType !== 'all' && normalizeLeaveType(entry.type) !== this.calendarLeaveType) return false;
+            return entry.startDate <= `${this.currentYear}-12-31` && entry.endDate >= `${this.currentYear}-01-01`;
+        });
+    }
+
+    renderCalendar(entries, employees, holidays = {}) {
         if (typeof FullCalendar === 'undefined') return;
 
         const todayKey = getLocalDateKey(this.now());
-        const yearEntries = entries.filter((entry) => (
-            entry.startDate <= `${this.currentYear}-12-31` && entry.endDate >= `${this.currentYear}-01-01`
-        ));
+        const yearEntries = this.getFilteredCalendarEntries(entries);
         const events = yearEntries.map((entry) => {
             const status = entry.startDate <= todayKey && entry.endDate >= todayKey
                 ? 'away'
                 : (entry.startDate > todayKey ? 'planned' : 'taken');
             return {
-                title: entry.employeeName,
+                title: `${entry.employeeName} · ${t(`schedule.vacation.types.${normalizeLeaveType(entry.type)}`)}`,
                 start: entry.startDate,
                 end: getEndExclusive(entry.endDate),
                 allDay: true,
-                classNames: [`vacation-center-event--${status}`],
+                classNames: [
+                    `vacation-center-event--${status}`,
+                    `vacation-center-event--type-${normalizeLeaveType(entry.type)}`
+                ],
                 extendedProps: {
                     employeeId: entry.employeeId,
                     vacationId: entry.id,
@@ -410,9 +507,100 @@ export class VacationCenterManager {
                 const { employeeId, vacationId, endDate } = info.event.extendedProps;
                 this.scheduleManager?.openBookVacationModal(info.event.startStr, endDate, employeeId, vacationId);
             },
+            datesSet: (info) => this.updateCalendarCoverage(
+                info.view?.currentStart || info.start,
+                info.view?.currentEnd || info.end,
+                yearEntries,
+                employees,
+                holidays
+            ),
             height: 'auto'
         });
         this.calendar.render();
+    }
+
+    updateCalendarCoverage(periodStart, periodEnd, entries, employees, holidays = {}) {
+        const startKey = getLocalDateKey(periodStart);
+        const inclusiveEnd = new Date(periodEnd);
+        inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
+        const endKey = getLocalDateKey(inclusiveEnd);
+        const employeesById = new Map(employees.map((employee) => [employee.id, employee]));
+        const colleagues = new Set();
+        let leaveDays = 0;
+        let records = 0;
+
+        entries.forEach((entry) => {
+            if (entry.endDate < startKey || entry.startDate > endKey) return;
+            records += 1;
+            colleagues.add(entry.employeeId);
+            leaveDays += this.countEntryWorkingDays(entry, employeesById.get(entry.employeeId), startKey, endKey, holidays);
+        });
+
+        const root = this.getRoot();
+        const values = {
+            '[data-vc-coverage-colleagues]': colleagues.size,
+            '[data-vc-coverage-days]': leaveDays,
+            '[data-vc-coverage-records]': records
+        };
+        Object.entries(values).forEach(([selector, value]) => {
+            const element = root?.querySelector(selector);
+            if (element) element.textContent = String(value);
+        });
+    }
+
+    countEntryWorkingDays(entry, employee = {}, startKey, endKey, holidays = {}) {
+        const rangeStart = entry.startDate > startKey ? entry.startDate : startKey;
+        const rangeEnd = entry.endDate < endKey ? entry.endDate : endKey;
+        const configuredDays = Array.isArray(employee?.workDays) && employee.workDays.length
+            ? new Set(employee.workDays.map(Number))
+            : new Set([1, 2, 3, 4, 5]);
+        let count = 0;
+        for (let date = new Date(`${rangeStart}T00:00:00`); date <= new Date(`${rangeEnd}T00:00:00`); date.setDate(date.getDate() + 1)) {
+            const dateKey = getLocalDateKey(date);
+            if (configuredDays.has(date.getDay()) && !holidays?.[dateKey]) count += 1;
+        }
+        return count;
+    }
+
+    getReportRows(employees, summary, holidays = {}) {
+        return summary.rows.map((row) => {
+            const employee = employees.find((item) => item.id === row.id) || {};
+            const leaveUsage = calculateEmployeeLeaveUsageByTypeForYear(employee, this.currentYear, this.now(), holidays);
+            return {
+                name: row.name,
+                department: row.department || t('schedule.board.unassignedDepartment'),
+                allowance: row.vacationAllowance,
+                taken: row.takenDays,
+                booked: row.plannedDays,
+                remaining: row.vacationBalance,
+                carryOver: Number(employee.vacationCarryOverByYear?.[String(this.currentYear)] || 0),
+                carryOverExpiry: employee.vacationCarryOverExpiryByYear?.[String(this.currentYear)] || '',
+                sick: leaveUsage.sick.recordedDays,
+                unpaid: leaveUsage.unpaid.recordedDays,
+                parental: leaveUsage.parental.recordedDays,
+                training: leaveUsage.training.recordedDays,
+                compensatory: leaveUsage.compensatory.recordedDays
+            };
+        });
+    }
+
+    renderReportsWorkspace(employees, summary, holidays, yearPolicy) {
+        const rows = this.getReportRows(employees, summary, holidays);
+        return `
+            <section class="vacation-center-reports">
+                <div class="vacation-center-reports__heading">
+                    <div><span>${this.currentYear}</span><h2>${t('vacationCenter.reportsTitle')}</h2><p>${t('vacationCenter.reportsDescription')}</p></div>
+                    <div><button type="button" data-vc-export-excel>${t('vacationCenter.exportExcel')}</button><button type="button" data-vc-export-pdf>${t('vacationCenter.exportPdf')}</button></div>
+                </div>
+                <div class="vacation-center-report-table-wrap">
+                    <table class="vacation-center-report-table">
+                        <thead><tr><th>${t('schedule.vacation.colleague')}</th><th>${t('vacationCenter.departmentFilter')}</th><th>${t('schedule.vacation.allowance')}</th><th>${t('schedule.vacation.taken')}</th><th>${t('schedule.vacation.planned')}</th><th>${t('schedule.vacation.remaining')}</th><th>${t('vacationCenter.carryOver')}</th><th>${t('schedule.vacation.types.sick')}</th><th>${t('vacationCenter.otherLeave')}</th></tr></thead>
+                        <tbody>${rows.map((row) => `<tr><td><strong>${escapeHtml(row.name)}</strong></td><td>${escapeHtml(row.department)}</td><td>${row.allowance}</td><td>${row.taken}</td><td>${row.booked}</td><td class="${row.remaining < 0 ? 'is-negative' : ''}">${row.remaining}</td><td>${row.carryOver}${row.carryOverExpiry ? `<small>${t('vacationCenter.untilDate', { date: this.formatDate(row.carryOverExpiry) })}</small>` : ''}</td><td>${row.sick}</td><td>${row.unpaid + row.parental + row.training + row.compensatory}</td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
+                ${yearPolicy?.closed ? `<p class="vacation-center-report-note">${t('vacationCenter.reportClosedYear')}</p>` : ''}
+            </section>
+        `;
     }
 
     onClick(event) {
@@ -448,6 +636,32 @@ export class VacationCenterManager {
 
         if (event.target.closest('[data-vc-book]')) {
             this.scheduleManager?.openBookVacationModal();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-toggle-policy]')) {
+            this.showYearPolicy = !this.showYearPolicy;
+            this.render();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-reopen-year]')) {
+            this.reopenYear();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-export-excel]')) {
+            this.exportReportToExcel();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-export-pdf]')) {
+            this.exportReportToPdf();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-print-calendar]')) {
+            window.print();
             return;
         }
 
@@ -487,6 +701,24 @@ export class VacationCenterManager {
             this.currentYear = Number(event.target.value);
             this.editingBalance = false;
             this.render();
+            return;
+        }
+
+        if (event.target.matches('[data-vc-calendar-department]')) {
+            this.calendarDepartment = event.target.value;
+            this.render();
+            return;
+        }
+
+        if (event.target.matches('[data-vc-calendar-employee]')) {
+            this.calendarEmployee = event.target.value;
+            this.render();
+            return;
+        }
+
+        if (event.target.matches('[data-vc-calendar-type]')) {
+            this.calendarLeaveType = event.target.value;
+            this.render();
         }
     }
 
@@ -497,10 +729,18 @@ export class VacationCenterManager {
     }
 
     onSubmit(event) {
-        if (!event.target.matches('[data-vc-balance-form]')) return;
-        event.preventDefault();
-        const input = event.target.querySelector('input');
-        this.saveBalance(Number(event.target.dataset.recordedDays), input?.value);
+        if (event.target.matches('[data-vc-balance-form]')) {
+            event.preventDefault();
+            const input = event.target.querySelector('input');
+            this.saveBalance(Number(event.target.dataset.recordedDays), input?.value);
+            return;
+        }
+
+        if (event.target.matches('[data-vc-close-year-form]')) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            this.closeYear(formData.get('carryOverLimit'), formData.get('expiryDate'));
+        }
     }
 
     applyRosterFilter(query) {
@@ -531,7 +771,9 @@ export class VacationCenterManager {
             this.render();
         } catch (error) {
             console.error(error);
-            alert(t('schedule.vacation.balanceSaveFailed'));
+            alert(error?.code === 'vacation-year-closed'
+                ? t('vacationCenter.yearClosedError', { year: error.year })
+                : t('schedule.vacation.balanceSaveFailed'));
         }
     }
 
@@ -547,8 +789,110 @@ export class VacationCenterManager {
             this.render();
         } catch (error) {
             console.error(error);
-            alert(t('schedule.vacation.balanceSaveFailed'));
+            alert(error?.code === 'vacation-year-closed'
+                ? t('vacationCenter.yearClosedError', { year: error.year })
+                : t('schedule.vacation.balanceSaveFailed'));
         }
+    }
+
+    async closeYear(carryOverLimit, expiryDate) {
+        if (!confirm(t('vacationCenter.closeYearConfirm', { year: this.currentYear }))) return;
+        try {
+            await this.dataManager.closeVacationYear(this.currentYear, { carryOverLimit, expiryDate });
+            this.render();
+        } catch (error) {
+            console.error(error);
+            alert(t('vacationCenter.yearPolicySaveFailed'));
+        }
+    }
+
+    async reopenYear() {
+        if (!confirm(t('vacationCenter.reopenYearConfirm', { year: this.currentYear }))) return;
+        try {
+            await this.dataManager.reopenVacationYear(this.currentYear);
+            this.render();
+        } catch (error) {
+            console.error(error);
+            alert(t('vacationCenter.yearPolicySaveFailed'));
+        }
+    }
+
+    getCurrentReportRows() {
+        const employees = this.getEmployees();
+        const holidays = this.dataManager.getHolidaysForYear?.(this.currentYear) || {};
+        const summary = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now(), holidays);
+        return this.getReportRows(employees, summary, holidays);
+    }
+
+    exportReportToExcel() {
+        if (!window.XLSX) {
+            alert(t('vacationCenter.exportUnavailable'));
+            return;
+        }
+        const rows = this.getCurrentReportRows().map((row) => ({
+            [t('schedule.vacation.colleague')]: row.name,
+            [t('vacationCenter.departmentFilter')]: row.department,
+            [t('schedule.vacation.allowance')]: row.allowance,
+            [t('schedule.vacation.taken')]: row.taken,
+            [t('schedule.vacation.planned')]: row.booked,
+            [t('schedule.vacation.remaining')]: row.remaining,
+            [t('vacationCenter.carryOver')]: row.carryOver,
+            [t('vacationCenter.expiryDate')]: row.carryOverExpiry,
+            [t('schedule.vacation.types.sick')]: row.sick,
+            [t('schedule.vacation.types.unpaid')]: row.unpaid,
+            [t('schedule.vacation.types.parental')]: row.parental,
+            [t('schedule.vacation.types.training')]: row.training,
+            [t('schedule.vacation.types.compensatory')]: row.compensatory
+        }));
+        const worksheet = window.XLSX.utils.json_to_sheet(rows);
+        worksheet['!cols'] = [{ wch: 26 }, { wch: 20 }, ...Array(11).fill({ wch: 14 })];
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, String(this.currentYear));
+        window.XLSX.writeFile(workbook, `Atlantic-Holiday-Leave-${this.currentYear}.xlsx`);
+    }
+
+    exportReportToPdf() {
+        const JsPdf = window.jspdf?.jsPDF || window.jsPDF;
+        if (!JsPdf) {
+            alert(t('vacationCenter.exportUnavailable'));
+            return;
+        }
+        const doc = new JsPdf({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const rows = this.getCurrentReportRows();
+        doc.setFillColor(233, 75, 90);
+        doc.rect(0, 0, 297, 24, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Atlantic Holiday', 14, 10);
+        doc.setFontSize(10);
+        doc.text(`${t('vacationCenter.reportsTitle')} · ${this.currentYear}`, 14, 17);
+        doc.autoTable({
+            startY: 30,
+            head: [[
+                t('schedule.vacation.colleague'), t('vacationCenter.departmentFilter'),
+                t('schedule.vacation.allowance'), t('schedule.vacation.taken'),
+                t('schedule.vacation.planned'), t('schedule.vacation.remaining'),
+                t('vacationCenter.carryOver'), t('schedule.vacation.types.sick'),
+                t('vacationCenter.otherLeave')
+            ]],
+            body: rows.map((row) => [
+                row.name, row.department, row.allowance, row.taken, row.booked,
+                row.remaining, row.carryOver, row.sick,
+                row.unpaid + row.parental + row.training + row.compensatory
+            ]),
+            headStyles: { fillColor: [233, 75, 90], textColor: 255 },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            styles: { fontSize: 8 }
+        });
+        doc.save(`Atlantic-Holiday-Leave-${this.currentYear}.pdf`);
+    }
+
+    formatDate(dateKey) {
+        if (!dateKey) return '—';
+        const locale = i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
+        return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' })
+            .format(new Date(`${dateKey}T00:00:00`));
     }
 
     formatRange(startDate, endDate) {

@@ -1,4 +1,9 @@
 import { i18n } from '../../../core/i18n.js';
+import {
+    LEAVE_TYPES,
+    leaveTypeDeductsFromVacation,
+    normalizeLeaveType
+} from '../vacation-records.js';
 
 export function getScheduleLocale() {
     return i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB';
@@ -19,14 +24,25 @@ export function getUpcomingVacationEntries(dataManager, { includePast = false } 
         .sort((left, right) => left.startDate.localeCompare(right.startDate));
 }
 
-export function calculateEmployeeVacationDaysForYear(employee, year) {
-    return getEmployeeVacationWeekdaysForYear(employee, year).size;
+export function calculateEmployeeVacationDaysForYear(employee, year, holidays = {}) {
+    return getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (vacation) => (
+        leaveTypeDeductsFromVacation(vacation.type)
+    )).size;
 }
 
-function getEmployeeVacationWeekdaysForYear(employee, year) {
-    const vacationDays = new Set();
+function getEmployeeWorkDays(employee) {
+    const configuredDays = Array.isArray(employee?.workDays)
+        ? employee.workDays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+        : [];
+    return new Set(configuredDays.length ? configuredDays : [1, 2, 3, 4, 5]);
+}
+
+function getEmployeeLeaveWeekdaysForYear(employee, year, holidays = {}, predicate = () => true) {
+    const leaveDays = new Set();
+    const workDays = getEmployeeWorkDays(employee);
 
     (employee.vacations || []).forEach((vacation) => {
+        if (!predicate(vacation)) return;
         const start = new Date(`${vacation.startDate}T00:00:00`);
         const end = new Date(`${vacation.endDate}T00:00:00`);
 
@@ -39,19 +55,21 @@ function getEmployeeVacationWeekdaysForYear(employee, year) {
                 continue;
             }
 
-            const weekday = current.getDay();
-            if (weekday !== 0 && weekday !== 6) {
-                vacationDays.add(getLocalDateKey(current));
+            const dateKey = getLocalDateKey(current);
+            if (workDays.has(current.getDay()) && !holidays?.[dateKey]) {
+                leaveDays.add(dateKey);
             }
         }
     });
 
-    return vacationDays;
+    return leaveDays;
 }
 
-export function calculateEmployeeVacationUsageForYear(employee, year, referenceDate = new Date()) {
+export function calculateEmployeeVacationUsageForYear(employee, year, referenceDate = new Date(), holidays = {}) {
     const todayKey = getLocalDateKey(referenceDate);
-    const vacationDays = [...getEmployeeVacationWeekdaysForYear(employee, year)];
+    const vacationDays = [...getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (vacation) => (
+        leaveTypeDeductsFromVacation(vacation.type)
+    ))];
     const takenDays = vacationDays.filter((dateKey) => dateKey <= todayKey).length;
     const plannedDays = vacationDays.length - takenDays;
 
@@ -60,6 +78,21 @@ export function calculateEmployeeVacationUsageForYear(employee, year, referenceD
         plannedDays,
         recordedDays: vacationDays.length
     };
+}
+
+export function calculateEmployeeLeaveUsageByTypeForYear(employee, year, referenceDate = new Date(), holidays = {}) {
+    const todayKey = getLocalDateKey(referenceDate);
+    return LEAVE_TYPES.reduce((usageByType, type) => {
+        const days = [...getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (entry) => (
+            normalizeLeaveType(entry.type) === type
+        ))];
+        usageByType[type] = {
+            takenDays: days.filter((dateKey) => dateKey <= todayKey).length,
+            plannedDays: days.filter((dateKey) => dateKey > todayKey).length,
+            recordedDays: days.length
+        };
+        return usageByType;
+    }, {});
 }
 
 export function getAnnualVacationAllowance(employee, year = null) {
@@ -75,23 +108,49 @@ export function getAnnualVacationAllowance(employee, year = null) {
     return 22 + (Number.isFinite(adjustment) ? adjustment : 0);
 }
 
-export function calculateEmployeeLeaveBalanceForYear(employee, year) {
-    const vacationAllowance = getAnnualVacationAllowance(employee, year);
-    const vacationDays = calculateEmployeeVacationDaysForYear(employee, year);
+export function getEffectiveAnnualVacationAllowance(employee, year, referenceDate = new Date(), holidays = {}) {
+    const recordedAllowance = getAnnualVacationAllowance(employee, year);
+    const carryOver = Number(employee?.vacationCarryOverByYear?.[String(year)] || 0);
+    const expiryDate = employee?.vacationCarryOverExpiryByYear?.[String(year)] || null;
+    const referenceKey = getLocalDateKey(referenceDate);
+    let expiredCarryOver = 0;
+
+    if (carryOver > 0 && expiryDate && referenceKey > expiryDate) {
+        const usedBeforeExpiry = [...getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (entry) => (
+            leaveTypeDeductsFromVacation(entry.type)
+        ))].filter((dateKey) => dateKey <= expiryDate).length;
+        expiredCarryOver = Math.max(carryOver - Math.min(carryOver, usedBeforeExpiry), 0);
+    }
+
+    return {
+        vacationAllowance: recordedAllowance - expiredCarryOver,
+        recordedAllowance,
+        carryOver,
+        expiryDate,
+        expiredCarryOver
+    };
+}
+
+export function calculateEmployeeLeaveBalanceForYear(employee, year, holidays = {}, referenceDate = new Date()) {
+    const allowance = getEffectiveAnnualVacationAllowance(employee, year, referenceDate, holidays);
+    const vacationAllowance = allowance.vacationAllowance;
+    const vacationDays = calculateEmployeeVacationDaysForYear(employee, year, holidays);
     const vacationBalance = vacationAllowance - vacationDays;
 
     return {
         vacationAllowance,
         vacationDays,
         vacationBalance,
-        unusedVacationDays: Math.max(vacationBalance, 0)
+        unusedVacationDays: Math.max(vacationBalance, 0),
+        expiredCarryOver: allowance.expiredCarryOver
     };
 }
 
-export function calculateVacationPlannerYearSummary(employees = [], year, referenceDate = new Date()) {
+export function calculateVacationPlannerYearSummary(employees = [], year, referenceDate = new Date(), holidays = {}) {
     const rows = employees.map((employee) => {
-        const usage = calculateEmployeeVacationUsageForYear(employee, year, referenceDate);
-        const vacationAllowance = getAnnualVacationAllowance(employee, year);
+        const usage = calculateEmployeeVacationUsageForYear(employee, year, referenceDate, holidays);
+        const allowance = getEffectiveAnnualVacationAllowance(employee, year, referenceDate, holidays);
+        const vacationAllowance = allowance.vacationAllowance;
         const vacationBalance = vacationAllowance - usage.recordedDays;
         const yearlyAllowance = Number(employee?.vacationAllowancesByYear?.[String(year)]);
 
@@ -104,6 +163,8 @@ export function calculateVacationPlannerYearSummary(employees = [], year, refere
             unusedVacationDays: Math.max(vacationBalance, 0),
             overbookedDays: Math.max(-vacationBalance, 0),
             hasYearlyOverride: Number.isFinite(yearlyAllowance) && yearlyAllowance >= 0,
+            carryOver: allowance.carryOver,
+            expiredCarryOver: allowance.expiredCarryOver,
             ...usage
         };
     });

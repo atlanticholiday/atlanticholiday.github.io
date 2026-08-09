@@ -1,7 +1,7 @@
 import { i18n, t } from '../../core/i18n.js';
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
 import {
-    calculateEmployeeVacationUsageForYear,
+    calculateEmployeeLeaveUsageByTypeForYear,
     calculateVacationPlannerYearSummary
 } from './views/schedule-view-helpers.js';
 
@@ -32,12 +32,14 @@ export class ScheduleManager {
         const bookVacationCancel = document.getElementById('book-vacation-cancel-btn');
         const bookVacationSave = document.getElementById('book-vacation-save-btn');
         const bookVacationModal = document.getElementById('book-vacation-modal');
+        const vacationTypeSelect = document.getElementById('vacation-type-select');
         const bookVacationDelete = document.getElementById('book-vacation-delete-btn');
 
         const closeBookVacationModal = () => {
             if (bookVacationModal) bookVacationModal.classList.add('hidden');
             document.getElementById('vacation-start-date').value = '';
             document.getElementById('vacation-end-date').value = '';
+            if (vacationTypeSelect) vacationTypeSelect.value = 'vacation';
         };
 
         if (bookVacationClose) bookVacationClose.addEventListener('click', closeBookVacationModal);
@@ -73,7 +75,8 @@ export class ScheduleManager {
             ? this.vacationPlannerYear
             : this.dataManager.getCurrentDate().getFullYear();
         this.vacationPlannerYear = selectedYear;
-        const summary = calculateVacationPlannerYearSummary(employees, selectedYear, today);
+        const holidays = this.dataManager.getHolidaysForYear?.(selectedYear) || {};
+        const summary = calculateVacationPlannerYearSummary(employees, selectedYear, today, holidays);
         const yearStart = `${selectedYear}-01-01`;
         const yearEnd = `${selectedYear}-12-31`;
         const yearEntries = vacationEntries
@@ -100,7 +103,13 @@ export class ScheduleManager {
             const isAwayToday = vacation.startDate <= todayKey && vacation.endDate >= todayKey;
             const isFuture = vacation.startDate > todayKey;
             const status = isAwayToday ? 'away' : (isFuture ? 'planned' : 'taken');
-            const workingDays = calculateEmployeeVacationUsageForYear({ vacations: [vacation] }, selectedYear, today).recordedDays;
+            const employee = employees.find((item) => item.id === vacation.employeeId) || { vacations: [] };
+            const workingDays = calculateEmployeeLeaveUsageByTypeForYear(
+                { ...employee, vacations: [vacation] },
+                selectedYear,
+                today,
+                holidays
+            )[vacation.type || 'vacation'].recordedDays;
 
             return {
                 title: `${vacation.employeeName} · ${workingDays}d`,
@@ -207,7 +216,7 @@ export class ScheduleManager {
                         <strong>${yearEntries.length}</strong>
                     </summary>
                     <div id="vacation-list-view" class="vacation-records-list">
-                        ${yearEntries.length ? yearEntries.map((vacation) => this.renderVacationRecord(vacation, selectedYear, today)).join('') : `
+                            ${yearEntries.length ? yearEntries.map((vacation) => this.renderVacationRecord(vacation, selectedYear, today, holidays)).join('') : `
                             <div class="vacation-planner-empty">${t('schedule.vacation.noYearRecords')}</div>
                         `}
                     </div>
@@ -373,8 +382,14 @@ export class ScheduleManager {
         }
     }
 
-    renderVacationRecord(vacation, year, referenceDate) {
-        const usage = calculateEmployeeVacationUsageForYear({ vacations: [vacation] }, year, referenceDate);
+    renderVacationRecord(vacation, year, referenceDate, holidays = {}) {
+        const employee = this.dataManager.getEmployeeById?.(vacation.employeeId) || {};
+        const usage = calculateEmployeeLeaveUsageByTypeForYear(
+            { ...employee, vacations: [vacation] },
+            year,
+            referenceDate,
+            holidays
+        )[vacation.type || 'vacation'];
         const todayKey = this.getLocalDateKey(referenceDate);
         const statusKey = vacation.startDate > todayKey
             ? 'planned'
@@ -401,6 +416,7 @@ export class ScheduleManager {
         const select = document.getElementById('vacation-employee-select');
         const startInput = document.getElementById('vacation-start-date');
         const endInput = document.getElementById('vacation-end-date');
+        const typeSelect = document.getElementById('vacation-type-select');
         const saveBtn = document.getElementById('book-vacation-save-btn');
         const deleteBtn = document.getElementById('book-vacation-delete-btn');
         const title = modal.querySelector('h3');
@@ -417,17 +433,20 @@ export class ScheduleManager {
         delete modal.dataset.employeeId;
         delete modal.dataset.vacationId;
         select.disabled = false;
+        if (typeSelect) typeSelect.value = 'vacation';
         saveBtn.textContent = t('schedule.vacation.scheduleBtn');
         if (deleteBtn) deleteBtn.classList.add('hidden');
         if (title) title.textContent = t('schedule.vacation.bookTitle');
 
         // Edit Mode
         if (employeeId && vacationId) {
+            const vacation = this.dataManager.getVacationRecordById?.(vacationId, { includeArchived: false });
             modal.dataset.editing = 'true';
             modal.dataset.employeeId = employeeId;
             modal.dataset.vacationId = vacationId;
             select.value = employeeId;
             select.disabled = true; // Don't switch employee when editing specific vacation
+            if (typeSelect) typeSelect.value = vacation?.type || 'vacation';
             saveBtn.textContent = t('schedule.vacation.updateBtn');
             if (deleteBtn) deleteBtn.classList.remove('hidden');
             if (title) title.textContent = t('schedule.vacation.editTitle');
@@ -442,6 +461,7 @@ export class ScheduleManager {
         const employeeId = select.value;
         const startDate = document.getElementById('vacation-start-date').value;
         const endDate = document.getElementById('vacation-end-date').value;
+        const type = document.getElementById('vacation-type-select')?.value || 'vacation';
 
         if (!employeeId || !startDate || !endDate) {
             alert(t('schedule.vacation.selectDatesError'));
@@ -453,9 +473,9 @@ export class ScheduleManager {
                 const originalEmployeeId = modal.dataset.employeeId;
                 const vacationId = modal.dataset.vacationId;
                 // In case for some reason select value is different (though disabled), use original
-                await this.dataManager.handleUpdateVacation(originalEmployeeId, vacationId, startDate, endDate);
+                await this.dataManager.handleUpdateVacation(originalEmployeeId, vacationId, startDate, endDate, { type });
             } else {
-                await this.dataManager.handleScheduleVacation(employeeId, startDate, endDate);
+                await this.dataManager.handleScheduleVacation(employeeId, startDate, endDate, { type });
             }
 
             modal.classList.add('hidden');
@@ -465,7 +485,9 @@ export class ScheduleManager {
             }
         } catch (e) {
             console.error(e);
-            alert(t('schedule.vacation.saveFailed'));
+            alert(e?.code === 'vacation-year-closed'
+                ? t('vacationCenter.yearClosedError', { year: e.year })
+                : t('schedule.vacation.saveFailed'));
         }
     }
 
@@ -483,7 +505,9 @@ export class ScheduleManager {
                 this.renderVacationPlanner();
             } catch (e) {
                 console.error(e);
-                alert(t('schedule.vacation.deleteFailed'));
+                alert(e?.code === 'vacation-year-closed'
+                    ? t('vacationCenter.yearClosedError', { year: e.year })
+                    : t('schedule.vacation.deleteFailed'));
             }
         }
     }

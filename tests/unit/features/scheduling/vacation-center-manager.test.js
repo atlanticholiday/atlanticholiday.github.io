@@ -109,8 +109,31 @@ describe("VacationCenterManager", () => {
     const { bookingCalls } = createFixture();
     document.querySelector('[data-vc-view="calendar"]').click();
     assert.ok(document.querySelector("#vacation-center-calendar"));
+    assert.ok(document.querySelector("[data-vc-calendar-department]"));
+    assert.ok(document.querySelector("[data-vc-calendar-employee]"));
+    assert.ok(document.querySelector("[data-vc-calendar-type]"));
 
     document.querySelector("[data-vc-book]").click();
     assert.deepEqual(bookingCalls, [[]]);
+  });
+
+  test("renders annual reports and exports them to Excel", () => {
+    createFixture();
+    let exportedFilename = null;
+    window.XLSX = {
+      utils: {
+        json_to_sheet: () => ({}),
+        book_new: () => ({}),
+        book_append_sheet: () => {}
+      },
+      writeFile: (_workbook, filename) => { exportedFilename = filename; }
+    };
+
+    document.querySelector('[data-vc-view="reports"]').click();
+    assert.ok(document.querySelector(".vacation-center-report-table"));
+    document.querySelector("[data-vc-export-excel]").click();
+
+    assert.equal(exportedFilename, "Atlantic-Holiday-Leave-2026.xlsx");
+    delete window.XLSX;
   });
 });

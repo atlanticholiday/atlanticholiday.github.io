@@ -987,12 +987,12 @@ function subscribeScheduleDataForCurrentUser() {
 
     if (canUseSchedule || canUseVacationCenter) {
         dataManager.listenForVacationRecordChanges();
+        dataManager.listenForGlobalSettings();
     }
 
     if (canUseSchedule) {
         dataManager.listenForDailyNotes();
         dataManager.listenForShiftPresets();
-        dataManager.listenForGlobalSettings();
     }
 
     if (canUseSchedule || needsTimeClockData) {

@@ -1,5 +1,23 @@
 const DEFAULT_VACATION_STATUS = 'approved';
 const DEFAULT_VACATION_VISIBILITY = 'team';
+export const DEFAULT_LEAVE_TYPE = 'vacation';
+export const LEAVE_TYPES = Object.freeze([
+    'vacation',
+    'sick',
+    'unpaid',
+    'parental',
+    'training',
+    'compensatory'
+]);
+
+export function normalizeLeaveType(value) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    return LEAVE_TYPES.includes(normalized) ? normalized : DEFAULT_LEAVE_TYPE;
+}
+
+export function leaveTypeDeductsFromVacation(value) {
+    return normalizeLeaveType(value) === DEFAULT_LEAVE_TYPE;
+}
 
 function normalizeOptionalText(value) {
     if (typeof value !== 'string') {
@@ -59,6 +77,7 @@ export function normalizeVacationEntry(vacation = {}, { employeeId = null, id = 
         employeeId: normalizedEmployeeId,
         startDate,
         endDate,
+        type: normalizeLeaveType(vacation.type),
         status: normalizeOptionalText(vacation.status) || DEFAULT_VACATION_STATUS,
         note: normalizeOptionalText(vacation.note),
         visibility: normalizeOptionalText(vacation.visibility) || DEFAULT_VACATION_VISIBILITY,
@@ -90,6 +109,7 @@ export function toEmployeeVacationEntry(vacation = {}, employeeId = null) {
         id: normalizedEntry.id,
         startDate: normalizedEntry.startDate,
         endDate: normalizedEntry.endDate,
+        type: normalizedEntry.type,
         status: normalizedEntry.status,
         note: normalizedEntry.note,
         visibility: normalizedEntry.visibility
@@ -153,6 +173,7 @@ export function buildSharedVacationEntries(records = [], employees = []) {
                 employeeDepartment: employee.department || null,
                 startDate: normalizedRecord.startDate,
                 endDate: normalizedRecord.endDate,
+                type: normalizedRecord.type,
                 status: normalizedRecord.status,
                 note: normalizedRecord.note,
                 visibility: normalizedRecord.visibility

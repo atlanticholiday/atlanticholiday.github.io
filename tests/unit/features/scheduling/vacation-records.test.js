@@ -17,7 +17,17 @@ describe("Vacation records", () => {
 
     assert.equal(record.id, getVacationRecordDocId("emp-1", "2026-08-10", "2026-08-15"));
     assert.equal(record.status, "approved");
+    assert.equal(record.type, "vacation");
     assert.equal(record.visibility, "team");
+  });
+
+  test("normalizes supported absence types and preserves them in shared entries", () => {
+    const [entry] = buildSharedVacationEntries([
+      { id: "leave-1", employeeId: "emp-1", startDate: "2026-08-10", endDate: "2026-08-11", type: "SICK" }
+    ], [{ id: "emp-1", name: "Ana" }]);
+
+    assert.equal(entry.type, "sick");
+    assert.equal(createVacationRecord({ employeeId: "emp-1", startDate: "2026-09-01", endDate: "2026-09-01", type: "unknown" }).type, "vacation");
   });
 
   test("groups vacation records by employee and keeps them sorted", () => {

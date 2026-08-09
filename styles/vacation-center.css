@@ -213,6 +213,27 @@
     stroke-width: 1.8;
 }
 
+.vacation-center-settings-button,
+.vacation-center-calendar-actions button,
+.vacation-center-reports__heading button {
+    min-height: 42px;
+    padding: 0 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.vacation-center-settings-button:hover,
+.vacation-center-settings-button.is-active,
+.vacation-center-calendar-actions button:hover,
+.vacation-center-reports__heading button:hover {
+    border-color: var(--vacation-accent);
+    color: var(--vacation-accent-dark);
+}
+
 .vacation-center-totals {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -523,6 +544,95 @@
     color: var(--vacation-accent-dark);
 }
 
+.vacation-center-balance-focus button:disabled {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.vacation-center-policy {
+    display: flex;
+    align-items: end;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--vacation-accent-border);
+    background: var(--vacation-accent-ultra-light);
+}
+
+.vacation-center-policy > div:first-child {
+    min-width: 0;
+    flex: 1;
+}
+
+.vacation-center-policy__status {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--vacation-accent-dark);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vacation-center-policy strong,
+.vacation-center-policy small {
+    display: block;
+}
+
+.vacation-center-policy strong {
+    font-size: 0.82rem;
+}
+
+.vacation-center-policy small {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 0.68rem;
+}
+
+.vacation-center-policy label {
+    display: grid;
+    gap: 5px;
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 800;
+}
+
+.vacation-center-policy input {
+    width: 145px;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 0.74rem;
+}
+
+.vacation-center-policy input[type="number"] {
+    width: 82px;
+}
+
+.vacation-center-policy > button {
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--vacation-accent);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.vacation-center-policy--closed {
+    align-items: center;
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.vacation-center-policy--closed .vacation-center-policy__status {
+    color: #475569;
+}
+
 .vacation-center-balance-editor {
     margin-top: -1px;
     padding: 16px;
@@ -706,6 +816,93 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
+.vacation-center-calendar-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 0.8fr)) minmax(280px, 1.5fr);
+    gap: 10px;
+    align-items: end;
+    padding: 16px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-calendar-filters label {
+    display: grid;
+    gap: 5px;
+    color: #64748b;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vacation-center-calendar-filters select {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 30px 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 0.72rem;
+    line-height: normal;
+}
+
+.vacation-center-calendar-coverage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+}
+
+.vacation-center-calendar-coverage span {
+    padding: 7px 10px;
+    border-left: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.6rem;
+}
+
+.vacation-center-calendar-coverage span:first-child {
+    border-left: 0;
+}
+
+.vacation-center-calendar-coverage strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+
+.vacation-center-type-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 12px;
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 700;
+}
+
+.vacation-center-type-legend span,
+.vacation-center-person-leave__list button span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vacation-center-type-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--vacation-accent);
+}
+
+.vacation-center-type-dot--sick { background: #dc2626; }
+.vacation-center-type-dot--unpaid { background: #64748b; }
+.vacation-center-type-dot--parental { background: #7c3aed; }
+.vacation-center-type-dot--training { background: #0284c7; }
+.vacation-center-type-dot--compensatory { background: #d97706; }
+
 .vacation-center-legend {
     display: flex;
     flex-wrap: wrap;
@@ -801,6 +998,106 @@
     background: #d97706;
 }
 
+#vacation-center-calendar .vacation-center-event--type-sick { background: #dc2626; }
+#vacation-center-calendar .vacation-center-event--type-unpaid { background: #64748b; }
+#vacation-center-calendar .vacation-center-event--type-parental { background: #7c3aed; }
+#vacation-center-calendar .vacation-center-event--type-training { background: #0284c7; }
+#vacation-center-calendar .vacation-center-event--type-compensatory { background: #d97706; }
+
+.vacation-center-reports {
+    padding: 28px;
+}
+
+.vacation-center-reports__heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 20px;
+}
+
+.vacation-center-reports__heading > div:first-child > span {
+    color: var(--vacation-accent-dark);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.vacation-center-reports__heading h2 {
+    margin: 3px 0 0;
+    font-size: 1.2rem;
+}
+
+.vacation-center-reports__heading p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.72rem;
+}
+
+.vacation-center-reports__heading > div:last-child {
+    display: flex;
+    gap: 8px;
+}
+
+.vacation-center-reports__heading button:first-child {
+    border-color: var(--vacation-accent);
+    background: var(--vacation-accent);
+    color: #ffffff;
+}
+
+.vacation-center-report-table-wrap {
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.vacation-center-report-table {
+    width: 100%;
+    min-width: 940px;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+}
+
+.vacation-center-report-table th,
+.vacation-center-report-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: right;
+}
+
+.vacation-center-report-table th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vacation-center-report-table th:first-child,
+.vacation-center-report-table th:nth-child(2),
+.vacation-center-report-table td:first-child,
+.vacation-center-report-table td:nth-child(2) {
+    text-align: left;
+}
+
+.vacation-center-report-table td.is-negative {
+    color: #be123c;
+    font-weight: 800;
+}
+
+.vacation-center-report-table td small {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.vacation-center-report-note {
+    margin: 12px 0 0;
+    color: #64748b;
+    font-size: 0.68rem;
+}
+
 @keyframes vacationCenterEnter {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -823,6 +1120,14 @@
 
     .vacation-center-roster__list {
         max-height: 360px;
+    }
+
+    .vacation-center-calendar-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vacation-center-calendar-coverage {
+        grid-column: 1 / -1;
     }
 }
 
@@ -861,11 +1166,16 @@
 
     .vacation-center-toolbar__actions {
         justify-content: space-between;
+        flex-wrap: wrap;
     }
 
     .vacation-center-book {
         flex: 1;
         justify-content: center;
+    }
+
+    .vacation-center-settings-button {
+        width: 100%;
     }
 
     .vacation-center-totals {
@@ -904,6 +1214,39 @@
         flex-direction: column;
     }
 
+    .vacation-center-calendar-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .vacation-center-calendar-coverage {
+        grid-column: auto;
+    }
+
+    .vacation-center-policy {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .vacation-center-policy label,
+    .vacation-center-policy input,
+    .vacation-center-policy input[type="number"] {
+        width: 100%;
+    }
+
+    .vacation-center-reports {
+        padding: 18px 15px;
+    }
+
+    .vacation-center-reports__heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .vacation-center-reports__heading button {
+        flex: 1;
+    }
+
     #vacation-center-calendar .fc-toolbar {
         align-items: stretch;
         flex-direction: column;
@@ -913,5 +1256,39 @@
     #vacation-center-calendar .fc-toolbar-chunk {
         display: flex;
         justify-content: center;
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    #vacation-center-page,
+    #vacation-center-page * {
+        visibility: visible !important;
+    }
+
+    #vacation-center-page {
+        position: absolute;
+        inset: 0;
+        background: #ffffff;
+    }
+
+    .vacation-center-page-header,
+    .vacation-center-toolbar,
+    .vacation-center-totals,
+    .vacation-center-policy,
+    .vacation-center-calendar-filters,
+    .vacation-center-calendar-actions {
+        display: none !important;
+    }
+
+    .vacation-center-main,
+    .vacation-center-workspace {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
     }
 }

@@ -1,6 +1,7 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
   calculateEmployeeLeaveBalanceForYear,
+  calculateEmployeeLeaveUsageByTypeForYear,
   calculateEmployeeVacationDaysForYear,
   calculateEmployeeVacationUsageForYear,
   calculatePreviousYearLeaveStats,
@@ -126,6 +127,47 @@ describe("schedule-view-helpers", () => {
     };
 
     assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026), 6);
+  });
+
+  test("excludes public holidays and follows each colleague's working week", () => {
+    const employee = {
+      workDays: [4, 5],
+      vacations: [{ startDate: "2026-01-01", endDate: "2026-01-02" }]
+    };
+
+    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026, {
+      "2026-01-01": "New Year's Day"
+    }), 1);
+  });
+
+  test("keeps non-vacation absence types out of the vacation balance", () => {
+    const employee = {
+      vacations: [
+        { startDate: "2026-01-05", endDate: "2026-01-05", type: "vacation" },
+        { startDate: "2026-01-06", endDate: "2026-01-06", type: "sick" },
+        { startDate: "2026-01-07", endDate: "2026-01-07", type: "training" }
+      ]
+    };
+
+    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026), 1);
+    const usage = calculateEmployeeLeaveUsageByTypeForYear(employee, 2026, new Date("2026-12-31T12:00:00"));
+    assert.equal(usage.vacation.recordedDays, 1);
+    assert.equal(usage.sick.recordedDays, 1);
+    assert.equal(usage.training.recordedDays, 1);
+  });
+
+  test("expires only the carry-over that was not used before its deadline", () => {
+    const employee = {
+      vacationAllowancesByYear: { "2027": 27 },
+      vacationCarryOverByYear: { "2027": 5 },
+      vacationCarryOverExpiryByYear: { "2027": "2027-03-31" },
+      vacations: [{ startDate: "2027-03-01", endDate: "2027-03-02" }]
+    };
+
+    const balance = calculateEmployeeLeaveBalanceForYear(employee, 2027, {}, new Date("2027-04-01T12:00:00"));
+    assert.equal(balance.vacationAllowance, 24);
+    assert.equal(balance.expiredCarryOver, 3);
+    assert.equal(balance.vacationBalance, 22);
   });
 
   test("builds planner totals without letting overbooking hide another colleague's remaining days", () => {

@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { t } from '../../core/i18n.js';
 import { ChangeNotifier } from '../../shared/change-notifier.js';
 import {
@@ -41,6 +41,7 @@ import {
 } from '../../shared/access-roles.js';
 import { normalizeAllowedApps } from '../../shared/app-access.js';
 import { normalizeManualAttendanceNote } from './time-clock-controls.js';
+import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
 
 export class DataManager {
     constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
@@ -64,6 +65,7 @@ export class DataManager {
         this.dailyNotes = {};
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
+        this.vacationYearPolicies = {};
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
@@ -131,6 +133,7 @@ export class DataManager {
         this.dailyNotes = {};
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
+        this.vacationYearPolicies = {};
         this.selectedDateKey = null;
         this.hasLoadedVacationRecords = false;
         this.attendanceSyncState = {
@@ -324,8 +327,10 @@ export class DataManager {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 this.minStaffThreshold = data.minStaffThreshold || 0;
+                this.vacationYearPolicies = data.vacationYearPolicies || {};
             } else {
                 this.minStaffThreshold = 0;
+                this.vacationYearPolicies = {};
             }
             this.notifyDataChange();
         }, (error) => console.error("Error listening for settings:", error));
@@ -437,6 +442,12 @@ export class DataManager {
         if (normalizedAllowance !== null && (!Number.isInteger(normalizedAllowance) || normalizedAllowance < 0)) {
             throw new Error('Invalid vacation allowance');
         }
+        if (this.isVacationYearClosed(normalizedYear)) {
+            const error = new Error(`Vacation year ${normalizedYear} is closed`);
+            error.code = 'vacation-year-closed';
+            error.year = normalizedYear;
+            throw error;
+        }
 
         const docRef = doc(this.db, "employees", employeeId);
         const fieldPath = `vacationAllowancesByYear.${normalizedYear}`;
@@ -448,6 +459,87 @@ export class DataManager {
             console.error("Vacation allowance update failed:", error);
             throw error;
         });
+    }
+
+    async closeVacationYear(year, { carryOverLimit = 5, expiryDate = null } = {}) {
+        const normalizedYear = Number.parseInt(year, 10);
+        const normalizedLimit = Math.max(0, Number.parseInt(carryOverLimit, 10) || 0);
+        const targetYear = normalizedYear + 1;
+        const normalizedExpiry = expiryDate || `${targetYear}-03-31`;
+
+        if (!Number.isInteger(normalizedYear) || normalizedYear < 2000 || normalizedYear > 2200) {
+            throw new Error('Invalid vacation year');
+        }
+        if (this.isVacationYearClosed(normalizedYear)) {
+            const error = new Error(`Vacation year ${normalizedYear} is already closed`);
+            error.code = 'vacation-year-closed';
+            error.year = normalizedYear;
+            throw error;
+        }
+
+        const holidays = this.getHolidaysForYear(normalizedYear);
+        const closePlan = buildVacationYearClosePlan(this.getActiveEmployees(), normalizedYear, normalizedLimit, holidays);
+        const carriedOverByEmployee = {};
+        const previousAllowancesByEmployee = {};
+        const batch = writeBatch(this.db);
+        closePlan.forEach((item) => {
+            carriedOverByEmployee[item.employeeId] = item.carryOver;
+            previousAllowancesByEmployee[item.employeeId] = item.previousAllowance;
+
+            batch.update(doc(this.db, 'employees', item.employeeId), {
+                [`vacationAllowancesByYear.${targetYear}`]: item.nextAllowance,
+                [`vacationCarryOverByYear.${targetYear}`]: item.carryOver,
+                [`vacationCarryOverExpiryByYear.${targetYear}`]: normalizedExpiry
+            });
+        });
+        const policy = {
+            closed: true,
+            closedAt: new Date().toISOString(),
+            carryOverLimit: normalizedLimit,
+            expiryDate: normalizedExpiry,
+            targetYear,
+            carriedOverByEmployee,
+            previousAllowancesByEmployee
+        };
+        batch.set(doc(this.db, 'settings', 'global'), {
+            vacationYearPolicies: { [String(normalizedYear)]: policy }
+        }, { merge: true });
+        await batch.commit();
+        this.vacationYearPolicies = { ...this.vacationYearPolicies, [String(normalizedYear)]: policy };
+        this.notifyDataChange();
+        return policy;
+    }
+
+    async reopenVacationYear(year) {
+        const normalizedYear = Number.parseInt(year, 10);
+        const policy = this.getVacationYearPolicy(normalizedYear);
+        if (!policy?.closed) return null;
+
+        const targetYear = Number(policy.targetYear || normalizedYear + 1);
+        const batch = writeBatch(this.db);
+        this.getActiveEmployees().forEach((employee) => {
+            const previousAllowance = policy.previousAllowancesByEmployee?.[employee.id];
+            batch.update(doc(this.db, 'employees', employee.id), {
+                [`vacationAllowancesByYear.${targetYear}`]: previousAllowance === null || previousAllowance === undefined
+                    ? deleteField()
+                    : previousAllowance,
+                [`vacationCarryOverByYear.${targetYear}`]: deleteField(),
+                [`vacationCarryOverExpiryByYear.${targetYear}`]: deleteField()
+            });
+        });
+
+        const reopenedPolicy = {
+            ...policy,
+            closed: false,
+            reopenedAt: new Date().toISOString()
+        };
+        batch.set(doc(this.db, 'settings', 'global'), {
+            vacationYearPolicies: { [String(normalizedYear)]: reopenedPolicy }
+        }, { merge: true });
+        await batch.commit();
+        this.vacationYearPolicies = { ...this.vacationYearPolicies, [String(normalizedYear)]: reopenedPolicy };
+        this.notifyDataChange();
+        return reopenedPolicy;
     }
 
     async saveDailyNote(dateKey, note) {
@@ -493,7 +585,11 @@ export class DataManager {
             .map((vacation) => ({
                 id: vacation.id,
                 startDate: vacation.startDate,
-                endDate: vacation.endDate
+                endDate: vacation.endDate,
+                type: vacation.type,
+                status: vacation.status,
+                note: vacation.note,
+                visibility: vacation.visibility
             }));
     }
 
@@ -526,6 +622,7 @@ export class DataManager {
             employeeId: vacationRecord.employeeId,
             startDate: vacationRecord.startDate,
             endDate: vacationRecord.endDate,
+            type: vacationRecord.type,
             status: vacationRecord.status,
             visibility: vacationRecord.visibility,
             note: vacationRecord.note,
@@ -575,15 +672,16 @@ export class DataManager {
         }
     }
 
-    async handleScheduleVacation(employeeId, startDate, endDate) {
+    async handleScheduleVacation(employeeId, startDate, endDate, { type = 'vacation' } = {}) {
         if (!this.isValidVacationRange(startDate, endDate)) {
             alert(t('schedule.vacation.invalidRangeError'));
             return;
         }
+        this.assertVacationDateRangeOpen(startDate, endDate);
         const empDoc = this.getEmployeeById(employeeId);
         if (!empDoc) return;
 
-        const vacationRecord = createVacationRecord({ employeeId, startDate, endDate }, { source: 'planner' });
+        const vacationRecord = createVacationRecord({ employeeId, startDate, endDate, type }, { source: 'planner' });
         if (!vacationRecord) {
             return;
         }
@@ -612,6 +710,7 @@ export class DataManager {
         }
 
         const vacationToDelete = toEmployeeVacationEntry(empDoc.vacations[vacationIndex], employeeId);
+        this.assertVacationDateRangeOpen(vacationToDelete.startDate, vacationToDelete.endDate);
         const updatedVacations = empDoc.vacations.filter((_, index) => index !== vacationIndex);
 
         const employeeRef = doc(this.db, "employees", employeeId);
@@ -626,7 +725,7 @@ export class DataManager {
         await Promise.all(writes).catch(e => console.error("Failed to delete vacation", e));
     }
     // Add a method to update an existing vacation entry
-    async handleUpdateVacation(employeeId, vacationReference, startDate, endDate) {
+    async handleUpdateVacation(employeeId, vacationReference, startDate, endDate, { type = null } = {}) {
         if (!this.isValidVacationRange(startDate, endDate)) {
             alert(t('schedule.vacation.invalidRangeError'));
             return;
@@ -644,11 +743,14 @@ export class DataManager {
         if (!previousVacation) {
             return;
         }
+        this.assertVacationDateRangeOpen(previousVacation.startDate, previousVacation.endDate);
+        this.assertVacationDateRangeOpen(startDate, endDate);
 
         const updatedVacation = createVacationRecord({
             employeeId,
             startDate,
             endDate,
+            type: type || previousVacation.type,
             status: previousVacation.status,
             note: previousVacation.note,
             visibility: previousVacation.visibility
@@ -685,6 +787,28 @@ export class DataManager {
         }
 
         return new Date(`${endDate}T00:00:00`) >= new Date(`${startDate}T00:00:00`);
+    }
+
+    getVacationYearPolicy(year) {
+        const normalizedYear = Number.parseInt(year, 10);
+        return this.vacationYearPolicies?.[String(normalizedYear)] || null;
+    }
+
+    isVacationYearClosed(year) {
+        return Boolean(this.getVacationYearPolicy(year)?.closed);
+    }
+
+    assertVacationDateRangeOpen(startDate, endDate) {
+        const startYear = Number(String(startDate).slice(0, 4));
+        const endYear = Number(String(endDate).slice(0, 4));
+        for (let year = startYear; year <= endYear; year += 1) {
+            if (this.isVacationYearClosed(year)) {
+                const error = new Error(`Vacation year ${year} is closed`);
+                error.code = 'vacation-year-closed';
+                error.year = year;
+                throw error;
+            }
+        }
     }
 
     getEmployeeOrderFromDom() {
@@ -1174,6 +1298,7 @@ export class DataManager {
                     employeeDepartment: employee.department || null,
                     startDate: employeeVacation.startDate,
                     endDate: employeeVacation.endDate,
+                    type: employeeVacation.type,
                     status: employeeVacation.status,
                     note: employeeVacation.note,
                     visibility: employeeVacation.visibility
