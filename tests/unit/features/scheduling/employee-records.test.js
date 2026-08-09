@@ -22,6 +22,7 @@ describe("Employee records", () => {
     assert.equal(employee.isArchived, false);
     assert.equal(employee.shifts.default, "9:00-18:00");
     assert.equal(employee.vacationAdjustment, 0);
+    assert.deepEqual(employee.vacationAllowancesByYear, {});
   });
 
   test("normalizes vacation adjustment when creating a new employee record", () => {

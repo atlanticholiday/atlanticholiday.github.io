@@ -20,11 +20,19 @@ export function getUpcomingVacationEntries(dataManager, { includePast = false } 
 }
 
 export function calculateEmployeeVacationDaysForYear(employee, year) {
-    let vacationDays = 0;
+    return getEmployeeVacationWeekdaysForYear(employee, year).size;
+}
+
+function getEmployeeVacationWeekdaysForYear(employee, year) {
+    const vacationDays = new Set();
 
     (employee.vacations || []).forEach((vacation) => {
         const start = new Date(`${vacation.startDate}T00:00:00`);
         const end = new Date(`${vacation.endDate}T00:00:00`);
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+            return;
+        }
 
         for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
             if (current.getFullYear() !== year) {
@@ -33,7 +41,7 @@ export function calculateEmployeeVacationDaysForYear(employee, year) {
 
             const weekday = current.getDay();
             if (weekday !== 0 && weekday !== 6) {
-                vacationDays += 1;
+                vacationDays.add(getLocalDateKey(current));
             }
         }
     });
@@ -41,13 +49,34 @@ export function calculateEmployeeVacationDaysForYear(employee, year) {
     return vacationDays;
 }
 
-export function getAnnualVacationAllowance(employee) {
+export function calculateEmployeeVacationUsageForYear(employee, year, referenceDate = new Date()) {
+    const todayKey = getLocalDateKey(referenceDate);
+    const vacationDays = [...getEmployeeVacationWeekdaysForYear(employee, year)];
+    const takenDays = vacationDays.filter((dateKey) => dateKey <= todayKey).length;
+    const plannedDays = vacationDays.length - takenDays;
+
+    return {
+        takenDays,
+        plannedDays,
+        recordedDays: vacationDays.length
+    };
+}
+
+export function getAnnualVacationAllowance(employee, year = null) {
+    const yearlyAllowance = year === null || year === undefined
+        ? null
+        : Number(employee?.vacationAllowancesByYear?.[String(year)]);
+
+    if (Number.isFinite(yearlyAllowance) && yearlyAllowance >= 0) {
+        return yearlyAllowance;
+    }
+
     const adjustment = Number(employee?.vacationAdjustment || 0);
     return 22 + (Number.isFinite(adjustment) ? adjustment : 0);
 }
 
 export function calculateEmployeeLeaveBalanceForYear(employee, year) {
-    const vacationAllowance = getAnnualVacationAllowance(employee);
+    const vacationAllowance = getAnnualVacationAllowance(employee, year);
     const vacationDays = calculateEmployeeVacationDaysForYear(employee, year);
     const vacationBalance = vacationAllowance - vacationDays;
 
@@ -56,6 +85,39 @@ export function calculateEmployeeLeaveBalanceForYear(employee, year) {
         vacationDays,
         vacationBalance,
         unusedVacationDays: Math.max(vacationBalance, 0)
+    };
+}
+
+export function calculateVacationPlannerYearSummary(employees = [], year, referenceDate = new Date()) {
+    const rows = employees.map((employee) => {
+        const usage = calculateEmployeeVacationUsageForYear(employee, year, referenceDate);
+        const vacationAllowance = getAnnualVacationAllowance(employee, year);
+        const vacationBalance = vacationAllowance - usage.recordedDays;
+        const yearlyAllowance = Number(employee?.vacationAllowancesByYear?.[String(year)]);
+
+        return {
+            id: employee.id,
+            name: employee.name,
+            department: employee.department || null,
+            vacationAllowance,
+            vacationBalance,
+            unusedVacationDays: Math.max(vacationBalance, 0),
+            overbookedDays: Math.max(-vacationBalance, 0),
+            hasYearlyOverride: Number.isFinite(yearlyAllowance) && yearlyAllowance >= 0,
+            ...usage
+        };
+    });
+
+    return {
+        year,
+        rows,
+        vacationAllowance: rows.reduce((sum, row) => sum + row.vacationAllowance, 0),
+        takenDays: rows.reduce((sum, row) => sum + row.takenDays, 0),
+        plannedDays: rows.reduce((sum, row) => sum + row.plannedDays, 0),
+        recordedDays: rows.reduce((sum, row) => sum + row.recordedDays, 0),
+        unusedVacationDays: rows.reduce((sum, row) => sum + row.unusedVacationDays, 0),
+        overbookedDays: rows.reduce((sum, row) => sum + row.overbookedDays, 0),
+        colleaguesOverbooked: rows.filter((row) => row.overbookedDays > 0).length
     };
 }
 

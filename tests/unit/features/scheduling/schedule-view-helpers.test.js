@@ -1,8 +1,11 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
   calculateEmployeeLeaveBalanceForYear,
+  calculateEmployeeVacationDaysForYear,
+  calculateEmployeeVacationUsageForYear,
   calculatePreviousYearLeaveStats,
-  calculateTeamStats
+  calculateTeamStats,
+  calculateVacationPlannerYearSummary
 } from "../../../../js/features/scheduling/views/schedule-view-helpers.js";
 
 describe("schedule-view-helpers", () => {
@@ -23,6 +26,22 @@ describe("schedule-view-helpers", () => {
     assert.equal(balance.vacationDays, 5);
     assert.equal(balance.vacationBalance, 20);
     assert.equal(balance.unusedVacationDays, 20);
+  });
+
+  test("uses a year-specific allowance without changing other years", () => {
+    const employee = {
+      vacationAdjustment: 2,
+      vacationAllowancesByYear: { "2025": 18, "2026": 27 },
+      vacations: [{ startDate: "2026-01-05", endDate: "2026-01-09" }]
+    };
+
+    assert.equal(calculateEmployeeLeaveBalanceForYear(employee, 2025).vacationAllowance, 18);
+    assert.equal(calculateEmployeeLeaveBalanceForYear(employee, 2026).vacationAllowance, 27);
+    assert.equal(calculateEmployeeLeaveBalanceForYear(employee, 2026).vacationBalance, 22);
+    assert.equal(calculateEmployeeLeaveBalanceForYear(employee, 2024).vacationAllowance, 24);
+
+    const summary = calculateVacationPlannerYearSummary([employee], 2026, new Date("2026-08-08T12:00:00"));
+    assert.equal(summary.rows[0].hasYearlyOverride, true);
   });
 
   test("adds start allowance and previous year unused days to team stats", () => {
@@ -83,5 +102,50 @@ describe("schedule-view-helpers", () => {
     assert.equal(year2025.vacationDays, 15);
     assert.equal(year2025.unusedVacationDays, 30);
     assert.equal(year2025.colleaguesWithUnusedDays, 2);
+  });
+
+  test("separates taken and future booked weekdays", () => {
+    const employee = {
+      vacations: [
+        { startDate: "2026-01-05", endDate: "2026-01-09" },
+        { startDate: "2026-09-07", endDate: "2026-09-11" }
+      ]
+    };
+
+    const usage = calculateEmployeeVacationUsageForYear(employee, 2026, new Date("2026-08-08T12:00:00"));
+
+    assert.deepEqual(usage, { takenDays: 5, plannedDays: 5, recordedDays: 10 });
+  });
+
+  test("does not double count overlapping vacation records", () => {
+    const employee = {
+      vacations: [
+        { startDate: "2026-03-02", endDate: "2026-03-06" },
+        { startDate: "2026-03-05", endDate: "2026-03-09" }
+      ]
+    };
+
+    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026), 6);
+  });
+
+  test("builds planner totals without letting overbooking hide another colleague's remaining days", () => {
+    const summary = calculateVacationPlannerYearSummary([
+      {
+        id: "e1",
+        name: "Alex",
+        vacations: [{ startDate: "2025-01-06", endDate: "2025-02-07" }]
+      },
+      {
+        id: "e2",
+        name: "Sam",
+        vacations: [{ startDate: "2025-06-02", endDate: "2025-06-06" }]
+      }
+    ], 2025, new Date("2026-08-08T12:00:00"));
+
+    assert.equal(summary.vacationAllowance, 44);
+    assert.equal(summary.recordedDays, 30);
+    assert.equal(summary.unusedVacationDays, 17);
+    assert.equal(summary.overbookedDays, 3);
+    assert.equal(summary.colleaguesOverbooked, 1);
   });
 });

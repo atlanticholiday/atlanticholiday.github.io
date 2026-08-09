@@ -1,10 +1,25 @@
 import { i18n, t } from '../../core/i18n.js';
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
+import {
+    calculateEmployeeVacationUsageForYear,
+    calculateVacationPlannerYearSummary
+} from './views/schedule-view-helpers.js';
+
+function escapeHtml(value = '') {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 export class ScheduleManager {
     constructor(dataManager, uiManager) {
         this.dataManager = dataManager;
         this.uiManager = uiManager;
+        this.vacationPlannerYear = null;
+        this.vacationBalanceEditorEmployeeId = null;
         this.setupEventListeners();
     }
 
@@ -51,65 +66,78 @@ export class ScheduleManager {
 
         const employees = this.dataManager.getActiveEmployees();
         const vacationEntries = this.dataManager.getSharedVacationEntries();
-        const events = [];
-        const employeeColors = {};
+        const today = new Date();
         const todayKey = this.getLocalDateKey(new Date());
-
-        // Generate consistent colors for employees
-        const getEmployeeColor = (name) => {
-            let hash = 0;
-            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            const h = Math.abs(hash % 360);
-            return `hsl(${h}, 70%, 45%)`;
-        };
-
-        employees.forEach(emp => {
-            employeeColors[emp.id] = getEmployeeColor(emp.name);
-        });
-
+        const currentYear = today.getFullYear();
+        const selectedYear = Number.isInteger(this.vacationPlannerYear)
+            ? this.vacationPlannerYear
+            : this.dataManager.getCurrentDate().getFullYear();
+        this.vacationPlannerYear = selectedYear;
+        const summary = calculateVacationPlannerYearSummary(employees, selectedYear, today);
+        const yearStart = `${selectedYear}-01-01`;
+        const yearEnd = `${selectedYear}-12-31`;
+        const yearEntries = vacationEntries
+            .filter((vacation) => vacation.startDate <= yearEnd && vacation.endDate >= yearStart)
+            .sort((left, right) => left.startDate.localeCompare(right.startDate));
+        const availableYears = new Set([selectedYear, currentYear]);
+        for (let offset = 0; offset < 5; offset += 1) {
+            availableYears.add(currentYear - offset);
+        }
         vacationEntries.forEach((vacation) => {
+            availableYears.add(Number(vacation.startDate.slice(0, 4)));
+            availableYears.add(Number(vacation.endDate.slice(0, 4)));
+        });
+        const yearOptions = [...availableYears]
+            .filter(Number.isInteger)
+            .sort((left, right) => right - left);
+        const balanceRows = [...summary.rows].sort((left, right) => {
+            const balanceComparison = left.vacationBalance - right.vacationBalance;
+            return balanceComparison || left.name.localeCompare(right.name);
+        });
+        const events = yearEntries.map((vacation) => {
             const endPlusOne = new Date(vacation.endDate);
             endPlusOne.setDate(endPlusOne.getDate() + 1);
-            events.push({
-                title: vacation.employeeName,
+            const isAwayToday = vacation.startDate <= todayKey && vacation.endDate >= todayKey;
+            const isFuture = vacation.startDate > todayKey;
+            const status = isAwayToday ? 'away' : (isFuture ? 'planned' : 'taken');
+            const workingDays = calculateEmployeeVacationUsageForYear({ vacations: [vacation] }, selectedYear, today).recordedDays;
+
+            return {
+                title: `${vacation.employeeName} · ${workingDays}d`,
                 start: vacation.startDate,
                 end: endPlusOne.toISOString().split('T')[0],
                 allDay: true,
-                backgroundColor: employeeColors[vacation.employeeId],
-                borderColor: 'transparent',
+                classNames: [`vacation-event--${status}`],
                 extendedProps: {
                     employeeId: vacation.employeeId,
                     vacationId: vacation.id,
                     endDate: vacation.endDate
                 }
-            });
+            };
         });
-
-        const upcomingVacations = vacationEntries
-            .map((vacation) => ({
-                ...vacation,
-                employeeColor: employeeColors[vacation.employeeId]
-            }))
-            .filter((vacation) => vacation.endDate >= todayKey)
-            .sort((left, right) => left.startDate.localeCompare(right.startDate));
-        const awayTodayCount = vacationEntries.filter((vacation) => vacation.startDate <= todayKey && vacation.endDate >= todayKey).length;
 
         container.innerHTML = `
             <div class="vacation-planner-shell">
                 <section class="vacation-planner-hero">
-                    <div>
+                    <div class="vacation-planner-intro">
                         <div class="vacation-planner-kicker">${t('schedule.views.vacationPlanner')}</div>
                         <h2>${t('schedule.vacation.title')}</h2>
                         <p>${t('schedule.vacation.subtitle')}</p>
                     </div>
                     <div class="vacation-planner-actions">
-                        <div class="vacation-planner-stat">
-                            <span>${t('schedule.board.summaryAwayToday')}</span>
-                            <strong>${awayTodayCount}</strong>
-                        </div>
-                        <div class="vacation-planner-stat">
-                            <span>${t('schedule.board.upcomingLabel')}</span>
-                            <strong>${upcomingVacations.length}</strong>
+                        <div class="vacation-planner-year-control" aria-label="${escapeHtml(t('schedule.vacation.yearControl'))}">
+                            <button type="button" data-vacation-year-step="-1" aria-label="${escapeHtml(t('schedule.board.previousYear'))}">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                            </button>
+                            <label>
+                                <span class="sr-only">${t('schedule.vacation.yearControl')}</span>
+                                <select id="vacation-planner-year-select">
+                                    ${yearOptions.map((year) => `<option value="${year}" ${year === selectedYear ? 'selected' : ''}>${year}</option>`).join('')}
+                                </select>
+                            </label>
+                            <button type="button" data-vacation-year-step="1" aria-label="${escapeHtml(t('schedule.board.nextYear'))}">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                            </button>
                         </div>
                         <button id="main-book-vacation-btn" class="vacation-planner-primary-btn" type="button">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -117,37 +145,131 @@ export class ScheduleManager {
                         </button>
                     </div>
                 </section>
+
+                <section class="vacation-planner-summary" aria-label="${escapeHtml(t('schedule.vacation.yearSummary'))}">
+                    ${this.renderVacationPlannerMetric(t('schedule.vacation.allowance'), summary.vacationAllowance, t('schedule.vacation.teamDays'))}
+                    ${this.renderVacationPlannerMetric(t('schedule.vacation.taken'), summary.takenDays, t('schedule.vacation.weekdays'))}
+                    ${this.renderVacationPlannerMetric(t('schedule.vacation.planned'), summary.plannedDays, t('schedule.vacation.weekdays'))}
+                    ${this.renderVacationPlannerMetric(
+                        t('schedule.vacation.remaining'),
+                        summary.unusedVacationDays,
+                        summary.overbookedDays > 0
+                            ? t('schedule.vacation.overbookedSummary', { count: summary.overbookedDays })
+                            : t('schedule.vacation.weekdays'),
+                        summary.overbookedDays > 0 ? 'danger' : 'success'
+                    )}
+                </section>
+
                 <div class="vacation-planner-grid">
+                    <section class="vacation-balance-panel">
+                        <div class="vacation-planner-section-heading">
+                            <div>
+                                <span>${selectedYear}</span>
+                                <h3>${t('schedule.vacation.balanceTitle')}</h3>
+                            </div>
+                            <p>${t('schedule.vacation.weekdayNote')}</p>
+                        </div>
+                        <div class="vacation-balance-table-head" aria-hidden="true">
+                            <span>${t('schedule.vacation.colleague')}</span>
+                            <span>${t('schedule.vacation.taken')}</span>
+                            <span>${t('schedule.vacation.planned')}</span>
+                            <span>${t('schedule.vacation.remaining')}</span>
+                            <span></span>
+                        </div>
+                        <div class="vacation-balance-list">
+                            ${balanceRows.length ? balanceRows.map((row) => this.renderVacationBalanceRow(row, selectedYear)).join('') : `
+                                <div class="vacation-planner-empty">${t('schedule.vacation.noColleagues')}</div>
+                            `}
+                        </div>
+                    </section>
                     <section class="vacation-calendar-panel">
+                        <div class="vacation-planner-section-heading vacation-calendar-heading">
+                            <div>
+                                <span>${selectedYear}</span>
+                                <h3>${t('schedule.vacation.calendarTitle')}</h3>
+                            </div>
+                            <div class="vacation-planner-legend" aria-label="${escapeHtml(t('schedule.vacation.legendLabel'))}">
+                                <span><i class="vacation-planner-legend__dot vacation-planner-legend__dot--taken"></i>${t('schedule.vacation.taken')}</span>
+                                <span><i class="vacation-planner-legend__dot vacation-planner-legend__dot--planned"></i>${t('schedule.vacation.planned')}</span>
+                                <span><i class="vacation-planner-legend__dot vacation-planner-legend__dot--away"></i>${t('schedule.vacation.awayToday')}</span>
+                            </div>
+                        </div>
                         <div id="vacation-calendar"></div>
                     </section>
-                    <aside class="vacation-upcoming-panel">
-                        <div class="vacation-upcoming-heading">
-                            <div>
-                                <span>${t('schedule.board.upcomingLabel')}</span>
-                                <h3>${t('schedule.vacation.upcomingList')}</h3>
-                            </div>
-                            <strong>${upcomingVacations.length}</strong>
-                        </div>
-                        <div id="vacation-list-view" class="vacation-list-view"></div>
-                    </aside>
                 </div>
+
+                <details class="vacation-records-panel">
+                    <summary>
+                        <div>
+                            <span>${selectedYear}</span>
+                            <h3>${t('schedule.vacation.recordsTitle')}</h3>
+                        </div>
+                        <strong>${yearEntries.length}</strong>
+                    </summary>
+                    <div id="vacation-list-view" class="vacation-records-list">
+                        ${yearEntries.length ? yearEntries.map((vacation) => this.renderVacationRecord(vacation, selectedYear, today)).join('') : `
+                            <div class="vacation-planner-empty">${t('schedule.vacation.noYearRecords')}</div>
+                        `}
+                    </div>
+                </details>
             </div>
         `;
 
         document.getElementById('main-book-vacation-btn').addEventListener('click', () => this.openBookVacationModal());
 
+        container.querySelectorAll('[data-vacation-year-step]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.vacationPlannerYear = selectedYear + Number(button.dataset.vacationYearStep);
+                this.renderVacationPlanner();
+            });
+        });
+        container.querySelector('#vacation-planner-year-select')?.addEventListener('change', (event) => {
+            this.vacationPlannerYear = Number(event.target.value);
+            this.renderVacationPlanner();
+        });
+        container.querySelectorAll('[data-edit-vacation-balance]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.vacationBalanceEditorEmployeeId = button.dataset.editVacationBalance;
+                this.renderVacationPlanner();
+            });
+        });
+        container.querySelector('[data-cancel-vacation-balance]')?.addEventListener('click', () => {
+            this.vacationBalanceEditorEmployeeId = null;
+            this.renderVacationPlanner();
+        });
+        container.querySelector('[data-reset-vacation-balance]')?.addEventListener('click', async (event) => {
+            await this.handleVacationBalanceReset(event.currentTarget.dataset.resetVacationBalance, selectedYear);
+        });
+        container.querySelector('[data-vacation-balance-form]')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await this.handleVacationBalanceSave(
+                form.dataset.vacationBalanceForm,
+                selectedYear,
+                Number(form.dataset.recordedDays),
+                form.querySelector('input')?.value
+            );
+        });
+
         if (typeof FullCalendar !== 'undefined') {
             const calendarEl = document.getElementById('vacation-calendar');
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
+                initialDate: selectedYear === currentYear ? todayKey : `${selectedYear}-01-01`,
+                validRange: {
+                    start: `${selectedYear}-01-01`,
+                    end: `${selectedYear + 1}-01-01`
+                },
+                firstDay: 1,
                 headerToolbar: {
-                    left: 'prev,next today',
+                    left: 'prev,next',
                     center: 'title',
                     right: 'dayGridMonth,listMonth'
                 },
                 events: events,
                 selectable: true,
+                displayEventTime: false,
+                dayMaxEvents: 3,
                 eventClassNames: ['vacation-event'],
                 select: (info) => {
                     this.openBookVacationModal(info.startStr, info.endStr ? new Date(new Date(info.endStr).setDate(new Date(info.endStr).getDate() - 1)).toISOString().split('T')[0] : info.startStr);
@@ -167,57 +289,111 @@ export class ScheduleManager {
             calendar.render();
         }
 
-        const listView = document.getElementById('vacation-list-view');
-        if (listView) {
-            if (!upcomingVacations.length) {
-                listView.innerHTML = `
-                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                        ${t('schedule.vacation.noUpcoming')}
+        container.querySelectorAll('[data-open-vacation]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const employeeId = button.dataset.employeeId;
+                const vacationId = button.dataset.vacationId;
+                const vacation = this.dataManager.getVacationRecordById(vacationId, { includeArchived: false });
+
+                if (!employeeId || !vacation) return;
+                this.openBookVacationModal(vacation.startDate, vacation.endDate, employeeId, vacationId);
+            });
+        });
+    }
+
+    renderVacationPlannerMetric(label, value, detail, tone = '') {
+        return `
+            <div class="vacation-planner-metric ${tone ? `vacation-planner-metric--${tone}` : ''}">
+                <span>${label}</span>
+                <strong>${value}</strong>
+                <small>${detail}</small>
+            </div>
+        `;
+    }
+
+    renderVacationBalanceRow(row, year) {
+        const balanceTone = row.vacationBalance < 0 ? 'is-overbooked' : (row.vacationBalance <= 5 ? 'is-low' : '');
+        const isEditing = this.vacationBalanceEditorEmployeeId === row.id;
+
+        return `
+            <article class="vacation-balance-row ${balanceTone}">
+                <div class="vacation-balance-row__main">
+                    <div class="vacation-balance-row__person">
+                        <strong>${escapeHtml(row.name)}</strong>
+                        <span>${escapeHtml(row.department || t('schedule.board.unassignedDepartment'))}</span>
                     </div>
-                `;
-            } else {
-                listView.innerHTML = upcomingVacations.map((vacation) => `
-                    <button
-                        type="button"
-                        class="vacation-list-item"
-                        data-open-vacation
-                        data-employee-id="${vacation.employeeId}"
-                        data-vacation-id="${vacation.id}">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-3">
-                                    <span class="h-3 w-3 shrink-0 rounded-full" style="background-color: ${vacation.employeeColor};"></span>
-                                    <span class="truncate text-base font-semibold text-slate-900">${vacation.employeeName}</span>
-                                </div>
-                                <p class="mt-2 text-sm text-slate-600">${this.formatVacationRange(vacation.startDate, vacation.endDate)}</p>
-                            </div>
-                            <span class="inline-flex shrink-0 items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                                ${this.getVacationDurationLabel(vacation.startDate, vacation.endDate)}
-                            </span>
+                    <span class="vacation-balance-row__number" data-label="${escapeHtml(t('schedule.vacation.taken'))}">${row.takenDays}</span>
+                    <span class="vacation-balance-row__number" data-label="${escapeHtml(t('schedule.vacation.planned'))}">${row.plannedDays}</span>
+                    <strong class="vacation-balance-row__balance" data-label="${escapeHtml(t('schedule.vacation.remaining'))}">${row.vacationBalance}</strong>
+                    <button type="button" class="vacation-balance-edit" data-edit-vacation-balance="${escapeHtml(row.id)}">${t('schedule.vacation.editBalance')}</button>
+                </div>
+                ${isEditing ? `
+                    <form class="vacation-balance-editor" data-vacation-balance-form="${escapeHtml(row.id)}" data-recorded-days="${row.recordedDays}">
+                        <div>
+                            <label for="vacation-balance-${escapeHtml(row.id)}">${t('schedule.vacation.daysRemainingForYear', { year })}</label>
+                            <p>${t('schedule.vacation.balanceEditHint', { count: row.recordedDays })}</p>
                         </div>
-                    </button>
-                `).join('');
+                        <input id="vacation-balance-${escapeHtml(row.id)}" type="number" step="1" min="-${row.recordedDays}" value="${row.vacationBalance}" required>
+                        <div class="vacation-balance-editor__actions">
+                            <button type="submit">${t('common.save')}</button>
+                            <button type="button" data-cancel-vacation-balance>${t('common.cancel')}</button>
+                            ${row.hasYearlyOverride ? `<button type="button" data-reset-vacation-balance="${escapeHtml(row.id)}">${t('schedule.vacation.restoreDefault')}</button>` : ''}
+                        </div>
+                    </form>
+                ` : ''}
+            </article>
+        `;
+    }
 
-                listView.querySelectorAll('[data-open-vacation]').forEach((button) => {
-                    button.addEventListener('click', () => {
-                        const employeeId = button.dataset.employeeId;
-                        const vacationId = button.dataset.vacationId;
-                        const vacation = this.dataManager.getVacationRecordById(vacationId, { includeArchived: false });
-
-                        if (!employeeId || !vacation) {
-                            return;
-                        }
-
-                        this.openBookVacationModal(
-                            vacation.startDate,
-                            vacation.endDate,
-                            employeeId,
-                            vacationId
-                        );
-                    });
-                });
-            }
+    async handleVacationBalanceSave(employeeId, year, recordedDays, remainingValue) {
+        const remainingDays = Number.parseInt(remainingValue, 10);
+        if (!Number.isInteger(remainingDays) || remainingDays < -recordedDays) {
+            alert(t('schedule.vacation.invalidBalance'));
+            return;
         }
+
+        try {
+            await this.dataManager.handleVacationAllowanceForYearChange(employeeId, year, recordedDays + remainingDays);
+            this.vacationBalanceEditorEmployeeId = null;
+            this.renderVacationPlanner();
+        } catch (error) {
+            console.error(error);
+            alert(t('schedule.vacation.balanceSaveFailed'));
+        }
+    }
+
+    async handleVacationBalanceReset(employeeId, year) {
+        try {
+            await this.dataManager.handleVacationAllowanceForYearChange(employeeId, year, null);
+            this.vacationBalanceEditorEmployeeId = null;
+            this.renderVacationPlanner();
+        } catch (error) {
+            console.error(error);
+            alert(t('schedule.vacation.balanceSaveFailed'));
+        }
+    }
+
+    renderVacationRecord(vacation, year, referenceDate) {
+        const usage = calculateEmployeeVacationUsageForYear({ vacations: [vacation] }, year, referenceDate);
+        const todayKey = this.getLocalDateKey(referenceDate);
+        const statusKey = vacation.startDate > todayKey
+            ? 'planned'
+            : (vacation.endDate < todayKey ? 'taken' : 'awayToday');
+
+        return `
+            <button
+                type="button"
+                class="vacation-record"
+                data-open-vacation
+                data-employee-id="${escapeHtml(vacation.employeeId)}"
+                data-vacation-id="${escapeHtml(vacation.id)}">
+                <span class="vacation-record__status vacation-record__status--${statusKey}">${t(`schedule.vacation.${statusKey}`)}</span>
+                <span class="vacation-record__person">${escapeHtml(vacation.employeeName)}</span>
+                <span class="vacation-record__range">${this.formatVacationRange(vacation.startDate, vacation.endDate)}</span>
+                <span class="vacation-record__days">${t('schedule.vacation.workingDayCount', { count: usage.recordedDays })}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+            </button>
+        `;
     }
 
     openBookVacationModal(startDateStr = '', endDateStr = '', employeeId = null, vacationId = null) {

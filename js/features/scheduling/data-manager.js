@@ -426,6 +426,30 @@ export class DataManager {
         await updateDoc(docRef, updateData).catch(e => console.error("Extra hours note update failed:", e));
     }
 
+    async handleVacationAllowanceForYearChange(employeeId, year, allowance = null) {
+        const normalizedYear = Number.parseInt(year, 10);
+        const normalizedAllowance = allowance === null ? null : Number.parseInt(allowance, 10);
+
+        if (!employeeId || !Number.isInteger(normalizedYear) || normalizedYear < 2000 || normalizedYear > 2200) {
+            throw new Error('Invalid vacation allowance year');
+        }
+
+        if (normalizedAllowance !== null && (!Number.isInteger(normalizedAllowance) || normalizedAllowance < 0)) {
+            throw new Error('Invalid vacation allowance');
+        }
+
+        const docRef = doc(this.db, "employees", employeeId);
+        const fieldPath = `vacationAllowancesByYear.${normalizedYear}`;
+        const updateData = {
+            [fieldPath]: normalizedAllowance === null ? deleteField() : normalizedAllowance
+        };
+
+        await updateDoc(docRef, updateData).catch((error) => {
+            console.error("Vacation allowance update failed:", error);
+            throw error;
+        });
+    }
+
     async saveDailyNote(dateKey, note) {
         const docRef = doc(this.db, "daily_notes", dateKey);
         if (!note || note.trim() === '') {

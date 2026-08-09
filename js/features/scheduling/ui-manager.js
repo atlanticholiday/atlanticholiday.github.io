@@ -2515,9 +2515,11 @@ export class UIManager {
             if (buttonConfig.view === activeView) {
                 element.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
                 element.classList.remove('text-gray-600', 'hover:text-gray-900');
+                element.style.setProperty('color', '#0f172a', 'important');
             } else {
                 element.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
                 element.classList.add('text-gray-600', 'hover:text-gray-900');
+                element.style.removeProperty('color');
             }
         });
 
