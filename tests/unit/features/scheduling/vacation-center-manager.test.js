@@ -62,10 +62,25 @@ describe("VacationCenterManager", () => {
 
     assert.equal(document.querySelectorAll("[data-vc-select-employee]").length, 2);
     assert.includes(document.querySelector(".vacation-center-inspector").textContent, "Ana Silva");
+    const workspace = document.querySelector(".vacation-center-workspace");
+    const search = document.querySelector("[data-vc-search]");
 
     document.querySelector('[data-vc-select-employee="e2"]').click();
 
     assert.includes(document.querySelector(".vacation-center-inspector").textContent, "Bruno Costa");
+    assert.equal(document.querySelector(".vacation-center-workspace"), workspace);
+    assert.equal(document.querySelector("[data-vc-search]"), search);
+    assert.ok(document.querySelector('[data-vc-select-employee="e2"]').classList.contains("is-selected"));
+    assert.ok(!document.querySelector('[data-vc-select-employee="e1"]').classList.contains("is-selected"));
+  });
+
+  test("only uses the entrance animation for the first workspace render", () => {
+    const { manager } = createFixture();
+    assert.ok(document.querySelector(".vacation-center-workspace").classList.contains("is-entering"));
+
+    manager.render();
+
+    assert.ok(!document.querySelector(".vacation-center-workspace").classList.contains("is-entering"));
   });
 
   test("filters the roster without losing the inspector", () => {

@@ -1,4 +1,9 @@
 .vacation-center-page {
+    --vacation-accent: var(--brand-color, #e94b5a);
+    --vacation-accent-dark: var(--brand-color-dark, #d3414f);
+    --vacation-accent-light: var(--brand-color-light, #fde8ea);
+    --vacation-accent-border: var(--brand-color-light-border, #fad1d5);
+    --vacation-accent-ultra-light: var(--brand-color-ultra-light, #fef9f9);
     min-height: 100vh;
     background: #f8fafc;
     color: #0f172a;
@@ -83,6 +88,9 @@
     border-radius: 20px;
     background: #ffffff;
     box-shadow: 0 20px 60px rgba(15, 23, 42, 0.07);
+}
+
+.vacation-center-workspace.is-entering {
     animation: vacationCenterEnter 220ms ease-out;
 }
 
@@ -124,7 +132,7 @@
 }
 
 .vacation-center-view-switch button.is-active::after {
-    background: #2563eb;
+    background: var(--vacation-accent);
 }
 
 .vacation-center-toolbar__actions,
@@ -178,7 +186,7 @@
     padding: 0 16px;
     border: 0;
     border-radius: 10px;
-    background: #2563eb;
+    background: var(--vacation-accent);
     color: #ffffff;
     font-size: 0.8rem;
     font-weight: 800;
@@ -186,7 +194,7 @@
 }
 
 .vacation-center-book:hover {
-    background: #1d4ed8;
+    background: var(--vacation-accent-dark);
     transform: translateY(-1px);
 }
 
@@ -304,9 +312,9 @@
 }
 
 .vacation-center-search:focus-within {
-    border-color: #93c5fd;
+    border-color: var(--vacation-accent-border);
     background: #ffffff;
-    box-shadow: 0 0 0 3px #dbeafe;
+    box-shadow: 0 0 0 3px var(--vacation-accent-light);
 }
 
 .vacation-center-search svg {
@@ -350,9 +358,14 @@
     background: #f8fafc;
 }
 
+.vacation-center-person:focus-visible {
+    outline: 2px solid var(--vacation-accent);
+    outline-offset: -2px;
+}
+
 .vacation-center-person.is-selected {
-    background: #eff6ff;
-    box-shadow: inset 3px 0 #2563eb;
+    background: var(--vacation-accent-ultra-light);
+    box-shadow: inset 3px 0 var(--vacation-accent);
 }
 
 .vacation-center-avatar {
@@ -369,7 +382,7 @@
 }
 
 .vacation-center-person.is-selected .vacation-center-avatar {
-    background: #2563eb;
+    background: var(--vacation-accent);
     color: #ffffff;
 }
 
@@ -500,16 +513,16 @@
 }
 
 .vacation-center-balance-focus button:hover {
-    border-color: #2563eb;
-    color: #1d4ed8;
+    border-color: var(--vacation-accent);
+    color: var(--vacation-accent-dark);
 }
 
 .vacation-center-balance-editor {
     margin-top: -1px;
     padding: 16px;
-    border: 1px solid #bfdbfe;
+    border: 1px solid var(--vacation-accent-border);
     border-radius: 0 0 12px 12px;
-    background: #eff6ff;
+    background: var(--vacation-accent-ultra-light);
     animation: vacationCenterEditor 160ms ease-out;
 }
 
@@ -528,7 +541,7 @@
 .vacation-center-balance-editor input {
     width: 100px;
     height: 38px;
-    border: 1px solid #93c5fd;
+    border: 1px solid var(--vacation-accent-border);
     border-radius: 8px;
     background: #ffffff;
     font-weight: 800;
@@ -537,17 +550,17 @@
 
 .vacation-center-balance-editor button {
     padding: 0 11px;
-    border: 1px solid #bfdbfe;
+    border: 1px solid var(--vacation-accent-border);
     border-radius: 8px;
     background: #ffffff;
-    color: #1e40af;
+    color: var(--vacation-accent-dark);
     font-size: 0.7rem;
     font-weight: 800;
 }
 
 .vacation-center-balance-editor button[type="submit"] {
-    border-color: #2563eb;
-    background: #2563eb;
+    border-color: var(--vacation-accent);
+    background: var(--vacation-accent);
     color: #ffffff;
 }
 
@@ -655,7 +668,7 @@
 }
 
 .vacation-center-person-leave__list button:hover {
-    border-color: #93c5fd;
+    border-color: var(--vacation-accent-border);
 }
 
 .vacation-center-person-leave__list button strong {
@@ -710,7 +723,7 @@
 }
 
 .vacation-center-legend i.is-planned {
-    background: #2563eb;
+    background: var(--vacation-accent);
 }
 
 .vacation-center-legend i.is-away {
@@ -775,7 +788,7 @@
 }
 
 #vacation-center-calendar .vacation-center-event--planned {
-    background: #2563eb;
+    background: var(--vacation-accent);
 }
 
 #vacation-center-calendar .vacation-center-event--away {

@@ -46,6 +46,7 @@ export class VacationCenterManager {
         this.searchQuery = '';
         this.editingBalance = false;
         this.calendar = null;
+        this.hasRendered = false;
         this.initialized = false;
         this.unsubscribeDataChanges = null;
 
@@ -123,7 +124,7 @@ export class VacationCenterManager {
         }
 
         root.innerHTML = `
-            <div class="vacation-center-workspace">
+            <div class="vacation-center-workspace ${this.hasRendered ? '' : 'is-entering'}">
                 <section class="vacation-center-toolbar">
                     <nav class="vacation-center-view-switch" aria-label="${escapeHtml(t('vacationCenter.viewLabel'))}">
                         <button type="button" data-vc-view="balances" class="${this.currentView === 'balances' ? 'is-active' : ''}">${t('vacationCenter.balancesView')}</button>
@@ -165,6 +166,7 @@ export class VacationCenterManager {
         } else {
             this.applyRosterFilter(this.searchQuery);
         }
+        this.hasRendered = true;
     }
 
     renderTotal(label, value, tone = '') {
@@ -302,6 +304,34 @@ export class VacationCenterManager {
         `;
     }
 
+    renderSelectedInspector() {
+        if (this.currentView !== 'balances') return;
+
+        const inspector = this.getRoot()?.querySelector('.vacation-center-inspector');
+        if (!inspector) return;
+
+        const employees = this.getEmployees();
+        const entries = this.getVacationEntries();
+        const employee = employees.find((item) => item.id === this.selectedEmployeeId) || null;
+        const row = calculateVacationPlannerYearSummary(employees, this.currentYear, this.now()).rows
+            .find((item) => item.id === this.selectedEmployeeId) || null;
+
+        inspector.innerHTML = employee && row
+            ? this.renderInspector(employee, row, entries)
+            : `<div class="vacation-center-empty">${t('vacationCenter.selectColleague')}</div>`;
+    }
+
+    selectEmployee(employeeId) {
+        if (!employeeId || employeeId === this.selectedEmployeeId) return;
+
+        this.selectedEmployeeId = employeeId;
+        this.editingBalance = false;
+        this.getRoot()?.querySelectorAll('[data-vc-select-employee]').forEach((button) => {
+            button.classList.toggle('is-selected', button.dataset.vcSelectEmployee === employeeId);
+        });
+        this.renderSelectedInspector();
+    }
+
     renderBalanceEditor(row) {
         return `
             <form class="vacation-center-balance-editor" data-vc-balance-form data-recorded-days="${row.recordedDays}">
@@ -412,9 +442,7 @@ export class VacationCenterManager {
 
         const employeeButton = event.target.closest('[data-vc-select-employee]');
         if (employeeButton) {
-            this.selectedEmployeeId = employeeButton.dataset.vcSelectEmployee;
-            this.editingBalance = false;
-            this.render();
+            this.selectEmployee(employeeButton.dataset.vcSelectEmployee);
             return;
         }
 
@@ -425,13 +453,13 @@ export class VacationCenterManager {
 
         if (event.target.closest('[data-vc-edit-balance]')) {
             this.editingBalance = true;
-            this.render();
+            this.renderSelectedInspector();
             return;
         }
 
         if (event.target.closest('[data-vc-cancel-balance]')) {
             this.editingBalance = false;
-            this.render();
+            this.renderSelectedInspector();
             return;
         }
 
