@@ -31,6 +31,7 @@ export class NavigationManager {
             cleaningAh: 'cleaning-ah-page',
             cleaningBills: 'cleaning-bills-page',
             buildPlanner: 'build-planner-page',
+            vacationCenter: 'vacation-center-page',
             staff: 'staff-page',
             nukiDoors: 'nuki-doors-page',
         };
@@ -238,6 +239,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showVacationCenterPage() {
+        this.showPage('vacationCenter');
+        const event = new CustomEvent('vacationCenterPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -264,6 +271,7 @@ export class NavigationManager {
         const goToTimeClockBtn = document.getElementById('go-to-time-clock-btn');
         const goToBuildPlannerBtn = document.getElementById('go-to-build-planner-btn');
         const goToNukiDoorsBtn = document.getElementById('go-to-nuki-doors-btn');
+        const goToVacationCenterBtn = document.getElementById('go-to-vacation-center-btn');
 
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {
@@ -410,6 +418,12 @@ export class NavigationManager {
             });
         }
 
+        if (goToVacationCenterBtn) {
+            goToVacationCenterBtn.addEventListener('click', () => {
+                this.showVacationCenterPage();
+            });
+        }
+
         // All Info navigation
         const goToAllInfoBtn = document.getElementById('go-to-allinfo-btn');
         if (goToAllInfoBtn) {
@@ -480,6 +494,7 @@ export class NavigationManager {
         const backToLandingFromTimeClockBtn = document.getElementById('back-to-landing-from-time-clock-btn');
         const backToLandingFromBuildPlannerBtn = document.getElementById('back-to-landing-from-build-planner-btn');
         const backToLandingFromNukiDoorsBtn = document.getElementById('back-to-landing-from-nuki-doors-btn');
+        const backToLandingFromVacationCenterBtn = document.getElementById('back-to-landing-from-vacation-center-btn');
 
         if (backToLandingFromReservationsBtn) {
             backToLandingFromReservationsBtn.addEventListener('click', () => {
@@ -605,6 +620,12 @@ export class NavigationManager {
 
         if (backToLandingFromNukiDoorsBtn) {
             backToLandingFromNukiDoorsBtn.addEventListener('click', () => {
+                this.showLandingPage();
+            });
+        }
+
+        if (backToLandingFromVacationCenterBtn) {
+            backToLandingFromVacationCenterBtn.addEventListener('click', () => {
                 this.showLandingPage();
             });
         }

@@ -102,6 +102,8 @@
     "apps": {
         "workSchedule": "Horário de Trabalho",
         "workScheduleDesc": "Horários e férias.",
+        "vacationCenter": "Centro de Férias",
+        "vacationCenterDesc": "Saldos de férias e calendário da equipa.",
         "vehicles": "Veículos",
         "vehiclesDesc": "Frota e inspeções.",
         "welcomePacks": "Welcome Pack",
@@ -1954,7 +1956,8 @@
                 "buildPlanner": "Build Planner",
                 "inventory": "Inventory",
                 "nukiDoors": "Portas Nuki",
-                "cleaningAh": "Limpeza AH"
+                "cleaningAh": "Limpeza AH",
+                "vacationCenter": "Centro de Férias"
             }
         },
         "goLive": {
@@ -2228,6 +2231,23 @@
             "accessBannerBody": "Alterações ao horário, planeamento de férias e exportações continuam reservados a gestores. Use esta vista para consultar a escala viva da equipa sem abrir ferramentas de gestão.",
             "readOnlyDayNotice": "Este detalhe diário do horário é só de leitura para contas de colaborador."
         }
+    },
+    "vacationCenter": {
+        "title": "Centro de Férias",
+        "subtitle": "Saldos, histórico e planeamento da equipa",
+        "viewLabel": "Vista do espaço de férias",
+        "balancesView": "Saldos",
+        "calendarView": "Calendário da equipa",
+        "teamLabel": "Equipa",
+        "colleagueList": "Colegas",
+        "searchPlaceholder": "Pesquisar colega ou departamento",
+        "noSearchResults": "Nenhum colega corresponde à pesquisa.",
+        "selectColleague": "Selecione um colega para rever o saldo.",
+        "remainingInYear": "Restantes em {{year}}",
+        "historyLabel": "Histórico",
+        "yearHistory": "Saldo por ano",
+        "recordedLeave": "Férias registadas",
+        "teamCalendar": "Calendário da equipa"
     },
     "staff": {
         "title": "Gestão de Equipa",

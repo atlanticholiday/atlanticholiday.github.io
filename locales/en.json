@@ -102,6 +102,8 @@
   "apps": {
     "workSchedule": "Work Schedule",
     "workScheduleDesc": "Schedules and holidays.",
+    "vacationCenter": "Vacation Center",
+    "vacationCenterDesc": "Leave balances and team calendar.",
     "vehicles": "Vehicles",
     "vehiclesDesc": "Fleet and checks.",
     "welcomePacks": "Welcome Packs",
@@ -1946,7 +1948,8 @@
         "buildPlanner": "Build Planner",
         "inventory": "Inventory",
         "nukiDoors": "Nuki Doors",
-        "cleaningAh": "Cleaning AH"
+        "cleaningAh": "Cleaning AH",
+        "vacationCenter": "Vacation Center"
       }
     },
     "goLive": {
@@ -2220,6 +2223,23 @@
       "colleaguesWithUnused": "colleagues with unused days",
       "balanceAlerts": "Balance alerts"
     }
+  },
+  "vacationCenter": {
+    "title": "Vacation Center",
+    "subtitle": "Balances, leave history and team planning",
+    "viewLabel": "Vacation workspace view",
+    "balancesView": "Balances",
+    "calendarView": "Team calendar",
+    "teamLabel": "Team",
+    "colleagueList": "Colleagues",
+    "searchPlaceholder": "Search colleague or department",
+    "noSearchResults": "No colleague matches this search.",
+    "selectColleague": "Select a colleague to review their balance.",
+    "remainingInYear": "Remaining in {{year}}",
+    "historyLabel": "History",
+    "yearHistory": "Year-by-year balance",
+    "recordedLeave": "Recorded leave",
+    "teamCalendar": "Team calendar"
   },
   "staff": {
     "title": "Staff Management",

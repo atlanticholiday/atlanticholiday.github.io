@@ -1,0 +1,898 @@
+.vacation-center-page {
+    min-height: 100vh;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.vacation-center-page-header {
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(14px);
+}
+
+.vacation-center-page-header__inner {
+    display: flex;
+    width: min(1540px, calc(100vw - 40px));
+    min-height: 76px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 0 auto;
+}
+
+.vacation-center-page-header__brand,
+.vacation-center-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.vacation-center-back {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #475569;
+    transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.vacation-center-back:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateX(-1px);
+}
+
+.vacation-center-page-header__title strong,
+.vacation-center-page-header__title span {
+    display: block;
+}
+
+.vacation-center-page-header__title strong {
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+}
+
+.vacation-center-page-header__title span {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 0.72rem;
+}
+
+.vacation-center-signout {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.vacation-center-signout:hover {
+    color: #0f172a;
+}
+
+.vacation-center-main {
+    width: min(1540px, calc(100vw - 40px));
+    margin: 0 auto;
+    padding: 34px 0 56px;
+}
+
+.vacation-center-workspace {
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.07);
+    animation: vacationCenterEnter 220ms ease-out;
+}
+
+.vacation-center-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-view-switch {
+    display: flex;
+    gap: 22px;
+}
+
+.vacation-center-view-switch button {
+    position: relative;
+    padding: 10px 0;
+    border: 0;
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.vacation-center-view-switch button::after {
+    position: absolute;
+    right: 0;
+    bottom: -21px;
+    left: 0;
+    height: 2px;
+    background: transparent;
+    content: '';
+}
+
+.vacation-center-view-switch button.is-active {
+    color: #0f172a;
+}
+
+.vacation-center-view-switch button.is-active::after {
+    background: #2563eb;
+}
+
+.vacation-center-toolbar__actions,
+.vacation-center-year-control {
+    display: flex;
+    align-items: center;
+}
+
+.vacation-center-toolbar__actions {
+    gap: 10px;
+}
+
+.vacation-center-year-control {
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.vacation-center-year-control button,
+.vacation-center-year-control select {
+    height: 42px;
+    border: 0;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 800;
+}
+
+.vacation-center-year-control button {
+    width: 40px;
+    color: #64748b;
+}
+
+.vacation-center-year-control button:hover {
+    background: #f1f5f9;
+}
+
+.vacation-center-year-control select {
+    min-width: 88px;
+    border-right: 1px solid #e2e8f0;
+    border-left: 1px solid #e2e8f0;
+    outline: none;
+    text-align: center;
+}
+
+.vacation-center-book {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.vacation-center-book:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.vacation-center-book svg {
+    width: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+.vacation-center-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 24px;
+    border-left: 1px solid #e2e8f0;
+}
+
+.vacation-center-total:first-child {
+    border-left: 0;
+}
+
+.vacation-center-total span {
+    color: #64748b;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vacation-center-total strong {
+    color: #0f172a;
+    font-size: 1.25rem;
+}
+
+.vacation-center-total--positive strong {
+    color: #047857;
+}
+
+.vacation-center-total--warning strong {
+    color: #be123c;
+}
+
+.vacation-center-balances {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.9fr) minmax(520px, 1.35fr);
+    min-height: 690px;
+}
+
+.vacation-center-roster {
+    min-width: 0;
+    padding: 24px;
+    border-right: 1px solid #e2e8f0;
+}
+
+.vacation-center-roster__heading,
+.vacation-center-inspector__head,
+.vacation-center-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.vacation-center-roster__heading span,
+.vacation-center-section-title span,
+.vacation-center-calendar-heading > div > span {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.vacation-center-roster__heading h2,
+.vacation-center-section-title h3,
+.vacation-center-calendar-heading h2 {
+    margin: 3px 0 0;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.vacation-center-roster__heading > strong {
+    display: inline-flex;
+    min-width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.72rem;
+}
+
+.vacation-center-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 12px;
+    padding: 0 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.vacation-center-search:focus-within {
+    border-color: #93c5fd;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.vacation-center-search svg {
+    width: 16px;
+    fill: none;
+    stroke: #94a3b8;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+}
+
+.vacation-center-search input {
+    width: 100%;
+    height: 42px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.78rem;
+}
+
+.vacation-center-roster__list {
+    display: grid;
+    max-height: 560px;
+    overflow: auto;
+}
+
+.vacation-center-person {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 10px;
+    border: 0;
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    text-align: left;
+    transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.vacation-center-person:hover {
+    background: #f8fafc;
+}
+
+.vacation-center-person.is-selected {
+    background: #eff6ff;
+    box-shadow: inset 3px 0 #2563eb;
+}
+
+.vacation-center-avatar {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.vacation-center-person.is-selected .vacation-center-avatar {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.vacation-center-person__copy strong,
+.vacation-center-person__copy small,
+.vacation-center-person__balance strong,
+.vacation-center-person__balance small {
+    display: block;
+}
+
+.vacation-center-person__copy strong {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.8rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vacation-center-person__copy small,
+.vacation-center-person__balance small {
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 0.62rem;
+}
+
+.vacation-center-person__balance {
+    min-width: 45px;
+    text-align: right;
+}
+
+.vacation-center-person__balance strong {
+    color: #047857;
+    font-size: 0.94rem;
+}
+
+.vacation-center-person__balance--warning strong {
+    color: #b45309;
+}
+
+.vacation-center-person__balance--danger strong {
+    color: #be123c;
+}
+
+.vacation-center-inspector {
+    min-width: 0;
+    padding: 28px 30px;
+}
+
+.vacation-center-inspector__head {
+    justify-content: flex-start;
+}
+
+.vacation-center-avatar--large {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.82rem;
+}
+
+.vacation-center-inspector__head > div > span {
+    color: #64748b;
+    font-size: 0.68rem;
+}
+
+.vacation-center-inspector__head h2 {
+    margin: 2px 0 0;
+    font-size: 1.25rem;
+    letter-spacing: -0.025em;
+}
+
+.vacation-center-balance-focus {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 24px 0 0;
+    padding: 20px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-balance-focus span,
+.vacation-center-balance-focus small,
+.vacation-center-balance-focus strong {
+    display: block;
+}
+
+.vacation-center-balance-focus span {
+    color: #64748b;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.vacation-center-balance-focus strong {
+    margin-top: 3px;
+    color: #047857;
+    font-size: 2.6rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.vacation-center-balance-focus--warning strong {
+    color: #b45309;
+}
+
+.vacation-center-balance-focus--danger strong {
+    color: #be123c;
+}
+
+.vacation-center-balance-focus small {
+    margin-top: 5px;
+    color: #94a3b8;
+    font-size: 0.66rem;
+}
+
+.vacation-center-balance-focus button {
+    padding: 8px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.vacation-center-balance-focus button:hover {
+    border-color: #2563eb;
+    color: #1d4ed8;
+}
+
+.vacation-center-balance-editor {
+    margin-top: -1px;
+    padding: 16px;
+    border: 1px solid #bfdbfe;
+    border-radius: 0 0 12px 12px;
+    background: #eff6ff;
+    animation: vacationCenterEditor 160ms ease-out;
+}
+
+.vacation-center-balance-editor label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.vacation-center-balance-editor > div {
+    display: flex;
+    gap: 7px;
+    margin-top: 9px;
+}
+
+.vacation-center-balance-editor input {
+    width: 100px;
+    height: 38px;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    background: #ffffff;
+    font-weight: 800;
+    text-align: center;
+}
+
+.vacation-center-balance-editor button {
+    padding: 0 11px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e40af;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.vacation-center-balance-editor button[type="submit"] {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.vacation-center-balance-editor p {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 0.66rem;
+}
+
+.vacation-center-balance-editor .vacation-center-reset {
+    margin-top: 9px;
+    padding: 6px 0;
+    border: 0;
+    background: transparent;
+}
+
+.vacation-center-person-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-person-metrics > div {
+    padding: 18px 0;
+}
+
+.vacation-center-person-metrics dt {
+    color: #94a3b8;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.vacation-center-person-metrics dd {
+    margin: 5px 0 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.vacation-center-history,
+.vacation-center-person-leave {
+    padding-top: 20px;
+}
+
+.vacation-center-section-title {
+    justify-content: flex-start;
+}
+
+.vacation-center-history__rows {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin-top: 12px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #e2e8f0;
+}
+
+.vacation-center-history__rows button {
+    display: grid;
+    gap: 4px;
+    padding: 11px;
+    border: 0;
+    background: #ffffff;
+    color: #64748b;
+    text-align: left;
+}
+
+.vacation-center-history__rows button:hover {
+    background: #f8fafc;
+}
+
+.vacation-center-history__rows strong {
+    color: #0f172a;
+    font-size: 0.78rem;
+}
+
+.vacation-center-history__rows span {
+    font-size: 0.62rem;
+}
+
+.vacation-center-person-leave__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.vacation-center-person-leave__list button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.7rem;
+    text-align: left;
+}
+
+.vacation-center-person-leave__list button:hover {
+    border-color: #93c5fd;
+}
+
+.vacation-center-person-leave__list button strong {
+    color: #0f172a;
+}
+
+.vacation-center-person-leave__list p,
+.vacation-center-empty,
+.vacation-center-no-results {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.vacation-center-no-results {
+    padding: 24px 10px;
+    text-align: center;
+}
+
+.vacation-center-calendar-workspace {
+    padding: 28px;
+}
+
+.vacation-center-calendar-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vacation-center-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.vacation-center-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vacation-center-legend i {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #64748b;
+}
+
+.vacation-center-legend i.is-planned {
+    background: #2563eb;
+}
+
+.vacation-center-legend i.is-away {
+    background: #d97706;
+}
+
+#vacation-center-calendar {
+    --fc-border-color: #e2e8f0;
+    margin-top: 20px;
+    min-height: 640px;
+}
+
+#vacation-center-calendar .fc-toolbar-title {
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+#vacation-center-calendar .fc-button {
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 800;
+    box-shadow: none;
+}
+
+#vacation-center-calendar .fc-button:hover,
+#vacation-center-calendar .fc-button-primary:not(:disabled).fc-button-active {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #ffffff;
+}
+
+#vacation-center-calendar .fc-day-today {
+    background: #fff7ed !important;
+}
+
+#vacation-center-calendar .fc-col-header-cell {
+    background: #f8fafc;
+}
+
+#vacation-center-calendar .fc-col-header-cell-cushion,
+#vacation-center-calendar .fc-daygrid-day-number {
+    color: #475569;
+    font-weight: 800;
+}
+
+#vacation-center-calendar .fc-daygrid-day-frame {
+    min-height: 105px;
+}
+
+#vacation-center-calendar .fc-event {
+    border: 0;
+    border-radius: 5px;
+    background: #64748b;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+#vacation-center-calendar .vacation-center-event--planned {
+    background: #2563eb;
+}
+
+#vacation-center-calendar .vacation-center-event--away {
+    background: #d97706;
+}
+
+@keyframes vacationCenterEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vacationCenterEditor {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 980px) {
+    .vacation-center-balances {
+        grid-template-columns: 1fr;
+    }
+
+    .vacation-center-roster {
+        border-right: 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .vacation-center-roster__list {
+        max-height: 360px;
+    }
+}
+
+@media (max-width: 680px) {
+    .vacation-center-page-header__inner,
+    .vacation-center-main {
+        width: min(100% - 24px, 1540px);
+    }
+
+    .vacation-center-page-header__title span,
+    .vacation-center-signout span {
+        display: none;
+    }
+
+    .vacation-center-page-header__actions {
+        gap: 6px;
+    }
+
+    .vacation-center-main {
+        padding-top: 18px;
+    }
+
+    .vacation-center-workspace {
+        border-radius: 14px;
+    }
+
+    .vacation-center-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .vacation-center-view-switch button::after {
+        bottom: -16px;
+    }
+
+    .vacation-center-toolbar__actions {
+        justify-content: space-between;
+    }
+
+    .vacation-center-book {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .vacation-center-totals {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vacation-center-total {
+        padding: 12px 15px;
+    }
+
+    .vacation-center-total:nth-child(3) {
+        border-top: 1px solid #e2e8f0;
+        border-left: 0;
+    }
+
+    .vacation-center-total:nth-child(4) {
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .vacation-center-roster,
+    .vacation-center-inspector,
+    .vacation-center-calendar-workspace {
+        padding: 18px 15px;
+    }
+
+    .vacation-center-history__rows {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vacation-center-person-leave__list {
+        grid-template-columns: 1fr;
+    }
+
+    .vacation-center-calendar-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #vacation-center-calendar .fc-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #vacation-center-calendar .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+    }
+}

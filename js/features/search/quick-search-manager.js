@@ -23,6 +23,7 @@ export const QUICK_SEARCH_PAGE_EVENTS = Object.freeze({
     staff: "staffPageOpened",
     timeClock: "timeClockPageOpened",
     userManagement: "userManagementPageOpened",
+    vacationCenter: "vacationCenterPageOpened",
     vehicles: "vehiclesPageOpened",
     visits: "visitsPageOpened",
     welcomePacks: "welcomePacksPageOpened"

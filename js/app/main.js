@@ -44,6 +44,7 @@ import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
 import { UIManager } from '../features/scheduling/ui-manager.js';
+import { VacationCenterManager } from '../features/scheduling/vacation-center-manager.js';
 import { getAppAccessOptionByButtonId, getAppAccessOptions } from '../shared/app-access.js';
 import { canonicalizeEmail } from '../shared/email.js';
 
@@ -77,7 +78,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager;
 
 function clearSensitiveBrowserState() {
     try {
@@ -445,6 +446,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         scheduleManager = new ScheduleManager(dataManager, uiManager);
         window.scheduleManager = scheduleManager;
+        vacationCenterManager = new VacationCenterManager(dataManager, { scheduleManager });
+        vacationCenterManager.init();
+        window.vacationCenterManager = vacationCenterManager;
         try {
             staffManager = new StaffManager(dataManager, uiManager);
             window.staffManager = staffManager;
@@ -797,7 +801,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #linen-inventory-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #linen-inventory-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn, #vacation-center-sign-out-btn')) {
             signOut(auth);
         }
     });
@@ -971,8 +975,9 @@ function subscribeScheduleDataForCurrentUser() {
 
     const hasPrivilegedScheduleAccess = dataManager.hasPrivilegedRole?.();
     const canUseSchedule = dataManager.canAccessWorkSchedule?.();
+    const canUseVacationCenter = dataManager.canAccessApp?.('vacationCenter');
     const needsTimeClockData = dataManager.isTimeClockStationUser?.() || dataManager.isClockOnlyUser?.();
-    const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || needsTimeClockData;
+    const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || canUseVacationCenter || needsTimeClockData;
 
     if (!shouldLoadEmployeeDirectory) {
         return;
@@ -980,8 +985,11 @@ function subscribeScheduleDataForCurrentUser() {
 
     dataManager.listenForEmployeeChanges();
 
-    if (canUseSchedule) {
+    if (canUseSchedule || canUseVacationCenter) {
         dataManager.listenForVacationRecordChanges();
+    }
+
+    if (canUseSchedule) {
         dataManager.listenForDailyNotes();
         dataManager.listenForShiftPresets();
         dataManager.listenForGlobalSettings();

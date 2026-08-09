@@ -182,4 +182,34 @@ describe("NavigationManager", () => {
     assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
     assert.ok(document.getElementById("nuki-doors-page").classList.contains("hidden"));
   });
+
+  test("routes to Vacation Center and back to landing", () => {
+    resetDom(`
+      <button id="go-to-vacation-center-btn">Vacation Center</button>
+      <button id="back-to-landing-from-vacation-center-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="vacation-center-page" class="hidden"></div>
+    `);
+
+    const navigationManager = new NavigationManager();
+    navigationManager.setupNavigationListeners();
+
+    let pageEventCount = 0;
+    document.addEventListener("vacationCenterPageOpened", () => {
+      pageEventCount += 1;
+    }, { once: true });
+
+    document.getElementById("go-to-vacation-center-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "vacationCenter");
+    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(!document.getElementById("vacation-center-page").classList.contains("hidden"));
+    assert.equal(pageEventCount, 1);
+
+    document.getElementById("back-to-landing-from-vacation-center-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "landing");
+    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
+    assert.ok(document.getElementById("vacation-center-page").classList.contains("hidden"));
+  });
 });

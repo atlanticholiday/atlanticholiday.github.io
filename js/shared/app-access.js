@@ -24,6 +24,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'main'
     },
     {
+        key: 'vacationCenter',
+        buttonId: 'go-to-vacation-center-btn',
+        pageName: 'vacationCenter',
+        labelKey: 'userManagement.appAccess.options.vacationCenter',
+        fallbackLabel: 'Vacation Center',
+        group: 'main'
+    },
+    {
         key: 'properties',
         buttonId: 'go-to-properties-btn',
         pageName: 'properties',
