@@ -122,11 +122,11 @@ describe("schedule-view-helpers", () => {
     const employee = {
       vacations: [
         { startDate: "2026-03-02", endDate: "2026-03-06" },
-        { startDate: "2026-03-05", endDate: "2026-03-09" }
+        { startDate: "2026-03-05", endDate: "2026-03-10" }
       ]
     };
 
-    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026), 6);
+    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026), 7);
   });
 
   test("excludes public holidays and follows each colleague's working week", () => {

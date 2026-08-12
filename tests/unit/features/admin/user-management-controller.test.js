@@ -166,7 +166,7 @@ describe("UserManagementController", () => {
     const controller = new UserManagementController({
       accessManager: {
         async listEmails() {
-          return ["nastassja.deaguiaratlantic+clock@gmail.com"];
+          return ["example.employee+clock@gmail.com"];
         },
         async getRoles() {
           return ["employee"];
@@ -190,14 +190,14 @@ describe("UserManagementController", () => {
       },
       createAuthUser: async () => {},
       sendPasswordReset: async () => {},
-      getEmployees: () => [{ id: "emp-1", name: "Nastassja", email: "nastassjadeaguiaratlantic@gmail.com" }],
+      getEmployees: () => [{ id: "emp-1", name: "Example Employee", email: "exampleemployee@gmail.com" }],
       windowRef: { alert() {}, confirm() { return true; } }
     });
 
     await controller.refreshUserList();
 
     assert.equal(syncEmployeeLinkCalls.length, 1);
-    assert.equal(syncEmployeeLinkCalls[0].email, "nastassja.deaguiaratlantic+clock@gmail.com");
+    assert.equal(syncEmployeeLinkCalls[0].email, "example.employee+clock@gmail.com");
     assert.equal(syncEmployeeLinkCalls[0].employee.id, "emp-1");
   });
 

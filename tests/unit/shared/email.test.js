@@ -14,8 +14,8 @@ describe("Email helpers", () => {
 
   test("canonicalizes gmail dot and plus aliases for matching", () => {
     assert.equal(
-      canonicalizeEmail("Nastassja.DeAguiarAtlantic+clock@gmail.com"),
-      "nastassjadeaguiaratlantic@gmail.com"
+      canonicalizeEmail("Example.Employee+clock@gmail.com"),
+      "exampleemployee@gmail.com"
     );
   });
 

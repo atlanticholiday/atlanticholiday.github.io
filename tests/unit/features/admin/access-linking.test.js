@@ -41,8 +41,8 @@ describe("Access linking", () => {
 
   test("matches gmail aliases canonically", () => {
     const [row] = buildEmployeeAccessOverview(
-      [{ id: "1", name: "Nastassja", email: "nastassjadeaguiaratlantic@gmail.com" }],
-      [{ email: "nastassja.deaguiaratlantic+clock@gmail.com", roles: ["employee"], allowedApps: [] }]
+      [{ id: "1", name: "Example Employee", email: "exampleemployee@gmail.com" }],
+      [{ email: "example.employee+clock@gmail.com", roles: ["employee"], allowedApps: [] }]
     );
 
     assert.equal(row.status, "clock-only");

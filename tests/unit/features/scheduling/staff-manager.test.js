@@ -297,7 +297,7 @@ describe("StaffManager", () => {
         activeEmployees: [
           {
             id: "emp-1",
-            name: "Ana Brazão",
+            name: "Érica Simões",
             staffNumber: "18",
             workDays: [1]
           },
@@ -315,10 +315,10 @@ describe("StaffManager", () => {
     manager.render();
 
     const searchInput = document.getElementById("staff-search-input");
-    searchInput.value = "brazao";
+    searchInput.value = "simoes";
     searchInput.dispatchEvent(new Event("input", { bubbles: true }));
 
-    assert.includes(document.getElementById("staff-list-container").textContent, "Ana Brazão");
+    assert.includes(document.getElementById("staff-list-container").textContent, "Érica Simões");
     assert.ok(!document.getElementById("staff-list-container").textContent.includes("Bruno Costa"));
     assert.ok(!document.getElementById("staff-search-clear").classList.contains("hidden"));
 
