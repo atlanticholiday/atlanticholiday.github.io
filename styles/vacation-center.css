@@ -728,9 +728,41 @@
     justify-content: flex-start;
 }
 
+.vacation-center-history__heading {
+    justify-content: space-between;
+}
+
+.vacation-center-history__controls {
+    display: flex;
+    gap: 6px;
+}
+
+.vacation-center-history__controls button {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 800;
+}
+
+.vacation-center-history__controls button:hover:not(:disabled) {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.vacation-center-history__controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
 .vacation-center-history__rows {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--vacation-history-columns, 4), minmax(0, 1fr));
     gap: 1px;
     margin-top: 12px;
     overflow: hidden;
@@ -751,6 +783,10 @@
 
 .vacation-center-history__rows button:hover {
     background: #f8fafc;
+}
+
+.vacation-center-history__rows button.is-current {
+    box-shadow: inset 0 -3px 0 #e94b5a;
 }
 
 .vacation-center-history__rows strong {

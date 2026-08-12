@@ -13,6 +13,7 @@ function createFixture() {
       id: "e1",
       name: "Ana Silva",
       department: "Guest Care",
+      hireDate: "2024-05-15",
       vacations: [{ id: "v1", startDate: "2026-01-05", endDate: "2026-01-09" }]
     },
     {
@@ -91,6 +92,36 @@ describe("VacationCenterManager", () => {
 
     assert.ok(document.querySelector('[data-vc-select-employee="e1"]').classList.contains("hidden"));
     assert.ok(!document.querySelector('[data-vc-select-employee="e2"]').classList.contains("hidden"));
+  });
+
+  test("does not show history from before the colleague's entrance year", () => {
+    createFixture();
+
+    const historyYears = [...document.querySelectorAll("[data-vc-history-year]")]
+      .map((button) => Number(button.dataset.vcHistoryYear));
+
+    assert.deepEqual(historyYears, [2026, 2025, 2024]);
+    assert.equal(document.querySelector('[data-vc-history-step="-1"]').disabled, false);
+
+    document.querySelector('[data-vc-history-year="2024"]').click();
+
+    assert.deepEqual(
+      [...document.querySelectorAll("[data-vc-history-year]")].map((button) => Number(button.dataset.vcHistoryYear)),
+      [2024]
+    );
+    assert.equal(document.querySelector('[data-vc-history-step="-1"]').disabled, true);
+  });
+
+  test("moves forward again after reviewing an older year", () => {
+    const { manager } = createFixture();
+    document.querySelector('[data-vc-history-year="2025"]').click();
+    assert.equal(manager.currentYear, 2025);
+
+    document.querySelector('[data-vc-history-step="1"]').click();
+
+    assert.equal(manager.currentYear, 2026);
+    assert.equal(document.querySelector('[data-vc-history-step="1"]').disabled, true);
+    assert.equal(document.querySelector('[data-vc-history-year="2026"]').getAttribute("aria-current"), "true");
   });
 
   test("saves a year-specific remaining balance", async () => {

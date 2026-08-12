@@ -113,6 +113,31 @@ export class VacationCenterManager {
         return [...years].filter(Number.isInteger).sort((left, right) => right - left);
     }
 
+    getEmployeeEntranceYear(employee) {
+        const entranceYear = Number(String(employee?.hireDate || '').slice(0, 4));
+        return Number.isInteger(entranceYear) && entranceYear >= 1900
+            ? entranceYear
+            : null;
+    }
+
+    getEmployeeLatestYear(employee, entries = []) {
+        const years = [this.now().getFullYear()];
+        entries
+            .filter((entry) => entry.employeeId === employee?.id)
+            .forEach((entry) => {
+                years.push(Number(String(entry.startDate).slice(0, 4)));
+                years.push(Number(String(entry.endDate).slice(0, 4)));
+            });
+        [
+            employee?.vacationAllowancesByYear,
+            employee?.vacationCarryOverByYear,
+            employee?.vacationCarryOverExpiryByYear
+        ].forEach((yearlyValues) => {
+            Object.keys(yearlyValues || {}).forEach((year) => years.push(Number(year)));
+        });
+        return Math.max(...years.filter(Number.isInteger));
+    }
+
     render() {
         const root = this.getRoot();
         if (!root) return;
@@ -288,6 +313,8 @@ export class VacationCenterManager {
     }
 
     renderInspector(employee, row, entries, holidays = {}) {
+        const entranceYear = this.getEmployeeEntranceYear(employee);
+        const latestYear = this.getEmployeeLatestYear(employee, entries);
         const history = Array.from({ length: 4 }, (_, index) => {
             const year = this.currentYear - index;
             const balance = calculateEmployeeLeaveBalanceForYear(
@@ -296,7 +323,9 @@ export class VacationCenterManager {
                 this.dataManager.getHolidaysForYear?.(year) || {}
             );
             return { year, ...balance };
-        });
+        }).filter(({ year }) => entranceYear === null || year >= entranceYear);
+        const canShowPreviousYear = entranceYear === null || this.currentYear > entranceYear;
+        const canShowNextYear = this.currentYear < latestYear;
         const selectedEntries = entries
             .filter((entry) => entry.employeeId === employee.id)
             .filter((entry) => entry.startDate <= `${this.currentYear}-12-31` && entry.endDate >= `${this.currentYear}-01-01`)
@@ -331,13 +360,19 @@ export class VacationCenterManager {
             </dl>
 
             <section class="vacation-center-history">
-                <div class="vacation-center-section-title">
-                    <span>${t('vacationCenter.historyLabel')}</span>
-                    <h3>${t('vacationCenter.yearHistory')}</h3>
+                <div class="vacation-center-section-title vacation-center-history__heading">
+                    <div>
+                        <span>${t('vacationCenter.historyLabel')}</span>
+                        <h3>${t('vacationCenter.yearHistory')}</h3>
+                    </div>
+                    <div class="vacation-center-history__controls">
+                        <button type="button" data-vc-history-step="-1" aria-label="${escapeHtml(t('schedule.board.previousYear'))}" ${canShowPreviousYear ? '' : 'disabled'}>â†</button>
+                        <button type="button" data-vc-history-step="1" aria-label="${escapeHtml(t('schedule.board.nextYear'))}" ${canShowNextYear ? '' : 'disabled'}>â†’</button>
+                    </div>
                 </div>
-                <div class="vacation-center-history__rows">
+                <div class="vacation-center-history__rows" style="--vacation-history-columns: ${Math.max(1, history.length)}">
                     ${history.map((item) => `
-                        <button type="button" data-vc-history-year="${item.year}">
+                        <button type="button" data-vc-history-year="${item.year}" ${item.year === this.currentYear ? 'class="is-current" aria-current="true"' : ''}>
                             <strong>${item.year}</strong>
                             <span>${item.vacationDays} ${t('schedule.vacation.usedShort')}</span>
                             <span>${item.vacationBalance} ${t('schedule.vacation.leftShort')}</span>
@@ -623,6 +658,19 @@ export class VacationCenterManager {
         const historyYearButton = event.target.closest('[data-vc-history-year]');
         if (historyYearButton) {
             this.currentYear = Number(historyYearButton.dataset.vcHistoryYear);
+            this.editingBalance = false;
+            this.render();
+            return;
+        }
+
+        const historyStepButton = event.target.closest('[data-vc-history-step]');
+        if (historyStepButton) {
+            const employee = this.getEmployees().find((item) => item.id === this.selectedEmployeeId) || null;
+            const entranceYear = this.getEmployeeEntranceYear(employee);
+            const latestYear = this.getEmployeeLatestYear(employee, this.getVacationEntries());
+            const nextYear = this.currentYear + Number(historyStepButton.dataset.vcHistoryStep);
+            if ((entranceYear !== null && nextYear < entranceYear) || nextYear > latestYear) return;
+            this.currentYear = nextYear;
             this.editingBalance = false;
             this.render();
             return;
