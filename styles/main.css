@@ -6143,6 +6143,11 @@ header h1, header h2, header h3 {
     gap: 0.55rem;
 }
 
+.staff-list.hidden,
+.staff-list[hidden] {
+    display: none;
+}
+
 .staff-card {
     gap: 0.75rem 1rem;
     border-color: #e5eaf1;

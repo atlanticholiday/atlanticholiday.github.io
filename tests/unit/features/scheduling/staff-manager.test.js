@@ -274,6 +274,8 @@ describe("StaffManager", () => {
 
     assert.ok(document.getElementById("staff-list-container").classList.contains("hidden"));
     assert.ok(!document.getElementById("history-list-container").classList.contains("hidden"));
+    assert.equal(document.getElementById("staff-list-container").hidden, true);
+    assert.equal(document.getElementById("history-list-container").hidden, false);
     assert.equal(document.getElementById("staff-panel-title").textContent, "Archived colleagues");
     assert.includes(document.getElementById("history-list-container").textContent, "Archived Ana");
 

@@ -226,15 +226,16 @@ export class StaffManager {
         const historyContainer = this.document.getElementById('history-list-container');
         if (!listContainer || !historyContainer) return;
 
+        listContainer.classList.toggle('hidden', this.isHistoryView);
+        historyContainer.classList.toggle('hidden', !this.isHistoryView);
+        listContainer.hidden = this.isHistoryView;
+        historyContainer.hidden = !this.isHistoryView;
+
         if (this.isHistoryView) {
-            listContainer.classList.add('hidden');
-            historyContainer.classList.remove('hidden');
             this.renderHistoryList();
             return;
         }
 
-        listContainer.classList.remove('hidden');
-        historyContainer.classList.add('hidden');
         this.renderActiveList();
     }
 
