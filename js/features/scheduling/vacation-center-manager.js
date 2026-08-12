@@ -49,6 +49,7 @@ export class VacationCenterManager {
         this.calendarEmployee = 'all';
         this.calendarLeaveType = 'all';
         this.showYearPolicy = false;
+        this.showAllYearsTotal = false;
         this.editingBalance = false;
         this.calendar = null;
         this.hasRendered = false;
@@ -136,6 +137,52 @@ export class VacationCenterManager {
             Object.keys(yearlyValues || {}).forEach((year) => years.push(Number(year)));
         });
         return Math.max(...years.filter(Number.isInteger));
+    }
+
+    getEmployeeYearBounds(employee, entries = []) {
+        const entranceYear = this.getEmployeeEntranceYear(employee);
+        const latestYear = this.getEmployeeLatestYear(employee, entries);
+        const recordedYears = [
+            ...entries
+                .filter((entry) => entry.employeeId === employee?.id)
+                .flatMap((entry) => [
+                    Number(String(entry.startDate).slice(0, 4)),
+                    Number(String(entry.endDate).slice(0, 4))
+                ]),
+            ...Object.keys(employee?.vacationAllowancesByYear || {}).map(Number),
+            ...Object.keys(employee?.vacationCarryOverByYear || {}).map(Number)
+        ].filter(Number.isInteger);
+        const earliestRecordedYear = recordedYears.length
+            ? Math.min(...recordedYears)
+            : this.now().getFullYear();
+        return {
+            startYear: Math.min(entranceYear ?? earliestRecordedYear, latestYear),
+            endYear: latestYear
+        };
+    }
+
+    getEmployeeAllYearsSummary(employee, entries = []) {
+        const { startYear, endYear } = this.getEmployeeYearBounds(employee, entries);
+        let usedDays = 0;
+        let remainingDays = 0;
+        let closedYears = 0;
+
+        for (let year = startYear; year <= endYear; year += 1) {
+            const balance = calculateEmployeeLeaveBalanceForYear(
+                employee,
+                year,
+                this.dataManager.getHolidaysForYear?.(year) || {},
+                this.now()
+            );
+            usedDays += balance.vacationDays;
+            if (this.dataManager.isVacationYearClosed?.(year)) {
+                closedYears += 1;
+            } else {
+                remainingDays += balance.vacationBalance;
+            }
+        }
+
+        return { startYear, endYear, usedDays, remainingDays, closedYears };
     }
 
     render() {
@@ -315,6 +362,7 @@ export class VacationCenterManager {
     renderInspector(employee, row, entries, holidays = {}) {
         const entranceYear = this.getEmployeeEntranceYear(employee);
         const latestYear = this.getEmployeeLatestYear(employee, entries);
+        const allYears = this.getEmployeeAllYearsSummary(employee, entries);
         const history = Array.from({ length: 4 }, (_, index) => {
             const year = this.currentYear - index;
             const balance = calculateEmployeeLeaveBalanceForYear(
@@ -366,10 +414,24 @@ export class VacationCenterManager {
                         <h3>${t('vacationCenter.yearHistory')}</h3>
                     </div>
                     <div class="vacation-center-history__controls">
-                        <button type="button" data-vc-history-step="-1" aria-label="${escapeHtml(t('schedule.board.previousYear'))}" ${canShowPreviousYear ? '' : 'disabled'}>â†</button>
-                        <button type="button" data-vc-history-step="1" aria-label="${escapeHtml(t('schedule.board.nextYear'))}" ${canShowNextYear ? '' : 'disabled'}>â†’</button>
+                        <button type="button" class="vacation-center-history__total-toggle ${this.showAllYearsTotal ? 'is-active' : ''}" data-vc-toggle-all-years aria-expanded="${this.showAllYearsTotal ? 'true' : 'false'}">${t('vacationCenter.allYears')}</button>
+                        <button type="button" class="vacation-center-history__step" data-vc-history-step="-1" aria-label="${escapeHtml(t('schedule.board.previousYear'))}" ${canShowPreviousYear ? '' : 'disabled'}>â†</button>
+                        <button type="button" class="vacation-center-history__step" data-vc-history-step="1" aria-label="${escapeHtml(t('schedule.board.nextYear'))}" ${canShowNextYear ? '' : 'disabled'}>â†’</button>
                     </div>
                 </div>
+                ${this.showAllYearsTotal ? `
+                    <div class="vacation-center-history__total vacation-center-history__total--${allYears.remainingDays < 0 ? 'danger' : 'positive'}" data-vc-all-years-summary>
+                        <div class="vacation-center-history__total-scope">
+                            <span>${t('vacationCenter.allYears')}</span>
+                            <strong>${t('vacationCenter.allYearsRange', { startYear: allYears.startYear, endYear: allYears.endYear })}</strong>
+                        </div>
+                        <dl>
+                            <div><dt>${t('vacationCenter.totalUsed')}</dt><dd>${allYears.usedDays}</dd></div>
+                            <div><dt>${t('vacationCenter.totalRemaining')}</dt><dd>${allYears.remainingDays}</dd></div>
+                        </dl>
+                        ${allYears.closedYears > 0 ? `<p>${t('vacationCenter.closedYearsExcluded')}</p>` : ''}
+                    </div>
+                ` : ''}
                 <div class="vacation-center-history__rows" style="--vacation-history-columns: ${Math.max(1, history.length)}">
                     ${history.map((item) => `
                         <button type="button" data-vc-history-year="${item.year}" ${item.year === this.currentYear ? 'class="is-current" aria-current="true"' : ''}>
@@ -425,6 +487,7 @@ export class VacationCenterManager {
         if (!employeeId || employeeId === this.selectedEmployeeId) return;
 
         this.selectedEmployeeId = employeeId;
+        this.showAllYearsTotal = false;
         this.editingBalance = false;
         this.getRoot()?.querySelectorAll('[data-vc-select-employee]').forEach((button) => {
             button.classList.toggle('is-selected', button.dataset.vcSelectEmployee === employeeId);
@@ -673,6 +736,12 @@ export class VacationCenterManager {
             this.currentYear = nextYear;
             this.editingBalance = false;
             this.render();
+            return;
+        }
+
+        if (event.target.closest('[data-vc-toggle-all-years]')) {
+            this.showAllYearsTotal = !this.showAllYearsTotal;
+            this.renderSelectedInspector();
             return;
         }
 

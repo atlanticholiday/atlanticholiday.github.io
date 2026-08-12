@@ -124,6 +124,37 @@ describe("VacationCenterManager", () => {
     assert.equal(document.querySelector('[data-vc-history-year="2026"]').getAttribute("aria-current"), "true");
   });
 
+  test("shows an all-years used and remaining total from the entrance year", () => {
+    const { manager } = createFixture();
+
+    document.querySelector("[data-vc-toggle-all-years]").click();
+
+    const summary = document.querySelector("[data-vc-all-years-summary]");
+    const values = [...summary.querySelectorAll("dd")].map((element) => Number(element.textContent));
+    assert.deepEqual(values, [5, 61]);
+    assert.equal(document.querySelector("[data-vc-toggle-all-years]").getAttribute("aria-expanded"), "true");
+    assert.deepEqual(manager.getEmployeeAllYearsSummary(manager.getEmployees()[0], manager.getVacationEntries()), {
+      startYear: 2024,
+      endYear: 2026,
+      usedDays: 5,
+      remainingDays: 61,
+      closedYears: 0
+    });
+  });
+
+  test("excludes closed years from total remaining to avoid counting carry-over twice", () => {
+    const { manager, employees } = createFixture();
+    manager.dataManager.isVacationYearClosed = (year) => year === 2024;
+
+    assert.deepEqual(manager.getEmployeeAllYearsSummary(employees[0], manager.getVacationEntries()), {
+      startYear: 2024,
+      endYear: 2026,
+      usedDays: 5,
+      remainingDays: 39,
+      closedYears: 1
+    });
+  });
+
   test("saves a year-specific remaining balance", async () => {
     const { allowanceUpdates } = createFixture();
     document.querySelector("[data-vc-edit-balance]").click();

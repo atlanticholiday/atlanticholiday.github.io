@@ -737,7 +737,7 @@
     gap: 6px;
 }
 
-.vacation-center-history__controls button {
+.vacation-center-history__step {
     display: inline-flex;
     width: 32px;
     height: 32px;
@@ -750,14 +750,96 @@
     font-weight: 800;
 }
 
-.vacation-center-history__controls button:hover:not(:disabled) {
+.vacation-center-history__step:hover:not(:disabled) {
     border-color: #94a3b8;
     background: #f8fafc;
 }
 
-.vacation-center-history__controls button:disabled {
+.vacation-center-history__step:disabled {
     cursor: not-allowed;
     opacity: 0.35;
+}
+
+.vacation-center-history__total-toggle {
+    min-height: 32px;
+    padding: 0 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.vacation-center-history__total-toggle:hover,
+.vacation-center-history__total-toggle.is-active {
+    border-color: #e94b5a;
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.vacation-center-history__total {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.75fr) minmax(220px, 1fr);
+    gap: 18px;
+    align-items: center;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #f8fafc;
+    animation: vacation-center-total-reveal 160ms ease-out;
+}
+
+.vacation-center-history__total-scope span,
+.vacation-center-history__total dt {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.vacation-center-history__total-scope strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 0.88rem;
+}
+
+.vacation-center-history__total dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin: 0;
+}
+
+.vacation-center-history__total dd {
+    margin: 4px 0 0;
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.vacation-center-history__total--positive dl > div:last-child dd {
+    color: #047857;
+}
+
+.vacation-center-history__total--danger dl > div:last-child dd {
+    color: #be123c;
+}
+
+.vacation-center-history__total p {
+    grid-column: 1 / -1;
+    margin: -4px 0 0;
+    color: #64748b;
+    font-size: 0.64rem;
+}
+
+@keyframes vacation-center-total-reveal {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .vacation-center-history__rows {
@@ -1239,6 +1321,19 @@
 
     .vacation-center-history__rows {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vacation-center-history__rows button:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    .vacation-center-history__heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .vacation-center-history__total {
+        grid-template-columns: 1fr;
     }
 
     .vacation-center-person-leave__list {
