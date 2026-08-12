@@ -2316,6 +2316,11 @@
       "active": "Active",
       "archive": "Archive"
     },
+    "search": {
+      "label": "Search colleagues",
+      "placeholder": "Search colleagues",
+      "clear": "Clear search"
+    },
     "stats": {
       "active": "Active colleagues",
       "archived": "Archived colleagues",
@@ -2342,7 +2347,9 @@
       "activeEmptyTitle": "No active colleagues",
       "activeEmpty": "Add a colleague to start building the live staff directory.",
       "archiveEmptyTitle": "No archived colleagues",
-      "archiveEmpty": "Archived records will appear here once a colleague is removed from the live directory."
+      "archiveEmpty": "Archived records will appear here once a colleague is removed from the live directory.",
+      "searchEmptyTitle": "No colleagues found",
+      "searchEmpty": "Try another name, staff number, department, email, or phone number."
     },
     "validation": {
       "nameRequired": "Please enter a name.",

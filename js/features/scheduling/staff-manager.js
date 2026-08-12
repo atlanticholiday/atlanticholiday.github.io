@@ -8,6 +8,7 @@ export class StaffManager {
         this.document = documentRef;
         this.window = windowRef;
         this.isHistoryView = false;
+        this.searchQuery = '';
 
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
 
@@ -43,6 +44,30 @@ export class StaffManager {
         });
 
         this.window.addEventListener?.('languageChanged', this.handleLanguageChange);
+
+        const searchInput = this.document.getElementById('staff-search-input');
+        if (searchInput && searchInput.dataset.staffBound !== 'true') {
+            searchInput.dataset.staffBound = 'true';
+            searchInput.addEventListener('input', () => {
+                this.searchQuery = searchInput.value;
+                this.updateSearchControl();
+                this.renderCurrentList();
+            });
+        }
+
+        const clearSearchButton = this.document.getElementById('staff-search-clear');
+        if (clearSearchButton && clearSearchButton.dataset.staffBound !== 'true') {
+            clearSearchButton.dataset.staffBound = 'true';
+            clearSearchButton.addEventListener('click', () => {
+                this.searchQuery = '';
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                }
+                this.updateSearchControl();
+                this.renderCurrentList();
+            });
+        }
 
         const container = this.document.getElementById('staff-page');
         if (container) {
@@ -193,6 +218,14 @@ export class StaffManager {
         this.ensureAddEmployeeFormReady();
         this.updateChrome();
 
+        this.renderCurrentList();
+    }
+
+    renderCurrentList() {
+        const listContainer = this.document.getElementById('staff-list-container');
+        const historyContainer = this.document.getElementById('history-list-container');
+        if (!listContainer || !historyContainer) return;
+
         if (this.isHistoryView) {
             listContainer.classList.add('hidden');
             historyContainer.classList.remove('hidden');
@@ -209,6 +242,18 @@ export class StaffManager {
         this.updateSummaryCounts();
         this.updateViewButtons();
         this.updatePanelCopy();
+        this.updateSearchControl();
+    }
+
+    updateSearchControl() {
+        const searchInput = this.document.getElementById('staff-search-input');
+        const clearSearchButton = this.document.getElementById('staff-search-clear');
+        const hasQuery = Boolean(this.searchQuery.trim());
+
+        if (searchInput && searchInput.value !== this.searchQuery) {
+            searchInput.value = this.searchQuery;
+        }
+        clearSearchButton?.classList.toggle('hidden', !hasQuery);
     }
 
     updateSummaryCounts() {
@@ -322,6 +367,35 @@ export class StaffManager {
         return normalizedDays.map((day) => this.getWeekdayLabel(day)).join(', ');
     }
 
+    normalizeSearchValue(value = '') {
+        return String(value)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase()
+            .trim();
+    }
+
+    filterEmployees(employees = []) {
+        const query = this.normalizeSearchValue(this.searchQuery);
+        if (!query) {
+            return employees;
+        }
+
+        return employees.filter((employee) => {
+            const searchableProfile = [
+                employee.name,
+                employee.staffNumber,
+                employee.department,
+                employee.position,
+                employee.employmentType,
+                employee.email,
+                employee.phone
+            ].filter(Boolean).join(' ');
+
+            return this.normalizeSearchValue(searchableProfile).includes(query);
+        });
+    }
+
     renderStateMessage(container, { title, message, tone = 'muted' }) {
         const safeTitle = this.escapeHtml(title);
         const safeMessage = this.escapeHtml(message);
@@ -366,7 +440,16 @@ export class StaffManager {
             return;
         }
 
-        container.innerHTML = activeEmployees.map((employee) => this.renderActiveCard(employee)).join('');
+        const filteredEmployees = this.filterEmployees(activeEmployees);
+        if (filteredEmployees.length === 0) {
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.searchEmptyTitle', 'No colleagues found'),
+                message: this.translate('staff.states.searchEmpty', 'Try another name, staff number, department, email, or phone number.')
+            });
+            return;
+        }
+
+        container.innerHTML = filteredEmployees.map((employee) => this.renderActiveCard(employee)).join('');
     }
 
     renderActiveCard(employee) {
@@ -461,7 +544,16 @@ export class StaffManager {
             return;
         }
 
-        container.innerHTML = archivedEmployees.map((employee) => this.renderHistoryCard(employee)).join('');
+        const filteredEmployees = this.filterEmployees(archivedEmployees);
+        if (filteredEmployees.length === 0) {
+            this.renderStateMessage(container, {
+                title: this.translate('staff.states.searchEmptyTitle', 'No colleagues found'),
+                message: this.translate('staff.states.searchEmpty', 'Try another name, staff number, department, email, or phone number.')
+            });
+            return;
+        }
+
+        container.innerHTML = filteredEmployees.map((employee) => this.renderHistoryCard(employee)).join('');
     }
 
     renderHistoryCard(employee) {

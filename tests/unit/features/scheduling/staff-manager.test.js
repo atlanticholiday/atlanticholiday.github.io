@@ -9,6 +9,8 @@ function createFixture() {
       <button id="staff-active-view-btn" data-staff-view-target="active"></button>
       <button id="staff-history-view-btn" data-staff-view-target="history"></button>
       <button id="open-add-employee-modal-btn">Add</button>
+      <input id="staff-search-input" type="search">
+      <button id="staff-search-clear" class="hidden">Clear</button>
       <div id="staff-active-count"></div>
       <div id="staff-archived-count"></div>
       <div id="staff-total-count"></div>
@@ -274,6 +276,48 @@ describe("StaffManager", () => {
     assert.ok(!document.getElementById("history-list-container").classList.contains("hidden"));
     assert.equal(document.getElementById("staff-panel-title").textContent, "Archived colleagues");
     assert.includes(document.getElementById("history-list-container").textContent, "Archived Ana");
+
+    restoreI18n();
+  });
+
+  test("filters colleagues as the user types and ignores accents", () => {
+    const restoreI18n = installStaffTranslations();
+    createFixture();
+
+    const manager = new StaffManager(
+      createDataManager({
+        activeEmployees: [
+          {
+            id: "emp-1",
+            name: "Ana Brazão",
+            staffNumber: "18",
+            workDays: [1]
+          },
+          {
+            id: "emp-2",
+            name: "Bruno Costa",
+            email: "bruno@example.com",
+            workDays: [2]
+          }
+        ]
+      }),
+      createUiManager()
+    );
+
+    manager.render();
+
+    const searchInput = document.getElementById("staff-search-input");
+    searchInput.value = "brazao";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.includes(document.getElementById("staff-list-container").textContent, "Ana Brazão");
+    assert.ok(!document.getElementById("staff-list-container").textContent.includes("Bruno Costa"));
+    assert.ok(!document.getElementById("staff-search-clear").classList.contains("hidden"));
+
+    document.getElementById("staff-search-clear").click();
+
+    assert.equal(searchInput.value, "");
+    assert.includes(document.getElementById("staff-list-container").textContent, "Bruno Costa");
 
     restoreI18n();
   });

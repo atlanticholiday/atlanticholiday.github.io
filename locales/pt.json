@@ -2322,6 +2322,11 @@
             "active": "Ativos",
             "archive": "Arquivo"
         },
+        "search": {
+            "label": "Pesquisar colegas",
+            "placeholder": "Pesquisar colegas",
+            "clear": "Limpar pesquisa"
+        },
         "stats": {
             "active": "Colegas ativos",
             "archived": "Colegas arquivados",
@@ -2348,7 +2353,9 @@
             "activeEmptyTitle": "Sem colegas ativos",
             "activeEmpty": "Adicione um colega para começar a construir o diretório ativo.",
             "archiveEmptyTitle": "Sem colegas arquivados",
-            "archiveEmpty": "Os registos arquivados vão aparecer aqui quando um colega sair do diretório ativo."
+            "archiveEmpty": "Os registos arquivados vão aparecer aqui quando um colega sair do diretório ativo.",
+            "searchEmptyTitle": "Nenhum colega encontrado",
+            "searchEmpty": "Tente outro nome, número de funcionário, departamento, email ou telefone."
         },
         "validation": {
             "nameRequired": "Introduza um nome.",
