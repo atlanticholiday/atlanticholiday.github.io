@@ -1,9 +1,18 @@
 import { getAppAccessOptionByPageName } from '../../shared/app-access.js';
+import { AppSwitcher } from './app-switcher.js';
+
+const RECENT_PAGES_STORAGE_KEY = 'atlantic-holiday-recent-pages';
+const RECENT_PAGES_LIMIT = 10;
+const NON_RECENT_PAGES = new Set(['landing', 'login', 'setup']);
 
 export class NavigationManager {
-    constructor({ getDataManager = null } = {}) {
+    constructor({ getDataManager = null, storage = window.localStorage } = {}) {
         this.getDataManager = typeof getDataManager === 'function' ? getDataManager : () => null;
+        this.storage = storage;
         this.currentPage = null;
+        this.navigationStack = [];
+        this.isHistoryNavigation = false;
+        this.appSwitcher = null;
         this.pages = {
             landing: 'landing-page',
             properties: 'properties-page',
@@ -35,6 +44,7 @@ export class NavigationManager {
             staff: 'staff-page',
             nukiDoors: 'nuki-doors-page',
         };
+        this.recentPages = this.loadRecentPages();
     }
 
     showPage(pageName) {
@@ -55,8 +65,83 @@ export class NavigationManager {
         const targetPage = document.getElementById(this.pages[pageName]);
         if (targetPage) {
             targetPage.classList.remove('hidden');
+            if (this.currentPage !== pageName && !this.isHistoryNavigation) {
+                this.navigationStack.push(pageName);
+            }
             this.currentPage = pageName;
+            this.recordRecentPage(pageName);
+            this.appSwitcher?.close();
+            this.appSwitcher?.refresh();
         }
+    }
+
+    loadRecentPages() {
+        try {
+            const storedPages = JSON.parse(this.storage?.getItem(RECENT_PAGES_STORAGE_KEY) || '[]');
+            if (!Array.isArray(storedPages)) return [];
+            return storedPages
+                .filter((pageName) => typeof pageName === 'string' && this.pages[pageName] && !NON_RECENT_PAGES.has(pageName))
+                .filter((pageName, index, pages) => pages.indexOf(pageName) === index)
+                .slice(0, RECENT_PAGES_LIMIT);
+        } catch {
+            return [];
+        }
+    }
+
+    saveRecentPages() {
+        try {
+            this.storage?.setItem(RECENT_PAGES_STORAGE_KEY, JSON.stringify(this.recentPages));
+        } catch {
+            // Navigation still works when storage is unavailable or full.
+        }
+    }
+
+    recordRecentPage(pageName) {
+        if (NON_RECENT_PAGES.has(pageName) || !this.pages[pageName]) return;
+        this.recentPages = [pageName, ...this.recentPages.filter((entry) => entry !== pageName)]
+            .slice(0, RECENT_PAGES_LIMIT);
+        this.saveRecentPages();
+    }
+
+    getRecentPages() {
+        return [...this.recentPages];
+    }
+
+    clearRecentPages() {
+        this.recentPages = [];
+        this.saveRecentPages();
+        this.appSwitcher?.refresh();
+    }
+
+    showPreviousPage(fallbackPage = 'landing') {
+        if (this.navigationStack.at(-1) === this.currentPage) {
+            this.navigationStack.pop();
+        }
+
+        const previousPage = this.navigationStack.at(-1);
+        const targetPage = previousPage && this.canOpenPage(previousPage) ? previousPage : fallbackPage;
+
+        this.isHistoryNavigation = true;
+        try {
+            this.showPage(targetPage);
+        } finally {
+            this.isHistoryNavigation = false;
+        }
+    }
+
+    navigateFromSwitcher(pageName, buttonId = '') {
+        if (pageName === 'landing') {
+            this.showLandingPage();
+            return;
+        }
+
+        const landingButton = buttonId ? document.getElementById(buttonId) : null;
+        if (landingButton) {
+            landingButton.click();
+            return;
+        }
+
+        this.showPage(pageName);
     }
 
     canOpenPage(pageName) {
@@ -626,7 +711,7 @@ export class NavigationManager {
 
         if (backToLandingFromVacationCenterBtn) {
             backToLandingFromVacationCenterBtn.addEventListener('click', () => {
-                this.showLandingPage();
+                this.showPreviousPage();
             });
         }
 
@@ -817,6 +902,15 @@ export class NavigationManager {
                 this.showLandingPage();
             });
         }
+
+        this.appSwitcher = new AppSwitcher({
+            getCurrentPage: () => this.getCurrentPage(),
+            getRecentPages: () => this.getRecentPages(),
+            canOpenPage: (pageName) => this.canOpenPage(pageName),
+            onNavigate: (pageName, buttonId) => this.navigateFromSwitcher(pageName, buttonId),
+            onClearRecent: () => this.clearRecentPages()
+        });
+        this.appSwitcher.setup();
     }
 
 

@@ -22,6 +22,18 @@
         "phone": "Telefone",
         "status": "Estado"
     },
+    "appSwitcher": {
+        "trigger": "Apps",
+        "openLabel": "Abrir seletor de aplicações",
+        "title": "Mudar de aplicação",
+        "subtitle": "Volte atrás ou abra outra área de trabalho",
+        "recent": "Recentes",
+        "recentItem": "Visitado recentemente",
+        "clear": "Limpar",
+        "empty": "As aplicações visitadas recentemente aparecerão aqui.",
+        "allApps": "Todas as aplicações",
+        "dashboard": "Abrir página de aplicações"
+    },
     "days": {
         "short": [
             "Dom",

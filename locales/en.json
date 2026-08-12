@@ -22,6 +22,18 @@
     "phone": "Phone",
     "status": "Status"
   },
+  "appSwitcher": {
+    "trigger": "Apps",
+    "openLabel": "Open app switcher",
+    "title": "Switch app",
+    "subtitle": "Jump back or open another workspace",
+    "recent": "Recent",
+    "recentItem": "Recently visited",
+    "clear": "Clear",
+    "empty": "Your recently visited apps will appear here.",
+    "allApps": "All apps",
+    "dashboard": "Open all apps page"
+  },
   "days": {
     "short": [
       "Sun",

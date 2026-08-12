@@ -1,8 +1,82 @@
 import { describe, test, assert } from "../../../test-harness.js";
-import { resetDom } from "../../../test-utils.js";
+import { createStorageMock, resetDom } from "../../../test-utils.js";
 import { NavigationManager } from "../../../../js/features/scheduling/navigation-manager.js";
 
 describe("NavigationManager", () => {
+  test("restores recent app pages from local storage", () => {
+    resetDom("");
+    const storage = createStorageMock({
+      "atlantic-holiday-recent-pages": JSON.stringify(["vacationCenter", "schedule", "vacationCenter", "login", "unknown"])
+    });
+    const navigationManager = new NavigationManager({ storage });
+
+    assert.deepEqual(navigationManager.getRecentPages(), ["vacationCenter", "schedule"]);
+  });
+
+  test("keeps the 10 most recent unique app pages", () => {
+    resetDom(`
+      <div id="properties-page"></div>
+      <div id="welcome-packs-page"></div>
+      <div id="laundry-log-page"></div>
+      <div id="linen-inventory-page"></div>
+      <div id="airbnb-reservation-invoices-page"></div>
+      <div id="operational-guidelines-page"></div>
+      <div id="heated-pools-page"></div>
+      <div id="app-content"></div>
+      <div id="reservations-page"></div>
+      <div id="time-clock-page"></div>
+      <div id="allinfo-page"></div>
+      <div id="rnal-page"></div>
+    `);
+    const storage = createStorageMock();
+    const navigationManager = new NavigationManager({ storage });
+
+    [
+      "properties",
+      "welcomePacks",
+      "laundryLog",
+      "linenInventory",
+      "airbnbReservationInvoices",
+      "operationalGuidelines",
+      "heatedPools",
+      "schedule",
+      "reservations",
+      "timeClock",
+      "allinfo",
+      "rnal"
+    ].forEach((pageName) => navigationManager.showPage(pageName));
+
+    assert.equal(navigationManager.getRecentPages().length, 10);
+    assert.equal(navigationManager.getRecentPages()[0], "rnal");
+    assert.ok(!navigationManager.getRecentPages().includes("properties"));
+    assert.ok(!navigationManager.getRecentPages().includes("welcomePacks"));
+
+    navigationManager.showPage("schedule");
+    assert.equal(navigationManager.getRecentPages()[0], "schedule");
+    assert.equal(new Set(navigationManager.getRecentPages()).size, 10);
+    assert.equal(JSON.parse(storage.getItem("atlantic-holiday-recent-pages"))[0], "schedule");
+  });
+
+  test("Vacation Center back returns to the actual previous page", () => {
+    resetDom(`
+      <button id="back-to-landing-from-vacation-center-btn">Back</button>
+      <div id="landing-page"></div>
+      <div id="app-content" class="hidden"></div>
+      <div id="vacation-center-page" class="hidden"></div>
+    `);
+    const navigationManager = new NavigationManager({ storage: createStorageMock() });
+    navigationManager.setupNavigationListeners();
+
+    navigationManager.showLandingPage();
+    navigationManager.showSchedulePage();
+    navigationManager.showVacationCenterPage();
+    document.getElementById("back-to-landing-from-vacation-center-btn").click();
+
+    assert.equal(navigationManager.getCurrentPage(), "schedule");
+    assert.ok(!document.getElementById("app-content").classList.contains("hidden"));
+    assert.ok(document.getElementById("vacation-center-page").classList.contains("hidden"));
+  });
+
   test("routes to welcome packs and back to landing", () => {
     resetDom(`
       <button id="go-to-welcome-packs-btn">Welcome Packs</button>
