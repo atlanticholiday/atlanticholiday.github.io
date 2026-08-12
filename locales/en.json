@@ -2333,6 +2333,13 @@
       "placeholder": "Search colleagues",
       "clear": "Clear search"
     },
+    "sort": {
+      "label": "Sort colleagues",
+      "nameAsc": "A–Z",
+      "nameDesc": "Z–A",
+      "oldest": "Oldest first",
+      "newest": "Newest first"
+    },
     "stats": {
       "active": "Active colleagues",
       "archived": "Archived colleagues",

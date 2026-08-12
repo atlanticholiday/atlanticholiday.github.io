@@ -9,6 +9,12 @@ function createFixture() {
       <button id="staff-active-view-btn" data-staff-view-target="active"></button>
       <button id="staff-history-view-btn" data-staff-view-target="history"></button>
       <button id="open-add-employee-modal-btn">Add</button>
+      <select id="staff-sort-select">
+        <option value="nameAsc">A-Z</option>
+        <option value="nameDesc">Z-A</option>
+        <option value="oldest">Oldest first</option>
+        <option value="newest">Newest first</option>
+      </select>
       <input id="staff-search-input" type="search">
       <button id="staff-search-clear" class="hidden">Clear</button>
       <div id="staff-active-count"></div>
@@ -320,6 +326,43 @@ describe("StaffManager", () => {
 
     assert.equal(searchInput.value, "");
     assert.includes(document.getElementById("staff-list-container").textContent, "Bruno Costa");
+
+    restoreI18n();
+  });
+
+  test("sorts colleagues alphabetically and by hire date", () => {
+    const restoreI18n = installStaffTranslations();
+    createFixture();
+
+    const manager = new StaffManager(
+      createDataManager({
+        activeEmployees: [
+          { id: "emp-1", name: "Bruno", hireDate: "2025-01-15", workDays: [1] },
+          { id: "emp-2", name: "Ana", hireDate: "2022-06-01", workDays: [2] },
+          { id: "emp-3", name: "Carla", hireDate: "2024-03-10", workDays: [3] }
+        ]
+      }),
+      createUiManager()
+    );
+
+    manager.render();
+    const renderedNames = () => Array.from(document.querySelectorAll("#staff-list-container .staff-name"))
+      .map((element) => element.textContent);
+
+    assert.deepEqual(renderedNames(), ["Ana", "Bruno", "Carla"]);
+
+    const sortSelect = document.getElementById("staff-sort-select");
+    sortSelect.value = "nameDesc";
+    sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    assert.deepEqual(renderedNames(), ["Carla", "Bruno", "Ana"]);
+
+    sortSelect.value = "oldest";
+    sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    assert.deepEqual(renderedNames(), ["Ana", "Carla", "Bruno"]);
+
+    sortSelect.value = "newest";
+    sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    assert.deepEqual(renderedNames(), ["Bruno", "Carla", "Ana"]);
 
     restoreI18n();
   });

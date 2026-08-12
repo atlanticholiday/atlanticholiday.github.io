@@ -2339,6 +2339,13 @@
             "placeholder": "Pesquisar colegas",
             "clear": "Limpar pesquisa"
         },
+        "sort": {
+            "label": "Ordenar colegas",
+            "nameAsc": "A–Z",
+            "nameDesc": "Z–A",
+            "oldest": "Mais antigos primeiro",
+            "newest": "Mais recentes primeiro"
+        },
         "stats": {
             "active": "Colegas ativos",
             "archived": "Colegas arquivados",

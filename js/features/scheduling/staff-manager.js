@@ -9,6 +9,7 @@ export class StaffManager {
         this.window = windowRef;
         this.isHistoryView = false;
         this.searchQuery = '';
+        this.sortMode = 'nameAsc';
 
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
 
@@ -65,6 +66,15 @@ export class StaffManager {
                     searchInput.focus();
                 }
                 this.updateSearchControl();
+                this.renderCurrentList();
+            });
+        }
+
+        const sortSelect = this.document.getElementById('staff-sort-select');
+        if (sortSelect && sortSelect.dataset.staffBound !== 'true') {
+            sortSelect.dataset.staffBound = 'true';
+            sortSelect.addEventListener('change', () => {
+                this.sortMode = sortSelect.value;
                 this.renderCurrentList();
             });
         }
@@ -378,11 +388,7 @@ export class StaffManager {
 
     filterEmployees(employees = []) {
         const query = this.normalizeSearchValue(this.searchQuery);
-        if (!query) {
-            return employees;
-        }
-
-        return employees.filter((employee) => {
+        const filteredEmployees = query ? employees.filter((employee) => {
             const searchableProfile = [
                 employee.name,
                 employee.staffNumber,
@@ -394,7 +400,59 @@ export class StaffManager {
             ].filter(Boolean).join(' ');
 
             return this.normalizeSearchValue(searchableProfile).includes(query);
-        });
+        }) : employees;
+
+        return this.sortEmployees(filteredEmployees);
+    }
+
+    getEmployeeDateValue(employee = {}) {
+        const value = employee.hireDate || employee.createdAt;
+        if (!value) return null;
+
+        if (typeof value.toMillis === 'function') {
+            return value.toMillis();
+        }
+        if (typeof value.toDate === 'function') {
+            return value.toDate().getTime();
+        }
+
+        const timestamp = new Date(value).getTime();
+        return Number.isFinite(timestamp) ? timestamp : null;
+    }
+
+    sortEmployees(employees = []) {
+        const direction = this.sortMode === 'nameDesc' || this.sortMode === 'newest' ? -1 : 1;
+        const isChronological = this.sortMode === 'oldest' || this.sortMode === 'newest';
+
+        return employees
+            .map((employee, index) => ({ employee, index }))
+            .sort((left, right) => {
+                if (isChronological) {
+                    const leftDate = this.getEmployeeDateValue(left.employee);
+                    const rightDate = this.getEmployeeDateValue(right.employee);
+
+                    if (leftDate !== null && rightDate !== null && leftDate !== rightDate) {
+                        return (leftDate - rightDate) * direction;
+                    }
+                    if (leftDate !== null || rightDate !== null) {
+                        return leftDate !== null ? -1 : 1;
+                    }
+
+                    const leftOrder = Number(left.employee.displayOrder ?? left.employee.staffNumber);
+                    const rightOrder = Number(right.employee.displayOrder ?? right.employee.staffNumber);
+                    if (Number.isFinite(leftOrder) && Number.isFinite(rightOrder) && leftOrder !== rightOrder) {
+                        return (leftOrder - rightOrder) * direction;
+                    }
+                }
+
+                const nameComparison = String(left.employee.name || '').localeCompare(
+                    String(right.employee.name || ''),
+                    undefined,
+                    { sensitivity: 'base' }
+                );
+                return nameComparison ? nameComparison * direction : left.index - right.index;
+            })
+            .map(({ employee }) => employee);
     }
 
     renderStateMessage(container, { title, message, tone = 'muted' }) {

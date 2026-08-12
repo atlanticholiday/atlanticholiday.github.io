@@ -2018,23 +2018,39 @@ Mountain Villa, Sintra Hills, V4"
                                 data-i18n="staff.views.archive">Archive</button>
                         </div>
 
-                        <div class="staff-search" role="search">
-                            <label class="sr-only" for="staff-search-input" data-i18n="staff.search.label">Search colleagues</label>
-                            <svg class="staff-search-icon" aria-hidden="true" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
-                            </svg>
-                            <input id="staff-search-input" type="search" autocomplete="off"
-                                placeholder="Search colleagues" data-i18n="staff.search.placeholder"
-                                data-i18n-attr="placeholder">
-                            <button id="staff-search-clear" type="button" class="staff-search-clear hidden">
-                                <span class="sr-only" data-i18n="staff.search.clear">Clear search</span>
+                        <div class="staff-directory-tools">
+                            <label class="staff-sort" for="staff-sort-select">
+                                <span class="sr-only" data-i18n="staff.sort.label">Sort colleagues</span>
                                 <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18 18 6M6 6l12 12"></path>
+                                        d="M8 7h12M8 12h8M8 17h4M4 5v14m0 0-2-2m2 2 2-2"></path>
                                 </svg>
-                            </button>
+                                <select id="staff-sort-select">
+                                    <option value="nameAsc" data-i18n="staff.sort.nameAsc">A–Z</option>
+                                    <option value="nameDesc" data-i18n="staff.sort.nameDesc">Z–A</option>
+                                    <option value="oldest" data-i18n="staff.sort.oldest">Oldest first</option>
+                                    <option value="newest" data-i18n="staff.sort.newest">Newest first</option>
+                                </select>
+                            </label>
+
+                            <div class="staff-search" role="search">
+                                <label class="sr-only" for="staff-search-input" data-i18n="staff.search.label">Search colleagues</label>
+                                <svg class="staff-search-icon" aria-hidden="true" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+                                </svg>
+                                <input id="staff-search-input" type="search" autocomplete="off"
+                                    placeholder="Search colleagues" data-i18n="staff.search.placeholder"
+                                    data-i18n-attr="placeholder">
+                                <button id="staff-search-clear" type="button" class="staff-search-clear hidden">
+                                    <span class="sr-only" data-i18n="staff.search.clear">Clear search</span>
+                                    <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M6 18 18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
