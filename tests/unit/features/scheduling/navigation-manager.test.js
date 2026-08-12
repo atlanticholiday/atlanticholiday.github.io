@@ -77,6 +77,51 @@ describe("NavigationManager", () => {
     assert.ok(document.getElementById("vacation-center-page").classList.contains("hidden"));
   });
 
+  test("app switcher groups apps under static categories and filters them by search", () => {
+    resetDom(`
+      <div id="main-app">
+        <div id="landing-page">
+          <header class="dashboard-header"><div class="header-right"></div></header>
+          <button id="go-to-time-clock-btn"><h3>Time Clock</h3></button>
+          <button id="go-to-schedule-btn"><h3>Work Schedule</h3></button>
+          <button id="go-to-vacation-center-btn"><h3>Centro de Férias</h3></button>
+          <button id="go-to-staff-btn"><h3>Staff</h3></button>
+          <button id="go-to-reservations-btn"><h3>Weekly Reservations</h3></button>
+          <button id="go-to-heated-pools-btn"><h3>Heated Pools</h3></button>
+        </div>
+        <div id="time-clock-page" class="hidden"></div>
+        <div id="app-content" class="hidden"></div>
+        <div id="vacation-center-page" class="hidden"></div>
+        <div id="staff-page" class="hidden"></div>
+        <div id="reservations-page" class="hidden"></div>
+        <div id="heated-pools-page" class="hidden"></div>
+      </div>
+    `);
+    const navigationManager = new NavigationManager({ storage: createStorageMock() });
+    navigationManager.setupNavigationListeners();
+
+    document.querySelector("[data-app-switcher-trigger]").click();
+
+    const categories = Array.from(document.querySelectorAll("[data-app-switcher-category]"));
+    assert.equal(categories.length, 2);
+    assert.ok(categories.every((category) => category.querySelector("h3")?.textContent.trim()));
+    assert.equal(categories[0].querySelectorAll("[data-app-switcher-page]").length, 4);
+    assert.equal(categories[1].querySelectorAll("[data-app-switcher-page]").length, 2);
+
+    const searchInput = document.querySelector("[data-app-switcher-search]");
+    searchInput.value = "ferias";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.equal(document.querySelector('[data-app-switcher-page="vacationCenter"]').hidden, false);
+    assert.equal(document.querySelector('[data-app-switcher-page="schedule"]').hidden, true);
+    assert.equal(document.querySelector("[data-app-switcher-recent-section]").hidden, true);
+
+    searchInput.value = "missing app";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(document.querySelector("[data-app-switcher-no-results]").hidden, false);
+    assert.ok(categories.every((category) => category.hidden));
+  });
+
   test("routes to welcome packs and back to landing", () => {
     resetDom(`
       <button id="go-to-welcome-packs-btn">Welcome Packs</button>

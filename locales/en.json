@@ -31,6 +31,9 @@
     "recentItem": "Recently visited",
     "clear": "Clear",
     "empty": "Your recently visited apps will appear here.",
+    "searchLabel": "Search apps",
+    "searchPlaceholder": "Search apps",
+    "noResults": "No apps match your search.",
     "allApps": "All apps",
     "dashboard": "Open all apps page"
   },

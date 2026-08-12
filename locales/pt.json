@@ -31,6 +31,9 @@
         "recentItem": "Visitado recentemente",
         "clear": "Limpar",
         "empty": "As aplicações visitadas recentemente aparecerão aqui.",
+        "searchLabel": "Pesquisar aplicações",
+        "searchPlaceholder": "Pesquisar aplicações",
+        "noResults": "Nenhuma aplicação corresponde à pesquisa.",
         "allApps": "Todas as aplicações",
         "dashboard": "Abrir página de aplicações"
     },

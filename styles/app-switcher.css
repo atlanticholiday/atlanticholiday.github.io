@@ -114,6 +114,62 @@
     stroke-width: 1.8;
 }
 
+.app-switcher-search {
+    display: flex;
+    height: 40px;
+    align-items: center;
+    gap: 9px;
+    margin: 14px 18px 2px;
+    padding: 0 12px;
+    border: 1px solid #dbe3ed;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #94a3b8;
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.app-switcher-search:focus-within {
+    border-color: #f0a5ad;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(233, 75, 90, 0.08);
+}
+
+.app-switcher-search svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.7;
+}
+
+.app-switcher-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #0f172a;
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.app-switcher-search input::placeholder {
+    color: #94a3b8;
+}
+
+.app-switcher-search .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .app-switcher-section {
     padding: 15px 18px 4px;
 }
@@ -160,6 +216,21 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2px 8px;
+}
+
+.app-switcher-categories {
+    display: grid;
+    gap: 13px;
+}
+
+.app-switcher-category h3 {
+    margin: 0 8px 4px;
+    color: #94a3b8;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    line-height: 1.4;
+    text-transform: uppercase;
 }
 
 .app-switcher-item {
@@ -261,6 +332,14 @@
     font-size: 0.7rem;
 }
 
+.app-switcher-no-results {
+    margin: 0;
+    padding: 18px 8px 22px;
+    color: #64748b;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
 .app-switcher-dashboard-link {
     position: sticky;
     bottom: 0;
@@ -309,6 +388,10 @@
 
     .app-switcher-app-list {
         grid-template-columns: 1fr;
+    }
+
+    .app-switcher-categories {
+        gap: 15px;
     }
 }
 
