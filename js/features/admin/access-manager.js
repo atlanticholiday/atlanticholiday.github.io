@@ -109,20 +109,31 @@ export class AccessManager {
         try {
             await this.callProtectedFunction('adminRemoveAccess', { email: normalizedEmail });
         } catch (error) {
-            if (!isCallableUnavailableError(error)) throw error;
+            const code = String(error?.code || '').trim().toLowerCase();
+            const recoverableCallableFailure = isCallableUnavailableError(error)
+                || code === 'functions/internal'
+                || code === 'internal';
+            if (!recoverableCallableFailure) throw error;
 
-            const batch = writeBatch(this.db);
-            getEmailLookupKeys(normalizedEmail).forEach((key) => {
-                batch.delete(doc(this.db, this.collectionPath, key));
-            });
-
-            const materializedAccess = await getDocs(query(
-                collection(this.db, 'userAccess'),
-                where('emailCanonical', '==', canonicalizeEmail(normalizedEmail))
-            ));
-            materializedAccess.docs.forEach((documentSnapshot) => batch.delete(documentSnapshot.ref));
-            await batch.commit();
+            // Firestore rules still require the signed-in user to be an admin.
+            // Keeping this fallback makes deletion work on Spark projects where
+            // callable failures can be surfaced by the SDK as `internal`.
+            await this.removeEmailDirectly(normalizedEmail);
         }
+    }
+
+    async removeEmailDirectly(email) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const materializedAccess = await getDocs(query(
+            collection(this.db, 'userAccess'),
+            where('emailCanonical', '==', canonicalizeEmail(normalizedEmail))
+        ));
+        const batch = writeBatch(this.db);
+        getEmailLookupKeys(normalizedEmail).forEach((key) => {
+            batch.delete(doc(this.db, this.collectionPath, key));
+        });
+        materializedAccess.docs.forEach((documentSnapshot) => batch.delete(documentSnapshot.ref));
+        await batch.commit();
     }
 
     /**

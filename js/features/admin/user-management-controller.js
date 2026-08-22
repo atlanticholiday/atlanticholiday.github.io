@@ -1061,7 +1061,13 @@ export class UserManagementController {
                 await this.refreshUserList();
             } catch (error) {
                 console.error(error);
-                this.window.alert(`Failed to remove user: ${error.message}`);
+                const code = String(error?.code || '').replace(/^functions\//, '');
+                const message = code === 'permission-denied'
+                    ? 'Only an administrator can remove user access.'
+                    : code === 'internal' || error?.message === 'internal'
+                    ? 'The access service could not finish the deletion. Refresh the page and try again.'
+                    : (error?.message || 'Unknown error.');
+                this.window.alert(`Failed to remove user: ${message}`);
             }
         });
 

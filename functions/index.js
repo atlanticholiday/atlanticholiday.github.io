@@ -118,10 +118,15 @@ exports.adminRemoveAccess = onCall(async (request) => {
   const email = requireValidEmail(request.data?.email);
   const db = firestore;
   const keys = getEmailLookupKeys(email);
+  const canonicalEmail = canonicalizeEmail(email);
+  const materializedAccess = await db
+    .collection("userAccess")
+    .where("emailCanonical", "==", canonicalEmail)
+    .get();
   const batch = db.batch();
   keys.forEach((key) => batch.delete(db.collection("allowedEmails").doc(key)));
+  materializedAccess.docs.forEach((document) => batch.delete(document.ref));
   await batch.commit();
-  await removeMaterializedAccess(email);
 
   try {
     const user = await auth.getUserByEmail(email);
