@@ -1732,7 +1732,23 @@
       "countLabel": "Total access accounts",
       "accountsLabel": "accounts",
       "empty": "No access accounts created yet.",
-      "resetPassword": "Reset Password"
+      "resetPassword": "Reset Password",
+      "setPassword": "Set New Password"
+    },
+    "password": {
+      "eyebrow": "ADMIN SECURITY",
+      "title": "Set New Password",
+      "description": "Set a password directly for",
+      "newLabel": "New password",
+      "confirmLabel": "Confirm new password",
+      "help": "Use 12–128 characters. Saving signs the user out of existing sessions.",
+      "save": "Set password",
+      "saving": "Saving…",
+      "lengthError": "Use between 12 and 128 characters.",
+      "matchError": "The passwords do not match.",
+      "success": "Password updated. Existing sessions have been signed out.",
+      "failed": "The password could not be updated.",
+      "serviceUnavailable": "The secure password-change service has not been deployed yet."
     },
     "directory": {
       "searchPlaceholder": "Search name or email",

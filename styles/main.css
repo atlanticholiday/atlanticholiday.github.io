@@ -6805,6 +6805,17 @@ header h1, header h2, header h3 {
     background: #dbeafe;
 }
 
+.user-management-button-password {
+    border: 1px solid rgba(233, 75, 90, 0.34);
+    background: #fff;
+    color: #be123c;
+}
+
+.user-management-button-password:hover {
+    background: #fff1f2;
+    transform: translateY(-1px);
+}
+
 .user-management-button-preview {
     border: 1px solid rgba(233, 75, 90, 0.32);
     background: rgba(255, 241, 242, 0.98);

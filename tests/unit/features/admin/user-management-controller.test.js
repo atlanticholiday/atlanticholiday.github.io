@@ -41,6 +41,16 @@ function createFixture() {
       <button id="close-create-user-btn">Close</button>
       <button id="cancel-create-user-btn">Cancel</button>
     </div>
+    <div id="set-password-modal" class="hidden" aria-hidden="true">
+      <button id="set-password-backdrop">Backdrop</button>
+      <button id="close-set-password-btn">Close</button>
+      <span id="set-password-account-email"></span>
+      <input id="set-user-password" type="password">
+      <input id="confirm-user-password" type="password">
+      <p id="set-password-error"></p>
+      <button id="cancel-set-password-btn">Cancel</button>
+      <button id="save-user-password-btn">Set password</button>
+    </div>
     <input id="new-user-email">
     <input id="new-user-password">
     <p id="create-user-error"></p>
@@ -707,6 +717,72 @@ describe("UserManagementController", () => {
     assert.includes(alerts[0], "Firebase accepted a password reset email request for ana@example.com.");
     assert.includes(alerts[0], "If nothing arrives, check spam/quarantine");
     assert.ok(!alerts[0].includes("Password reset email sent"));
+  });
+
+  test("lets an administrator set a password directly and requires matching values", async () => {
+    createFixture();
+
+    const passwordChanges = [];
+    const alerts = [];
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["ana@example.com"];
+        },
+        async getRoles() {
+          return [];
+        },
+        async getAllowedApps() {
+          return [];
+        },
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      setUserPassword: async (email, password) => {
+        passwordChanges.push({ email, password });
+      },
+      sendPasswordReset: async () => {},
+      getEmployees: () => [],
+      windowRef: {
+        alert(message) {
+          alerts.push(message);
+        },
+        confirm() {
+          return true;
+        }
+      }
+    });
+
+    controller.init();
+    await controller.refreshUserList();
+
+    document.querySelector('[data-user-action="set-password"]').click();
+    assert.equal(document.getElementById("set-password-modal").classList.contains("hidden"), false);
+    assert.equal(document.getElementById("set-password-account-email").textContent, "ana@example.com");
+
+    document.getElementById("set-user-password").value = "a-secure-password";
+    document.getElementById("confirm-user-password").value = "not-the-same-value";
+    document.getElementById("save-user-password-btn").click();
+    await flushAsyncWork();
+    assert.equal(passwordChanges.length, 0);
+    assert.includes(document.getElementById("set-password-error").textContent, "do not match");
+
+    document.getElementById("confirm-user-password").value = "a-secure-password";
+    document.getElementById("save-user-password-btn").click();
+    await flushAsyncWork();
+
+    assert.deepEqual(passwordChanges, [{ email: "ana@example.com", password: "a-secure-password" }]);
+    assert.equal(document.getElementById("set-password-modal").classList.contains("hidden"), true);
+    assert.deepEqual(alerts, ["Password updated. Existing sessions have been signed out."]);
   });
 
   test("shows generated reset links so admins are not blocked by email delivery", async () => {

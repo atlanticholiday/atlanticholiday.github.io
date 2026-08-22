@@ -1740,7 +1740,23 @@
             "countLabel": "Total de acessos",
             "accountsLabel": "contas",
             "empty": "Ainda não existem contas de acesso.",
-            "resetPassword": "Repor Password"
+            "resetPassword": "Repor Password",
+            "setPassword": "Definir Nova Password"
+        },
+        "password": {
+            "eyebrow": "SEGURANÇA ADMIN",
+            "title": "Definir Nova Password",
+            "description": "Defina diretamente uma password para",
+            "newLabel": "Nova password",
+            "confirmLabel": "Confirmar nova password",
+            "help": "Utilize entre 12 e 128 caracteres. Ao guardar, as sessões existentes serão terminadas.",
+            "save": "Definir password",
+            "saving": "A guardar…",
+            "lengthError": "Utilize entre 12 e 128 caracteres.",
+            "matchError": "As passwords não coincidem.",
+            "success": "Password atualizada. As sessões existentes foram terminadas.",
+            "failed": "Não foi possível atualizar a password.",
+            "serviceUnavailable": "O serviço seguro de alteração de password ainda não foi publicado."
         },
         "directory": {
             "searchPlaceholder": "Pesquisar nome ou email",

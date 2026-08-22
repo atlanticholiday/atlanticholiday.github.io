@@ -96,6 +96,47 @@ exports.adminCreateAuthUser = onCall(async (request) => {
   }
 });
 
+exports.adminSetUserPassword = onCall(async (request) => {
+  const actor = await requireAdminAccess(request);
+  const email = requireValidEmail(request.data?.email);
+  const password = String(request.data?.password || "");
+
+  if (email.endsWith("@horario.test")) {
+    throw new HttpsError("invalid-argument", "Production test-account domains are disabled.");
+  }
+
+  if (password.length < 12 || password.length > 128) {
+    throw new HttpsError("invalid-argument", "Passwords must contain between 12 and 128 characters.");
+  }
+
+  const targetAccessEntry = await getAccessEntry(email);
+  if (!targetAccessEntry) {
+    throw new HttpsError("not-found", "This email is not listed in User Management.");
+  }
+
+  try {
+    const user = await auth.getUserByEmail(email);
+    await auth.updateUser(user.uid, { password });
+    await auth.revokeRefreshTokens(user.uid);
+    await writeAudit({
+      email: actor.email,
+      event: "auth_user_password_changed",
+      targetEmail: email,
+      targetUid: user.uid
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error?.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "No Firebase Auth login exists for this email address.");
+    }
+    if (error?.code === "auth/invalid-password") {
+      throw new HttpsError("invalid-argument", "The new password does not meet Firebase password requirements.");
+    }
+    console.error("Failed to update Firebase Auth password:", error);
+    throw new HttpsError("internal", "Firebase Authentication could not update this password.");
+  }
+});
+
 exports.adminAddAccess = onCall(async (request) => {
   const actor = await requireAdminAccess(request);
   const email = requireValidEmail(request.data?.email);

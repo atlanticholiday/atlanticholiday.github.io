@@ -767,6 +767,40 @@
                         </section>
                     </div>
 
+                    <div id="set-password-modal" class="user-management-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="set-password-dialog-title" aria-hidden="true">
+                        <button id="set-password-backdrop" type="button" class="user-management-dialog-backdrop" aria-label="Close password dialog"></button>
+                        <section class="user-management-dialog-panel">
+                            <header class="user-management-dialog-header">
+                                <div>
+                                    <p class="user-management-eyebrow" data-i18n="userManagement.password.eyebrow">ADMIN SECURITY</p>
+                                    <h2 id="set-password-dialog-title" data-i18n="userManagement.password.title">Set New Password</h2>
+                                    <p><span data-i18n="userManagement.password.description">Set a password directly for</span> <strong id="set-password-account-email"></strong>.</p>
+                                </div>
+                                <button id="close-set-password-btn" type="button" class="user-management-icon-button" aria-label="Close">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </header>
+                            <div class="user-management-dialog-body">
+                                <label class="user-management-dialog-field" for="set-user-password">
+                                    <span data-i18n="userManagement.password.newLabel">New password</span>
+                                    <input type="password" id="set-user-password" minlength="12" maxlength="128" autocomplete="new-password">
+                                </label>
+                                <label class="user-management-dialog-field" for="confirm-user-password">
+                                    <span data-i18n="userManagement.password.confirmLabel">Confirm new password</span>
+                                    <input type="password" id="confirm-user-password" minlength="12" maxlength="128" autocomplete="new-password">
+                                </label>
+                                <p class="user-management-dialog-help" data-i18n="userManagement.password.help">Use 12–128 characters. Saving signs the user out of existing sessions.</p>
+                                <p id="set-password-error" class="user-management-dialog-error" aria-live="polite"></p>
+                            </div>
+                            <footer class="user-management-dialog-actions">
+                                <button id="cancel-set-password-btn" type="button" class="user-management-secondary-action" data-i18n="common.cancel">Cancel</button>
+                                <button id="save-user-password-btn" type="button" class="user-management-primary-action" data-i18n="userManagement.password.save">Set password</button>
+                            </footer>
+                        </section>
+                    </div>
+
                     <div class="user-management-main-view" data-user-management-main-view="colleagues" hidden>
                         <div class="user-management-panel user-management-panel-colleagues modal-content">
                             <div class="user-management-section-head">

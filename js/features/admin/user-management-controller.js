@@ -54,6 +54,9 @@ export class UserManagementController {
         accessManager,
         roleManager,
         createAuthUser,
+        setUserPassword = async () => {
+            throw new Error('The secure password-change service is unavailable.');
+        },
         sendPasswordReset,
         getEmployees = () => [],
         ensureEmployeeForAccess = async () => {},
@@ -64,6 +67,7 @@ export class UserManagementController {
         this.accessManager = accessManager;
         this.roleManager = roleManager;
         this.createAuthUser = createAuthUser;
+        this.setUserPassword = setUserPassword;
         this.sendPasswordReset = sendPasswordReset;
         this.getEmployees = getEmployees;
         this.ensureEmployeeForAccess = ensureEmployeeForAccess;
@@ -76,6 +80,7 @@ export class UserManagementController {
         this.inspectorDraft = null;
         this.inspectorNotice = '';
         this.isCreateUserOpen = false;
+        this.passwordDialogEmail = '';
     }
 
     init() {
@@ -89,6 +94,7 @@ export class UserManagementController {
         this.inspectorDraft = null;
         this.inspectorNotice = '';
         this.isCreateUserOpen = false;
+        this.passwordDialogEmail = '';
         this.setupRolePresetInputs();
         this.setupMainViewNavigation();
         this.setupSideViewNavigation();
@@ -220,6 +226,10 @@ export class UserManagementController {
                     this.setCreateUserOpen(false);
                     return;
                 }
+                if (event.key === 'Escape' && this.passwordDialogEmail) {
+                    this.setPasswordDialogOpen(false);
+                    return;
+                }
                 if (event.key === 'Escape' && this.document.getElementById('user-management-page')?.classList.contains('user-management-inspector-open')) {
                     this.setInspectorOpen(false);
                     return;
@@ -267,6 +277,25 @@ export class UserManagementController {
                     event.preventDefault();
                     this.document.getElementById('create-user-btn')?.click();
                 }
+            });
+        });
+
+        ['close-set-password-btn', 'cancel-set-password-btn', 'set-password-backdrop'].forEach((id) => {
+            this.document.getElementById(id)?.addEventListener('click', () => {
+                this.setPasswordDialogOpen(false);
+            });
+        });
+        ['set-user-password', 'confirm-user-password'].forEach((id) => {
+            this.document.getElementById(id)?.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    this.document.getElementById('save-user-password-btn')?.click();
+                }
+            });
+        });
+        this.document.getElementById('save-user-password-btn')?.addEventListener('click', () => {
+            this.handleSetUserPassword().catch((error) => {
+                console.error('Failed to set user password:', error);
             });
         });
     }
@@ -345,6 +374,62 @@ export class UserManagementController {
         if (this.isCreateUserOpen) {
             this.setText('create-user-error', '');
             this.document.getElementById('new-user-email')?.focus?.();
+        }
+    }
+
+    setPasswordDialogOpen(isOpen, email = '') {
+        this.passwordDialogEmail = isOpen ? canonicalizeEmail(email) : '';
+        const modal = this.document.getElementById('set-password-modal');
+        modal?.classList.toggle('hidden', !this.passwordDialogEmail);
+        modal?.setAttribute('aria-hidden', this.passwordDialogEmail ? 'false' : 'true');
+        this.document.body?.classList.toggle('overflow-hidden', Boolean(this.passwordDialogEmail || this.isCreateUserOpen));
+
+        this.setText('set-password-account-email', this.passwordDialogEmail);
+        this.setText('set-password-error', '');
+        const passwordInput = this.document.getElementById('set-user-password');
+        const confirmationInput = this.document.getElementById('confirm-user-password');
+        if (passwordInput) passwordInput.value = '';
+        if (confirmationInput) confirmationInput.value = '';
+        if (this.passwordDialogEmail) passwordInput?.focus?.();
+    }
+
+    async handleSetUserPassword() {
+        const email = this.passwordDialogEmail;
+        if (!email) return;
+
+        const password = this.document.getElementById('set-user-password')?.value || '';
+        const confirmation = this.document.getElementById('confirm-user-password')?.value || '';
+        if (password.length < 12 || password.length > 128) {
+            this.setText('set-password-error', this.translate('userManagement.password.lengthError', 'Use between 12 and 128 characters.'));
+            return;
+        }
+        if (password !== confirmation) {
+            this.setText('set-password-error', this.translate('userManagement.password.matchError', 'The passwords do not match.'));
+            return;
+        }
+
+        const saveButton = this.document.getElementById('save-user-password-btn');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = this.translate('userManagement.password.saving', 'Saving…');
+        }
+        this.setText('set-password-error', '');
+
+        try {
+            await this.setUserPassword(email, password);
+            this.setPasswordDialogOpen(false);
+            this.window.alert(this.translate('userManagement.password.success', 'Password updated. Existing sessions have been signed out.'));
+        } catch (error) {
+            const message = error?.code === 'functions/not-found' || error?.code === 'functions/unimplemented'
+                ? this.translate('userManagement.password.serviceUnavailable', 'The secure password-change service has not been deployed yet.')
+                : error?.message || this.translate('userManagement.password.failed', 'The password could not be updated.');
+            this.setText('set-password-error', message);
+            throw error;
+        } finally {
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = this.translate('userManagement.password.save', 'Set password');
+            }
         }
     }
 
@@ -786,6 +871,7 @@ export class UserManagementController {
         });
 
         const accountActions = container.querySelector('#user-inspector-account-actions');
+        accountActions?.appendChild(this.createSetPasswordButton(user.email));
         accountActions?.appendChild(this.createResetPasswordButton(user.email));
         accountActions?.appendChild(this.createDeleteAccessButton(user.email));
     }
@@ -1084,6 +1170,18 @@ export class UserManagementController {
             }
         });
 
+        return button;
+    }
+
+    createSetPasswordButton(email) {
+        const button = this.document.createElement('button');
+        button.type = 'button';
+        button.textContent = this.translate('userManagement.users.setPassword', 'Set New Password');
+        button.className = 'user-management-button user-management-button-password';
+        button.dataset.userAction = 'set-password';
+        button.addEventListener('click', () => {
+            this.setPasswordDialogOpen(true, email);
+        });
         return button;
     }
 

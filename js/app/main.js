@@ -608,6 +608,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return createAuthUserWithoutCallable(email, password);
                 }
             },
+            setUserPassword: async (email, password) => {
+                const result = await httpsCallable(functionsInstance, 'adminSetUserPassword')({ email, password });
+                return result.data || {};
+            },
             sendPasswordReset: (email) => requestFirebasePasswordReset({
                 email,
                 createResetLink: async (targetEmail) => {
