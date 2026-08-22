@@ -1807,6 +1807,17 @@
             "expandHint": "Selecione uma app para ver os detalhes",
             "noApps": "Sem apps do painel selecionadas.",
             "note": "Esta pré-visualização é apenas de leitura. Não inicia sessão como o colega nem altera o acesso.",
+            "interactive": {
+                "title": "Explorar a área deste utilizador",
+                "description": "Abra as apps reais com as permissões deste utilizador. Pode navegar normalmente, mas as alterações ficam bloqueadas.",
+                "openDashboard": "Abrir pré-visualização interativa",
+                "previewing": "A pré-visualizar",
+                "readOnlyNotice": "A navegação funciona normalmente. As alterações estão bloqueadas nesta vista.",
+                "exit": "Sair da pré-visualização",
+                "blocked": "As alterações estão bloqueadas enquanto pré-visualiza outro utilizador.",
+                "unavailable": "Não foi possível abrir esta app na pré-visualização.",
+                "standalone": "Esta app independente só pode ser aberta na vista normal com sessão iniciada."
+            },
             "levels": {
                 "admin": "Administrador",
                 "manager": "Gestor privilegiado",

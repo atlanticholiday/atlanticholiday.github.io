@@ -1799,6 +1799,17 @@
       "expandHint": "Select an app for details",
       "noApps": "No dashboard apps selected.",
       "note": "This is a read-only permission preview. It does not sign in as the colleague or change their access.",
+      "interactive": {
+        "title": "Explore their workspace",
+        "description": "Open the real apps with this user’s permissions. You can navigate normally, but changes are blocked.",
+        "openDashboard": "Open interactive preview",
+        "previewing": "Previewing",
+        "readOnlyNotice": "Navigation works normally. Changes are blocked in this preview.",
+        "exit": "Exit preview",
+        "blocked": "Changes are blocked while previewing another user.",
+        "unavailable": "This app could not be opened in the preview.",
+        "standalone": "This standalone app can only be opened in the normal signed-in view."
+      },
       "levels": {
         "admin": "Administrator",
         "manager": "Privileged manager",

@@ -257,6 +257,7 @@ describe("UserManagementController", () => {
 
   test("previews the effective workspace and inside-app scope for a colleague", async () => {
     createFixture();
+    const interactivePreviewCalls = [];
     document.getElementById("fixture").insertAdjacentHTML("beforeend", `
       <main id="landing-page">
         <section class="landing-category">
@@ -309,6 +310,7 @@ describe("UserManagementController", () => {
       createAuthUser: async () => {},
       sendPasswordReset: async () => {},
       getEmployees: () => [{ id: "emp-1", name: "Ana", email: "ana@example.com" }],
+      startInteractivePreview: (payload) => interactivePreviewCalls.push(payload),
       windowRef: { alert() {}, confirm() { return true; } }
     });
 
@@ -334,6 +336,8 @@ describe("UserManagementController", () => {
     assert.includes(previewText, "No User Management");
     assert.includes(previewText, "restricted colleague views");
     assert.equal(document.querySelectorAll(".user-access-preview__dashboard-card").length, 5);
+    assert.includes(previewText, "Explore their workspace");
+    assert.ok(document.getElementById("start-interactive-access-preview-btn"));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-time-clock-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-schedule-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-laundry-log-btn"]'));
@@ -357,6 +361,13 @@ describe("UserManagementController", () => {
     assert.equal(laundryDetails.open, false);
     laundryDetails.querySelector("summary").click();
     assert.equal(laundryDetails.open, true);
+
+    document.querySelector('[data-preview-button-id="go-to-laundry-log-btn"]').click();
+    assert.equal(interactivePreviewCalls.length, 1);
+    assert.equal(interactivePreviewCalls[0].buttonId, "go-to-laundry-log-btn");
+    assert.equal(interactivePreviewCalls[0].user.email, "ana@example.com");
+    assert.equal(interactivePreviewCalls[0].linkedEmployee.id, "emp-1");
+    assert.equal(modal.classList.contains("hidden"), true);
   });
 
   test("shows when a shared-station user bypasses the launcher", () => {

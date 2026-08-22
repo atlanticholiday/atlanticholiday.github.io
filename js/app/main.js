@@ -9,6 +9,7 @@ import { i18n, t } from '../core/i18n.js';
 import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
+import { InteractiveAccessPreviewSession } from '../features/admin/interactive-access-preview-session.js';
 import { isCallableUnavailableError } from '../features/admin/firebase-function-utils.js';
 import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
@@ -78,7 +79,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -582,6 +583,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) { console.warn('Language change refresh failed:', e); }
         });
 
+        interactiveAccessPreviewSession = new InteractiveAccessPreviewSession({
+            dataManager,
+            navigationManager,
+            syncAccessUi: () => {
+                syncAccessModeUi();
+                uiManager?.updateView?.();
+            },
+            translate: (key, fallback) => {
+                const translated = t(key);
+                return translated && translated !== key ? translated : fallback;
+            }
+        });
+
         const userManagementController = new UserManagementController({
             accessManager,
             roleManager,
@@ -606,12 +620,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             },
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
-            ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload)
+            ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload),
+            startInteractivePreview: (payload) => interactiveAccessPreviewSession.start(payload)
         });
         userManagementController.init();
 
         // Setup authentication listener
         onAuthStateChanged(auth, async (user) => {
+            if (!user && interactiveAccessPreviewSession?.isActive?.()) {
+                interactiveAccessPreviewSession.stop({ restorePage: false });
+            }
             if (user) {
                 let accessEntry = null;
                 let accessVerificationError = null;

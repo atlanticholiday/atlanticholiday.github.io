@@ -7035,20 +7035,25 @@ header h1, header h2, header h3 {
 
 .user-access-preview__dashboard-card {
     min-height: 76px;
-    cursor: default;
+    width: 100%;
+    cursor: pointer;
     padding: 0.7rem 0.8rem;
     border-color: rgba(203, 213, 225, 0.8);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.94);
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-    pointer-events: none;
 }
 
 .user-access-preview__dashboard-card:hover {
-    transform: none;
-    border-color: rgba(203, 213, 225, 0.8);
-    background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    transform: translateY(-2px);
+    border-color: rgba(244, 63, 94, 0.38);
+    background: #fff;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+}
+
+.user-access-preview__dashboard-card:focus-visible {
+    outline: 3px solid rgba(244, 63, 94, 0.22);
+    outline-offset: 2px;
 }
 
 .user-access-preview__dashboard-card .card-icon,
@@ -7108,6 +7113,167 @@ header h1, header h2, header h3 {
     margin-top: 0.2rem;
     color: #64748b;
     font-size: 0.78rem;
+}
+
+.user-access-preview__launch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1.35rem;
+}
+
+.user-access-preview__launch strong {
+    color: #0f172a;
+    font-size: 0.94rem;
+}
+
+.user-access-preview__launch p {
+    margin-top: 0.25rem;
+    max-width: 38rem;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.user-access-preview__launch button {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #0f172a;
+    padding: 0.7rem 1rem;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 750;
+    transition: transform 160ms ease, background 160ms ease;
+}
+
+.user-access-preview__launch button:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+}
+
+body.interactive-access-preview-active {
+    padding-top: 70px;
+}
+
+body.interactive-access-preview-active .sticky {
+    top: 70px !important;
+}
+
+.interactive-access-preview-bar {
+    position: fixed;
+    z-index: 100000;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+    min-height: 70px;
+    border-bottom: 1px solid #cbd5e1;
+    background: rgba(255, 255, 255, 0.96);
+    padding: 0.7rem clamp(1rem, 3vw, 2rem);
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(18px);
+    animation: interactive-preview-enter 220ms ease-out both;
+}
+
+.interactive-access-preview-bar__identity {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.interactive-access-preview-bar__identity div {
+    display: grid;
+    min-width: 0;
+}
+
+.interactive-access-preview-bar__identity strong {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.83rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.interactive-access-preview-bar__identity span:not(.interactive-access-preview-bar__pulse) {
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.interactive-access-preview-bar__pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #f43f5e;
+    box-shadow: 0 0 0 5px rgba(244, 63, 94, 0.12);
+}
+
+.interactive-access-preview-bar > p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.interactive-access-preview-bar > button {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #0f172a;
+    padding: 0.58rem 0.9rem;
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 750;
+    white-space: nowrap;
+    transition: transform 160ms ease, background 160ms ease;
+}
+
+.interactive-access-preview-bar > button:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+}
+
+.interactive-access-preview-toast {
+    position: fixed;
+    z-index: 100001;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    max-width: min(24rem, calc(100vw - 2.5rem));
+    border-radius: 14px;
+    background: #0f172a;
+    padding: 0.8rem 1rem;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 650;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.26);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.interactive-access-preview-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@keyframes interactive-preview-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .user-access-preview__surface-list,
@@ -7638,6 +7804,37 @@ header h1, header h2, header h3 {
 
     .user-access-preview__dashboard-grid {
         grid-template-columns: 1fr;
+    }
+
+    .user-access-preview__launch {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .user-access-preview__launch button {
+        width: 100%;
+    }
+
+    body.interactive-access-preview-active {
+        padding-top: 104px;
+    }
+
+    body.interactive-access-preview-active .sticky {
+        top: 104px !important;
+    }
+
+    .interactive-access-preview-bar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.55rem 0.8rem;
+        min-height: 104px;
+        padding: 0.65rem 0.8rem;
+    }
+
+    .interactive-access-preview-bar > p {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        font-size: 0.72rem;
+        text-align: left;
     }
 
     .user-access-preview__app:nth-child(odd) {

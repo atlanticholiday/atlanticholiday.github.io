@@ -57,6 +57,7 @@ export class UserManagementController {
         sendPasswordReset,
         getEmployees = () => [],
         ensureEmployeeForAccess = async () => {},
+        startInteractivePreview = () => {},
         documentRef = document,
         windowRef = window
     }) {
@@ -66,6 +67,7 @@ export class UserManagementController {
         this.sendPasswordReset = sendPasswordReset;
         this.getEmployees = getEmployees;
         this.ensureEmployeeForAccess = ensureEmployeeForAccess;
+        this.startInteractivePreview = startInteractivePreview;
         this.document = documentRef;
         this.window = windowRef;
         this.selectedUserEmail = null;
@@ -1086,14 +1088,14 @@ export class UserManagementController {
         this.document.getElementById('access-preview-close-btn')?.focus?.();
     }
 
-    closeAccessPreview() {
+    closeAccessPreview({ restoreFocus = true } = {}) {
         const modal = this.document.getElementById('access-preview-modal');
         modal?.classList.add('hidden');
         modal?.setAttribute('aria-hidden', 'true');
         this.document.body?.classList.remove('overflow-hidden');
         this.previewState = null;
 
-        const triggerElement = this.previewTriggerElement;
+        const triggerElement = restoreFocus ? this.previewTriggerElement : null;
         this.previewTriggerElement = null;
         triggerElement?.focus?.();
     }
@@ -1156,8 +1158,32 @@ export class UserManagementController {
 
             ${this.getAccessGuideMarkup(preview)}
 
+            <div class="user-access-preview__launch">
+                <div>
+                    <strong>${this.escapeHtml(this.translate('userManagement.preview.interactive.title', 'Explore their workspace'))}</strong>
+                    <p>${this.escapeHtml(this.translate('userManagement.preview.interactive.description', 'Open the real apps with this user’s permissions. You can navigate normally, but changes are blocked.'))}</p>
+                </div>
+                <button id="start-interactive-access-preview-btn" type="button">${this.escapeHtml(this.translate('userManagement.preview.interactive.openDashboard', 'Open interactive preview'))}</button>
+            </div>
+
             <p class="user-access-preview__note">${this.escapeHtml(this.translate('userManagement.preview.note', 'This is a read-only permission preview. It does not sign in as the colleague or change their access.'))}</p>
         `;
+
+        container.querySelectorAll('[data-preview-button-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.launchInteractivePreview(button.dataset.previewButtonId || '');
+            });
+        });
+        container.querySelector('#start-interactive-access-preview-btn')?.addEventListener('click', () => {
+            this.launchInteractivePreview();
+        });
+    }
+
+    launchInteractivePreview(buttonId = '') {
+        if (!this.previewState) return;
+        const { user, linkedEmployee } = this.previewState;
+        this.closeAccessPreview({ restoreFocus: false });
+        this.startInteractivePreview({ user, linkedEmployee, buttonId });
     }
 
     getPreviewDashboardMarkup(preview) {
@@ -1278,9 +1304,9 @@ export class UserManagementController {
         }
 
         return `
-            <div class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(sourceCard.id)}" aria-disabled="true">
+            <button type="button" class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(sourceCard.id)}">
                 ${clone.innerHTML}
-            </div>
+            </button>
         `;
     }
 
@@ -1329,13 +1355,13 @@ export class UserManagementController {
         };
 
         return `
-            <div class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(buttonId)}" aria-disabled="true">
+            <button type="button" class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(buttonId)}">
                 <span class="user-access-preview__fallback-icon" aria-hidden="true">${this.escapeHtml(fallback.icon)}</span>
                 <div class="card-body">
                     <h3>${this.escapeHtml(fallback.label)}</h3>
                     <p>${this.escapeHtml(fallback.description)}</p>
                 </div>
-            </div>
+            </button>
         `;
     }
 
