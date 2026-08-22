@@ -490,7 +490,8 @@ export class LaundryLogManager {
     }
 
     getCleanerPendingRecords() {
-        return this.getReturnRecords()
+        return this.getFilteredRecords("all")
+            .filter((record) => record.status === "pending" || record.status === "mismatch")
             .sort((left, right) => String(left.deliveryDate || "").localeCompare(String(right.deliveryDate || "")));
     }
 

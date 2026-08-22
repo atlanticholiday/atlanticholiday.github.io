@@ -635,8 +635,8 @@ input:not([type="radio"]):focus, select:focus, textarea:focus {
     box-shadow: var(--shadow-glass);
 }
 
-/* Apple-style legend items */
-.flex.items-center.gap-2 {
+/* Apple-style schedule legend items */
+.schedule-legend-item.flex.items-center.gap-2 {
     padding: 8px 12px;
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: var(--blur-glass);
@@ -647,7 +647,7 @@ input:not([type="radio"]):focus, select:focus, textarea:focus {
     cursor: pointer;
 }
 
-.flex.items-center.gap-2:hover {
+.schedule-legend-item.flex.items-center.gap-2:hover {
     background: rgba(255, 255, 255, 0.9);
     transform: translateY(-1px);
 }

@@ -116,6 +116,55 @@ describe("LaundryLogManager", () => {
     window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
   });
 
+  test("keeps returns with missing items visible to cleaners", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+
+    const manager = new LaundryLogManager(null, {
+      getDataManager: () => createCleanerDataManager()
+    });
+    manager.records = [
+      {
+        id: "pending-return",
+        ...createLaundryLogRecord({
+          propertyName: "Atlantic View",
+          deliveryDate: "2026-04-10",
+          items: { bathTowel: { delivered: 4, received: 0 } }
+        }, { now: () => "2026-04-10T10:00:00.000Z" })
+      },
+      {
+        id: "short-return",
+        ...createLaundryLogRecord({
+          propertyName: "Calas Loft",
+          deliveryDate: "2026-04-11",
+          receivedDate: "2026-04-12",
+          items: { bathTowel: { delivered: 4, received: 3 } }
+        }, { now: () => "2026-04-12T10:00:00.000Z" })
+      },
+      {
+        id: "completed-return",
+        ...createLaundryLogRecord({
+          propertyName: "Lido Vista",
+          deliveryDate: "2026-04-12",
+          receivedDate: "2026-04-13",
+          items: { bathTowel: { delivered: 4, received: 4 } }
+        }, { now: () => "2026-04-13T10:00:00.000Z" })
+      }
+    ];
+
+    manager.ensureDomScaffold();
+    manager.activeWorkspace = "returns";
+    manager.render();
+
+    const returns = manager.getCleanerPendingRecords();
+    assert.deepEqual(returns.map((record) => record.id), ["pending-return", "short-return"]);
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Atlantic View");
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Calas Loft");
+    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Lido Vista"));
+  });
+
   test("adds the signed-in cleaner to sent and received audit metadata", () => {
     const dataManager = createCleanerDataManager();
     const manager = new LaundryLogManager(null, {
