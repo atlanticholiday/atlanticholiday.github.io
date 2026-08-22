@@ -68,7 +68,7 @@ describe("LaundryLogManager", () => {
     window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
   });
 
-  test("lets cleaners reuse the previous property load and review only return counts", () => {
+  test("lets cleaners enter received quantities and add linen that was not sent", () => {
     resetDom(`
       <div id="landing-page"></div>
       <button id="go-to-welcome-packs-btn"></button>
@@ -107,12 +107,32 @@ describe("LaundryLogManager", () => {
     assert.ok(!document.querySelector("[data-laundry-item-field='received']"));
 
     manager.switchWorkspace("returns");
+    assert.equal(document.querySelectorAll("[data-laundry-action='review-return']").length, 1);
+    assert.equal(document.querySelectorAll("[data-laundry-action='complete-return']").length, 0);
     document.querySelector("[data-laundry-action='review-return'][data-record-id='handoff-1']").click();
 
     assert.ok(document.getElementById("laundry-cleaner-return-editor"));
     assert.ok(!document.querySelector("#laundry-cleaner-return-editor [data-laundry-item-field='delivered']"));
-    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='received']").value, "4");
-    assert.equal(document.querySelector("[data-laundry-item-key='pillowCases'][data-laundry-item-field='received']").value, "2");
+    assert.equal(document.querySelector("[data-laundry-item-key='bathTowel'][data-laundry-item-field='received']").value, "0");
+    assert.equal(document.querySelector("[data-laundry-item-key='pillowCases'][data-laundry-item-field='received']").value, "0");
+    assert.equal(document.querySelectorAll("#laundry-cleaner-return-editor [data-laundry-action='save']").length, 1);
+
+    document.querySelector("[data-laundry-action='toggle-extra-picker']").click();
+    document.getElementById("laundry-cleaner-extra-item-select").value = "singleFittedSheet";
+    document.querySelector("[data-laundry-action='add-return-extra-item']").click();
+
+    const extraStandardItem = document.querySelector("[data-laundry-item-key='singleFittedSheet'][data-laundry-item-field='received']");
+    assert.equal(extraStandardItem.value, "1");
+    assert.equal(manager.draft.items.singleFittedSheet.delivered, 0);
+    assert.equal(manager.draft.items.singleFittedSheet.received, 1);
+
+    document.getElementById("laundry-cleaner-extra-custom-name").value = "Beach blanket";
+    document.querySelector("[data-laundry-action='add-return-custom-extra']").click();
+
+    assert.equal(manager.draft.customItems.at(-1).name, "Beach blanket");
+    assert.equal(manager.draft.customItems.at(-1).delivered, 0);
+    assert.equal(manager.draft.customItems.at(-1).received, 1);
+    assert.includes(document.getElementById("laundry-cleaner-return-editor").textContent, "Beach blanket");
     window.localStorage.removeItem("horario:laundry-log-draft:cleaner-1");
   });
 

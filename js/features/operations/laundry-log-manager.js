@@ -103,8 +103,8 @@ export class LaundryLogManager {
         this.cleanerExpandedSections = new Set(["doubleBed", "towels"]);
         this.cleanerShowAllSections = new Set();
         this.cleanerCompactPreset = false;
+        this.cleanerExtraPickerOpen = false;
         this.cleanerNotice = "";
-        this.lastCompletedReturn = null;
         this.isSaving = false;
         this.draft = this.createDefaultDraft();
         this.statusMessage = "";
@@ -606,7 +606,7 @@ export class LaundryLogManager {
 
     setSaveControlsBusy(isBusy) {
         this.isSaving = Boolean(isBusy);
-        document.querySelectorAll("[data-laundry-action='save'], [data-laundry-action='complete-return'], [data-laundry-action='undo-return']")
+        document.querySelectorAll("[data-laundry-action='save']")
             .forEach((button) => {
                 button.disabled = this.isSaving;
                 button.classList.toggle("opacity-60", this.isSaving);
@@ -753,7 +753,6 @@ export class LaundryLogManager {
         const original = this.editingRecordId
             ? this.records.find((record) => record.id === this.editingRecordId) || null
             : null;
-        this.lastCompletedReturn = null;
         const isReturnUpdate = Boolean(this.returnEditingRecordId)
             || (!original?.receivedAt && summary.receivedStarted);
         const payload = this.buildAuditedPayload(draft, original, {
@@ -773,7 +772,13 @@ export class LaundryLogManager {
                 this.records = this.records.map((record) => record.id === this.editingRecordId
                     ? { ...record, ...payload }
                     : record);
-                this.setStatus(this.tr("messages.updated"), "success", savedDetails);
+                this.setStatus(
+                    isReturnUpdate && this.isCleanerView()
+                        ? this.tr("cleaner.returnSaved")
+                        : this.tr("messages.updated"),
+                    "success",
+                    savedDetails
+                );
             } else {
                 const savedRecord = await addDoc(recordsRef, payload);
                 this.records = this.records.some((record) => record.id === savedRecord.id)
@@ -849,7 +854,6 @@ export class LaundryLogManager {
         this.returnEditingRecordId = null;
         this.entryFormExpanded = true;
         this.cleanerNotice = "";
-        this.lastCompletedReturn = null;
         this.cleanerCompactPreset = false;
         this.cleanerShowAllSections.clear();
         this.draft = this.createDefaultDraft({
@@ -882,7 +886,6 @@ export class LaundryLogManager {
         this.returnEditingRecordId = null;
         this.entryFormExpanded = false;
         this.cleanerNotice = "";
-        this.lastCompletedReturn = null;
         this.cleanerCompactPreset = false;
         this.cleanerShowAllSections.clear();
         this.draft = this.createDefaultDraft();
@@ -970,18 +973,11 @@ export class LaundryLogManager {
             return;
         }
         const draft = this.createDraftFromRecord(target);
-        Object.values(draft.items).forEach((item) => {
-            item.received = item.delivered;
-        });
-        draft.customItems.forEach((item) => {
-            item.received = item.delivered;
-        });
-        draft.receivedDate = getTodayIsoDate();
 
         this.activeWorkspace = "returns";
         this.returnEditingRecordId = recordId;
         this.editingRecordId = recordId;
-        this.lastCompletedReturn = null;
+        this.cleanerExtraPickerOpen = false;
         this.draft = draft;
         this.cleanerExpandedSections = new Set(
             summarizeLaundryLogRecord(draft).sectionSummaries
@@ -996,6 +992,7 @@ export class LaundryLogManager {
     closeCleanerReturnReview() {
         this.editingRecordId = null;
         this.returnEditingRecordId = null;
+        this.cleanerExtraPickerOpen = false;
         this.draft = this.createDefaultDraft();
         this.cleanerDraftRestored = false;
         this.ensureCleanerDraftRestored();
@@ -1003,82 +1000,51 @@ export class LaundryLogManager {
         this.render();
     }
 
-    async completeCleanerReturn(recordId) {
-        if (this.isSaving) {
-            return;
-        }
-        const target = this.records.find((record) => record.id === recordId);
-        if (!target) {
-            return;
-        }
-
-        const draft = this.createDraftFromRecord(target);
-        Object.values(draft.items).forEach((item) => {
-            item.received = item.delivered;
-        });
-        draft.customItems.forEach((item) => {
-            item.received = item.delivered;
-        });
-        draft.receivedDate = getTodayIsoDate();
-        const payload = this.buildAuditedPayload(draft, target, { markReceived: true });
-        this.lastCompletedReturn = null;
-
-        try {
-            this.setSaveControlsBusy(true);
-            const recordsRef = this.getCollectionRef();
-            if (!recordsRef) {
-                throw new Error("Firestore is not available.");
-            }
-            await updateDoc(doc(recordsRef, recordId), payload);
-            this.records = this.records.map((record) => record.id === recordId
-                ? { ...record, ...payload }
-                : record);
-            this.lastCompletedReturn = {
-                recordId,
-                original: target
-            };
-            this.setStatus(this.tr("cleaner.returnSaved"), "success");
-            this.render();
-            this.scrollToSelector("#laundry-log-status-message");
-        } catch (error) {
-            console.error("[Laundry Log] failed to complete return:", error);
-            this.setStatus(this.tr("messages.saveFailed"), "danger");
-            this.render();
-            this.scrollToSelector("#laundry-log-status-message");
-        } finally {
-            this.setSaveControlsBusy(false);
+    toggleCleanerExtraPicker() {
+        this.cleanerExtraPickerOpen = !this.cleanerExtraPickerOpen;
+        this.render();
+        if (this.cleanerExtraPickerOpen) {
+            this.scrollToSelector("#laundry-cleaner-extra-picker");
         }
     }
 
-    async undoCleanerReturn() {
-        if (this.isSaving || !this.lastCompletedReturn) {
+    addCleanerReturnExtraItem() {
+        const itemKey = document.getElementById("laundry-cleaner-extra-item-select")?.value || "";
+        const group = LAUNDRY_LOG_GROUPS.find((section) => section.items.some((item) => item.key === itemKey));
+        if (!itemKey || !group) {
             return;
         }
-        const { recordId, original } = this.lastCompletedReturn;
-        const draft = this.createDraftFromRecord(original);
-        const payload = this.buildAuditedPayload(draft, original);
-
-        try {
-            this.setSaveControlsBusy(true);
-            const recordsRef = this.getCollectionRef();
-            if (!recordsRef) {
-                throw new Error("Firestore is not available.");
-            }
-            await updateDoc(doc(recordsRef, recordId), payload);
-            this.records = this.records.map((record) => record.id === recordId
-                ? { ...record, ...payload }
-                : record);
-            this.lastCompletedReturn = null;
-            this.setStatus(this.tr("cleaner.returnReopened"), "info");
-            this.render();
-            this.scrollToSelector("#laundry-log-status-message");
-        } catch (error) {
-            console.error("[Laundry Log] failed to undo completed return:", error);
-            this.setStatus(this.tr("messages.saveFailed"), "danger");
-            this.render();
-        } finally {
-            this.setSaveControlsBusy(false);
+        const draft = this.readDraftFromDom();
+        if (!draft.items?.[itemKey]) {
+            return;
         }
+        draft.items[itemKey].received = Math.max(1, Number(draft.items[itemKey].received || 0));
+        this.draft = draft;
+        this.cleanerExpandedSections.add(group.key);
+        this.persistCleanerDraft();
+        this.render();
+        this.scrollToSelector(`[data-laundry-item-key='${itemKey}'][data-laundry-item-field='received']`);
+    }
+
+    addCleanerReturnCustomExtraItem() {
+        const input = document.getElementById("laundry-cleaner-extra-custom-name");
+        const name = normalizeLabel(input?.value);
+        if (!name) {
+            input?.focus?.();
+            return;
+        }
+        const draft = this.readDraftFromDom();
+        const existingItem = draft.customItems.find((item) => normalizeKey(item.name) === normalizeKey(name));
+        if (existingItem) {
+            existingItem.received = Math.max(1, Number(existingItem.received || 0) + 1);
+        } else {
+            draft.customItems.push({ name, delivered: 0, received: 1 });
+        }
+        this.draft = draft;
+        this.cleanerExpandedSections.add("other");
+        this.persistCleanerDraft();
+        this.render();
+        this.scrollToSelector("[data-laundry-cleaner-section='other']");
     }
 
     async deleteRecord(recordId) {
@@ -1271,8 +1237,9 @@ export class LaundryLogManager {
         if (action === "show-section-items" && sectionKey) return void this.showCleanerSectionItems(sectionKey);
         if (action === "adjust-count" && itemKey && field && Number.isFinite(delta)) return void this.adjustCleanerItemCount(itemKey, field, delta);
         if (action === "adjust-custom-count" && Number.isInteger(customIndex) && field && Number.isFinite(delta)) return void this.adjustCleanerCustomCount(customIndex, field, delta);
-        if (action === "complete-return" && recordId) return void this.completeCleanerReturn(recordId);
-        if (action === "undo-return") return void this.undoCleanerReturn();
+        if (action === "toggle-extra-picker") return void this.toggleCleanerExtraPicker();
+        if (action === "add-return-extra-item") return void this.addCleanerReturnExtraItem();
+        if (action === "add-return-custom-extra") return void this.addCleanerReturnCustomExtraItem();
         if (action === "close-return-review") return void this.closeCleanerReturnReview();
         if (action === "copy-delivered") return void this.copyDeliveredToReceived();
         if (action === "received-today") return void this.setReceivedDateToToday();
@@ -1372,7 +1339,6 @@ export class LaundryLogManager {
                         ${statusIcon(this.statusTone)}
                     </span>
                     <span class="min-w-0 flex-1">${escapeHtml(this.statusMessage)}</span>
-                    ${this.lastCompletedReturn ? `<button type="button" data-laundry-action="undo-return" class="min-h-10 shrink-0 rounded-full border border-current/20 bg-white/80 px-4 py-2 text-sm font-semibold transition hover:bg-white">${escapeHtml(this.tr("cleaner.undo"))}</button>` : ""}
                 </div>
             </section>
         `;
@@ -1544,7 +1510,8 @@ export class LaundryLogManager {
     renderCleanerSection(section, sectionSummary, mode = "send") {
         const field = mode === "return" ? "received" : "delivered";
         const allRows = section.items.filter((item) => {
-            return mode !== "return" || Number(this.draft.items?.[item.key]?.delivered || 0) > 0;
+            const counts = this.draft.items?.[item.key] || { delivered: 0, received: 0 };
+            return mode !== "return" || Number(counts.delivered || 0) > 0 || Number(counts.received || 0) > 0;
         });
         const compactPreset = mode === "send"
             && this.cleanerCompactPreset
@@ -1556,7 +1523,7 @@ export class LaundryLogManager {
         const customItems = section.key === "other"
             ? this.draft.customItems
                 .map((item, index) => ({ item, index }))
-                .filter((entry) => mode !== "return" || entry.item.delivered > 0)
+                .filter((entry) => mode !== "return" || entry.item.delivered > 0 || entry.item.received > 0)
             : [];
         if (mode === "return" && rows.length === 0 && customItems.length === 0) {
             return "";
@@ -1599,6 +1566,53 @@ export class LaundryLogManager {
                     ` : ""}
                 </div>
             </details>
+        `;
+    }
+
+    renderCleanerExtraReturnPicker() {
+        const availableGroups = LAUNDRY_LOG_GROUPS.map((section) => ({
+            ...section,
+            items: section.items.filter((item) => {
+                const counts = this.draft.items?.[item.key] || { delivered: 0, received: 0 };
+                return Number(counts.delivered || 0) === 0 && Number(counts.received || 0) === 0;
+            })
+        })).filter((section) => section.items.length > 0);
+
+        return `
+            <section id="laundry-cleaner-extra-picker" class="border-b border-slate-200 py-4">
+                <button type="button" data-laundry-action="toggle-extra-picker" aria-label="${escapeHtml(this.tr("cleaner.addExtraLinen"))}" aria-expanded="${this.cleanerExtraPickerOpen ? "true" : "false"}" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-rose-300 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
+                    <span class="text-xl leading-none">+</span>
+                    <span>${escapeHtml(this.tr("cleaner.addExtraLinen"))}</span>
+                </button>
+                ${this.cleanerExtraPickerOpen ? `
+                    <div class="pt-4">
+                        <p class="text-sm leading-6 text-slate-600">${escapeHtml(this.tr("cleaner.extraLinenHint"))}</p>
+                        ${availableGroups.length ? `
+                            <div class="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                <label>
+                                    <span class="sr-only">${escapeHtml(this.tr("cleaner.chooseExtraItem"))}</span>
+                                    <select id="laundry-cleaner-extra-item-select" class="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100">
+                                        <option value="">${escapeHtml(this.tr("cleaner.chooseExtraItem"))}</option>
+                                        ${availableGroups.map((section) => `
+                                            <optgroup label="${escapeHtml(this.tr(section.labelKey))}">
+                                                ${section.items.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(this.tr(item.labelKey))}</option>`).join("")}
+                                            </optgroup>
+                                        `).join("")}
+                                    </select>
+                                </label>
+                                <button type="button" data-laundry-action="add-return-extra-item" class="min-h-12 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition active:scale-[0.99] hover:bg-slate-800">${escapeHtml(this.tr("cleaner.addExtraItem"))}</button>
+                            </div>
+                        ` : `<p class="mt-3 text-sm text-slate-500">${escapeHtml(this.tr("cleaner.allStandardItemsAdded"))}</p>`}
+                        <div class="mt-4 border-t border-slate-200 pt-4">
+                            <label class="text-sm font-semibold text-slate-700" for="laundry-cleaner-extra-custom-name">${escapeHtml(this.tr("cleaner.otherExtraItem"))}</label>
+                            <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                <input id="laundry-cleaner-extra-custom-name" type="text" placeholder="${escapeHtml(this.tr("cleaner.otherExtraPlaceholder"))}" class="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none placeholder:text-slate-400 focus:border-rose-300 focus:ring-2 focus:ring-rose-100">
+                                <button type="button" data-laundry-action="add-return-custom-extra" class="min-h-12 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-700">${escapeHtml(this.tr("cleaner.addExtraItem"))}</button>
+                            </div>
+                        </div>
+                    </div>
+                ` : ""}
+            </section>
         `;
     }
 
@@ -1696,12 +1710,11 @@ export class LaundryLogManager {
                         : this.tr("cleaner.pendingDays", { count: pendingDays }))}</span>
                 </div>
                 <div class="mt-3 text-sm font-medium text-slate-700">${escapeHtml(this.tr("cleaner.unitsSent", { count: record.deliveredUnits }))}</div>
-                <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                    <button type="button" data-laundry-action="complete-return" data-record-id="${escapeHtml(record.id)}" class="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
-                        <span>${escapeHtml(this.tr("cleaner.everythingReturned"))}</span>
+                <div class="mt-4">
+                    <button type="button" data-laundry-action="review-return" data-record-id="${escapeHtml(record.id)}" class="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl bg-rose-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700">
+                        <span>${escapeHtml(this.tr("cleaner.checkReceivedLinen"))}</span>
+                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                     </button>
-                    <button type="button" data-laundry-action="review-return" data-record-id="${escapeHtml(record.id)}" class="min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-700">${escapeHtml(this.tr("cleaner.somethingMissing"))}</button>
                 </div>
             </article>
         `;
@@ -1737,13 +1750,12 @@ export class LaundryLogManager {
                         const sectionSummary = summary.sectionSummaries.find((entry) => entry.key === section.key);
                         return this.renderCleanerSection(section, sectionSummary, "return");
                     }).join("")}
+                    ${this.renderCleanerExtraReturnPicker()}
                 </div>
                 <div class="mt-5">${this.renderReturnMismatchWarning(summary)}</div>
                 <div class="laundry-mobile-action-bar border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur sm:mt-6 sm:rounded-2xl sm:border">
                     <div class="mx-auto max-w-2xl">
-                        <button type="button" data-laundry-action="save" class="min-h-12 w-full rounded-xl bg-rose-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700">${escapeHtml(summary.differenceUnits
-                            ? this.tr("cleaner.saveDifference")
-                            : this.tr("cleaner.confirmReturn"))}</button>
+                        <button type="button" data-laundry-action="save" class="min-h-12 w-full rounded-xl bg-rose-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition active:scale-[0.99] hover:bg-rose-700">${escapeHtml(this.tr("cleaner.saveReceivedLinen"))}</button>
                     </div>
                 </div>
             </section>
