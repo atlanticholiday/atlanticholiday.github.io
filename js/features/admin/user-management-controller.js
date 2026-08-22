@@ -1005,6 +1005,8 @@ export class UserManagementController {
 
     async presentPasswordResetResult(email, result = {}) {
         const resetLink = typeof result?.resetLink === 'string' ? result.resetLink : '';
+        const emailRequested = result?.delivery === 'email';
+        const emailFailed = result?.delivery === 'failed';
 
         if (resetLink) {
             let copied = false;
@@ -1018,9 +1020,15 @@ export class UserManagementController {
                 }
             }
 
-            const message = copied
-                ? `Password reset link created for ${email}. It was copied to the clipboard. Send this link to the user so they can choose a new password.`
-                : `Password reset link created for ${email}. Copy this link and send it to the user so they can choose a new password.`;
+            const deliveryMessage = emailRequested
+                ? `Firebase accepted a password reset email request for ${email}.`
+                : emailFailed
+                ? `Firebase could not send the password reset email for ${email}.`
+                : `Password reset link created for ${email}.`;
+            const linkMessage = copied
+                ? 'A backup reset link was copied to the clipboard.'
+                : 'Use the backup reset link below if the email does not arrive.';
+            const message = `${deliveryMessage} ${linkMessage}`;
 
             if (typeof this.window.prompt === 'function') {
                 this.window.prompt(message, resetLink);
@@ -1031,9 +1039,12 @@ export class UserManagementController {
             return;
         }
 
+        const requestMessage = emailRequested
+            ? `Firebase accepted a password reset email request for ${email}. `
+            : `Password reset requested for ${email}. `;
         this.window.alert(
-            `Password reset requested for ${email}. `
-            + `If this address is a Firebase email/password login and delivery is working, the email should arrive soon. `
+            requestMessage
+            + `If the address is a Firebase email/password login, the email should arrive soon. `
             + `If nothing arrives, check spam/quarantine and verify the account plus email templates in Firebase Authentication.`
         );
     }

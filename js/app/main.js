@@ -10,7 +10,7 @@ import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
 import { InteractiveAccessPreviewSession } from '../features/admin/interactive-access-preview-session.js';
-import { isCallableUnavailableError, shouldFallbackToClientPasswordReset } from '../features/admin/firebase-function-utils.js';
+import { isCallableUnavailableError, requestFirebasePasswordReset } from '../features/admin/firebase-function-utils.js';
 import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
@@ -608,18 +608,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return createAuthUserWithoutCallable(email, password);
                 }
             },
-            sendPasswordReset: async (email) => {
-                try {
+            sendPasswordReset: (email) => requestFirebasePasswordReset({
+                email,
+                createResetLink: async (targetEmail) => {
                     const createPasswordResetLink = httpsCallable(functionsInstance, 'createPasswordResetLink');
-                    const result = await createPasswordResetLink({ email });
+                    const result = await createPasswordResetLink({ email: targetEmail });
                     return result.data || {};
-                } catch (error) {
-                    if (!shouldFallbackToClientPasswordReset(error)) throw error;
-                    console.warn('Admin reset-link generation failed; requesting a standard password reset email instead.', error);
-                    await sendPasswordResetEmail(auth, email);
-                    return { delivery: 'email' };
-                }
-            },
+                },
+                sendResetEmail: (targetEmail) => sendPasswordResetEmail(auth, targetEmail)
+            }),
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
             ensureEmployeeForAccess: (payload) => ensureEmployeeForAccess(payload),
             startInteractivePreview: (payload) => interactiveAccessPreviewSession.start(payload)

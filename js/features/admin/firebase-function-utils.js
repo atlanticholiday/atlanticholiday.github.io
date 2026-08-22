@@ -26,3 +26,37 @@ export function shouldFallbackToClientPasswordReset(error) {
     return code === 'functions/internal'
         || code === 'functions/failed-precondition';
 }
+
+export async function requestFirebasePasswordReset({
+    email,
+    createResetLink,
+    sendResetEmail
+}) {
+    let resetResult = {};
+
+    try {
+        resetResult = await createResetLink(email) || {};
+    } catch (error) {
+        if (!shouldFallbackToClientPasswordReset(error)) {
+            throw error;
+        }
+    }
+
+    try {
+        await sendResetEmail(email);
+        return {
+            ...resetResult,
+            delivery: 'email'
+        };
+    } catch (error) {
+        if (!resetResult.resetLink) {
+            throw error;
+        }
+
+        return {
+            ...resetResult,
+            delivery: 'failed',
+            deliveryError: String(error?.code || error?.message || 'unknown')
+        };
+    }
+}

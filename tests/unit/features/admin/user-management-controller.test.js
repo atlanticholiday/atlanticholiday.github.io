@@ -683,6 +683,7 @@ describe("UserManagementController", () => {
       createAuthUser: async () => {},
       sendPasswordReset: async (email) => {
         resetRequests.push(email);
+        return { delivery: "email" };
       },
       getEmployees: () => [],
       windowRef: {
@@ -703,7 +704,7 @@ describe("UserManagementController", () => {
 
     assert.deepEqual(resetRequests, ["ana@example.com"]);
     assert.equal(alerts.length, 1);
-    assert.includes(alerts[0], "Password reset requested for ana@example.com.");
+    assert.includes(alerts[0], "Firebase accepted a password reset email request for ana@example.com.");
     assert.includes(alerts[0], "If nothing arrives, check spam/quarantine");
     assert.ok(!alerts[0].includes("Password reset email sent"));
   });
@@ -739,7 +740,10 @@ describe("UserManagementController", () => {
       createAuthUser: async () => {},
       sendPasswordReset: async (email) => {
         resetRequests.push(email);
-        return { resetLink: "https://example.com/reset?code=abc123" };
+        return {
+          resetLink: "https://example.com/reset?code=abc123",
+          delivery: "email"
+        };
       },
       getEmployees: () => [],
       windowRef: {
@@ -769,8 +773,8 @@ describe("UserManagementController", () => {
     assert.deepEqual(resetRequests, ["ana@example.com"]);
     assert.deepEqual(copiedLinks, ["https://example.com/reset?code=abc123"]);
     assert.equal(prompts.length, 1);
-    assert.includes(prompts[0].message, "Password reset link created for ana@example.com");
-    assert.includes(prompts[0].message, "copied to the clipboard");
+    assert.includes(prompts[0].message, "Firebase accepted a password reset email request for ana@example.com");
+    assert.includes(prompts[0].message, "backup reset link was copied to the clipboard");
     assert.equal(prompts[0].value, "https://example.com/reset?code=abc123");
   });
 });
