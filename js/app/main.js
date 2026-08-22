@@ -10,7 +10,7 @@ import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
 import { InteractiveAccessPreviewSession } from '../features/admin/interactive-access-preview-session.js';
-import { isCallableUnavailableError } from '../features/admin/firebase-function-utils.js';
+import { isCallableUnavailableError, shouldFallbackToClientPasswordReset } from '../features/admin/firebase-function-utils.js';
 import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
@@ -614,9 +614,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const result = await createPasswordResetLink({ email });
                     return result.data || {};
                 } catch (error) {
-                    if (!isCallableUnavailableError(error)) throw error;
+                    if (!shouldFallbackToClientPasswordReset(error)) throw error;
+                    console.warn('Admin reset-link generation failed; requesting a standard password reset email instead.', error);
                     await sendPasswordResetEmail(auth, email);
-                    return {};
+                    return { delivery: 'email' };
                 }
             },
             getEmployees: () => dataManager?.getActiveEmployees?.() || [],
