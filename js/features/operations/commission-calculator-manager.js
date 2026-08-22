@@ -72,6 +72,7 @@ export class CommissionCalculatorManager {
     if (landingButton && parent) {
       const sibling = parent.querySelector('.dashboard-card');
       landingButton.className = sibling?.className || 'dashboard-card';
+      landingButton.classList.add('hidden');
 
       if (landingButton.parentElement !== parent) {
         parent.appendChild(landingButton);

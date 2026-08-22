@@ -257,6 +257,31 @@ describe("UserManagementController", () => {
 
   test("previews the effective workspace and inside-app scope for a colleague", async () => {
     createFixture();
+    document.getElementById("fixture").insertAdjacentHTML("beforeend", `
+      <main id="landing-page">
+        <section class="landing-category">
+          <h3>Team &amp; Scheduling</h3>
+          <div class="dashboard-grid">
+            <button id="go-to-time-clock-btn" class="dashboard-card"><div class="card-body"><h3>Time Clock</h3><p>Clock in and out.</p></div></button>
+            <button id="go-to-schedule-btn" class="dashboard-card"><div class="card-body"><h3 id="go-to-schedule-title">Work Schedule</h3><p id="go-to-schedule-description">Manager schedule.</p></div></button>
+          </div>
+        </section>
+        <section class="landing-category">
+          <h3>Reservations &amp; Guests</h3>
+          <div class="dashboard-grid">
+            <button id="go-to-reservations-btn" class="dashboard-card"><div class="card-body"><h3>Weekly Reservations</h3><p>Weekly guest work.</p></div></button>
+            <button id="go-to-heated-pools-btn" class="dashboard-card"><div class="card-body"><h3>Heated Pools</h3><p>Pool heating tasks.</p></div></button>
+          </div>
+        </section>
+        <section class="landing-category">
+          <h3>Services &amp; Logistics</h3>
+          <div class="dashboard-grid">
+            <button id="go-to-laundry-log-btn" class="dashboard-card"><div class="card-body"><h3>Laundry Log</h3><p>Linen by property.</p></div></button>
+          </div>
+        </section>
+        <div id="other-tools-grid"></div>
+      </main>
+    `);
 
     const controller = new UserManagementController({
       accessManager: {
@@ -289,6 +314,7 @@ describe("UserManagementController", () => {
 
     await controller.refreshUserList();
     assert.includes(document.getElementById("user-inspector-content").textContent, "Heated Pools visible automatically");
+    assert.includes(document.getElementById("inspector-preview-btn").textContent, "View as user");
     document.getElementById("inspector-preview-btn").click();
 
     const modal = document.getElementById("access-preview-modal");
@@ -296,6 +322,8 @@ describe("UserManagementController", () => {
     assert.equal(modal.classList.contains("hidden"), false);
     assert.includes(previewText, "Ana");
     assert.includes(previewText, "Employee + selected apps");
+    assert.includes(previewText, "Their landing screen");
+    assert.includes(previewText, "Exact navigation preview");
     assert.includes(previewText, "Read-only monthly schedule");
     assert.includes(previewText, "Laundry Log");
     assert.includes(previewText, "Colleague workflow");
@@ -305,6 +333,17 @@ describe("UserManagementController", () => {
     assert.includes(previewText, "Manager / Supervisor");
     assert.includes(previewText, "No User Management");
     assert.includes(previewText, "restricted colleague views");
+    assert.equal(document.querySelectorAll(".user-access-preview__dashboard-card").length, 5);
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-time-clock-btn"]'));
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-schedule-btn"]'));
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-laundry-log-btn"]'));
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-reservations-btn"]'));
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-heated-pools-btn"]'));
+    assert.equal(document.querySelector('[data-preview-button-id="go-to-user-management-btn"]'), null);
+    assert.includes(
+      document.querySelector('[data-preview-button-id="go-to-schedule-btn"]').textContent,
+      "read-only mode"
+    );
     assert.equal(document.querySelectorAll(".user-access-preview__guide-row").length, 5);
     assert.includes(
       document.querySelector(".user-access-preview__guide-row-current").textContent,
@@ -318,6 +357,29 @@ describe("UserManagementController", () => {
     assert.equal(laundryDetails.open, false);
     laundryDetails.querySelector("summary").click();
     assert.equal(laundryDetails.open, true);
+  });
+
+  test("shows when a shared-station user bypasses the launcher", () => {
+    createFixture();
+    const controller = new UserManagementController({
+      accessManager: {},
+      roleManager: {},
+      createAuthUser: async () => {},
+      sendPasswordReset: async () => {},
+      windowRef: { alert() {}, confirm() { return true; } }
+    });
+
+    controller.openAccessPreview({
+      email: "station@example.com",
+      roles: ["time-clock-station"],
+      allowedApps: ["laundryLog"]
+    });
+
+    const previewText = document.getElementById("access-preview-content").textContent;
+    assert.includes(previewText, "Opens directly in Time Clock");
+    assert.includes(previewText, "bypasses the app launcher");
+    assert.equal(document.querySelectorAll(".user-access-preview__dashboard-card").length, 0);
+    assert.equal(document.querySelector('[data-preview-button-id="go-to-laundry-log-btn"]'), null);
   });
 
   test("renders the access directory when employee-link synchronization is unavailable", async () => {

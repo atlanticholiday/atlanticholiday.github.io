@@ -4,6 +4,7 @@ import { AppSwitcher } from './app-switcher.js';
 const RECENT_PAGES_STORAGE_KEY = 'atlantic-holiday-recent-pages';
 const RECENT_PAGES_LIMIT = 10;
 const NON_RECENT_PAGES = new Set(['landing', 'login', 'setup']);
+const PRIVILEGED_ONLY_PAGES = new Set(['operations', 'visits', 'cleaningBills']);
 
 export class NavigationManager {
     constructor({ getDataManager = null, storage = window.localStorage } = {}) {
@@ -159,6 +160,10 @@ export class NavigationManager {
         }
 
         if (pageName === 'userManagement') {
+            return Boolean(dataManager.hasAdminRole?.());
+        }
+
+        if (PRIVILEGED_ONLY_PAGES.has(pageName)) {
             return Boolean(dataManager.hasPrivilegedRole?.());
         }
 
@@ -167,7 +172,7 @@ export class NavigationManager {
             return Boolean(dataManager.canAccessApp?.(appOption.key));
         }
 
-        return true;
+        return false;
     }
 
     showDefaultAuthorizedPage() {

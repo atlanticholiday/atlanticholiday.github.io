@@ -79,6 +79,11 @@ async function createAuthUserWithoutCallable(email, password) {
 
 // Initialize managers
 let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager;
+const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
+    'go-to-visits-btn',
+    'go-to-cleaning-bills-btn',
+    'go-to-commission-calculator-btn'
+]);
 
 function clearSensitiveBrowserState() {
     try {
@@ -260,6 +265,10 @@ function syncAccessModeUi() {
                 : limitedTimeClockMode;
             button.classList.toggle('hidden', shouldHide);
         }
+    });
+
+    PRIVILEGED_ONLY_LANDING_BUTTON_IDS.forEach((buttonId) => {
+        document.getElementById(buttonId)?.classList.toggle('hidden', !dataManager.hasPrivilegedRole?.());
     });
 
     cleaningAhManager?.syncAccessVisibility?.();

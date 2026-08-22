@@ -3,6 +3,46 @@ import { createStorageMock, resetDom } from "../../../test-utils.js";
 import { NavigationManager } from "../../../../js/features/scheduling/navigation-manager.js";
 
 describe("NavigationManager", () => {
+  test("blocks manager-only legacy pages for colleagues", () => {
+    const employeeDataManager = {
+      hasAdminRole() { return false; },
+      hasPrivilegedRole() { return false; },
+      canAccessWorkSchedule() { return true; },
+      canAccessApp(appKey) { return appKey === "laundryLog"; }
+    };
+    const employeeNavigation = new NavigationManager({
+      getDataManager: () => employeeDataManager,
+      storage: createStorageMock()
+    });
+
+    assert.equal(employeeNavigation.canOpenPage("visits"), false);
+    assert.equal(employeeNavigation.canOpenPage("cleaningBills"), false);
+    assert.equal(employeeNavigation.canOpenPage("userManagement"), false);
+    assert.equal(employeeNavigation.canOpenPage("laundryLog"), true);
+    assert.equal(employeeNavigation.canOpenPage("unknown"), false);
+
+    const managerNavigation = new NavigationManager({
+      getDataManager: () => ({
+        ...employeeDataManager,
+        hasPrivilegedRole() { return true; }
+      }),
+      storage: createStorageMock()
+    });
+    assert.equal(managerNavigation.canOpenPage("visits"), true);
+    assert.equal(managerNavigation.canOpenPage("cleaningBills"), true);
+    assert.equal(managerNavigation.canOpenPage("userManagement"), false);
+
+    const adminNavigation = new NavigationManager({
+      getDataManager: () => ({
+        ...employeeDataManager,
+        hasAdminRole() { return true; },
+        hasPrivilegedRole() { return true; }
+      }),
+      storage: createStorageMock()
+    });
+    assert.equal(adminNavigation.canOpenPage("userManagement"), true);
+  });
+
   test("restores recent app pages from local storage", () => {
     resetDom("");
     const storage = createStorageMock({

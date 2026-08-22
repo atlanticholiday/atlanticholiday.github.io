@@ -166,6 +166,7 @@ export class VisitsManager {
           card.className = sibling.className;
           // We'll keep our own HTML structure though for consistency
         }
+        card.classList.add('hidden');
 
         parent.appendChild(card);
         parent.closest('.landing-category')?.classList.remove('hidden');
@@ -176,7 +177,7 @@ export class VisitsManager {
         if (landing) {
           const fallback = document.createElement('button');
           fallback.id = 'go-to-visits-btn';
-          fallback.className = 'dashboard-card px-4 py-3 border rounded bg-white hover:shadow';
+          fallback.className = 'dashboard-card hidden px-4 py-3 border rounded bg-white hover:shadow';
           fallback.textContent = 'Visits';
           landing.appendChild(fallback);
         }

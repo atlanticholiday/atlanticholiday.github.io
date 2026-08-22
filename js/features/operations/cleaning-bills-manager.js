@@ -176,6 +176,7 @@ export class CleaningBillsManager {
         if (sibling) {
           card.className = sibling.className;
         }
+        card.classList.add('hidden');
 
         parent.appendChild(card);
         parent.closest('.landing-category')?.classList.remove('hidden');
@@ -185,7 +186,7 @@ export class CleaningBillsManager {
         if (landing) {
           const fallback = document.createElement('button');
           fallback.id = 'go-to-cleaning-bills-btn';
-          fallback.className = 'dashboard-card px-4 py-3 border rounded bg-white hover:shadow';
+          fallback.className = 'dashboard-card hidden px-4 py-3 border rounded bg-white hover:shadow';
           fallback.textContent = 'Cleaning Bills';
           landing.appendChild(fallback);
         }

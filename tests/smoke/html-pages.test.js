@@ -1,6 +1,25 @@
 import { describe, test, assert } from "../test-harness.js";
 
 describe("HTML smoke", () => {
+  test("hidden dashboard cards stay hidden after dashboard styles load", async () => {
+    const response = await fetch("../styles/main.css");
+    assert.ok(response.ok, "Failed to fetch dashboard styles");
+
+    const style = document.createElement("style");
+    style.textContent = `.hidden { display: none; }\n${await response.text()}`;
+    const card = document.createElement("button");
+    card.className = "dashboard-card hidden";
+    document.head.appendChild(style);
+    document.body.appendChild(card);
+
+    try {
+      assert.equal(getComputedStyle(card).display, "none", "Restricted dashboard cards must not be visible");
+    } finally {
+      card.remove();
+      style.remove();
+    }
+  });
+
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
       { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-vacation-center-btn", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page", "go-to-nuki-doors-btn", "nuki-doors-page", "nuki-doors-root"] },

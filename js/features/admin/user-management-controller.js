@@ -743,7 +743,7 @@ export class UserManagementController {
                     <small id="user-inspector-notice" aria-live="polite">${this.escapeHtml(this.inspectorNotice || '')}</small>
                 </div>
                 <div class="user-management-inspector-primary-actions">
-                    <button id="inspector-preview-btn" type="button" class="user-management-secondary-action">${this.escapeHtml(this.translate('userManagement.preview.button', 'Preview access'))}</button>
+                    <button id="inspector-preview-btn" type="button" class="user-management-secondary-action">${this.escapeHtml(this.translate('userManagement.preview.button', 'View as user'))}</button>
                     <button id="save-user-access-btn" type="button" class="user-management-primary-action" ${this.inspectorDraft.dirty ? '' : 'disabled'}>${this.escapeHtml(this.translate('userManagement.inspector.save', 'Save changes'))}</button>
                 </div>
             </div>
@@ -825,7 +825,7 @@ export class UserManagementController {
     createPreviewAccessButton(user, linkedEmployee = null) {
         const button = this.document.createElement('button');
         button.type = 'button';
-        button.textContent = this.translate('userManagement.preview.button', 'Preview Access');
+        button.textContent = this.translate('userManagement.preview.button', 'View as user');
         button.className = 'user-management-button user-management-button-preview';
         button.addEventListener('click', () => {
             this.openAccessPreview(user, linkedEmployee, button);
@@ -1118,6 +1118,7 @@ export class UserManagementController {
                 </details>
             `;
         }).join('');
+        const dashboardPreview = this.getPreviewDashboardMarkup(preview);
 
         container.innerHTML = `
             <div class="user-access-preview__identity">
@@ -1128,6 +1129,8 @@ export class UserManagementController {
                 </div>
                 <span class="user-access-preview__level">${this.escapeHtml(this.getPreviewLevelLabel(preview.accessLevel))}</span>
             </div>
+
+            ${dashboardPreview}
 
             <section class="user-access-preview__section">
                 <div class="user-access-preview__section-head">
@@ -1148,6 +1151,185 @@ export class UserManagementController {
             ${this.getAccessGuideMarkup(preview)}
 
             <p class="user-access-preview__note">${this.escapeHtml(this.translate('userManagement.preview.note', 'This is a read-only permission preview. It does not sign in as the colleague or change their access.'))}</p>
+        `;
+    }
+
+    getPreviewDashboardMarkup(preview) {
+        const visibleButtonIds = new Set();
+        if (preview.surfaces.timeClock) visibleButtonIds.add('go-to-time-clock-btn');
+        if (preview.surfaces.schedule) visibleButtonIds.add('go-to-schedule-btn');
+        if (preview.surfaces.userManagement) visibleButtonIds.add('go-to-user-management-btn');
+        if (preview.isPrivileged) {
+            ['go-to-visits-btn', 'go-to-cleaning-bills-btn', 'go-to-commission-calculator-btn']
+                .forEach((buttonId) => visibleButtonIds.add(buttonId));
+        }
+        preview.appKeys.forEach((appKey) => {
+            const appOption = getAppAccessOptions().find((option) => option.key === appKey);
+            if (appOption?.buttonId) visibleButtonIds.add(appOption.buttonId);
+        });
+
+        const opensDirectlyToTimeClock = preview.isStation || preview.accessLevel === 'employee';
+        let dashboardBody = '';
+
+        if (opensDirectlyToTimeClock) {
+            dashboardBody = `
+                <div class="user-access-preview__direct-destination">
+                    <span class="user-access-preview__direct-icon" aria-hidden="true">⏱</span>
+                    <div>
+                        <strong>${this.escapeHtml(this.translate('userManagement.preview.directTimeClockTitle', 'Opens directly in Time Clock'))}</strong>
+                        <p>${this.escapeHtml(this.translate('userManagement.preview.directTimeClockDescription', 'This profile bypasses the app launcher after sign-in.'))}</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            const categorySections = Array.from(this.document.querySelectorAll('#landing-page .landing-category'))
+                .map((section) => {
+                    const cardMarkup = Array.from(section.querySelectorAll('.dashboard-card'))
+                        .filter((card) => visibleButtonIds.has(card.id))
+                        .map((card) => this.createPreviewDashboardCardMarkup(card, preview))
+                        .join('');
+                    if (!cardMarkup) return '';
+
+                    const heading = section.querySelector('h3')?.textContent?.trim()
+                        || this.translate('landing.mainApps', 'Main Apps');
+                    return this.createPreviewDashboardCategoryMarkup(heading, cardMarkup);
+                })
+                .filter(Boolean);
+
+            const renderedButtonIds = new Set(
+                Array.from(this.document.querySelectorAll('#landing-page .landing-category .dashboard-card'))
+                    .filter((card) => visibleButtonIds.has(card.id))
+                    .map((card) => card.id)
+            );
+            const otherToolsMarkup = Array.from(this.document.querySelectorAll('#other-tools-grid .dashboard-card'))
+                .filter((card) => visibleButtonIds.has(card.id))
+                .map((card) => {
+                    renderedButtonIds.add(card.id);
+                    return this.createPreviewDashboardCardMarkup(card, preview);
+                })
+                .join('');
+            if (otherToolsMarkup) {
+                categorySections.push(this.createPreviewDashboardCategoryMarkup(
+                    this.translate('landing.otherTools', 'Other Tools'),
+                    otherToolsMarkup
+                ));
+            }
+
+            const fallbackCards = [...visibleButtonIds]
+                .filter((buttonId) => !renderedButtonIds.has(buttonId))
+                .map((buttonId) => this.createFallbackPreviewDashboardCardMarkup(buttonId, preview))
+                .join('');
+            if (fallbackCards) {
+                categorySections.push(this.createPreviewDashboardCategoryMarkup(
+                    this.translate('landing.mainApps', 'Main Apps'),
+                    fallbackCards
+                ));
+            }
+
+            dashboardBody = categorySections.join('') || `
+                <div class="user-access-preview__empty">${this.escapeHtml(this.translate('userManagement.preview.noLauncherApps', 'No launcher tools are visible for this account.'))}</div>
+            `;
+        }
+
+        return `
+            <section class="user-access-preview__section user-access-preview__dashboard-section">
+                <div class="user-access-preview__section-head">
+                    <h3 class="user-access-preview__section-title">${this.escapeHtml(this.translate('userManagement.preview.landingTitle', 'Their landing screen'))}</h3>
+                    <span class="user-access-preview__section-meta">${this.escapeHtml(this.translate('userManagement.preview.landingMeta', 'Exact navigation preview'))}</span>
+                </div>
+                <div class="user-access-preview__dashboard">
+                    <div class="user-access-preview__dashboard-bar">
+                        <span class="user-access-preview__dashboard-brand"><span aria-hidden="true"></span> Atlantic Holiday</span>
+                        <span>${this.escapeHtml(this.translate('userManagement.preview.readOnly', 'Read-only'))}</span>
+                    </div>
+                    <div class="user-access-preview__dashboard-body">${dashboardBody}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    createPreviewDashboardCategoryMarkup(heading, cardMarkup) {
+        return `
+            <section class="user-access-preview__dashboard-category">
+                <h4>${this.escapeHtml(heading)}</h4>
+                <div class="user-access-preview__dashboard-grid">${cardMarkup}</div>
+            </section>
+        `;
+    }
+
+    createPreviewDashboardCardMarkup(sourceCard, preview) {
+        const clone = sourceCard.cloneNode(true);
+        clone.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+        if (sourceCard.id === 'go-to-schedule-btn') {
+            const title = clone.querySelector('.card-body h3');
+            const description = clone.querySelector('.card-body p');
+            if (title) title.textContent = this.translate('apps.workSchedule', 'Work Schedule');
+            if (description) {
+                description.textContent = preview.surfaces.schedule === 'monthly-readonly'
+                    ? this.translate('timeClock.landing.scheduleDescription', 'Open the work schedule in read-only mode.')
+                    : this.translate('apps.workScheduleDesc', 'Plan staff schedules and holidays.');
+            }
+        }
+
+        return `
+            <div class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(sourceCard.id)}" aria-disabled="true">
+                ${clone.innerHTML}
+            </div>
+        `;
+    }
+
+    createFallbackPreviewDashboardCardMarkup(buttonId, preview) {
+        const coreCards = {
+            'go-to-time-clock-btn': {
+                label: this.translate('timeClock.cardTitle', 'Time Clock'),
+                description: this.translate('timeClock.cardDescription', 'Clock in, take breaks and clock out.'),
+                icon: 'TC'
+            },
+            'go-to-schedule-btn': {
+                label: this.translate('apps.workSchedule', 'Work Schedule'),
+                description: preview.surfaces.schedule === 'monthly-readonly'
+                    ? this.translate('timeClock.landing.scheduleDescription', 'Open the work schedule in read-only mode.')
+                    : this.translate('apps.workScheduleDesc', 'Plan staff schedules and holidays.'),
+                icon: 'WS'
+            },
+            'go-to-user-management-btn': {
+                label: this.translate('apps.userManagement', 'User Management'),
+                description: this.translate('apps.userManagementDesc', 'Access and roles.'),
+                icon: 'UM'
+            },
+            'go-to-visits-btn': {
+                label: this.translate('apps.visits', 'Visits'),
+                description: this.translate('apps.visitsDesc', 'Monthly visits.'),
+                icon: 'VI'
+            },
+            'go-to-cleaning-bills-btn': {
+                label: this.translate('apps.cleaningBills', 'Cleaning Bills'),
+                description: this.translate('apps.cleaningBillsDesc', 'Cleaning fees.'),
+                icon: 'CB'
+            },
+            'go-to-commission-calculator-btn': {
+                label: this.translate('apps.commissionCalculator', 'Commission Calculator'),
+                description: this.translate('apps.commissionCalculatorDesc', 'Fees and VAT.'),
+                icon: '%'
+            }
+        };
+        const appOption = getAppAccessOptions().find((option) => option.buttonId === buttonId);
+        const fallback = coreCards[buttonId] || {
+            label: appOption ? this.getAppLabel(appOption) : buttonId,
+            description: appOption
+                ? this.translate(`apps.${appOption.key}Desc`, 'Operational workspace.')
+                : this.translate('userManagement.preview.appFallbackDescription', 'Operational workspace.'),
+            icon: (appOption?.fallbackLabel || buttonId).split(/\s+/).map((word) => word[0]).join('').slice(0, 2).toUpperCase()
+        };
+
+        return `
+            <div class="dashboard-card user-access-preview__dashboard-card" data-preview-button-id="${this.escapeHtml(buttonId)}" aria-disabled="true">
+                <span class="user-access-preview__fallback-icon" aria-hidden="true">${this.escapeHtml(fallback.icon)}</span>
+                <div class="card-body">
+                    <h3>${this.escapeHtml(fallback.label)}</h3>
+                    <p>${this.escapeHtml(fallback.description)}</p>
+                </div>
+            </div>
         `;
     }
 
