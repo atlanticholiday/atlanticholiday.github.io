@@ -20,6 +20,10 @@ describe("Linen Inventory security rules", () => {
     assert.ok(!rules.includes("allow read, write: if privileged() || hasApp('linenInventory')"));
     const propertyDirectoryRule = rules.match(/function canReadPropertyDirectory\(\) \{([\s\S]*?)\n    \}/)?.[1] || "";
     assert.ok(!propertyDirectoryRule.includes("linenInventory"));
+    const sanitizedDirectoryRule = rules.match(/match \/propertyDirectory\/\{propertyId\} \{([\s\S]*?)\n    \}/)?.[1] || "";
+    assert.includes(sanitizedDirectoryRule, "hasApp('linenInventory')");
+    assert.includes(sanitizedDirectoryRule, "hasOnly(['name', 'updatedAt'])");
+    assert.ok(!sanitizedDirectoryRule.includes("allow write"));
   });
 
   test("serves colleagues a sanitized property directory instead of full property records", async () => {
@@ -38,6 +42,7 @@ describe("Linen Inventory security rules", () => {
     assert.includes(callable, "name: name || \"\"");
     assert.includes(callable, "return { properties };");
     assert.includes(mainSource, "getLinenInventoryPropertyDirectory");
+    assert.includes(mainSource, "propertyDirectory");
   });
 
   test("limits linen photo writes to the colleague's own storage folder", async () => {

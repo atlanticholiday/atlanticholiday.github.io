@@ -1,14 +1,19 @@
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class PropertiesManager {
-    constructor(db) {
+    constructor(db, { canSyncPropertyDirectory = null } = {}) {
         console.log(`📋 [INITIALIZATION] PropertiesManager constructor called`);
         this.db = db;
         this.properties = [];
         this.filteredProperties = [];
         this.unsubscribe = null;
         this.wifiFieldsCleaned = false;
+        this.canSyncPropertyDirectory = typeof canSyncPropertyDirectory === 'function'
+            ? canSyncPropertyDirectory
+            : () => true;
+        this.propertyDirectorySyncPromise = null;
+        this.propertyDirectorySyncPending = false;
 
         // Filter and sort state
         this.currentSort = 'name-asc';
@@ -37,6 +42,75 @@ export class PropertiesManager {
 
     getPropertyImportReportsCollectionRef() {
         return collection(this.db, "propertyImportReports");
+    }
+
+    getPropertyDirectoryCollectionRef() {
+        return collection(this.db, "propertyDirectory");
+    }
+
+    getPropertyDirectoryName(property = {}) {
+        const value = [
+            property.name,
+            property.displayName,
+            property.title,
+            property.reference,
+            property.code,
+            property.propertyName
+        ].find((candidate) => typeof candidate === 'string' && candidate.trim());
+        return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+    }
+
+    async syncPropertyDirectory() {
+        if (!this.canSyncPropertyDirectory()) {
+            return null;
+        }
+
+        this.propertyDirectorySyncPending = true;
+        if (this.propertyDirectorySyncPromise) {
+            return this.propertyDirectorySyncPromise;
+        }
+
+        this.propertyDirectorySyncPromise = (async () => {
+            while (this.propertyDirectorySyncPending) {
+                this.propertyDirectorySyncPending = false;
+                const snapshot = await getDocs(this.getPropertyDirectoryCollectionRef());
+                const existing = new Map(snapshot.docs.map((entry) => [entry.id, entry.data()?.name || '']));
+                const desired = new Map(this.properties
+                    .map((property) => [property.id, this.getPropertyDirectoryName(property)])
+                    .filter(([id, name]) => id && name));
+                const operations = [];
+
+                desired.forEach((name, id) => {
+                    if (existing.get(id) !== name) {
+                        operations.push({ type: 'set', id, name });
+                    }
+                });
+                existing.forEach((_name, id) => {
+                    if (!desired.has(id)) {
+                        operations.push({ type: 'delete', id });
+                    }
+                });
+
+                for (let offset = 0; offset < operations.length; offset += 450) {
+                    const batch = writeBatch(this.db);
+                    operations.slice(offset, offset + 450).forEach((operation) => {
+                        const reference = doc(this.db, 'propertyDirectory', operation.id);
+                        if (operation.type === 'delete') {
+                            batch.delete(reference);
+                        } else {
+                            batch.set(reference, { name: operation.name, updatedAt: new Date() });
+                        }
+                    });
+                    await batch.commit();
+                }
+            }
+        })().catch((error) => {
+            console.warn('Could not synchronize the sanitized property directory:', error);
+        }).finally(() => {
+            this.propertyDirectorySyncPromise = null;
+        });
+
+        return this.propertyDirectorySyncPromise;
     }
 
     async addProperty(propertyData) {
@@ -144,6 +218,10 @@ export class PropertiesManager {
                 id: doc.id,
                 ...doc.data()
             }));
+
+            if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
+                void this.syncPropertyDirectory();
+            }
 
             // Log properties for debugging
             if (this.properties.length > 0) {

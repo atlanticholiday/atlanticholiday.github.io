@@ -3,6 +3,7 @@ import {
     collection,
     deleteDoc,
     doc,
+    getDocs,
     onSnapshot,
     query,
     where,
@@ -99,7 +100,8 @@ export class LinenInventoryManager {
         storage = null,
         getDataManager = null,
         getProperties = null,
-        getPropertyDirectory = null
+        getPropertyDirectory = null,
+        getPropertyDirectoryFallback = null
     } = {}) {
         this.db = db || null;
         this.storage = storage || null;
@@ -108,6 +110,19 @@ export class LinenInventoryManager {
         this.fetchPropertyDirectory = typeof getPropertyDirectory === "function"
             ? getPropertyDirectory
             : null;
+        this.fetchPropertyDirectoryFallback = typeof getPropertyDirectoryFallback === "function"
+            ? getPropertyDirectoryFallback
+            : this.db
+                ? async () => {
+                    const snapshot = await getDocs(collection(this.db, "propertyDirectory"));
+                    return {
+                        properties: snapshot.docs.map((entry) => ({
+                            id: entry.id,
+                            name: entry.data()?.name
+                        }))
+                    };
+                }
+                : null;
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
 
         this.records = [];
@@ -467,7 +482,7 @@ export class LinenInventoryManager {
     async ensurePropertyDirectory() {
         if (
             !this.isCleanerView()
-            || !this.fetchPropertyDirectory
+            || (!this.fetchPropertyDirectory && !this.fetchPropertyDirectoryFallback)
             || this.propertyDirectoryLoaded
             || this.propertyDirectoryLoading
         ) {
@@ -477,7 +492,22 @@ export class LinenInventoryManager {
         this.propertyDirectoryLoading = true;
         this.render();
         try {
-            const response = await this.fetchPropertyDirectory();
+            let response;
+            try {
+                if (!this.fetchPropertyDirectory) {
+                    throw new Error("The protected property directory is unavailable.");
+                }
+                response = await this.fetchPropertyDirectory();
+            } catch (primaryError) {
+                if (!this.fetchPropertyDirectoryFallback) {
+                    throw primaryError;
+                }
+                console.warn(
+                    "[Linen Inventory] protected property directory unavailable; using the sanitized Firestore directory.",
+                    primaryError
+                );
+                response = await this.fetchPropertyDirectoryFallback();
+            }
             const properties = response?.data?.properties || response?.properties || [];
             this.propertyDirectory = Array.isArray(properties)
                 ? properties

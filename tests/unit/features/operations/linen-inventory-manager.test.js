@@ -195,6 +195,33 @@ describe("LinenInventoryManager", () => {
     assert.equal(Object.keys(manager.propertyDirectory[0]).sort().join(","), "id,name");
   });
 
+  test("falls back to the sanitized Firestore directory when the callable is unavailable", async () => {
+    resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
+    let fallbackCalls = 0;
+    const manager = new LinenInventoryManager(null, {
+      getDataManager: () => ({
+        canAccessApp: () => true,
+        hasPrivilegedRole: () => false,
+        getCurrentUserContext: () => ({ uid: "cleaner-1", email: "ana@example.com" })
+      }),
+      getPropertyDirectory: async () => {
+        throw new Error("functions/not-found");
+      },
+      getPropertyDirectoryFallback: async () => {
+        fallbackCalls += 1;
+        return { properties: [{ id: "p1", name: "Atlantic View" }] };
+      }
+    });
+
+    manager.ensureDomScaffold();
+    await manager.ensurePropertyDirectory();
+
+    assert.equal(fallbackCalls, 1);
+    assert.equal(manager.propertyDirectoryLoaded, true);
+    assert.deepEqual(manager.propertyDirectory, [{ id: "p1", name: "Atlantic View" }]);
+    assert.equal(manager.statusMessage, "");
+  });
+
   test("clears colleague records, directory data, and in-memory drafts at sign-out", () => {
     resetDom(`<div id="landing-page"></div><button id="go-to-laundry-log-btn"></button>`);
     const manager = new LinenInventoryManager(null);

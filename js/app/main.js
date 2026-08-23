@@ -496,7 +496,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             storage: getStorage(app),
             getDataManager: () => dataManager,
             getProperties: () => propertiesManager?.properties || [],
-            getPropertyDirectory: httpsCallable(functionsInstance, 'getLinenInventoryPropertyDirectory')
+            getPropertyDirectory: httpsCallable(functionsInstance, 'getLinenInventoryPropertyDirectory'),
+            getPropertyDirectoryFallback: async () => {
+                const snapshot = await getDocs(collection(db, 'propertyDirectory'));
+                return {
+                    properties: snapshot.docs.map((entry) => ({
+                        id: entry.id,
+                        name: entry.data()?.name
+                    }))
+                };
+            }
         });
         window.linenInventoryManager = linenInventoryManager;
         try { linenInventoryManager.ensureDomScaffold?.(); } catch { }
@@ -705,7 +714,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const canReadFullPropertyRecords = dataManager.hasPrivilegedRole?.()
                     || propertyDirectoryApps.some((appKey) => dataManager.canAccessApp?.(appKey));
                 if (!propertiesManager && canReadFullPropertyRecords) {
-                    propertiesManager = new PropertiesManager(db);
+                    propertiesManager = new PropertiesManager(db, {
+                        canSyncPropertyDirectory: () => dataManager.hasPrivilegedRole?.()
+                            || dataManager.canAccessApp?.('properties')
+                            || dataManager.canAccessApp?.('allinfo')
+                    });
                     window.propertiesManager = propertiesManager;
                 }
 

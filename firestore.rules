@@ -268,6 +268,18 @@ service cloud.firestore {
       allow delete: if privileged() || hasApp('properties');
     }
 
+    match /propertyDirectory/{propertyId} {
+      allow read: if canReadPropertyDirectory() || hasApp('linenInventory');
+      allow create, update: if (
+          privileged() || hasApp('properties') || hasApp('allinfo')
+        )
+        && request.resource.data.keys().hasOnly(['name', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200;
+      allow delete: if privileged() || hasApp('properties') || hasApp('allinfo');
+    }
+
     match /propertyImportReports/{reportId} {
       allow read, write: if privileged() || hasApp('properties');
     }
