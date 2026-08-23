@@ -1041,6 +1041,7 @@
         "states": {
             "loading": "A carregar Welcome Packs...",
             "permissionDenied": "O Welcome Packs não está disponível para esta conta. Verifique o nível de acesso e tente novamente.",
+            "permissionDeniedPrivileged": "O acesso de administrador foi reconhecido, mas as permissões do servidor para esta funcionalidade ainda não estão ativas. Implemente as regras mais recentes do Firebase e tente novamente.",
             "unauthenticated": "Inicie sessão novamente para carregar o Welcome Packs.",
             "unavailable": "Não foi possível carregar o Welcome Packs agora. Tente novamente.",
             "unavailableTitle": "Welcome Packs Indisponível"

@@ -440,6 +440,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     states: {
         loading: 'A carregar Welcome Packs...',
         permissionDenied: 'O Welcome Packs não está disponível para esta conta. Verifique o nível de acesso e tente novamente.',
+        permissionDeniedPrivileged: 'O acesso de administrador foi reconhecido, mas as permissões do servidor para esta funcionalidade ainda não estão ativas. Implemente as regras mais recentes do Firebase e tente novamente.',
         unauthenticated: 'Inicie sessão novamente para carregar o Welcome Packs.',
         unavailable: 'Não foi possível carregar o Welcome Packs agora. Tente novamente.',
         unavailableTitle: 'Welcome Packs indisponível'
@@ -1072,6 +1073,10 @@ export class WelcomePackManager {
                 this.setCurrentView(wpView, { resetEdit: wpView === 'log' });
             };
         });
+        document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
+            this.currentView = 'purchases';
+            this.startPurchaseDraft('bulk');
+        });
     }
 
     renderLoadingState(container) {
@@ -1088,6 +1093,9 @@ export class WelcomePackManager {
         const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
 
         if (code.includes('permission-denied') || message.includes('insufficient permissions')) {
+            if (this.dataManager?.hasPrivilegedRole?.()) {
+                return this.tr('states.permissionDeniedPrivileged');
+            }
             return this.tr('states.permissionDenied');
         }
 
@@ -2292,10 +2300,6 @@ export class WelcomePackManager {
             lines: isFruit ? fruitLines : [createPurchaseLine({
                 id: `wp-purchase-line-${++this.purchaseLineSequence}`
             })]
-        });
-        document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
-            this.currentView = 'purchases';
-            this.startPurchaseDraft('bulk');
         });
     }
 

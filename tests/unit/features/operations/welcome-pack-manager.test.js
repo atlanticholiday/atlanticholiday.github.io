@@ -16,7 +16,8 @@ function primeWelcomePackTranslations() {
       },
       states: {
         unavailableTitle: "Welcome Packs Unavailable",
-        permissionDenied: "Welcome Packs is not available for this account. Check your access level and try again."
+        permissionDenied: "Welcome Packs is not available for this account. Check your access level and try again.",
+        permissionDeniedPrivileged: "Administrator access is recognized, but the server permissions for this feature are not active yet. Deploy the latest Firebase rules and try again."
       }
     }
   };
@@ -222,6 +223,36 @@ describe("WelcomePackManager", () => {
 
     assert.equal(manager.purchaseDraft.lines[0].stockQuantity, 2.135);
     assert.equal(manager.purchaseDraft.lines[0].stockUnit, "kg");
+  });
+
+  test("opens a bulk purchase draft from the workspace header", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() { return []; },
+      async getWelcomePackPurchases() { return []; }
+    });
+
+    await manager.render();
+    await flushRender();
+    document.querySelector("[data-wp-start-purchase]").click();
+    await flushRender();
+
+    assert.equal(manager.currentView, "purchases");
+    assert.ok(manager.purchaseDraft);
+    assert.ok(document.querySelector(".welcome-pack-purchase-editor"));
+  });
+
+  test("explains missing server rules when an administrator is denied", () => {
+    primeWelcomePackTranslations();
+    const manager = new WelcomePackManager({
+      hasPrivilegedRole() { return true; }
+    });
+    const error = new Error("Missing or insufficient permissions.");
+    error.code = "permission-denied";
+
+    assert.includes(manager.describeLoadError(error), "Administrator access is recognized");
   });
 
   test("saves a reviewed purchase and clears the draft", async () => {
