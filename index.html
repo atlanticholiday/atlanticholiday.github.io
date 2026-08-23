@@ -2948,7 +2948,7 @@ Mountain Villa, Sintra Hills, V4"
             <section class="heated-pools-controls">
                 <div>
                     <p class="heated-pools-eyebrow">Shared operations board</p>
-                    <h2>Keep heated pool status, requests, payments, and actions in one place</h2>
+                    <h2>See which pools are on, and why</h2>
                     <p>Planning date: <span id="heated-pools-planning-date-label"></span></p>
                 </div>
                 <div class="heated-pools-controls__actions">
@@ -2982,7 +2982,7 @@ Mountain Villa, Sintra Hills, V4"
                 <ol class="heated-pools-tutorial">
                     <li>
                         <strong>Add each property once.</strong>
-                        Use <span>Add property</span> for every accommodation with a heated pool. Set current pool status, last changed date, guest charge, and how many days it needs to heat.
+                        Use <span>Add property</span> for every accommodation with a heated pool. Then use the large On/Off controls in Current pool status whenever its physical state changes.
                     </li>
                     <li>
                         <strong>Add every reservation request.</strong>
@@ -2994,11 +2994,11 @@ Mountain Villa, Sintra Hills, V4"
                     </li>
                     <li>
                         <strong>Confirm work directly there.</strong>
-                        Click <span>Mark done</span> after switching a pool on/off. Click <span>Mark paid</span> after the payment is confirmed.
+                        Click <span>Mark done</span> after switching a pool on/off, or use the manual On/Off controls. Both save who made the change, when, and the associated reservation.
                     </li>
                     <li>
                         <strong>Keep corrections inline.</strong>
-                        If someone notices the pool status, payment, Avantio status, or notes are wrong, edit the table cell. It saves automatically.
+                        If someone notices payment, Avantio status, or notes are wrong, edit the field. Physical pool changes always use On/Off so the history stays trustworthy.
                     </li>
                 </ol>
                 <div class="heated-pools-help-note">
@@ -3016,20 +3016,6 @@ Mountain Villa, Sintra Hills, V4"
                         <label>
                             <span>Property</span>
                             <input name="propertyName" required placeholder="Villa Ocean Haven">
-                        </label>
-                        <label>
-                            <span>Pool status</span>
-                            <select name="poolState">
-                                <option value="unknown">Unknown</option>
-                                <option value="off">Off</option>
-                                <option value="on">On</option>
-                                <option value="always_on">Always on</option>
-                                <option value="unavailable">Unavailable</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Last changed</span>
-                            <input name="lastChangeDate" type="date">
                         </label>
                         <label>
                             <span>Heat-up days</span>
@@ -3121,28 +3107,13 @@ Mountain Villa, Sintra Hills, V4"
 
                 <div id="heated-pools-task-lanes" class="heated-pools-task-lanes"></div>
 
-                <section class="heated-pools-table-section">
+                <section class="heated-pools-table-section heated-pools-status-section">
                     <div class="heated-pools-section-heading">
-                        <h3>Property status</h3>
-                        <p>Current pool note, next reservation, next required action, and charge amount.</p>
+                        <p class="heated-pools-eyebrow">Live equipment state</p>
+                        <h3>Current pool status</h3>
+                        <p>Choose a reservation when relevant, then press On or Off. Every change is added to the property history automatically.</p>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="heated-pools-table">
-                            <thead>
-                                <tr>
-                                    <th>Property</th>
-                                    <th>Pool</th>
-                                    <th>Last changed</th>
-                                    <th>Heat days</th>
-                                    <th>Status note</th>
-                                    <th>Next reservation</th>
-                                    <th>Next action</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="heated-pools-table-body"></tbody>
-                        </table>
-                    </div>
+                    <div id="heated-pools-property-status-list" class="heated-pools-property-list"></div>
                 </section>
 
                 <section class="heated-pools-table-section">

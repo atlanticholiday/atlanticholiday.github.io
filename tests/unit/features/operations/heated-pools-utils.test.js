@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+  appendPoolStatusHistory,
   buildHeatedPoolPlan,
   parseHeatedPoolsCsv
 } from "../../../../js/features/operations/heated-pools-utils.js";
@@ -80,5 +81,34 @@ describe("Heated pools utils", () => {
       "Villa Right"
     ]);
     assert.equal(result.properties[1].poolState, "always_on");
+  });
+
+  test("records a manual state change with its colleague and reservation", () => {
+    const history = appendPoolStatusHistory([], {
+      id: "change-1",
+      previousState: "off",
+      state: "on",
+      at: "2026-08-23T09:30:00.000Z",
+      planningDate: "2026-08-23",
+      actor: { uid: "user-1", email: "ana@example.com", name: "Ana" },
+      reservation: { id: "res-1", dateRange: "24/8 - 31/8" }
+    });
+
+    assert.equal(history.length, 1);
+    assert.equal(history[0].previousState, "off");
+    assert.equal(history[0].state, "on");
+    assert.equal(history[0].actor.name, "Ana");
+    assert.equal(history[0].reservation.id, "res-1");
+    assert.equal(history[0].reservation.label, "24/8 - 31/8");
+  });
+
+  test("does not add duplicate no-op state changes", () => {
+    const original = [{ id: "existing", state: "on" }];
+    const history = appendPoolStatusHistory(original, {
+      previousState: "on",
+      state: "on"
+    });
+
+    assert.equal(history, original);
   });
 });

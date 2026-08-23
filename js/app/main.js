@@ -480,7 +480,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         cleaningBillsManager = new CleaningBillsManager(); // Reverted to original
         window.cleaningBillsManager = cleaningBillsManager;
         try { cleaningBillsManager.ensureDomScaffold?.(); } catch { }
-        heatedPoolsManager = new HeatedPoolsManager(db);
+        heatedPoolsManager = new HeatedPoolsManager(db, {
+            getDataManager: () => dataManager
+        });
         window.heatedPoolsManager = heatedPoolsManager;
         // Initialize Commission Calculator early to inject page and landing button before nav listeners are wired
         commissionCalculatorManager = new CommissionCalculatorManager();

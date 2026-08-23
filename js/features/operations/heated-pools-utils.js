@@ -177,6 +177,60 @@ export function summarizePoolProperties(properties = []) {
     };
 }
 
+export function appendPoolStatusHistory(history = [], change = {}, options = {}) {
+    const previousState = normalizePoolStateValue(change.previousState);
+    const state = normalizePoolStateValue(change.state);
+    if (!state || state === previousState) {
+        return Array.isArray(history) ? history : [];
+    }
+
+    const actor = change.actor && typeof change.actor === 'object'
+        ? {
+            uid: normalizeText(change.actor.uid),
+            email: normalizeText(change.actor.email),
+            name: normalizeText(change.actor.name || change.actor.email)
+        }
+        : {};
+    const reservation = change.reservation && typeof change.reservation === 'object'
+        ? {
+            id: normalizeText(change.reservation.id),
+            label: normalizeText(change.reservation.label || change.reservation.dateRange)
+        }
+        : {};
+    const at = normalizeHistoryTimestamp(change.at) || new Date().toISOString();
+    const limit = Number.isFinite(options.limit) && options.limit > 0 ? options.limit : 100;
+    const entry = {
+        id: normalizeText(change.id) || `pool_state_${Date.parse(at) || Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        previousState,
+        state,
+        at,
+        planningDate: normalizeText(change.planningDate),
+        source: normalizeText(change.source) || 'manual',
+        note: normalizeText(change.note),
+        actor,
+        reservation
+    };
+
+    return [...(Array.isArray(history) ? history : []), entry].slice(-limit);
+}
+
+function normalizePoolStateValue(value) {
+    const normalized = normalizeText(value).toLowerCase();
+    return ['unknown', 'off', 'on', 'always_on', 'unavailable'].includes(normalized)
+        ? normalized
+        : '';
+}
+
+function normalizeHistoryTimestamp(value) {
+    if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+        return new Date(value).toISOString();
+    }
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value.toISOString();
+    }
+    return '';
+}
+
 function mergeDuplicateProperties(properties = []) {
     const byName = new Map();
 
