@@ -766,7 +766,67 @@
         "hero": {
             "kicker": "Welcome Packs",
             "title": "",
-            "body": "O fluxo está agora dividido em três tarefas claras: definir os custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar-lhe os totais e a margem."
+            "body": "Registe primeiro as compras; o stock, o custo dos packs, as cobranças e a margem ficam depois ligados automaticamente."
+        },
+        "purchases": {
+            "navLabel": "Compras",
+            "navEyebrow": "Começar aqui",
+            "navDescription": "Importe uma fatura ou registe uma compra em quantidade e atualize o stock automaticamente.",
+            "kicker": "Registo de compras",
+            "title": "Compras e importação de faturas",
+            "description": "Registe compras em quantidade, fruta diária, descontos, IVA, taxas e vasilhame retornável no mesmo local.",
+            "recordPurchase": "Registar compra",
+            "importInvoice": "Importar fatura",
+            "dailyFruit": "Fruta diária",
+            "reviewKicker": "Rever antes de guardar",
+            "entryKicker": "Compra em quantidade",
+            "reviewTitle": "Confirmar a fatura importada",
+            "entryTitle": "Registar uma compra",
+            "reviewDescription": "Confirme fornecedor, quantidades, unidades, IVA, taxas e correspondência dos materiais antes de alterar o stock.",
+            "entryDescription": "Introduza o que o fornecedor faturou; o custo unitário e o stock adicionado são calculados em direto.",
+            "importedInvoice": "Fatura importada",
+            "ocrReviewNotice": "Esta digitalização foi lida por OCR. Confirme todos os números na fatura.",
+            "pdfReviewNotice": "O texto foi extraído do PDF. Confirme o rascunho antes de guardar.",
+            "importStarting": "A preparar a importação da fatura",
+            "importFailed": "Não foi possível importar a fatura: {{message}}",
+            "fileTooLarge": "Escolha uma fatura com menos de 10 MB.",
+            "addLine": "Adicionar linha de material",
+            "saveAndUpdateStock": "Guardar e atualizar stock",
+            "newMaterial": "Criar novo material",
+            "materialPlaceholder": "Nome do material",
+            "net": "Líquido",
+            "gross": "Com IVA",
+            "openInvoice": "Abrir fatura",
+            "manual": "Manual",
+            "saved": "Compra guardada e stock atualizado.",
+            "savedUploadFailed": "A compra e o stock foram guardados, mas não foi possível carregar o anexo da fatura.",
+            "duplicate": "Esta fatura já foi importada. O stock não foi alterado novamente.",
+            "saveFailed": "Não foi possível guardar a compra. O stock não foi alterado.",
+            "validation": "Adicione fornecedor, data e pelo menos um material com quantidade superior a zero.",
+            "emptyTitle": "Ainda não existem compras registadas",
+            "emptyDescription": "Importe uma fatura ou registe a primeira compra para iniciar o histórico de stock.",
+            "materialCount": { "one": "{{count}} material", "other": "{{count}} materiais" },
+            "metrics": {
+                "last30Days": "Últimos 30 dias", "purchasesRecorded": "Compras registadas",
+                "inventoryCost": "Custo do stock", "netCost": "Custo líquido usado na rentabilidade dos packs",
+                "cashAndVat": "Valor das faturas", "includesDeposits": "Inclui {{amount}} de vasilhame recuperável"
+            },
+            "table": {
+                "date": "Data", "supplier": "Fornecedor", "invoice": "Fatura", "materials": "Materiais",
+                "netCost": "Custo líquido", "paid": "Pago", "source": "Origem"
+            },
+            "fields": {
+                "supplier": "Fornecedor", "date": "Data", "invoiceNumber": "Número da fatura",
+                "cardCredit": "Crédito em cartão", "cashPaid": "Valor pago", "material": "Material",
+                "bought": "Quantidade comprada", "unitsPerPack": "Unidades / pack", "stockUnit": "Unidade de stock",
+                "unitPrice": "Preço unitário da fatura", "priceMode": "Preço indicado", "discount": "Desconto %",
+                "vat": "IVA", "extraCost": "Taxas líquidas", "deposit": "Vasilhame", "result": "Resultado calculado"
+            },
+            "totals": {
+                "stockAdded": "Stock adicionado", "netCost": "Custo líquido do stock", "vat": "IVA",
+                "deposits": "Vasilhame", "invoiceTotal": "Total calculado da fatura"
+            },
+            "units": { "unit": "unidade", "bottle": "garrafa", "pack": "pack", "kg": "kg", "litre": "litro" }
         },
         "workflow": {
             "materialCosts": {
@@ -1170,6 +1230,7 @@
                 "title": "Adicionar Material",
                 "namePlaceholder": "Nome do Material",
                 "stockPlaceholder": "Quantidade Inicial em Stock",
+                "reorderPointPlaceholder": "Ponto de reposição",
                 "costLabel": "Custo do Material (Líquido, sem IVA)",
                 "chargeLabel": "Cobrança Sugerida (Líquido, sem IVA)",
                 "confirm": "Adicionar Material"
@@ -1178,6 +1239,7 @@
                 "title": "Editar Material",
                 "namePlaceholder": "Nome do Material",
                 "stockPlaceholder": "Quantidade em Stock",
+                "reorderPointPlaceholder": "Ponto de reposição",
                 "costLabel": "Custo do Material (Líquido, sem IVA)",
                 "chargeLabel": "Cobrança Sugerida (Líquido, sem IVA)",
                 "confirm": "Guardar Alterações"

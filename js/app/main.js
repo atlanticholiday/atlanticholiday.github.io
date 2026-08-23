@@ -2,7 +2,7 @@ import { deleteApp, initializeApp } from "https://www.gstatic.com/firebasejs/11.
 import { browserSessionPersistence, createUserWithEmailAndPassword, getAuth, inMemoryPersistence, onAuthStateChanged, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, clearIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 import { Config } from '../core/config.js';
 import { i18n, t } from '../core/i18n.js';
@@ -435,7 +435,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialize Welcome Pack Manager (Correctly placed)
         welcomePackManager = new WelcomePackManager(dataManager, {
-            getUpcomingReservations: httpsCallable(functionsInstance, 'getUpcomingGuestReservations')
+            getUpcomingReservations: httpsCallable(functionsInstance, 'getUpcomingGuestReservations'),
+            uploadInvoice: async ({ purchaseId, file }) => {
+                const safeName = String(file.name || 'invoice.pdf').replace(/[^a-zA-Z0-9._-]+/g, '-');
+                const path = `welcome-pack-invoices/${purchaseId}/${safeName}`;
+                const fileRef = storageRef(getStorage(app), path);
+                await uploadBytes(fileRef, file, { contentType: file.type || 'application/pdf' });
+                return {
+                    name: file.name || safeName,
+                    storagePath: path,
+                    url: await getDownloadURL(fileRef),
+                    contentType: file.type || 'application/pdf',
+                    size: file.size || 0
+                };
+            }
         });
         window.welcomePackManager = welcomePackManager;
         airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();

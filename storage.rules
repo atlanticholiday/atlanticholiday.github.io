@@ -42,6 +42,12 @@ service firebase.storage {
         && 'linenInventory' in accessData().allowedApps;
     }
 
+    function hasWelcomePackAccess() {
+      return approved()
+        && accessData().allowedApps is list
+        && 'welcomePacks' in accessData().allowedApps;
+    }
+
     function allowedAttachmentType() {
       return request.resource.contentType.matches('image/.*')
         || request.resource.contentType == 'application/pdf'
@@ -68,6 +74,17 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow update, delete: if privileged();
+    }
+
+    match /welcome-pack-invoices/{purchaseId}/{fileName} {
+      allow read: if privileged() || hasWelcomePackAccess();
+      allow create, update: if (privileged() || hasWelcomePackAccess())
+        && request.resource.size < 10 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('image/.*')
+        );
+      allow delete: if privileged() || hasWelcomePackAccess();
     }
 
     match /{allPaths=**} {

@@ -168,6 +168,18 @@ describe("Welcome Pack utilities", () => {
         assert.equal(summary.lowStockItems[0].name, "Cookies");
     });
 
+    test("preserves decimal stock and uses each material reorder point", () => {
+        const summary = summarizeWelcomePackInventory([
+            { name: "Bananas", quantity: 2.135, stockUnit: "kg", reorderPoint: 2, costPrice: 1.91 },
+            { name: "Mango", quantity: 1.98, stockUnit: "kg", reorderPoint: 2, costPrice: 2.78 }
+        ]);
+
+        assert.equal(summary.items[0].quantity, 2.135);
+        assert.equal(summary.totals.stockUnits, 4.115);
+        assert.equal(summary.lowStockItems.length, 1);
+        assert.equal(summary.lowStockItems[0].name, "Mango");
+    });
+
     test("formats euro values consistently", () => {
         assert.equal(formatWelcomePackCurrency(7), "€7.00");
         assert.equal(formatWelcomePackCurrency(7.456), "€7.46");

@@ -29,6 +29,7 @@ import {
 } from './attendance-records.js';
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
 import { canonicalizeEmail } from '../../shared/email.js';
+import { calculateWeightedAverageCost, roundPurchaseValue } from '../operations/welcome-pack-purchase-utils.js';
 import {
     canAccessSelfServiceSchedule,
     canAccessSharedVacationBoard,
@@ -1368,7 +1369,7 @@ export class DataManager {
     }
 
     async saveWelcomePackItem(item) {
-        await addDoc(collection(this.db, "welcome_pack_items"), { ...item, quantity: parseInt(item.quantity) || 0 });
+        await addDoc(collection(this.db, "welcome_pack_items"), { ...item, quantity: Number.parseFloat(item.quantity) || 0 });
     }
 
     async updateWelcomePackItem(id, data) {
@@ -1377,6 +1378,117 @@ export class DataManager {
 
     async deleteWelcomePackItem(id) {
         await deleteDoc(doc(this.db, "welcome_pack_items", id));
+    }
+
+    async getWelcomePackPurchases() {
+        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_purchases"));
+        return querySnapshot.docs
+            .map(purchaseDoc => ({ id: purchaseDoc.id, ...purchaseDoc.data() }))
+            .sort((left, right) => {
+                const rightKey = `${right.date || ''} ${right.createdAt || ''}`;
+                const leftKey = `${left.date || ''} ${left.createdAt || ''}`;
+                return rightKey.localeCompare(leftKey);
+            });
+    }
+
+    async saveWelcomePackPurchase(purchase) {
+        const purchaseId = String(purchase?.id || '').trim() || doc(collection(this.db, "welcome_pack_purchases")).id;
+        const purchaseRef = doc(this.db, "welcome_pack_purchases", purchaseId);
+        const sourceLines = Array.isArray(purchase?.lines) ? purchase.lines : [];
+        const groups = new Map();
+
+        sourceLines.forEach((line, index) => {
+            const materialId = String(line.materialId || '').trim();
+            const nameKey = String(line.name || `material-${index}`).trim().toLowerCase();
+            const groupKey = materialId ? `existing:${materialId}` : `new:${nameKey}`;
+            const current = groups.get(groupKey) || {
+                materialId,
+                name: String(line.name || '').trim(),
+                stockUnit: String(line.stockUnit || 'unit').trim() || 'unit',
+                vatRate: Number(line.vatRate) || 22,
+                addedQuantity: 0,
+                addedCost: 0,
+                lineIndexes: []
+            };
+            current.addedQuantity += Number(line.stockQuantity) || 0;
+            current.addedCost += Number(line.inventoryCostTotal) || 0;
+            current.lineIndexes.push(index);
+            groups.set(groupKey, current);
+        });
+
+        groups.forEach((group) => {
+            group.itemRef = group.materialId
+                ? doc(this.db, "welcome_pack_items", group.materialId)
+                : doc(collection(this.db, "welcome_pack_items"));
+            group.materialId = group.itemRef.id;
+        });
+
+        const savedLines = sourceLines.map((line, index) => {
+            const group = [...groups.values()].find((candidate) => candidate.lineIndexes.includes(index));
+            return { ...line, materialId: group?.materialId || String(line.materialId || '') };
+        });
+
+        await runTransaction(this.db, async (transaction) => {
+            const purchaseSnapshot = await transaction.get(purchaseRef);
+            if (purchaseSnapshot.exists()) {
+                const duplicateError = new Error('This invoice has already been imported.');
+                duplicateError.code = 'welcome-pack/duplicate-invoice';
+                throw duplicateError;
+            }
+
+            const groupSnapshots = await Promise.all([...groups.values()].map(async (group) => ({
+                group,
+                snapshot: group.itemRef ? await transaction.get(group.itemRef) : null
+            })));
+
+            groupSnapshots.forEach(({ group, snapshot }) => {
+                const existing = snapshot?.exists() ? snapshot.data() : null;
+                const existingQuantity = Number(existing?.quantity) || 0;
+                const existingUnitCost = Number(existing?.costPrice) || 0;
+                const incomingUnitCost = group.addedQuantity > 0 ? group.addedCost / group.addedQuantity : 0;
+                const newQuantity = roundPurchaseValue(existingQuantity + group.addedQuantity, 4);
+                const newUnitCost = calculateWeightedAverageCost({
+                    currentQuantity: existingQuantity,
+                    currentUnitCost: existingUnitCost,
+                    addedQuantity: group.addedQuantity,
+                    addedUnitCost: incomingUnitCost
+                });
+                const itemPayload = {
+                    name: existing?.name || group.name,
+                    quantity: newQuantity,
+                    stockUnit: existing?.stockUnit || group.stockUnit,
+                    reorderPoint: Number(existing?.reorderPoint ?? 5),
+                    costPrice: newUnitCost,
+                    costVatRate: group.vatRate,
+                    costGross: roundPurchaseValue(newUnitCost * (1 + (group.vatRate / 100)), 4),
+                    sellPrice: Number(existing?.sellPrice) || 0,
+                    sellVatRate: Number(existing?.sellVatRate) || 22,
+                    sellGross: Number(existing?.sellGross) || 0,
+                    lastPurchaseAt: purchase.date || new Date().toISOString().split('T')[0],
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (existing) transaction.update(group.itemRef, itemPayload);
+                else transaction.set(group.itemRef, { ...itemPayload, createdAt: new Date().toISOString() });
+            });
+
+            transaction.set(purchaseRef, {
+                ...purchase,
+                id: purchaseId,
+                lines: savedLines,
+                createdAt: purchase.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+        });
+
+        return { id: purchaseId, lines: savedLines };
+    }
+
+    async updateWelcomePackPurchase(id, data) {
+        await updateDoc(doc(this.db, "welcome_pack_purchases", id), {
+            ...data,
+            updatedAt: new Date().toISOString()
+        });
     }
 
     async getWelcomePackLogs() {

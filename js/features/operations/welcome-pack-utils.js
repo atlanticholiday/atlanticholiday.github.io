@@ -23,8 +23,11 @@ export function applyWelcomePackVat(netAmount, vatRate = WELCOME_PACK_VAT_RATE) 
 }
 
 export function normalizeWelcomePackItem(item = {}) {
-    const quantityValue = Number.parseInt(item.quantity ?? item.qty ?? 1, 10);
-    const quantity = Number.isInteger(quantityValue) && quantityValue > 0 ? quantityValue : 1;
+    const rawQuantity = item.quantity ?? item.qty;
+    const quantityValue = rawQuantity === undefined || rawQuantity === null || rawQuantity === ''
+        ? 1
+        : toFiniteNumber(rawQuantity, 0);
+    const quantity = quantityValue >= 0 ? quantityValue : 0;
     const costPrice = roundWelcomePackCurrency(item.costPrice);
     const sellPrice = 0;
     const costVatRate = toFiniteNumber(item.costVatRate, 22);
@@ -38,6 +41,8 @@ export function normalizeWelcomePackItem(item = {}) {
         ...item,
         name: String(item.name || "").trim(),
         quantity,
+        stockUnit: String(item.stockUnit || item.unit || "unit").trim() || "unit",
+        reorderPoint: Math.max(0, toFiniteNumber(item.reorderPoint, 5)),
         costPrice,
         sellPrice,
         costVatRate,
@@ -354,7 +359,9 @@ export function summarizeWelcomePackInventory(items = []) {
         stockSellValue: 0
     });
 
-    const lowStockItems = normalizedItems.filter((item) => (item.quantity || 0) < 5);
+    const lowStockItems = normalizedItems.filter((item) => (
+        (item.quantity || 0) <= Math.max(0, toFiniteNumber(item.reorderPoint, 5))
+    ));
 
     return {
         items: normalizedItems,

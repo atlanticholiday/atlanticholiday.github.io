@@ -6,6 +6,14 @@ import {
     summarizeWelcomePackInventory,
     summarizeWelcomePackLogs
 } from './welcome-pack-utils.js';
+import {
+    calculatePurchaseLine,
+    createPurchaseLine,
+    matchPurchaseLinesToMaterials,
+    parseWelcomePackInvoiceText,
+    summarizePurchase
+} from './welcome-pack-purchase-utils.js';
+import { extractInvoiceFile, fingerprintInvoiceFile } from './welcome-pack-invoice-import.js';
 import { i18n, t } from '../../core/i18n.js';
 
 function escapeHtml(value) {
@@ -25,7 +33,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     hero: {
         kicker: 'Welcome Packs',
         title: '',
-        body: 'O fluxo está dividido em três tarefas claras: definir custos dos materiais, registar o valor cobrado em cada propriedade e deixar a área de cálculos mostrar os totais e a margem.'
+        body: 'Registe primeiro as compras; o stock, o custo dos packs, as cobranças e a margem ficam depois ligados automaticamente.'
     },
     workflow: {
         materialCosts: {
@@ -243,6 +251,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             title: 'Adicionar Material',
             namePlaceholder: 'Nome do Material',
             stockPlaceholder: 'Quantidade Inicial em Stock',
+            reorderPointPlaceholder: 'Ponto de reposição',
             costLabel: 'Custo do Material (Líquido, sem IVA)',
             chargeLabel: 'Referência de Cobrança (Líquido, sem IVA)',
             confirm: 'Adicionar Material'
@@ -251,6 +260,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             title: 'Editar Material',
             namePlaceholder: 'Nome do Material',
             stockPlaceholder: 'Quantidade em Stock',
+            reorderPointPlaceholder: 'Ponto de reposição',
             costLabel: 'Custo do Material (Líquido, sem IVA)',
             chargeLabel: 'Referência de Cobrança (Líquido, sem IVA)',
             confirm: 'Guardar Alterações'
@@ -460,11 +470,12 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
 };
 
 export class WelcomePackManager {
-    constructor(dataManager, { getUpcomingReservations = null } = {}) {
+    constructor(dataManager, { getUpcomingReservations = null, uploadInvoice = null } = {}) {
         this.dataManager = dataManager;
         this.getUpcomingReservations = getUpcomingReservations;
+        this.uploadInvoice = uploadInvoice;
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
-        this.currentView = 'dashboard'; // dashboard, inventory, log, reservations, presets
+        this.currentView = 'purchases'; // purchases, inventory, log, dashboard, reservations, presets
         this.cart = [];
         this.dashboardFilters = {
             startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], // Last 30 days default
@@ -474,11 +485,16 @@ export class WelcomePackManager {
         this.logEntries = [];
         this.activeLogEntryId = null;
         this.logEntrySequence = 0;
+        this.purchaseDraft = null;
+        this.purchaseFile = null;
+        this.purchaseImportStatus = null;
+        this.purchaseLineSequence = 0;
         this.cache = {
             logs: null,
             items: null,
             presets: null,
-            properties: null
+            properties: null,
+            purchases: null
         };
 
         if (typeof window !== 'undefined') {
@@ -567,6 +583,11 @@ export class WelcomePackManager {
             case 'properties':
                 this.cache.properties = this.dataManager.getAllProperties ? await this.dataManager.getAllProperties() : [];
                 break;
+            case 'purchases':
+                this.cache.purchases = this.dataManager.getWelcomePackPurchases
+                    ? await this.dataManager.getWelcomePackPurchases()
+                    : [];
+                break;
         }
         return this.cache[type];
     }
@@ -590,6 +611,13 @@ export class WelcomePackManager {
 
     getPrimaryViews() {
         return [
+            {
+                id: 'purchases',
+                label: this.tr('purchases.navLabel'),
+                eyebrow: this.tr('purchases.navEyebrow'),
+                description: this.tr('purchases.navDescription'),
+                icon: 'fa-receipt'
+            },
             {
                 id: 'inventory',
                 label: this.tr('workflow.materialCosts.label'),
@@ -639,6 +667,15 @@ export class WelcomePackManager {
 
     formatCurrency(value) {
         return formatWelcomePackCurrency(value);
+    }
+
+    formatQuantity(value, unit = '') {
+        const numeric = Number(value) || 0;
+        const formatted = new Intl.NumberFormat(this.getLocale(), {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        }).format(numeric);
+        return unit ? `${formatted} ${unit}` : formatted;
     }
 
     createLogEntry(overrides = {}) {
@@ -985,68 +1022,39 @@ export class WelcomePackManager {
 
         container.innerHTML = `
             <div class="welcome-pack-shell">
-                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-                        <div class="w-full">
-                            <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${this.tr('hero.kicker')}</div>
-                            ${this.tr('hero.title') ? `<h2 class="mt-2 text-2xl font-semibold text-slate-900">${this.tr('hero.title')}</h2>` : ''}
-                            <p class="mt-2 w-full text-sm leading-6 text-slate-600">${this.tr('hero.body')}</p>
+                <section class="welcome-pack-workspace-bar">
+                    <div class="welcome-pack-workspace-title">
+                        <div>
+                            <div class="welcome-pack-section-kicker">${this.tr('hero.kicker')}</div>
+                            <h2>${this.tr('hero.title') || this.tr('header.title')}</h2>
+                            <p>${this.tr('hero.body')}</p>
                         </div>
+                        <button type="button" class="welcome-pack-action-button" data-wp-start-purchase>
+                            <i class="fas fa-plus"></i><span>${this.tr('purchases.recordPurchase')}</span>
+                        </button>
                     </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 xl:grid-cols-3">
-                        ${primaryViews.map((view) => `
-                            <button
-                                type="button"
-                                class="text-left rounded-2xl border ${this.currentView === view.id ? 'border-sky-200 bg-sky-50/70' : 'border-slate-200 bg-slate-50'} px-4 py-4 transition hover:-translate-y-0.5 hover:border-slate-300"
-                                data-wp-view="${view.id}">
-                                <div class="flex items-start gap-3">
-                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${this.currentView === view.id ? 'bg-sky-100 text-sky-700' : 'bg-white text-slate-600'}">
-                                        <i class="fas ${view.icon}"></i>
-                                    </span>
-                                    <div class="min-w-0">
-                                        <div class="text-[11px] font-semibold uppercase tracking-[0.18em] ${this.currentView === view.id ? 'text-sky-700' : 'text-slate-500'}">${view.eyebrow}</div>
-                                        <h3 class="mt-1 text-base font-semibold text-slate-900">${view.label}</h3>
-                                        <p class="mt-1 text-sm leading-6 text-slate-600">${view.description}</p>
-                                    </div>
-                                </div>
-                            </button>
-                        `).join('')}
+                    <div class="welcome-pack-workspace-navigation">
+                        <nav class="flex flex-wrap gap-2" aria-label="Welcome Pack views">
+                            ${primaryViews.map((view) => `
+                                <button type="button" id="wp-${view.id}-btn" class="view-btn ${this.currentView === view.id ? 'active' : ''}" data-wp-view="${view.id}">
+                                    <i class="fas ${view.icon}"></i><span>${view.label}</span>
+                                </button>
+                            `).join('')}
+                        </nav>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${this.tr('support.label')}</span>
+                            ${supportViews.map((view) => `
+                                <button type="button" id="wp-${view.id}-btn" class="view-btn ${this.currentView === view.id ? 'active' : ''}" data-wp-view="${view.id}">
+                                    <i class="fas ${view.icon}"></i><span>${view.label}</span>
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                     <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                         ${this.renderWorkspaceMetric(this.tr('inventory.metrics.tracked'), String(inventorySummary.totals.materialCount))}
                         ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.loggedCharges'), String(logSummary.totals.count))}
                         ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.amountCharged'), this.formatCurrency(logSummary.totals.revenue))}
                         ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.netProfit'), this.formatCurrency(logSummary.totals.profit))}
-                    </div>
-                </section>
-
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                        <nav class="flex flex-wrap gap-2" aria-label="Welcome Pack views">
-                        ${primaryViews.map((view) => `
-                            <button
-                                type="button"
-                                id="wp-${view.id}-btn"
-                                class="view-btn ${this.currentView === view.id ? 'active' : ''}"
-                                data-wp-view="${view.id}">
-                                <i class="fas ${view.icon}"></i>
-                                <span>${view.label}</span>
-                            </button>
-                        `).join('')}
-                        </nav>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${this.tr('support.label')}</span>
-                            ${supportViews.map((view) => `
-                            <button
-                                type="button"
-                                id="wp-${view.id}-btn"
-                                class="view-btn ${this.currentView === view.id ? 'active' : ''}"
-                                data-wp-view="${view.id}">
-                                <i class="fas ${view.icon}"></i>
-                                <span>${view.label}</span>
-                            </button>
-                        `).join('')}
-                        </div>
                     </div>
                 </section>
                 <div id="wp-view-container" class="space-y-6"></div>
@@ -1107,7 +1115,8 @@ export class WelcomePackManager {
         this.renderLoadingState(container);
 
         try {
-            if (this.currentView === 'dashboard') await this.renderDashboard(container);
+            if (this.currentView === 'purchases') await this.renderPurchases(container);
+            else if (this.currentView === 'dashboard') await this.renderDashboard(container);
             else if (this.currentView === 'reservations') await this.renderReservations(container);
             else if (this.currentView === 'inventory') await this.renderInventory(container);
             else if (this.currentView === 'presets') await this.renderPresets(container);
@@ -2254,6 +2263,461 @@ export class WelcomePackManager {
         }
     }
 
+    createPurchaseDraft({ mode = 'bulk' } = {}) {
+        const isFruit = mode === 'fruit';
+        const fruitLines = [
+            ['Banana Regional', 1.99],
+            ['Maçã Fuji', 2.29],
+            ['Laranja', 1.69],
+            ['Manga', 2.89]
+        ].map(([name, unitPrice]) => createPurchaseLine({
+            id: `wp-purchase-line-${++this.purchaseLineSequence}`,
+            name,
+            category: 'fruit',
+            purchaseQuantity: 0,
+            unitsPerPurchaseUnit: 1,
+            stockUnit: 'kg',
+            unitPrice,
+            priceMode: 'gross',
+            vatRate: 4
+        }));
+
+        return summarizePurchase({
+            mode,
+            supplier: isFruit ? 'Continente' : '',
+            invoiceNumber: '',
+            date: new Date().toISOString().split('T')[0],
+            cardCredit: 0,
+            cashPaid: '',
+            lines: isFruit ? fruitLines : [createPurchaseLine({
+                id: `wp-purchase-line-${++this.purchaseLineSequence}`
+            })]
+        });
+        document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
+            this.currentView = 'purchases';
+            this.startPurchaseDraft('bulk');
+        });
+    }
+
+    startPurchaseDraft(mode = 'bulk') {
+        this.purchaseDraft = this.createPurchaseDraft({ mode });
+        this.purchaseFile = null;
+        this.purchaseImportStatus = null;
+        void this.renderCurrentView();
+    }
+
+    cancelPurchaseDraft() {
+        this.purchaseDraft = null;
+        this.purchaseFile = null;
+        this.purchaseImportStatus = null;
+        void this.renderCurrentView();
+    }
+
+    async renderPurchases(container) {
+        const [purchases, materials] = await Promise.all([
+            this._fetchData('purchases'),
+            this._fetchData('items')
+        ]);
+
+        if (this.purchaseDraft) {
+            this.renderPurchaseDraft(container, materials);
+            return;
+        }
+
+        const recentCutoff = new Date();
+        recentCutoff.setDate(recentCutoff.getDate() - 30);
+        const recentDate = recentCutoff.toISOString().split('T')[0];
+        const recentPurchases = purchases.filter((purchase) => String(purchase.date || '') >= recentDate);
+        const totals = recentPurchases.reduce((summary, purchase) => {
+            summary.net += Number(purchase.totals?.inventoryCostNet) || 0;
+            summary.gross += Number(purchase.totals?.gross) || 0;
+            summary.deposits += Number(purchase.totals?.deposits) || 0;
+            return summary;
+        }, { net: 0, gross: 0, deposits: 0 });
+
+        container.innerHTML = `
+            <section class="welcome-pack-panel welcome-pack-purchase-overview">
+                <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
+                    <div>
+                        <p class="welcome-pack-section-kicker">${this.tr('purchases.kicker')}</p>
+                        <h3>${this.tr('purchases.title')}</h3>
+                        <p>${this.tr('purchases.description')}</p>
+                    </div>
+                    <div class="welcome-pack-toolbar-actions">
+                        <input id="wp-invoice-file-input" class="sr-only" type="file" accept="application/pdf,image/*">
+                        <button type="button" id="wp-import-invoice-btn" class="welcome-pack-secondary-button">
+                            <i class="fas fa-file-arrow-up"></i>
+                            <span>${this.tr('purchases.importInvoice')}</span>
+                        </button>
+                        <button type="button" id="wp-fruit-purchase-btn" class="welcome-pack-secondary-button">
+                            <i class="fas fa-apple-whole"></i>
+                            <span>${this.tr('purchases.dailyFruit')}</span>
+                        </button>
+                        <button type="button" id="wp-new-purchase-btn" class="welcome-pack-action-button">
+                            <i class="fas fa-plus"></i>
+                            <span>${this.tr('purchases.recordPurchase')}</span>
+                        </button>
+                    </div>
+                </div>
+
+                ${this.purchaseImportStatus ? `
+                <div class="welcome-pack-import-progress" role="status">
+                    <div><i class="fas fa-spinner fa-spin"></i><span>${escapeHtml(this.purchaseImportStatus.message || '')}</span></div>
+                    <progress max="100" value="${Number(this.purchaseImportStatus.progress) || 0}"></progress>
+                </div>
+                ` : ''}
+
+                <div class="welcome-pack-metric-grid">
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('purchases.metrics.last30Days')}</span>
+                        <strong>${recentPurchases.length}</strong>
+                        <small>${this.tr('purchases.metrics.purchasesRecorded')}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('purchases.metrics.inventoryCost')}</span>
+                        <strong>${this.formatCurrency(totals.net)}</strong>
+                        <small>${this.tr('purchases.metrics.netCost')}</small>
+                    </article>
+                    <article class="welcome-pack-metric">
+                        <span>${this.tr('purchases.metrics.cashAndVat')}</span>
+                        <strong>${this.formatCurrency(totals.gross)}</strong>
+                        <small>${this.tr('purchases.metrics.includesDeposits', { amount: this.formatCurrency(totals.deposits) })}</small>
+                    </article>
+                </div>
+
+                ${purchases.length ? `
+                <div class="welcome-pack-table-wrap">
+                    <table class="welcome-pack-table">
+                        <thead><tr>
+                            <th>${this.tr('purchases.table.date')}</th>
+                            <th>${this.tr('purchases.table.supplier')}</th>
+                            <th>${this.tr('purchases.table.invoice')}</th>
+                            <th>${this.tr('purchases.table.materials')}</th>
+                            <th>${this.tr('purchases.table.netCost')}</th>
+                            <th>${this.tr('purchases.table.paid')}</th>
+                            <th>${this.tr('purchases.table.source')}</th>
+                        </tr></thead>
+                        <tbody>
+                            ${purchases.map((purchase) => `
+                            <tr>
+                                <td>${this.formatDisplayDate(purchase.date)}</td>
+                                <td><strong>${escapeHtml(purchase.supplier || '-')}</strong></td>
+                                <td>${escapeHtml(purchase.invoiceNumber || '-')}</td>
+                                <td>${this.pluralize('purchases.materialCount', purchase.lines?.length || 0)}</td>
+                                <td>${this.formatCurrency(purchase.totals?.inventoryCostNet || 0)}</td>
+                                <td>${this.formatCurrency(purchase.cashPaid ?? purchase.totals?.gross ?? 0)}</td>
+                                <td>${purchase.attachment?.url
+                                    ? `<a class="welcome-pack-invoice-link" href="${escapeHtml(purchase.attachment.url)}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i>${escapeHtml(purchase.attachment.name || this.tr('purchases.openInvoice'))}</a>`
+                                    : `<span>${escapeHtml(purchase.importMethod || this.tr('purchases.manual'))}</span>`}
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : `
+                <div class="welcome-pack-empty-state">
+                    <h4>${this.tr('purchases.emptyTitle')}</h4>
+                    <p>${this.tr('purchases.emptyDescription')}</p>
+                </div>`}
+            </section>
+        `;
+
+        document.getElementById('wp-new-purchase-btn')?.addEventListener('click', () => this.startPurchaseDraft('bulk'));
+        document.getElementById('wp-fruit-purchase-btn')?.addEventListener('click', () => this.startPurchaseDraft('fruit'));
+        const fileInput = document.getElementById('wp-invoice-file-input');
+        document.getElementById('wp-import-invoice-btn')?.addEventListener('click', () => fileInput?.click());
+        fileInput?.addEventListener('change', (event) => {
+            const [file] = event.target.files || [];
+            if (file) void this.importPurchaseInvoice(file);
+        });
+    }
+
+    renderPurchaseDraft(container, materials = []) {
+        const draft = summarizePurchase(this.purchaseDraft);
+        this.purchaseDraft = draft;
+        const isImported = Boolean(draft.importMethod);
+
+        container.innerHTML = `
+            <section class="welcome-pack-panel welcome-pack-purchase-editor">
+                <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
+                    <div>
+                        <p class="welcome-pack-section-kicker">${isImported ? this.tr('purchases.reviewKicker') : this.tr('purchases.entryKicker')}</p>
+                        <h3>${isImported ? this.tr('purchases.reviewTitle') : this.tr('purchases.entryTitle')}</h3>
+                        <p>${isImported ? this.tr('purchases.reviewDescription') : this.tr('purchases.entryDescription')}</p>
+                    </div>
+                    <button type="button" id="wp-cancel-purchase-btn" class="welcome-pack-secondary-button">
+                        <i class="fas fa-xmark"></i><span>${this.tr('actions.cancel')}</span>
+                    </button>
+                </div>
+
+                ${isImported ? `
+                <div class="welcome-pack-import-result">
+                    <i class="fas ${draft.importMethod === 'ocr' ? 'fa-eye' : 'fa-file-lines'}"></i>
+                    <div><strong>${escapeHtml(this.purchaseFile?.name || this.tr('purchases.importedInvoice'))}</strong>
+                    <span>${this.tr(draft.importMethod === 'ocr' ? 'purchases.ocrReviewNotice' : 'purchases.pdfReviewNotice')}</span></div>
+                </div>` : ''}
+
+                <div class="welcome-pack-purchase-meta">
+                    <label class="welcome-pack-field"><span>${this.tr('purchases.fields.supplier')}</span><input data-purchase-meta="supplier" value="${escapeHtml(draft.supplier)}" required></label>
+                    <label class="welcome-pack-field"><span>${this.tr('purchases.fields.date')}</span><input data-purchase-meta="date" type="date" value="${escapeHtml(draft.date)}" required></label>
+                    <label class="welcome-pack-field"><span>${this.tr('purchases.fields.invoiceNumber')}</span><input data-purchase-meta="invoiceNumber" value="${escapeHtml(draft.invoiceNumber)}"></label>
+                    <label class="welcome-pack-field"><span>${this.tr('purchases.fields.cardCredit')}</span><input data-purchase-meta="cardCredit" type="number" min="0" step="0.01" value="${draft.cardCredit || 0}"></label>
+                    <label class="welcome-pack-field"><span>${this.tr('purchases.fields.cashPaid')}</span><input data-purchase-meta="cashPaid" type="number" min="0" step="0.01" value="${draft.cashPaid ?? ''}"></label>
+                </div>
+
+                <div class="welcome-pack-purchase-grid-wrap">
+                    <table class="welcome-pack-purchase-grid">
+                        <thead><tr>
+                            <th>${this.tr('purchases.fields.material')}</th>
+                            <th>${this.tr('purchases.fields.bought')}</th>
+                            <th>${this.tr('purchases.fields.unitsPerPack')}</th>
+                            <th>${this.tr('purchases.fields.stockUnit')}</th>
+                            <th>${this.tr('purchases.fields.unitPrice')}</th>
+                            <th>${this.tr('purchases.fields.priceMode')}</th>
+                            <th>${this.tr('purchases.fields.discount')}</th>
+                            <th>${this.tr('purchases.fields.vat')}</th>
+                            <th>${this.tr('purchases.fields.extraCost')}</th>
+                            <th>${this.tr('purchases.fields.deposit')}</th>
+                            <th>${this.tr('purchases.fields.result')}</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="wp-purchase-lines">
+                            ${draft.lines.map((line) => this.renderPurchaseLineRow(line, materials)).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="welcome-pack-purchase-editor-footer">
+                    <button type="button" id="wp-add-purchase-line-btn" class="welcome-pack-secondary-button">
+                        <i class="fas fa-plus"></i><span>${this.tr('purchases.addLine')}</span>
+                    </button>
+                    <div class="welcome-pack-purchase-totals">
+                        <div><span>${this.tr('purchases.totals.stockAdded')}</span><strong id="wp-purchase-total-stock">${this.formatQuantity(draft.totals.stockQuantity)}</strong></div>
+                        <div><span>${this.tr('purchases.totals.netCost')}</span><strong id="wp-purchase-total-net">${this.formatCurrency(draft.totals.inventoryCostNet)}</strong></div>
+                        <div><span>${this.tr('purchases.totals.vat')}</span><strong id="wp-purchase-total-vat">${this.formatCurrency(draft.totals.vat)}</strong></div>
+                        <div><span>${this.tr('purchases.totals.deposits')}</span><strong id="wp-purchase-total-deposits">${this.formatCurrency(draft.totals.deposits)}</strong></div>
+                        <div class="is-total"><span>${this.tr('purchases.totals.invoiceTotal')}</span><strong id="wp-purchase-total-gross">${this.formatCurrency(draft.totals.gross)}</strong></div>
+                    </div>
+                    <button type="button" id="wp-save-purchase-btn" class="welcome-pack-action-button welcome-pack-purchase-save">
+                        <i class="fas fa-check"></i><span>${this.tr('purchases.saveAndUpdateStock')}</span>
+                    </button>
+                </div>
+            </section>
+        `;
+
+        container.querySelectorAll('[data-purchase-meta]').forEach((input) => {
+            input.addEventListener('input', () => {
+                const field = input.dataset.purchaseMeta;
+                this.purchaseDraft[field] = field === 'cardCredit' || field === 'cashPaid'
+                    ? input.value
+                    : input.value.trim();
+                if (field === 'cashPaid') this.purchaseDraft.cashPaidIsAutomatic = false;
+                this.refreshPurchaseDraftTotals();
+            });
+        });
+        container.querySelectorAll('[data-purchase-line-field]').forEach((input) => {
+            input.addEventListener('input', () => this.updatePurchaseLineFromInput(input, materials));
+            input.addEventListener('change', () => this.updatePurchaseLineFromInput(input, materials));
+        });
+        container.querySelectorAll('[data-remove-purchase-line]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.purchaseDraft.lines = this.purchaseDraft.lines.filter((line) => line.id !== button.dataset.removePurchaseLine);
+                if (!this.purchaseDraft.lines.length) this.addPurchaseLine(false);
+                else this.renderPurchaseDraft(container, materials);
+            });
+        });
+        document.getElementById('wp-add-purchase-line-btn')?.addEventListener('click', () => this.addPurchaseLine());
+        document.getElementById('wp-cancel-purchase-btn')?.addEventListener('click', () => this.cancelPurchaseDraft());
+        document.getElementById('wp-save-purchase-btn')?.addEventListener('click', () => void this.savePurchaseDraft());
+    }
+
+    renderPurchaseLineRow(line, materials) {
+        return `
+            <tr data-purchase-line-id="${escapeHtml(line.id)}">
+                <td class="welcome-pack-purchase-material-cell">
+                    <select data-purchase-line-field="materialId">
+                        <option value="">${this.tr('purchases.newMaterial')}</option>
+                        ${materials.map((material) => `<option value="${escapeHtml(material.id)}" ${material.id === line.materialId ? 'selected' : ''}>${escapeHtml(material.name)}</option>`).join('')}
+                    </select>
+                    <input data-purchase-line-field="name" value="${escapeHtml(line.name)}" placeholder="${this.tr('purchases.materialPlaceholder')}">
+                </td>
+                <td><input data-purchase-line-field="purchaseQuantity" type="number" min="0" step="0.001" value="${line.purchaseQuantity}"></td>
+                <td><input data-purchase-line-field="unitsPerPurchaseUnit" type="number" min="0.001" step="0.001" value="${line.unitsPerPurchaseUnit}"></td>
+                <td><select data-purchase-line-field="stockUnit">
+                    ${['unit', 'bottle', 'pack', 'kg', 'litre'].map((unit) => `<option value="${unit}" ${line.stockUnit === unit ? 'selected' : ''}>${this.tr(`purchases.units.${unit}`)}</option>`).join('')}
+                </select></td>
+                <td><input data-purchase-line-field="unitPrice" type="number" min="0" step="0.0001" value="${line.unitPrice}"></td>
+                <td><select data-purchase-line-field="priceMode"><option value="net" ${line.priceMode === 'net' ? 'selected' : ''}>${this.tr('purchases.net')}</option><option value="gross" ${line.priceMode === 'gross' ? 'selected' : ''}>${this.tr('purchases.gross')}</option></select></td>
+                <td><input data-purchase-line-field="discountPercent" type="number" min="0" max="100" step="0.01" value="${line.discountPercent}"></td>
+                <td><select data-purchase-line-field="vatRate">${[0, 4, 12, 22].map((rate) => `<option value="${rate}" ${Number(line.vatRate) === rate ? 'selected' : ''}>${rate}%</option>`).join('')}</select></td>
+                <td><input data-purchase-line-field="extraCostNet" type="number" min="0" step="0.01" value="${line.extraCostNet}"></td>
+                <td><input data-purchase-line-field="recoverableDeposit" type="number" min="0" step="0.01" value="${line.recoverableDeposit}"></td>
+                <td class="welcome-pack-purchase-result"><strong data-line-stock>${this.formatQuantity(line.stockQuantity, line.stockUnit)}</strong><span data-line-cost>${this.formatCurrency(line.unitCost)} / ${escapeHtml(line.stockUnit)}</span></td>
+                <td><button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" data-remove-purchase-line="${escapeHtml(line.id)}" title="${this.tr('actions.removeMaterial')}"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>`;
+    }
+
+    updatePurchaseLineFromInput(input, materials) {
+        const row = input.closest('[data-purchase-line-id]');
+        const lineIndex = this.purchaseDraft.lines.findIndex((line) => line.id === row?.dataset.purchaseLineId);
+        if (lineIndex < 0) return;
+        const field = input.dataset.purchaseLineField;
+        const numericFields = new Set(['purchaseQuantity', 'unitsPerPurchaseUnit', 'unitPrice', 'discountPercent', 'vatRate', 'extraCostNet', 'recoverableDeposit']);
+        const updates = { [field]: numericFields.has(field) ? input.value : input.value.trim() };
+
+        if (field === 'materialId' && input.value) {
+            const material = materials.find((candidate) => candidate.id === input.value);
+            if (material) {
+                updates.name = material.name;
+                updates.stockUnit = material.stockUnit || 'unit';
+                row.querySelector('[data-purchase-line-field="name"]').value = material.name;
+                row.querySelector('[data-purchase-line-field="stockUnit"]').value = updates.stockUnit;
+            }
+        }
+
+        this.purchaseDraft.lines[lineIndex] = calculatePurchaseLine({
+            ...this.purchaseDraft.lines[lineIndex],
+            ...updates
+        });
+        this.refreshPurchaseDraftTotals();
+    }
+
+    refreshPurchaseDraftTotals() {
+        this.purchaseDraft = summarizePurchase(this.purchaseDraft);
+        this.purchaseDraft.lines.forEach((line) => {
+            const row = document.querySelector(`[data-purchase-line-id="${line.id}"]`);
+            if (!row) return;
+            const stock = row.querySelector('[data-line-stock]');
+            const cost = row.querySelector('[data-line-cost]');
+            if (stock) stock.textContent = this.formatQuantity(line.stockQuantity, line.stockUnit);
+            if (cost) cost.textContent = `${this.formatCurrency(line.unitCost)} / ${line.stockUnit}`;
+        });
+        const values = {
+            'wp-purchase-total-stock': this.formatQuantity(this.purchaseDraft.totals.stockQuantity),
+            'wp-purchase-total-net': this.formatCurrency(this.purchaseDraft.totals.inventoryCostNet),
+            'wp-purchase-total-vat': this.formatCurrency(this.purchaseDraft.totals.vat),
+            'wp-purchase-total-deposits': this.formatCurrency(this.purchaseDraft.totals.deposits),
+            'wp-purchase-total-gross': this.formatCurrency(this.purchaseDraft.totals.gross)
+        };
+        Object.entries(values).forEach(([id, value]) => {
+            const target = document.getElementById(id);
+            if (target) target.textContent = value;
+        });
+    }
+
+    addPurchaseLine(render = true) {
+        this.purchaseDraft.lines.push(createPurchaseLine({ id: `wp-purchase-line-${++this.purchaseLineSequence}` }));
+        if (render) void this.renderCurrentView();
+    }
+
+    async importPurchaseInvoice(file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert(this.tr('purchases.fileTooLarge'));
+            return;
+        }
+        this.purchaseFile = file;
+        this.purchaseImportStatus = { progress: 0, message: this.tr('purchases.importStarting') };
+        void this.renderCurrentView();
+        try {
+            const [extracted, fingerprint] = await Promise.all([
+                extractInvoiceFile(file, {
+                    onProgress: (status) => {
+                        this.purchaseImportStatus = status;
+                        const progress = document.querySelector('.welcome-pack-import-progress progress');
+                        const label = document.querySelector('.welcome-pack-import-progress span');
+                        if (progress) progress.value = Number(status.progress) || 0;
+                        if (label) label.textContent = status.message || '';
+                    }
+                }),
+                fingerprintInvoiceFile(file)
+            ]);
+            const materials = await this._fetchData('items');
+            const parsed = parseWelcomePackInvoiceText(extracted.text);
+            this.purchaseDraft = summarizePurchase({
+                ...parsed,
+                id: `invoice-${fingerprint.slice(0, 32)}`,
+                lines: matchPurchaseLinesToMaterials(parsed.lines, materials),
+                importMethod: extracted.method,
+                importFileName: file.name,
+                fileFingerprint: fingerprint,
+                attachment: {
+                    name: file.name,
+                    contentType: file.type || 'application/pdf',
+                    size: file.size || 0,
+                    status: this.uploadInvoice ? 'pending' : 'metadata-only'
+                }
+            });
+            this.purchaseImportStatus = null;
+            await this.renderCurrentView();
+        } catch (error) {
+            console.error('[WelcomePack] Invoice import failed:', error);
+            this.purchaseImportStatus = null;
+            this.purchaseFile = null;
+            alert(this.tr('purchases.importFailed', { message: error?.message || String(error) }));
+            await this.renderCurrentView();
+        }
+    }
+
+    async savePurchaseDraft() {
+        const purchase = summarizePurchase(this.purchaseDraft);
+        const validLines = purchase.lines.filter((line) => line.name && line.stockQuantity > 0);
+        if (!purchase.supplier || !purchase.date || !validLines.length) {
+            alert(this.tr('purchases.validation'));
+            return;
+        }
+
+        if (purchase.invoiceNumber) {
+            const purchases = await this._fetchData('purchases');
+            const supplierKey = purchase.supplier.trim().toLowerCase();
+            const invoiceKey = purchase.invoiceNumber.trim().toLowerCase();
+            const duplicate = purchases.some((existing) => (
+                String(existing.supplier || '').trim().toLowerCase() === supplierKey
+                && String(existing.invoiceNumber || '').trim().toLowerCase() === invoiceKey
+            ));
+            if (duplicate) {
+                alert(this.tr('purchases.duplicate'));
+                return;
+            }
+        }
+
+        const saveButton = document.getElementById('wp-save-purchase-btn');
+        if (saveButton) saveButton.disabled = true;
+        try {
+            const result = await this.dataManager.saveWelcomePackPurchase({
+                ...purchase,
+                id: purchase.id || `purchase-${crypto.randomUUID()}`,
+                lines: validLines,
+                importRawText: purchase.rawText || '',
+                importMethod: purchase.importMethod || 'manual'
+            });
+
+            if (this.purchaseFile && this.uploadInvoice) {
+                try {
+                    const attachment = await this.uploadInvoice({ purchaseId: result.id, file: this.purchaseFile });
+                    await this.dataManager.updateWelcomePackPurchase(result.id, { attachment: { ...attachment, status: 'ready' } });
+                } catch (uploadError) {
+                    console.error('[WelcomePack] Invoice attachment upload failed:', uploadError);
+                    await this.dataManager.updateWelcomePackPurchase(result.id, {
+                        attachment: { ...purchase.attachment, status: 'failed' }
+                    });
+                    alert(this.tr('purchases.savedUploadFailed'));
+                }
+            }
+
+            this._invalidateCache(['items', 'purchases']);
+            this.purchaseDraft = null;
+            this.purchaseFile = null;
+            alert(this.tr('purchases.saved'));
+            await this.render();
+        } catch (error) {
+            console.error('[WelcomePack] Purchase save failed:', error);
+            alert(error?.code === 'welcome-pack/duplicate-invoice'
+                ? this.tr('purchases.duplicate')
+                : this.tr('purchases.saveFailed'));
+            if (saveButton) saveButton.disabled = false;
+        }
+    }
+
     bindPropertyToggleButtons(container) {
         container?.querySelectorAll?.('[data-wp-property-id]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -2738,7 +3202,7 @@ export class WelcomePackManager {
                         </thead>
                         <tbody id="wp-inventory-list">
                             ${inventorySummary.items.map((item) => {
-            const isLowStock = (item.quantity || 0) < 5;
+            const isLowStock = (item.quantity || 0) <= (item.reorderPoint ?? 5);
 
             return `
                                 <tr>
@@ -2746,8 +3210,8 @@ export class WelcomePackManager {
                                         <strong>${item.name}</strong>
                                         <span>${isLowStock ? this.tr('inventory.status.needsRestock') : this.tr('inventory.status.ready')}</span>
                                     </td>
-                                    <td>${item.quantity || 0}</td>
-                                    <td>${this.formatCurrency(item.costPrice)}</td>
+                                    <td>${this.formatQuantity(item.quantity || 0, item.stockUnit || 'unit')}</td>
+                                    <td>${this.formatCurrency(item.costPrice)} / ${escapeHtml(item.stockUnit || 'unit')}</td>
                                     <td>${item.costVatRate || 22}%</td>
                                     <td>
                                         <div class="welcome-pack-action-row">
@@ -3058,10 +3522,10 @@ export class WelcomePackManager {
                         ${items.map((item) => {
             const safeName = String(item.name || '').replace(/"/g, '&quot;');
             return `
-                            <article class="welcome-pack-catalog-item ${item.quantity < 5 ? 'is-low-stock' : ''}">
+                            <article class="welcome-pack-catalog-item ${item.quantity <= (item.reorderPoint ?? 5) ? 'is-low-stock' : ''}">
                                 <div>
                                     <strong>${item.name}</strong>
-                                    <span>${this.tr('log.materialInStock', { count: item.quantity || 0 })}</span>
+                                    <span>${this.tr('log.materialInStock', { count: this.formatQuantity(item.quantity || 0, item.stockUnit || 'unit') })}</span>
                                 </div>
                                 <div>
                                     <span>${this.tr('log.materialCost', { amount: this.formatCurrency(item.costPrice) })}</span>
@@ -3071,6 +3535,7 @@ export class WelcomePackManager {
                                     data-id="${item.id}"
                                     data-name="${safeName}"
                                     data-cost="${item.costPrice}"
+                                    data-unit="${escapeHtml(item.stockUnit || 'unit')}"
                                     data-cost-vat="${item.costVatRate || 22}"
                                     data-sell="0"
                                     data-sell-vat="22">
@@ -3175,6 +3640,7 @@ export class WelcomePackManager {
                     name: button.dataset.name,
                     quantity: 1,
                     costPrice: Number.parseFloat(button.dataset.cost) || 0,
+                    stockUnit: button.dataset.unit || 'unit',
                     sellPrice: Number.parseFloat(button.dataset.sell) || 0,
                     costVatRate: Number.parseFloat(button.dataset.costVat) || 22,
                     sellVatRate: Number.parseFloat(button.dataset.sellVat) || 22
@@ -3209,8 +3675,8 @@ export class WelcomePackManager {
     }
 
     updateCartItemQuantity(index, quantity) {
-        const nextQuantity = Number.parseInt(quantity, 10);
-        if (!Number.isInteger(nextQuantity) || nextQuantity <= 0) {
+        const nextQuantity = Number.parseFloat(quantity);
+        if (!Number.isFinite(nextQuantity) || nextQuantity <= 0) {
             this.removeCartItem(index);
             return;
         }
@@ -3307,7 +3773,7 @@ export class WelcomePackManager {
                         <div class="welcome-pack-cart-controls">
                             <label>
                                 <span>${this.tr('log.cart.qty')}</span>
-                                <input type="number" min="1" step="1" value="${item.quantity || 1}" onchange="welcomePackManager.updateCartItemQuantity(${index}, this.value)" title="${this.tr('log.cart.qty')}">
+                                <input type="number" min="0.001" step="0.001" value="${item.quantity || 1}" onchange="welcomePackManager.updateCartItemQuantity(${index}, this.value)" title="${this.tr('log.cart.qty')}">
                             </label>
                             <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" onclick="welcomePackManager.removeCartItem(${index})" title="${this.tr('actions.removeMaterial')}">
                                 <i class="fas fa-xmark"></i>
@@ -3474,7 +3940,13 @@ export class WelcomePackManager {
                     <h3 class="text-lg font-bold text-gray-900 mb-4">${this.tr('modals.addMaterial.title')}</h3>
                     <div class="space-y-4">
                         <input type="text" id="wp-new-item-name" placeholder="${this.tr('modals.addMaterial.namePlaceholder')}" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-new-item-stock" placeholder="${this.tr('modals.addMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" id="wp-new-item-stock" placeholder="${this.tr('modals.addMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0" step="0.001">
+                            <select id="wp-new-item-unit" class="w-full p-2 border rounded bg-white">
+                                ${['unit', 'bottle', 'pack', 'kg', 'litre'].map((unit) => `<option value="${unit}">${this.tr(`purchases.units.${unit}`)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <input type="number" id="wp-new-item-reorder" placeholder="${this.tr('modals.addMaterial.reorderPointPlaceholder')}" class="w-full p-2 border rounded" min="0" step="0.001" value="5">
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.addMaterial.costLabel')}</p>
@@ -3529,7 +4001,9 @@ export class WelcomePackManager {
         document.getElementById('wp-cancel-add-btn').onclick = () => document.getElementById('wp-add-item-modal').remove();
         document.getElementById('wp-confirm-add-btn').onclick = async () => {
             const name = document.getElementById('wp-new-item-name').value;
-            const stock = parseInt(document.getElementById('wp-new-item-stock').value) || 0;
+            const stock = Number.parseFloat(document.getElementById('wp-new-item-stock').value) || 0;
+            const stockUnit = document.getElementById('wp-new-item-unit').value || 'unit';
+            const reorderPoint = Number.parseFloat(document.getElementById('wp-new-item-reorder').value) || 0;
             const costPrice = parseFloat(document.getElementById('wp-new-item-cost').value);
             const costVatRate = parseInt(document.getElementById('wp-new-item-cost-vat').value) || 22;
             const sellPrice = 0;
@@ -3542,6 +4016,8 @@ export class WelcomePackManager {
                 await this.dataManager.saveWelcomePackItem({
                     name,
                     quantity: stock,
+                    stockUnit,
+                    reorderPoint,
                     costPrice: costPrice,           // Net cost
                     costVatRate: costVatRate,       // VAT rate for cost
                     costGross: costCalc.grossPrice, // Gross cost (calculated)
@@ -3577,7 +4053,13 @@ export class WelcomePackManager {
                     <h3 class="text-lg font-bold text-gray-900 mb-4">${this.tr('modals.editMaterial.title')}</h3>
                     <div class="space-y-4">
                         <input type="text" id="wp-edit-item-name" value="${item.name}" placeholder="${this.tr('modals.editMaterial.namePlaceholder')}" class="w-full p-2 border rounded">
-                        <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="${this.tr('modals.editMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" id="wp-edit-item-stock" value="${item.quantity || 0}" placeholder="${this.tr('modals.editMaterial.stockPlaceholder')}" class="w-full p-2 border rounded" min="0" step="0.001">
+                            <select id="wp-edit-item-unit" class="w-full p-2 border rounded bg-white">
+                                ${['unit', 'bottle', 'pack', 'kg', 'litre'].map((unit) => `<option value="${unit}" ${String(item.stockUnit || 'unit') === unit ? 'selected' : ''}>${this.tr(`purchases.units.${unit}`)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <input type="number" id="wp-edit-item-reorder" value="${item.reorderPoint ?? 5}" placeholder="${this.tr('modals.editMaterial.reorderPointPlaceholder')}" class="w-full p-2 border rounded" min="0" step="0.001">
                         
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <p class="text-xs font-semibold text-gray-600 mb-2 uppercase">${this.tr('modals.editMaterial.costLabel')}</p>
@@ -3635,6 +4117,8 @@ export class WelcomePackManager {
         document.getElementById('wp-confirm-edit-btn').onclick = async () => {
             const name = document.getElementById('wp-edit-item-name').value;
             const stock = document.getElementById('wp-edit-item-stock').value;
+            const stockUnit = document.getElementById('wp-edit-item-unit').value || 'unit';
+            const reorderPoint = Number.parseFloat(document.getElementById('wp-edit-item-reorder').value) || 0;
             const costPrice = parseFloat(document.getElementById('wp-edit-item-cost').value);
             const costVatRate = parseInt(document.getElementById('wp-edit-item-cost-vat').value) || 22;
             const sellPrice = Number.isFinite(item.sellPrice) ? item.sellPrice : 0;
@@ -3646,7 +4130,9 @@ export class WelcomePackManager {
 
                 await this.dataManager.updateWelcomePackItem(item.id, {
                     name,
-                    quantity: parseInt(stock) || 0,
+                    quantity: Number.parseFloat(stock) || 0,
+                    stockUnit,
+                    reorderPoint,
                     costPrice: costPrice,
                     costVatRate: costVatRate,
                     costGross: costCalc.grossPrice,

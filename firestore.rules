@@ -304,6 +304,10 @@ service cloud.firestore {
       allow read, write: if privileged() || hasApp('welcomePacks');
     }
 
+    match /welcome_pack_purchases/{purchaseId} {
+      allow read, write: if privileged() || hasApp('welcomePacks');
+    }
+
     match /heatedPools/{recordId} {
       allow read, write: if privileged() || hasApp('heatedPools') || hasApp('reservations');
     }

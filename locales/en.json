@@ -762,7 +762,70 @@
     "hero": {
       "kicker": "Welcome Packs",
       "title": "",
-      "body": "The workflow is now split into three clear jobs: define the material costs, register what you charged at each property, and let the calculations view show totals and margin for you."
+      "body": "Record purchases first; stock, pack costs, property charges, and margin then stay connected automatically."
+    },
+    "purchases": {
+      "navLabel": "Purchases",
+      "navEyebrow": "Start here",
+      "navDescription": "Import an invoice or record a bulk purchase and update stock automatically.",
+      "kicker": "Purchasing ledger",
+      "title": "Purchases and invoice import",
+      "description": "Record bulk goods, daily fruit, discounts, VAT, fees, and returnable deposits in one place.",
+      "recordPurchase": "Record purchase",
+      "importInvoice": "Import invoice",
+      "dailyFruit": "Daily fruit",
+      "reviewKicker": "Review before saving",
+      "entryKicker": "Bulk purchase",
+      "reviewTitle": "Check the imported invoice",
+      "entryTitle": "Record a purchase",
+      "reviewDescription": "Confirm the supplier, quantities, units, VAT, fees, and material matches before stock changes.",
+      "entryDescription": "Enter what the supplier billed; unit cost and stock added are calculated live.",
+      "importedInvoice": "Imported invoice",
+      "ocrReviewNotice": "This scan was read with OCR. Check every number against the invoice.",
+      "pdfReviewNotice": "Text was extracted from the PDF. Check the draft before saving.",
+      "importStarting": "Preparing invoice import",
+      "importFailed": "The invoice could not be imported: {{message}}",
+      "fileTooLarge": "Choose an invoice smaller than 10 MB.",
+      "addLine": "Add material line",
+      "saveAndUpdateStock": "Save and update stock",
+      "newMaterial": "Create new material",
+      "materialPlaceholder": "Material name",
+      "net": "Net",
+      "gross": "Gross",
+      "openInvoice": "Open invoice",
+      "manual": "Manual",
+      "saved": "Purchase saved and stock updated.",
+      "savedUploadFailed": "The purchase and stock were saved, but the invoice attachment could not be uploaded.",
+      "duplicate": "This invoice was already imported. Stock was not changed again.",
+      "saveFailed": "The purchase could not be saved. Stock was not changed.",
+      "validation": "Add a supplier, date, and at least one material with a quantity greater than zero.",
+      "emptyTitle": "No purchases recorded yet",
+      "emptyDescription": "Import an invoice or record the first bulk purchase to build the stock ledger.",
+      "materialCount": { "one": "{{count}} material", "other": "{{count}} materials" },
+      "metrics": {
+        "last30Days": "Last 30 days",
+        "purchasesRecorded": "Purchases recorded",
+        "inventoryCost": "Inventory cost",
+        "netCost": "Net cost used for pack profitability",
+        "cashAndVat": "Invoice value",
+        "includesDeposits": "Includes {{amount}} in recoverable deposits"
+      },
+      "table": {
+        "date": "Date", "supplier": "Supplier", "invoice": "Invoice", "materials": "Materials",
+        "netCost": "Net cost", "paid": "Paid", "source": "Source"
+      },
+      "fields": {
+        "supplier": "Supplier", "date": "Date", "invoiceNumber": "Invoice number",
+        "cardCredit": "Card credit", "cashPaid": "Cash paid", "material": "Material",
+        "bought": "Quantity bought", "unitsPerPack": "Units / pack", "stockUnit": "Stock unit",
+        "unitPrice": "Invoice unit price", "priceMode": "Price includes", "discount": "Discount %",
+        "vat": "VAT", "extraCost": "Fees net", "deposit": "Deposit", "result": "Calculated result"
+      },
+      "totals": {
+        "stockAdded": "Stock added", "netCost": "Net inventory cost", "vat": "VAT",
+        "deposits": "Deposits", "invoiceTotal": "Calculated invoice total"
+      },
+      "units": { "unit": "unit", "bottle": "bottle", "pack": "pack", "kg": "kg", "litre": "litre" }
     },
     "workflow": {
       "materialCosts": {
@@ -1158,6 +1221,7 @@
         "title": "Add Material",
         "namePlaceholder": "Material Name",
         "stockPlaceholder": "Initial Stock Quantity",
+        "reorderPointPlaceholder": "Reorder point",
         "costLabel": "Material Cost (Net, excl. VAT)",
         "chargeLabel": "Suggested Charge (Net, excl. VAT)",
         "confirm": "Add Material"
@@ -1166,6 +1230,7 @@
         "title": "Edit Material",
         "namePlaceholder": "Material Name",
         "stockPlaceholder": "Stock Quantity",
+        "reorderPointPlaceholder": "Reorder point",
         "costLabel": "Material Cost (Net, excl. VAT)",
         "chargeLabel": "Suggested Charge (Net, excl. VAT)",
         "confirm": "Save Changes"

@@ -158,6 +158,7 @@ describe("WelcomePackManager", () => {
         }
       });
 
+      manager.currentView = "dashboard";
       manager.init();
       await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -195,6 +196,80 @@ describe("WelcomePackManager", () => {
     document.getElementById("wp-add-log-entry-btn").click();
 
     assert.equal(document.querySelectorAll("[data-wp-log-entry-id]").length, 2);
+  });
+
+  test("opens the daily fruit purchase grid and calculates decimal stock", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() { return []; },
+      async getWelcomePackPurchases() { return []; }
+    });
+
+    manager.currentView = "purchases";
+    await manager.render();
+    await flushRender();
+    document.getElementById("wp-fruit-purchase-btn").click();
+    await manager.renderCurrentView();
+
+    assert.equal(document.querySelectorAll("[data-purchase-line-id]").length, 4);
+    assert.equal(document.querySelector('[data-purchase-meta="supplier"]').value, "Continente");
+
+    const quantityInput = document.querySelector('[data-purchase-line-field="purchaseQuantity"]');
+    quantityInput.value = "2.135";
+    quantityInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.equal(manager.purchaseDraft.lines[0].stockQuantity, 2.135);
+    assert.equal(manager.purchaseDraft.lines[0].stockUnit, "kg");
+  });
+
+  test("saves a reviewed purchase and clears the draft", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const saved = [];
+    const alerts = [];
+    const restoreAlert = installGlobalProperty("alert", (message) => alerts.push(message));
+
+    try {
+      const manager = new WelcomePackManager({
+        async getWelcomePackLogs() { return []; },
+        async getWelcomePackItems() { return []; },
+        async getWelcomePackPurchases() { return []; },
+        async saveWelcomePackPurchase(purchase) {
+          saved.push(purchase);
+          return { id: purchase.id, lines: purchase.lines };
+        }
+      });
+
+      manager.currentView = "purchases";
+      await manager.render();
+      await flushRender();
+      manager.startPurchaseDraft("bulk");
+      await manager.renderCurrentView();
+
+      const supplier = document.querySelector('[data-purchase-meta="supplier"]');
+      supplier.value = "Supplier A";
+      supplier.dispatchEvent(new Event("input", { bubbles: true }));
+      const name = document.querySelector('[data-purchase-line-field="name"]');
+      name.value = "Water";
+      name.dispatchEvent(new Event("input", { bubbles: true }));
+      const quantity = document.querySelector('[data-purchase-line-field="purchaseQuantity"]');
+      quantity.value = "24";
+      quantity.dispatchEvent(new Event("input", { bubbles: true }));
+      const price = document.querySelector('[data-purchase-line-field="unitPrice"]');
+      price.value = "0.5";
+      price.dispatchEvent(new Event("input", { bubbles: true }));
+
+      await manager.savePurchaseDraft();
+
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0].lines[0].stockQuantity, 24);
+      assert.equal(manager.purchaseDraft, null);
+      assert.ok(alerts.length > 0);
+    } finally {
+      restoreAlert();
+    }
   });
 
   test("saves multiple property charge rows as a batch", async () => {
