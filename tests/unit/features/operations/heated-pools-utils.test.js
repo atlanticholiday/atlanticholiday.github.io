@@ -1,7 +1,9 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
   appendPoolStatusHistory,
+  buildHeatedPoolPropertyDirectory,
   buildHeatedPoolPlan,
+  HEATED_POOL_PROPERTY_NAMES,
   parseHeatedPoolsCsv
 } from "../../../../js/features/operations/heated-pools-utils.js";
 
@@ -110,5 +112,21 @@ describe("Heated pools utils", () => {
     });
 
     assert.equal(history, original);
+  });
+
+  test("keeps the heated-pool directory restricted to safe display fields", () => {
+    const directory = buildHeatedPoolPropertyDirectory([
+      { id: "villa-1", name: "Villa Ocean Haven", apiKey: "must-not-leak", icalUrl: "private" },
+      { id: "villa-2", displayName: "Villa Vista Atlântica", ownerEmail: "private@example.com" },
+      { id: "other", name: "Not approved", apiSecret: "must-not-leak" }
+    ]);
+
+    assert.equal(HEATED_POOL_PROPERTY_NAMES.length, 21);
+    assert.deepEqual(directory, [
+      { id: "villa-1", name: "Villa Ocean Haven" },
+      { id: "villa-2", name: "Villa Vista Atlântica" }
+    ]);
+    assert.equal(JSON.stringify(directory).includes("must-not-leak"), false);
+    assert.equal(JSON.stringify(directory).includes("private@example.com"), false);
   });
 });

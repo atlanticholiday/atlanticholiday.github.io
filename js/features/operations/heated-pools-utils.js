@@ -4,6 +4,58 @@ const MONEY_PATTERN = /(\d+(?:[,.]\d{1,2})?)/;
 const YES_VALUES = new Set(['sim', 'yes', 'y']);
 const NO_VALUES = new Set(['nao', 'não', 'no', 'n']);
 
+// Display labels only. Sensitive property fields must never be copied into the
+// heated-pool workspace; buildHeatedPoolPropertyDirectory returns { id, name }.
+export const HEATED_POOL_PROPERTY_NAMES = Object.freeze([
+    'Villa Ocean Haven',
+    'Villa de la Ponte',
+    'Dream House',
+    'Pearl of Madeira',
+    'Villa Alegria',
+    'Villa Primavera',
+    'Palm Paradise',
+    'Cape View',
+    'Villa Zenha',
+    'Breeze House 1',
+    'Casa Vista Azul',
+    'Midnight House',
+    'Casa dos Francelhos',
+    'Villa Alves',
+    'Acqua Beach',
+    'Villa Devaneio',
+    'Villa Jasmin',
+    'Vila Sofia',
+    'Villa Valentina',
+    'Villa Baradaje',
+    'Villa Vista Atlântica'
+]);
+
+export function buildHeatedPoolPropertyDirectory(properties = [], approvedNames = HEATED_POOL_PROPERTY_NAMES) {
+    const approvedByKey = new Map(approvedNames.map((name) => [normalizeForCompare(name), normalizeText(name)]));
+    const safeDirectory = [];
+    const seen = new Set();
+
+    properties.forEach((property) => {
+        const sourceName = [
+            property?.name,
+            property?.displayName,
+            property?.title,
+            property?.reference,
+            property?.code,
+            property?.propertyName
+        ].find((value) => typeof value === 'string' && value.trim());
+        const approvedName = approvedByKey.get(normalizeForCompare(sourceName));
+        if (!approvedName || seen.has(approvedName)) return;
+        seen.add(approvedName);
+        safeDirectory.push({
+            id: normalizeText(property?.id),
+            name: approvedName
+        });
+    });
+
+    return safeDirectory.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function parseCsvLine(line = '') {
     const values = [];
     let current = '';
