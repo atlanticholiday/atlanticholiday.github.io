@@ -10183,6 +10183,12 @@ body.heated-pools-dialog-open {
     padding: 1rem;
 }
 
+/* The component's grid display is declared after Tailwind's shared .hidden
+   utility, so explicitly preserve the closed state on every app page. */
+.heated-pools-dialog.hidden {
+    display: none;
+}
+
 .heated-pools-dialog__backdrop {
     position: absolute;
     inset: 0;
