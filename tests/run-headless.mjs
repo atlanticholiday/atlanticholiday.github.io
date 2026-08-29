@@ -95,7 +95,15 @@ async function main() {
       waitUntil: "networkidle"
     });
 
-    await page.waitForFunction(() => Boolean(window.__testResults), null, { timeout: 15000 });
+    try {
+      await page.waitForFunction(() => Boolean(window.__testResults), null, { timeout: 15000 });
+    } catch (waitError) {
+      if (errors.length > 0) {
+        console.log("Browser errors before timeout:");
+        errors.forEach((error) => console.log(`- ${error}`));
+      }
+      throw waitError;
+    }
 
     const { title, results } = await page.evaluate(() => ({
       title: document.title,

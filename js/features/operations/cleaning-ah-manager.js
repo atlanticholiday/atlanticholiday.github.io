@@ -27,7 +27,9 @@ import {
     summarizeCleaningAhPropertyDetail,
     summarizeCleaningAhPropertyRows,
     summarizeLaundryRecords,
-    sortCleaningAhPropertyRows
+    sortCleaningAhPropertyRows,
+    combineCleaningAndLaundryMonthlySummaries,
+    combineCleaningAndLaundryPropertySummaries
 } from "./cleaning-ah-utils.js";
 import { i18n, t } from "../../core/i18n.js";
 
@@ -79,23 +81,6 @@ function getTodayIsoDate() {
     return `${year}-${month}-${day}`;
 }
 
-function isMonthEndWindow(todayStr) {
-    const parts = todayStr.split("-").map(Number);
-    if (parts.length !== 3) return false;
-    const year = parts[0];
-    const month = parts[1] - 1; // 0-based month
-    const day = parts[2];
-    
-    // First 3 days of any month
-    if (day <= 3) return true;
-    
-    // Last 3 days of the month
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    if (day >= daysInMonth - 2) return true;
-    
-    return false;
-}
-
 function parseIsoDateToUtc(value) {
     const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!match) {
@@ -131,21 +116,6 @@ function getMondayFirstWeekStart(value) {
     return toIsoDateKey(date);
 }
 
-function getIsoDateDiffDays(laterDateValue, earlierDateValue) {
-    const later = Date.parse(`${String(laterDateValue || "").slice(0, 10)}T00:00:00Z`);
-    const earlier = Date.parse(`${String(earlierDateValue || "").slice(0, 10)}T00:00:00Z`);
-    if (!Number.isFinite(later) || !Number.isFinite(earlier)) {
-        return null;
-    }
-
-    return Math.round((later - earlier) / 86400000);
-}
-
-const CLEANING_LAUNDRY_STATUS = Object.freeze({
-    pending: "pending",
-    none: "none"
-});
-
 export class CleaningAhManager {
     constructor(db, { getDataManager = null, getProperties = null } = {}) {
         this.db = db || null;
@@ -168,18 +138,15 @@ export class CleaningAhManager {
         this.statsCategoryKey = "";
         this.statsPropertySort = "net-desc";
         this.statsSelectedPropertyName = "";
+        this.statsViewMode = "month";
         this.calendarDate = getTodayIsoDate();
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
         this.registerQueueSort = localStorage.getItem("cleaningAhRegisterQueueSort") || "oldest";
         this.registerQueueCompact = localStorage.getItem("cleaningAhRegisterQueueCompact") === "true";
-        this.inlineKgDrafts = {};
         this.fastRegisterDuplicateWarning = false;
         this.laundryRegisterFilter = "all";
         this.laundryRegisterSort = "date-desc";
-        this.openLaundryLinkEditorId = "";
-        this.openCleaningLaundryEntryId = "";
-        this.cleaningLaundryQuickDrafts = {};
         this.calendarModalMode = "";
         this.heatmapDetailModal = null;
         this.exportModalActive = false;
@@ -337,20 +304,6 @@ export class CleaningAhManager {
                 : CLEANING_AH_RESERVATION_SOURCES.platform);
     }
 
-    createCleaningQuickLaundryDraft(record = {}, overrides = {}) {
-        return {
-            date: getTodayIsoDate(),
-            kg: "",
-            amount: "",
-            laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
-            notes: "",
-            editingLaundryId: "",
-            updatesInlineCleaning: false,
-            ...overrides,
-            linkedCleaningId: record.id || ""
-        };
-    }
-
     getRecordSourceLabel(value) {
         const sourceKeyByValue = {
             manual: "recordSources.manual",
@@ -388,8 +341,6 @@ export class CleaningAhManager {
             categoryKey: DEFAULT_CLEANING_CATEGORY_KEY,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
             guestAmount: "",
-            laundryKg: "",
-            laundryAmount: "",
             notes: ""
         };
     }
@@ -399,7 +350,6 @@ export class CleaningAhManager {
             rowId: `cleaning-batch-row-${this.nextCleaningBatchRowId += 1}`,
             propertyName: "",
             guestAmount: "",
-            laundryKg: "",
             notes: "",
             ...overrides
         };
@@ -417,8 +367,8 @@ export class CleaningAhManager {
     createDefaultLaundryDraft() {
         return {
             date: getTodayIsoDate(),
-            linkedCleaningId: "",
             propertyName: "",
+            quantity: "",
             kg: "",
             amount: "",
             laundryRatePerKg: String(CLEANING_AH_DEFAULTS.laundryRatePerKg),
@@ -430,6 +380,7 @@ export class CleaningAhManager {
         return {
             rowId: `laundry-batch-row-${this.nextLaundryBatchRowId += 1}`,
             propertyName: "",
+            quantity: "",
             kg: "",
             notes: "",
             ...overrides
@@ -609,7 +560,6 @@ export class CleaningAhManager {
                 this.cleaningRecords = snapshot.docs
                     .map((entry) => ({ id: entry.id, ...entry.data() }))
                     .sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
-                this.repairMissingLaundryAmounts(snapshot.docs, "laundryAmount");
                 this.render();
             }, (error) => {
                 console.error("[Cleaning AH] cleanings listener failed:", error);
@@ -648,19 +598,14 @@ export class CleaningAhManager {
         const patches = snapshotDocs
             .map((entry) => {
                 const record = { id: entry.id, ...entry.data() };
-                const kg = toOptionalNumber(record.kg ?? record.laundryKg ?? record.estimatedLaundryKg);
+                const kg = toOptionalNumber(record.kg);
                 const savedAmount = toOptionalNumber(record[amountField]);
                 if (kg === null || kg <= 0 || (savedAmount !== null && savedAmount > 0)) {
                     return null;
                 }
 
                 const laundryRatePerKg = toOptionalNumber(record.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
-                const amount = resolveLaundryAmount({
-                    ...record,
-                    kg,
-                    laundryKg: record.laundryKg ?? kg,
-                    laundryRatePerKg
-                }, amountField);
+                const amount = roundCurrency(kg * laundryRatePerKg);
                 if (amount <= 0) {
                     return null;
                 }
@@ -670,22 +615,6 @@ export class CleaningAhManager {
                     laundryRatePerKg,
                     updatedAt: new Date()
                 };
-
-                if (amountField === "laundryAmount") {
-                    const totalToAhWithoutLaundry = toOptionalNumber(record.totalToAhWithoutLaundry)
-                        ?? createCleaningAhRecord({
-                            ...record,
-                            laundryKg: kg,
-                            laundryAmount: amount,
-                            laundryRatePerKg
-                        }).totalToAhWithoutLaundry;
-                    patch.totalToAh = roundCurrency(totalToAhWithoutLaundry - amount - (toOptionalNumber(record.suppliesCost) || 0));
-                    patch.laundryStatus = "";
-                    patch.fingerprint = createCleaningAhFingerprint({
-                        ...record,
-                        ...patch
-                    });
-                }
 
                 return { ref: entry.ref, patch };
             })
@@ -922,66 +851,6 @@ export class CleaningAhManager {
         return rows[0]?.label || "";
     }
 
-    cleaningHasLaundryAssigned(record = {}, currentLinkedCleaningId = "") {
-        if (!record) {
-            return false;
-        }
-
-        if (record.id && record.id === currentLinkedCleaningId) {
-            return false;
-        }
-
-        if (roundCurrency(record.effectiveLaundryAmount ?? record.laundryAmount) > 0) {
-            return true;
-        }
-
-        return this.getLinkedLaundryRecordsForCleaning(record.id || "")
-            .some((entry) => entry.id !== currentLinkedCleaningId);
-    }
-
-    getLaundryReceivedDateDistance(record = {}, receivedDate = "") {
-        const diffDays = getIsoDateDiffDays(receivedDate, record.date);
-        if (diffDays === null) {
-            return Number.POSITIVE_INFINITY;
-        }
-
-        if (diffDays < 0) {
-            return 1000 + Math.abs(diffDays);
-        }
-
-        return diffDays;
-    }
-
-    getLaundryLinkOptions(currentLinkedCleaningId = "", preferredPropertyName = "", { receivedDate = "" } = {}) {
-        const normalizedPreferredProperty = normalizeKey(preferredPropertyName);
-        return [...this.cleaningRecords]
-            .filter((record) => {
-                return record.id === currentLinkedCleaningId || !this.cleaningHasLaundryAssigned(record, currentLinkedCleaningId);
-            })
-            .sort((left, right) => {
-                const leftIsCurrent = left.id === currentLinkedCleaningId;
-                const rightIsCurrent = right.id === currentLinkedCleaningId;
-                if (leftIsCurrent !== rightIsCurrent) {
-                    return leftIsCurrent ? -1 : 1;
-                }
-
-                const leftMatchesProperty = normalizedPreferredProperty && normalizeKey(left.propertyName) === normalizedPreferredProperty;
-                const rightMatchesProperty = normalizedPreferredProperty && normalizeKey(right.propertyName) === normalizedPreferredProperty;
-
-                if (leftMatchesProperty !== rightMatchesProperty) {
-                    return leftMatchesProperty ? -1 : 1;
-                }
-
-                const leftDistance = this.getLaundryReceivedDateDistance(left, receivedDate);
-                const rightDistance = this.getLaundryReceivedDateDistance(right, receivedDate);
-                if (leftDistance !== rightDistance) {
-                    return leftDistance - rightDistance;
-                }
-
-                return String(right.date || "").localeCompare(String(left.date || ""));
-            });
-    }
-
     getDuplicateCleaningRecord(candidate = {}, excludeRecordId = "") {
         const date = normalizeDateKey(candidate.date);
         const propertyName = normalizeKey(candidate.propertyName);
@@ -1002,10 +871,9 @@ export class CleaningAhManager {
     }
 
     getDuplicateLaundryRecord(candidate = {}, excludeRecordId = "") {
-        const linkedCleaningId = normalizeLabel(candidate.linkedCleaningId);
         const date = normalizeDateKey(candidate.date);
         const propertyName = normalizeKey(candidate.propertyName);
-        if (!date && !linkedCleaningId) {
+        if (!date || !propertyName) {
             return null;
         }
 
@@ -1014,13 +882,7 @@ export class CleaningAhManager {
                 return false;
             }
 
-            if (linkedCleaningId && record.linkedCleaningId === linkedCleaningId) {
-                return true;
-            }
-
-            return date
-                && normalizeDateKey(record.date) === date
-                && propertyName
+            return normalizeDateKey(record.date) === date
                 && normalizeKey(record.propertyName) === propertyName;
         }) || null;
     }
@@ -1055,157 +917,6 @@ export class CleaningAhManager {
             this.startEditingLaundry(duplicate.id);
         }
         return shouldSaveAnyway;
-    }
-
-    getCleaningLaundryState(record = {}) {
-        const effectiveLaundryAmount = roundCurrency(record.effectiveLaundryAmount ?? record.laundryAmount);
-        const linkedLaundryCount = Number(record.linkedLaundryCount || 0);
-        if (linkedLaundryCount > 1) {
-            return {
-                key: "needs-correction",
-                label: this.tr("laundryState.needsCorrection"),
-                className: "border-amber-200 bg-amber-50 text-amber-800"
-            };
-        }
-
-        if (effectiveLaundryAmount > 0 || linkedLaundryCount > 0) {
-            return {
-                key: "added",
-                label: this.tr("laundryState.added"),
-                className: "border-emerald-200 bg-emerald-50 text-emerald-800"
-            };
-        }
-
-        if (record.laundryStatus === CLEANING_LAUNDRY_STATUS.none) {
-            return {
-                key: "none",
-                label: this.tr("laundryState.none"),
-                className: "border-slate-200 bg-slate-50 text-slate-600"
-            };
-        }
-
-        return {
-            key: "waiting",
-            label: this.tr("laundryState.waiting"),
-            className: "border-sky-200 bg-sky-50 text-sky-800"
-        };
-    }
-
-    renderLaundryStateBadge(record = {}) {
-        const state = this.getCleaningLaundryState(record);
-        return `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${state.className}">${escapeHtml(state.label)}</span>`;
-    }
-
-    getLinkedLaundryRecordsForCleaning(recordId) {
-        if (!recordId) {
-            return [];
-        }
-
-        return this.laundryRecords.filter((record) => record.linkedCleaningId === recordId);
-    }
-
-    isLaundryLinkIgnored(record = {}) {
-        return record.ignoreLink === true || normalizeLabel(record.linkStatus) === "ignored";
-    }
-
-    getPrimaryLinkedLaundryRecordForCleaning(recordId) {
-        return this.getLinkedLaundryRecordsForCleaning(recordId)
-            .sort((left, right) => {
-                return String(right.date || "").localeCompare(String(left.date || ""))
-                    || String(right.id || "").localeCompare(String(left.id || ""));
-            })[0] || null;
-    }
-
-    getCleaningQuickLaundryDraft(record) {
-        const existingDraft = this.cleaningLaundryQuickDrafts[record?.id || ""];
-        if (existingDraft) {
-            return { ...existingDraft };
-        }
-
-        const linkedLaundry = this.getPrimaryLinkedLaundryRecordForCleaning(record?.id || "");
-        if (linkedLaundry) {
-            return this.createCleaningQuickLaundryDraft(record, {
-                date: linkedLaundry.date || getTodayIsoDate(),
-                kg: toInputNumber(linkedLaundry.kg),
-                amount: toInputNumber(linkedLaundry.amount),
-                laundryRatePerKg: toInputNumber(linkedLaundry.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
-                notes: linkedLaundry.notes || "",
-                editingLaundryId: linkedLaundry.id || ""
-            });
-        }
-
-        if (roundCurrency(record?.laundryAmount || 0) > 0) {
-            return this.createCleaningQuickLaundryDraft(record, {
-                date: record.date || getTodayIsoDate(),
-                kg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
-                amount: toInputNumber(record.laundryAmount),
-                laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
-                notes: record.notes || "",
-                updatesInlineCleaning: true
-            });
-        }
-
-        return this.createCleaningQuickLaundryDraft(record);
-    }
-
-    readCleaningQuickLaundryDraftFromContainer(container, recordId) {
-        const record = this.cleaningRecords.find((entry) => entry.id === recordId) || { id: recordId };
-        const previousDraft = this.cleaningLaundryQuickDrafts[recordId] || {};
-        return this.createCleaningQuickLaundryDraft(record, {
-            date: String(container?.querySelector('[name="date"]')?.value || "").trim(),
-            kg: String(container?.querySelector('[name="kg"]')?.value || "").trim(),
-            amount: String(container?.querySelector('[name="amount"]')?.value || "").trim(),
-            laundryRatePerKg: String(container?.querySelector('[name="laundryRatePerKg"]')?.value || "").trim(),
-            notes: String(container?.querySelector('[name="notes"]')?.value || "").trim(),
-            editingLaundryId: previousDraft.editingLaundryId || "",
-            updatesInlineCleaning: Boolean(previousDraft.updatesInlineCleaning)
-        });
-    }
-
-    getCleaningQuickLaundryActionLabel(record) {
-        if (this.getPrimaryLinkedLaundryRecordForCleaning(record?.id || "") || roundCurrency(record?.laundryAmount || 0) > 0) {
-            return this.tr("actions.editLaundry");
-        }
-
-        return this.tr("actions.addLaundry");
-    }
-
-    getCleaningLinkLabel(record) {
-        return `${this.formatDate(record.date)} · ${record.propertyName || this.tr("labels.unknown")} · ${this.getCleaningCategoryLabel(record.categoryKey || record.category)}`;
-    }
-
-    getCleaningWaitingDays(record = {}, today = getTodayIsoDate()) {
-        const diffDays = getIsoDateDiffDays(today, record.date);
-        return diffDays === null ? 0 : Math.max(0, diffDays);
-    }
-
-    getCleaningWaitingLabel(record = {}) {
-        const days = this.getCleaningWaitingDays(record);
-        if (days <= 0) {
-            return this.tr("laundryState.waitingToday");
-        }
-
-        return this.trCount("counts.daysWaiting", days);
-    }
-
-    getCleaningLinkMatchLabel(record = {}, preferredPropertyName = "", receivedDate = "") {
-        const parts = [];
-        if (normalizeKey(preferredPropertyName) && normalizeKey(record.propertyName) === normalizeKey(preferredPropertyName)) {
-            parts.push(this.tr("laundryMatching.sameProperty"));
-        }
-        if (!this.cleaningHasLaundryAssigned(record)) {
-            parts.push(this.tr("laundryMatching.waiting"));
-        }
-        const diffDays = getIsoDateDiffDays(receivedDate, record.date);
-        if (diffDays !== null && diffDays >= 0) {
-            parts.push(this.trCount("counts.daysAfterCleaning", diffDays));
-        }
-
-        return parts.length ? ` (${parts.join(", ")})` : "";
-    }
-
-    getCleaningLinkOptionLabel(record, preferredPropertyName = "", receivedDate = "") {
-        return `${this.formatDate(record.date)} - ${record.propertyName || this.tr("labels.unknown")} - ${this.getCleaningCategoryLabel(record.categoryKey || record.category)}${this.getCleaningLinkMatchLabel(record, preferredPropertyName, receivedDate)}`;
     }
 
     getSuggestedCleaningRecord(propertyName, { excludeRecordId = "", categoryKey = "" } = {}) {
@@ -1376,9 +1087,7 @@ export class CleaningAhManager {
 
     getCleaningRegisterFilterOptions() {
         return [
-            ["all", this.tr("cleanings.registerFilters.all")],
-            ["with-laundry", this.tr("cleanings.registerFilters.withLaundry")],
-            ["waiting-laundry", this.tr("cleanings.registerFilters.waitingLaundry")]
+            ["all", this.tr("cleanings.registerFilters.all")]
         ];
     }
 
@@ -1397,9 +1106,7 @@ export class CleaningAhManager {
 
     getLaundryRegisterFilterOptions() {
         return [
-            ["all", this.tr("laundryTab.registerFilters.all")],
-            ["linked", this.tr("laundryTab.registerFilters.linked")],
-            ["unlinked", this.tr("laundryTab.registerFilters.unlinked")]
+            ["all", this.tr("laundryTab.registerFilters.all")]
         ];
     }
 
@@ -1409,6 +1116,8 @@ export class CleaningAhManager {
             ["date-asc", this.tr("laundryTab.registerSortOptions.dateAsc")],
             ["property-asc", this.tr("laundryTab.registerSortOptions.propertyAsc")],
             ["property-desc", this.tr("laundryTab.registerSortOptions.propertyDesc")],
+            ["quantity-desc", this.tr("laundryTab.registerSortOptions.quantityDesc") || "Highest quantity"],
+            ["quantity-asc", this.tr("laundryTab.registerSortOptions.quantityAsc") || "Lowest quantity"],
             ["kg-desc", this.tr("laundryTab.registerSortOptions.kgDesc")],
             ["kg-asc", this.tr("laundryTab.registerSortOptions.kgAsc")],
             ["amount-desc", this.tr("laundryTab.registerSortOptions.amountDesc")],
@@ -1422,25 +1131,29 @@ export class CleaningAhManager {
         return (draft?.rows || []).reduce((summary, row) => {
             const propertyName = normalizeLabel(row?.propertyName);
             const kg = toOptionalNumber(row?.kg);
-            if (!propertyName || kg === null || kg <= 0) {
+            const quantity = toOptionalNumber(row?.quantity);
+            if (!propertyName || ((kg === null || kg <= 0) && (quantity === null || quantity <= 0))) {
                 return summary;
             }
 
             const record = createStandaloneLaundryRecord({
                 date: draft?.date,
                 propertyName,
-                kg,
+                quantity,
+                kg: kg || 0,
                 laundryRatePerKg
             });
 
             return {
                 count: summary.count + 1,
+                quantity: summary.quantity + (record.quantity || 0),
                 kg: roundCurrency(summary.kg + record.kg),
                 amount: roundCurrency(summary.amount + record.amount),
                 laundryRatePerKg
             };
         }, {
             count: 0,
+            quantity: 0,
             kg: 0,
             amount: 0,
             laundryRatePerKg
@@ -1470,8 +1183,7 @@ export class CleaningAhManager {
                 categoryKey,
                 category: categoryLabel,
                 reservationSource,
-                guestAmount: guestAmountField.numericValue,
-                laundryKg: toOptionalNumber(row?.laundryKg) || 0
+                guestAmount: guestAmountField.numericValue
             });
 
             return {
@@ -1480,7 +1192,6 @@ export class CleaningAhManager {
                 platformCommission: roundCurrency(summary.platformCommission + record.platformCommission),
                 vatAmount: roundCurrency(summary.vatAmount + record.vatAmount),
                 totalToAhWithoutLaundry: roundCurrency(summary.totalToAhWithoutLaundry + record.totalToAhWithoutLaundry),
-                laundryAmount: roundCurrency(summary.laundryAmount + record.laundryAmount),
                 totalToAh: roundCurrency(summary.totalToAh + record.totalToAh)
             };
         }, {
@@ -1489,7 +1200,6 @@ export class CleaningAhManager {
             platformCommission: 0,
             vatAmount: 0,
             totalToAhWithoutLaundry: 0,
-            laundryAmount: 0,
             totalToAh: 0
         });
     }
@@ -1651,34 +1361,29 @@ export class CleaningAhManager {
         const selectedStatsPropertyName = this.getStatsSelectedPropertyName(statsPropertyRows);
         const selectedStatsPropertyDetail = summarizeCleaningAhPropertyDetail(statsCleaningSummary.records, selectedStatsPropertyName);
 
-        const today = getTodayIsoDate();
         const allDerivedCleanings = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords);
-        const overdueCount = allDerivedCleanings.filter((record) => {
-            return this.getCleaningLaundryState(record).key === "waiting"
-                && this.getCleaningWaitingDays(record, today) >= 10;
-        }).length;
 
         root.innerHTML = `
             ${this.renderStatusMessage()}
-            <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${escapeHtml(this.tr("formula.kicker"))}</div>
-                    <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("formula.title"))}</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
-                    ${this.activeTab === "stats" ? this.renderStatsHelpDisclosure() : ""}
-                </div>
-                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                    ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count), "compact")}
-                    ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount), "compact")}
-                    ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission), "compact")}
-                    ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount), "compact")}
-                    ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(cleaningSummary.totals.laundryAmount), "compact")}
-                    ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh), "compact")}
-                </div>
-            </section>
+            ${this.activeTab !== "stats" ? `
+                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${escapeHtml(this.tr("formula.kicker"))}</div>
+                        <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("formula.title"))}</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
+                    </div>
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+                        ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count), "compact")}
+                        ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount), "compact")}
+                        ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission), "compact")}
+                        ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount), "compact")}
+                        ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh), "compact")}
+                    </div>
+                </section>
+            ` : ""}
 
             ${this.renderFilters()}
-            ${this.renderTabBar(overdueCount)}
+            ${this.renderTabBar()}
             ${this.renderActiveTab(
                 visibleCleaningRegisterEntries,
                 derivedCleanings,
@@ -1960,18 +1665,6 @@ export class CleaningAhManager {
         }, new Map());
     }
 
-    getCalendarChipClasses(record = {}) {
-        const state = this.getCleaningLaundryState(record).key;
-        const classByState = {
-            waiting: "border-sky-200 bg-sky-100 text-sky-950",
-            added: "border-emerald-200 bg-emerald-100 text-emerald-950",
-            none: "border-slate-200 bg-white text-slate-700",
-            "needs-correction": "border-amber-200 bg-amber-100 text-amber-950"
-        };
-
-        return classByState[state] || classByState.waiting;
-    }
-
     openCalendarCleaningModal({ recordId = "", date = "" } = {}) {
         if (recordId) {
             const record = this.cleaningRecords.find((entry) => entry.id === recordId);
@@ -1986,13 +1679,9 @@ export class CleaningAhManager {
                 categoryKey: this.getCleaningCategoryKey(record.categoryKey || record.category),
                 reservationSource: this.getCleaningReservationSource(record),
                 guestAmount: toInputNumber(record.guestAmount),
-                laundryKg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
-                laundryAmount: toInputNumber(record.laundryAmount),
                 notes: record.notes || ""
             };
             this.calendarModalMode = "edit";
-            this.openCleaningLaundryEntryId = "";
-            delete this.cleaningLaundryQuickDrafts[record.id];
             this.render();
             return;
         }
@@ -2062,8 +1751,6 @@ export class CleaningAhManager {
                 ? (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
                 : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
-            laundryKg: toOptionalNumber(draft.laundryKg) || 0,
-            laundryAmount: toOptionalNumber(draft.laundryAmount),
             notes: draft.notes
         });
 
@@ -2099,8 +1786,7 @@ export class CleaningAhManager {
 
     renderCalendarDayColumn(day, records = []) {
         const sortedRecords = [...records].sort((left, right) => {
-            return this.getCleaningLaundryState(left).key.localeCompare(this.getCleaningLaundryState(right).key)
-                || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
+            return normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
         });
 
         return `
@@ -2126,179 +1812,33 @@ export class CleaningAhManager {
         `;
     }
 
-    getCalendarChipDotClass(record) {
-        const key = this.getCleaningLaundryState(record).key;
-        const classes = {
-            waiting: "bg-sky-500 border-sky-300",
-            added: "bg-emerald-500 border-emerald-300",
-            none: "bg-slate-300 border-slate-200",
-            "needs-correction": "bg-amber-500 border-amber-300"
-        };
-        return classes[key] || classes.waiting;
+    getCalendarChipClasses(record = {}) {
+        return "border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:bg-indigo-50/50";
     }
 
     renderCalendarCleaningChip(record, index) {
-        const state = this.getCleaningLaundryState(record);
         return `
             <button type="button" data-action="open-calendar-edit-cleaning" data-id="${escapeHtml(record.id || "")}" class="group flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${this.getCalendarChipClasses(record)}">
-                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-semibold">${escapeHtml(String(index))}</span>
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">${escapeHtml(String(index))}</span>
                 <span class="min-w-0 flex-1">
-                    <span class="block truncate font-medium">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</span>
-                    <span class="block truncate text-xs opacity-75">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</span>
+                    <span class="block truncate font-medium text-slate-900">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</span>
+                    <span class="block truncate text-xs text-slate-500">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))} · ${escapeHtml(this.formatCurrency(record.guestAmount))}</span>
                 </span>
-                <span class="h-2.5 w-2.5 shrink-0 rounded-full border ${this.getCalendarChipDotClass(record)}" title="${escapeHtml(state.label)}" aria-label="${escapeHtml(state.label)}"></span>
             </button>
         `;
     }
 
-    renderMonthEndChecklistBanner(allDerivedCleanings = []) {
-        const today = getTodayIsoDate();
-        if (!isMonthEndWindow(today)) return "";
-        if (localStorage.getItem("monthEndDismissedAt") === today) return "";
-
-        const currentMonthKey = today.slice(0, 7);
-        const priorWaitingCleanings = allDerivedCleanings.filter((record) => {
-            const recordMonthKey = (record.date || "").slice(0, 7);
-            return recordMonthKey < currentMonthKey
-                && this.getCleaningLaundryState(record).key === "waiting";
-        });
-
-        const cleaningsById = new Map(this.cleaningRecords.map((c) => [c.id, c]));
-        const unlinkedLaundry = this.laundryRecords.filter((record) => {
-            return !record.linkedCleaningId || !cleaningsById.has(record.linkedCleaningId);
-        });
-
-        if (priorWaitingCleanings.length === 0 && unlinkedLaundry.length === 0) {
-            return "";
-        }
-
-        return `
-            <div class="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50 via-indigo-50 to-white p-6 shadow-sm">
-                <div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-sky-200/40 blur-3xl"></div>
-                <div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-indigo-200/40 blur-3xl"></div>
-                
-                <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-start gap-4">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-500 text-white shadow-md shadow-indigo-200">
-                            <i class="fas fa-clipboard-check text-xl"></i>
-                        </div>
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("register.monthEndChecklistTitle"))}</div>
-                            <p class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("register.monthEndChecklistDescription"))}</p>
-                            
-                            <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                                ${priorWaitingCleanings.length > 0 ? `
-                                    <div class="flex items-center gap-2 text-amber-700">
-                                        <i class="fas fa-circle-exclamation text-xs"></i>
-                                        <span>${escapeHtml(this.trCount("register.monthEndPriorWaiting", priorWaitingCleanings.length))}</span>
-                                        <button type="button" data-action="filter-prior-waiting" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 ml-1 transition">
-                                            ${escapeHtml(this.tr("register.viewPriorWaiting"))}
-                                        </button>
-                                    </div>
-                                ` : ""}
-                                ${unlinkedLaundry.length > 0 ? `
-                                    <div class="flex items-center gap-2 text-rose-700">
-                                        <i class="fas fa-circle-exclamation text-xs"></i>
-                                        <span>${escapeHtml(this.trCount("register.monthEndUnlinkedLaundry", unlinkedLaundry.length))}</span>
-                                    </div>
-                                ` : ""}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex shrink-0 items-center gap-3 self-end sm:self-center">
-                        <button type="button" data-action="dismiss-month-end" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition active:scale-95">
-                            <i class="fas fa-eye-slash mr-1.5"></i>
-                            ${escapeHtml(this.tr("register.dismissForToday"))}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderOverdueReconciliationPanel(allDerivedCleanings = []) {
-        const today = getTodayIsoDate();
-        const overdueCleanings = allDerivedCleanings.filter((record) => {
-            return this.getCleaningLaundryState(record).key === "waiting"
-                && this.getCleaningWaitingDays(record, today) >= 10;
-        });
-
-        if (overdueCleanings.length === 0) return "";
-
-        const overdueIds = overdueCleanings.map((c) => c.id).filter(Boolean);
-
-        return `
-            <section class="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600">${escapeHtml(this.tr("register.overdueKicker"))}</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.trCount("register.overdueCount", overdueCleanings.length))}</h3>
-                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("register.overdueDescription"))}</p>
-                    </div>
-                    <div>
-                        <button type="button" data-action="mark-all-overdue-no-laundry" data-ids="${escapeHtml(overdueIds.join(","))}" class="rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition active:scale-95">
-                            <i class="fas fa-check-double mr-1.5"></i>
-                            ${escapeHtml(this.tr("register.markAllNoLaundry"))}
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mt-5 overflow-x-auto">
-                    <table class="w-full border-collapse text-left text-sm">
-                        <thead>
-                            <tr class="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                <th class="py-3 px-4">${escapeHtml(this.tr("forms.property"))}</th>
-                                <th class="py-3 px-4">${escapeHtml(this.tr("forms.cleaningDate"))}</th>
-                                <th class="py-3 px-4">${escapeHtml(this.tr("labels.daysWaiting"))}</th>
-                                <th class="py-3 px-4 text-right">${escapeHtml(this.tr("metrics.guestTotal"))}</th>
-                                <th class="py-3 px-4 text-right">${escapeHtml(this.tr("labels.actions"))}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-700">
-                            ${overdueCleanings.map((record) => {
-                                const waitingDays = this.getCleaningWaitingDays(record, today);
-                                return `
-                                    <tr class="hover:bg-slate-50/80 transition-colors">
-                                        <td class="py-3.5 px-4 font-medium text-slate-900">${escapeHtml(record.propertyName || this.tr("labels.unknown"))}</td>
-                                        <td class="py-3.5 px-4">${escapeHtml(record.date)}</td>
-                                        <td class="py-3.5 px-4">
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                                ${escapeHtml(this.trCount("counts.daysWaiting", waitingDays))}
-                                            </span>
-                                        </td>
-                                        <td class="py-3.5 px-4 text-right">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
-                                        <td class="py-3.5 px-4 text-right">
-                                            <button type="button" data-action="mark-no-laundry" data-id="${escapeHtml(record.id || "")}" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition">
-                                                <i class="fas fa-check mr-1"></i>
-                                                ${escapeHtml(this.tr("actions.markNoLaundry"))}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join("")}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        `;
-    }
-
     renderRegisterTab(derivedCleanings, allDerivedCleanings = []) {
-        const today = getTodayIsoDate();
-        const todayEntries = derivedCleanings.filter((record) => record.date === today);
         const newestFirst = this.registerQueueSort === "newest";
-        const waitingLaundryEntries = derivedCleanings
-            .filter((record) => this.getCleaningLaundryState(record).key === "waiting")
-            .sort((left, right) => {
-                if (newestFirst) {
-                    return String(right.date || "").localeCompare(String(left.date || ""))
-                        || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
-                }
-                return this.getCleaningWaitingDays(right, today) - this.getCleaningWaitingDays(left, today)
-                    || String(left.date || "").localeCompare(String(right.date || ""))
+        const sortedCleanings = [...derivedCleanings].sort((left, right) => {
+            if (newestFirst) {
+                return String(right.date || "").localeCompare(String(left.date || ""))
                     || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
-            });
-        const quickCards = this.dedupeFastRegisterCards([...todayEntries, ...waitingLaundryEntries]);
+            }
+            return String(left.date || "").localeCompare(String(right.date || ""))
+                || normalizeKey(left.propertyName).localeCompare(normalizeKey(right.propertyName));
+        });
+        const quickCards = this.dedupeFastRegisterCards(sortedCleanings).slice(0, 30);
 
         const sortOptions = [
             ["oldest", this.tr("register.queueSortOldest")],
@@ -2312,7 +1852,6 @@ export class CleaningAhManager {
 
         return `
             <div class="space-y-6">
-                ${this.renderMonthEndChecklistBanner(allDerivedCleanings)}
                 <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm self-start xl:sticky xl:top-4">
                         <div>
@@ -2356,7 +1895,6 @@ export class CleaningAhManager {
                         </div>
                     </section>
                 </section>
-                ${this.renderOverdueReconciliationPanel(allDerivedCleanings)}
             </div>
         `;
     }
@@ -2419,20 +1957,10 @@ export class CleaningAhManager {
                             `).join("")}
                         </select>
                     </label>
-                    <label class="block">
+                    <label class="block md:col-span-2">
                         <span class="text-sm text-slate-600">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                         <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" required>
                     </label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="block">
-                            <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
-                            <input type="number" name="laundryKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryKg))}" placeholder="0">
-                        </label>
-                        <label class="block">
-                            <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.amount"))}</span>
-                            <input type="number" name="laundryAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryAmount))}" placeholder="0">
-                        </label>
-                    </div>
                 </div>
                 <label class="block">
                     <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
@@ -2448,24 +1976,20 @@ export class CleaningAhManager {
     }
 
     renderRegisterQueueCard(record) {
-        const state = this.getCleaningLaundryState(record);
-        const waitingLabel = state.key === "waiting" ? this.getCleaningWaitingLabel(record) : "";
         const compact = this.registerQueueCompact;
-        const inlineKg = this.inlineKgDrafts[record.id] ?? "";
 
         if (compact) {
             return `
                 <article class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <div class="min-w-0 flex-1">
                         <div class="truncate text-sm font-semibold text-slate-900">${escapeHtml(record.propertyName)}</div>
-                        <div class="truncate text-xs text-slate-500">${escapeHtml(this.formatDate(record.date))} · ${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}${waitingLabel ? ` · ${escapeHtml(waitingLabel)}` : ""}</div>
+                        <div class="truncate text-xs text-slate-500">${escapeHtml(this.formatDate(record.date))} · ${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))} · ${escapeHtml(this.formatCurrency(record.guestAmount))}</div>
                     </div>
                     <div class="flex shrink-0 items-center gap-1.5">
-                        ${this.renderLaundryStateBadge(record)}
-                        ${state.key === "waiting" ? this.renderTableActionButton({ action: "mark-no-laundry", id: record.id, label: this.tr("actions.markNoLaundry"), iconClass: "fas fa-check", tone: "primary" }) : ""}
+                        <span class="text-xs font-semibold text-emerald-700">${escapeHtml(this.formatCurrency(record.totalToAh))}</span>
                         ${this.renderTableActionButton({ action: "prefill-fast-form", id: record.id, label: this.tr("actions.fillForm"), iconClass: "fas fa-arrow-left", tone: "primary" })}
-                        ${this.renderTableActionButton({ action: "toggle-cleaning-laundry-entry", id: record.id, label: this.getCleaningQuickLaundryActionLabel(record), iconClass: "fas fa-plus", tone: "accent" })}
                         ${this.renderTableActionButton({ action: "edit-cleaning", id: record.id, label: t("common.edit"), iconClass: "fas fa-pen", tone: "primary" })}
+                        ${this.renderTableActionButton({ action: "delete-cleaning", id: record.id, label: t("common.delete"), iconClass: "fas fa-trash", tone: "danger" })}
                     </div>
                 </article>
             `;
@@ -2478,49 +2002,20 @@ export class CleaningAhManager {
                         <div class="text-sm font-semibold text-slate-900">${escapeHtml(record.propertyName)}</div>
                         <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.formatDate(record.date))} · ${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</div>
                     </div>
-                    ${this.renderLaundryStateBadge(record)}
+                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">${escapeHtml(this.formatCurrency(record.totalToAh))}</span>
                 </div>
-                ${waitingLabel ? `<div class="mt-2 text-xs font-medium text-sky-700">${escapeHtml(this.tr("forms.cleaningDate"))}: ${escapeHtml(this.formatDate(record.date))} - ${escapeHtml(waitingLabel)}</div>` : ""}
+                ${record.notes ? `<div class="mt-2 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
                 <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                     <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
                         <div class="text-xs text-slate-500">${escapeHtml(this.tr("tables.guest"))}</div>
                         <div class="font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.guestAmount))}</div>
                     </div>
                     <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <div class="text-xs text-slate-500">${escapeHtml(this.tr("tables.laundry"))}</div>
-                        <div class="font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(this.tr("tables.net"))}</div>
+                        <div class="font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.totalToAh))}</div>
                     </div>
                 </div>
-                ${state.key === "waiting" ? `
-                    <div class="mt-3 flex items-center gap-2">
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="${escapeHtml(this.tr("register.inlineKgPlaceholder"))}"
-                            value="${escapeHtml(inlineKg)}"
-                            data-action="update-inline-kg"
-                            data-id="${escapeHtml(record.id || "")}"
-                            class="w-28 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            aria-label="${escapeHtml(this.tr("forms.kg"))}"
-                        >
-                        <button
-                            type="button"
-                            data-action="save-inline-kg"
-                            data-id="${escapeHtml(record.id || "")}"
-                            class="view-btn active text-sm"
-                            ${!inlineKg ? "disabled" : ""}
-                        >${escapeHtml(this.tr("register.saveKg"))}</button>
-                    </div>
-                ` : ""}
                 <div class="mt-3 flex flex-wrap justify-end gap-2">
-                    ${state.key === "waiting" ? this.renderTableActionButton({
-                        action: "mark-no-laundry",
-                        id: record.id,
-                        label: this.tr("actions.markNoLaundry"),
-                        iconClass: "fas fa-check",
-                        tone: "primary"
-                    }) : ""}
                     ${this.renderTableActionButton({
                         action: "prefill-fast-form",
                         id: record.id,
@@ -2529,116 +2024,216 @@ export class CleaningAhManager {
                         tone: "primary"
                     })}
                     ${this.renderTableActionButton({
-                        action: "toggle-cleaning-laundry-entry",
-                        id: record.id,
-                        label: this.getCleaningQuickLaundryActionLabel(record),
-                        iconClass: "fas fa-plus",
-                        tone: "accent"
-                    })}
-                    ${this.renderTableActionButton({
                         action: "edit-cleaning",
                         id: record.id,
                         label: t("common.edit"),
                         iconClass: "fas fa-pen",
                         tone: "primary"
                     })}
+                    ${this.renderTableActionButton({
+                        action: "delete-cleaning",
+                        id: record.id,
+                        label: t("common.delete"),
+                        iconClass: "fas fa-trash",
+        tone: "danger"
+                    })}
                 </div>
-                ${this.openCleaningLaundryEntryId === record.id ? `<div class="mt-4">${this.renderCleaningQuickLaundryEntry(record)}</div>` : ""}
             </article>
         `;
     }
 
     renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail, laundrySummary = {}, allStatsRecords = []) {
         const laundryByMonth = laundrySummary.byMonth || [];
+        const cleaningsNet = cleaningSummary.totals.totalToAh || 0;
+        const laundryExpenses = laundrySummary.totals.amount || 0;
+        const finalNet = roundCurrency(cleaningsNet - laundryExpenses);
+        const combinedMonthly = combineCleaningAndLaundryMonthlySummaries(cleaningSummary.byMonth, laundryByMonth);
+        const combinedByProperty = combineCleaningAndLaundryPropertySummaries(cleaningSummary.byProperty, laundrySummary.byProperty || []);
+
         return `
             <section class="space-y-6">
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
+                <!-- 1. Executive 3-Card Summary (The Bottom Line) -->
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <!-- Cleanings Card -->
+                    <div class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("stats.cleaningsTitle"))}</span>
+                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</span>
+                        </div>
+                        <div class="my-4">
+                            <div class="text-3xl font-bold text-slate-900">${escapeHtml(this.formatCurrency(cleaningsNet))}</div>
+                            <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("metrics.netToAh"))}</div>
+                        </div>
+                        <div class="border-t border-slate-100 pt-3 text-xs text-slate-500 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.guestTotal"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(this.formatCurrency(cleaningSummary.totals.guestAmount))}</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.platformFees"))} + ${escapeHtml(this.tr("metrics.vat"))}:</span> <span class="font-medium text-slate-700">-${escapeHtml(this.formatCurrency(cleaningSummary.totals.platformCommission + cleaningSummary.totals.vatAmount))}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Laundry Card -->
+                    <div class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("stats.laundryTitle"))}</span>
+                            <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">${escapeHtml(String(laundrySummary.totals.count))} ${escapeHtml(this.tr("tables.rows") || "rows")}</span>
+                        </div>
+                        <div class="my-4">
+                            <div class="text-3xl font-bold text-rose-600">${escapeHtml(this.formatCurrency(laundryExpenses))}</div>
+                            <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
+                        </div>
+                        <div class="border-t border-slate-100 pt-3 text-xs text-slate-500 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.quantity"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(String(laundrySummary.totals.quantity || 0))}</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.kg"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Final Profit Card (Everything Together) -->
+                    <div class="rounded-3xl border-2 border-emerald-300 bg-emerald-50/70 p-6 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">${escapeHtml(this.tr("stats.everythingTogetherTitle"))}</span>
+                            <span class="rounded-full bg-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</span>
+                        </div>
+                        <div class="my-4">
+                            <div class="text-3xl font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</div>
+                            <div class="mt-1 text-xs font-medium text-emerald-800">${escapeHtml(this.tr("metrics.cleaningsNet"))} − ${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
+                        </div>
+                        <div class="border-t border-emerald-200/80 pt-3 text-xs text-emerald-900 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.cleanings"))}:</span> <span class="font-semibold text-emerald-950">+${escapeHtml(this.formatCurrency(cleaningsNet))}</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.laundry"))}:</span> <span class="font-semibold text-rose-700">-${escapeHtml(this.formatCurrency(laundryExpenses))}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. View Switcher & Export Actions -->
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="inline-flex rounded-2xl bg-slate-200/80 p-1 text-xs font-semibold shadow-inner">
+                        <button type="button" data-action="set-stats-view-mode" data-mode="month"
+                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "month" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
+                            <i class="fas fa-calendar-alt mr-1.5"></i>
+                            ${escapeHtml(this.tr("stats.byMonth"))}
+                        </button>
+                        <button type="button" data-action="set-stats-view-mode" data-mode="property"
+                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "property" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
+                            <i class="fas fa-building mr-1.5"></i>
+                            ${escapeHtml(this.tr("stats.topProperties"))}
+                        </button>
+                        <button type="button" data-action="set-stats-view-mode" data-mode="heatmap"
+                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "heatmap" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
+                            <i class="fas fa-th mr-1.5"></i>
+                            ${escapeHtml(this.tr("stats.heatmapTitle"))}
+                        </button>
+                    </div>
+
+                    <button type="button" data-action="open-export-modal" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
+                        <i class="fas fa-file-export mr-1.5"></i>
+                        ${escapeHtml(this.tr("stats.exportReport"))}
+                    </button>
+                </div>
+
+                <!-- 3. Dynamic View Content (By Month / By Property / Heatmap) -->
+                ${this.renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords)}
+            </section>
+        `;
+    }
+
+    renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords) {
+        if (this.statsViewMode === "heatmap") {
+            return this.renderPropertyMonthHeatmap(allStatsRecords);
+        }
+
+        if (this.statsViewMode === "property") {
+            return `
+                <section class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
+                    <div class="mb-4 flex items-center justify-between">
                         <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.overviewKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.overviewTitle"))}</h3>
-                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("stats.overviewDescription"))}</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</div>
-                            <button type="button" data-action="open-export-modal" class="rounded-xl bg-indigo-50 px-4 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition active:scale-95">
-                                <i class="fas fa-file-export mr-1.5"></i>
-                                ${escapeHtml(this.tr("stats.exportReport"))}
-                            </button>
+                            <h4 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("stats.topProperties"))}</h4>
+                            <p class="text-xs text-slate-500">Breakdown of cleanings net, laundry expenses, and final take-home per property.</p>
                         </div>
                     </div>
-                    <div class="mt-5 flex flex-wrap gap-2">
-                        ${this.renderStatsCategorySwitcher(statsCategoryOptions)}
-                    </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-                        ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission))}
-                        ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount))}
-                        ${this.renderMetricCard(this.tr("metrics.ahBeforeLaundry"), this.formatCurrency(cleaningSummary.totals.totalToAhWithoutLaundry))}
-                        ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(cleaningSummary.totals.averageTotalToAh))}
-                        ${this.renderMetricCard(this.tr("metrics.avgKgPerCleaning"), this.formatNumber(cleaningSummary.totals.averageLaundryKgPerCleaning))}
-                    </div>
-                </section>
-                <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(28rem,0.8fr)]">
-                    ${this.renderStatsComparisonBlock(statsPropertyRows, selectedStatsPropertyName)}
-                    ${this.renderStatsPropertyFocus(selectedStatsPropertyDetail)}
-                </section>
-                <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                    ${this.renderFinancialSummaryTable(this.tr("stats.byMonth"), cleaningSummary.byMonth, [
-                            [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
-                            [this.tr("tables.count"), (entry) => String(entry.count)],
-                            [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                            [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
-                            [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
-                            [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
-                        ])}
-                    ${this.renderFinancialSummaryTable(this.tr("stats.categories"), cleaningSummary.byCategory.slice(0, 8), [
-                            [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
-                            [this.tr("tables.count"), (entry) => String(entry.count)],
-                            [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                            [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
-                            [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
-                            [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
-                        ])}
-                </section>
-                ${laundryByMonth.length > 0 ? `
-                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="mb-4">
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.laundryTrendKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.laundryTrendTitle"))}</h3>
-                            <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.laundryTrendDescription"))}</p>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        <th class="py-2 pr-4 text-left">${escapeHtml(this.tr("tables.month"))}</th>
-                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.rows"))}</th>
-                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.avgKg"))}</th>
-                                        <th class="py-2 pr-4 text-right">${escapeHtml(this.tr("tables.laundry"))}</th>
-                                        <th class="py-2 text-right">${escapeHtml(this.tr("stats.laundryTrendCostPerKg"))}</th>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    <th class="py-3 pr-4 text-left font-semibold">${escapeHtml(this.tr("tables.property"))}</th>
+                                    <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
+                                    <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
+                                    <th class="py-3 pr-4 text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
+                                    <th class="py-3 pr-4 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.cleanings"))}</th>
+                                    <th class="py-3 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${combinedByProperty.map((row) => `
+                                    <tr class="hover:bg-slate-50/80 transition">
+                                        <td class="py-3 pr-4 font-semibold text-slate-900">${escapeHtml(row.label)}</td>
+                                        <td class="py-3 pr-4 text-right font-medium text-slate-900">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
+                                        <td class="py-3 pr-4 text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
+                                        <td class="py-3 pr-4 text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
+                                        <td class="py-3 pr-4 text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
+                                        <td class="py-3 text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    ${laundryByMonth.map((entry) => {
-                                        const kg = entry.totalKg || 0;
-                                        const amount = entry.totalAmount || entry.laundryAmount || 0;
-                                        const costPerKg = kg > 0 ? roundCurrency(amount / kg) : null;
-                                        return `
-                                            <tr class="border-b border-slate-100 hover:bg-slate-50">
-                                                <td class="py-2 pr-4 font-medium text-slate-900">${escapeHtml(this.formatMonthKey(entry.label))}</td>
-                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(String(entry.count || 0))}</td>
-                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(this.formatNumber(entry.averageKg ?? (entry.totalKg && entry.count ? entry.totalKg / entry.count : 0)))}</td>
-                                                <td class="py-2 pr-4 text-right text-slate-700">${escapeHtml(this.formatCurrency(amount))}</td>
-                                                <td class="py-2 text-right font-semibold ${costPerKg !== null ? "text-slate-900" : "text-slate-400"}">${costPerKg !== null ? escapeHtml(this.formatCurrency(costPerKg)) : "—"}</td>
-                                            </tr>
-                                        `;
-                                    }).join("")}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                ` : ""}
-                ${this.renderPropertyMonthHeatmap(allStatsRecords)}
+                                `).join("")}
+                            </tbody>
+                            <tfoot class="border-t-2 border-slate-300 bg-slate-50/80 font-semibold">
+                                <tr>
+                                    <td class="py-3 pr-4 text-slate-900">${escapeHtml(this.tr("tables.total"))}</td>
+                                    <td class="py-3 pr-4 text-right text-slate-900">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
+                                    <td class="py-3 pr-4 text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
+                                    <td class="py-3 pr-4 text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
+                                    <td class="py-3 pr-4 text-right text-xs text-slate-600">${escapeHtml(String(cleaningSummary.totals.count))}</td>
+                                    <td class="py-3 text-right text-xs text-slate-600">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+            `;
+        }
+
+        // Default: By Month
+        return `
+            <section class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("stats.consolidatedByMonthTitle"))}</h4>
+                        <p class="text-xs text-slate-500">${escapeHtml(this.tr("stats.consolidatedByMonthDescription"))}</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th class="py-3 pr-4 text-left font-semibold">${escapeHtml(this.tr("tables.month"))}</th>
+                                <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
+                                <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
+                                <th class="py-3 pr-4 text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
+                                <th class="py-3 pr-4 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.cleanings"))}</th>
+                                <th class="py-3 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${combinedMonthly.map((row) => `
+                                <tr class="hover:bg-slate-50/80 transition">
+                                    <td class="py-3 pr-4 font-semibold text-slate-900">${escapeHtml(this.formatMonthKey(row.label))}</td>
+                                    <td class="py-3 pr-4 text-right font-medium text-slate-900">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
+                                    <td class="py-3 pr-4 text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
+                                    <td class="py-3 pr-4 text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
+                                    <td class="py-3 pr-4 text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
+                                    <td class="py-3 text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                        <tfoot class="border-t-2 border-slate-300 bg-slate-50/80 font-semibold">
+                            <tr>
+                                <td class="py-3 pr-4 text-slate-900">${escapeHtml(this.tr("tables.total"))}</td>
+                                <td class="py-3 pr-4 text-right text-slate-900">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
+                                <td class="py-3 pr-4 text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
+                                <td class="py-3 pr-4 text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
+                                <td class="py-3 pr-4 text-right text-xs text-slate-600">${escapeHtml(String(cleaningSummary.totals.count))}</td>
+                                <td class="py-3 text-right text-xs text-slate-600">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </section>
         `;
     }
@@ -2647,78 +2242,68 @@ export class CleaningAhManager {
         if (!records.length) return "";
         const cellMap = {};
         const propertyTotals = {};
-        const monthSet = new Set();
-        for (const record of records) {
-            const prop = record.propertyName || "";
-            const monthKey = (record.date || "").slice(0, 7);
-            if (!prop || !monthKey) continue;
-            const cellKey = `${prop}||${monthKey}`;
-            const val = record.effectiveTotalToAh ?? record.totalToAh ?? 0;
-            cellMap[cellKey] = (cellMap[cellKey] || 0) + val;
-            propertyTotals[prop] = (propertyTotals[prop] || 0) + val;
-            monthSet.add(monthKey);
-        }
-        if (!monthSet.size) return "";
-        const months = [...monthSet].sort();
-        const properties = Object.keys(propertyTotals)
-            .sort((a, b) => propertyTotals[b] - propertyTotals[a])
-            .slice(0, 15);
-        const allValues = Object.values(cellMap).filter((v) => v > 0);
-        const maxVal = allValues.length ? Math.max(...allValues) : 1;
-        const cellBg = (value) => {
-            if (!value || value <= 0) return "";
-            const intensity = Math.min(1, value / maxVal);
-            const lightness = Math.round(97 - intensity * 55);
-            const saturation = Math.round(80 + intensity * 10);
-            return `hsl(199,${saturation}%,${lightness}%)`;
-        };
-        const headerCells = months.map((m) =>
-            `<th class="min-w-[5rem] px-2 py-2 text-right text-xs font-semibold text-slate-500">${escapeHtml(this.formatMonthKey(m))}</th>`
-        ).join("");
-        const rows = properties.map((prop) => {
-            const cells = months.map((m) => {
-                const val = cellMap[`${prop}||${m}`] || 0;
-                const bg = cellBg(val);
-                if (val > 0) {
-                    return `<td class="cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:scale-[1.03] transition-all px-2 py-1.5 text-right text-xs" style="background:${bg}" data-action="open-heatmap-detail" data-property="${escapeHtml(prop)}" data-month="${escapeHtml(m)}" title="${escapeHtml(prop)} \u2013 ${escapeHtml(this.formatMonthKey(m))}: ${escapeHtml(this.formatCurrency(val))}">${escapeHtml(this.formatCurrency(val))}</td>`;
-                }
-                return `<td class="px-2 py-1.5 text-right text-xs text-slate-300">—</td>`;
-            }).join("");
-            return `<tr class="border-b border-slate-100"><td class="max-w-[10rem] truncate py-1.5 pr-3 text-sm font-medium text-slate-900" title="${escapeHtml(prop)}">${escapeHtml(prop)}</td>${cells}</tr>`;
-        }).join("");
+        const monthsSet = new Set();
+
+        records.forEach((record) => {
+            const prop = record.propertyName || "Unknown";
+            const month = (record.date || "").slice(0, 7);
+            if (!month) return;
+
+            monthsSet.add(month);
+            if (!cellMap[prop]) cellMap[prop] = {};
+            cellMap[prop][month] = (cellMap[prop][month] || 0) + 1;
+            propertyTotals[prop] = (propertyTotals[prop] || 0) + 1;
+        });
+
+        const sortedMonths = [...monthsSet].sort();
+        const sortedProperties = Object.keys(propertyTotals).sort((a, b) => propertyTotals[b] - propertyTotals[a]);
+
         return `
             <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="mb-4">
-                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("stats.heatmapKicker"))}</div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("stats.heatmapKicker"))}</div>
                     <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("stats.heatmapTitle"))}</h3>
                     <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.heatmapDescription"))}</p>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead><tr class="border-b border-slate-200">
-                            <th class="py-2 pr-3 text-left text-xs font-semibold text-slate-500">${escapeHtml(this.tr("tables.property"))}</th>
-                            ${headerCells}
-                        </tr></thead>
-                        <tbody>${rows}</tbody>
+                    <table class="min-w-full text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-200">
+                                <th class="py-2 pr-4 text-left font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("tables.property"))}</th>
+                                ${sortedMonths.map((m) => `<th class="px-2 py-2 text-center font-semibold text-slate-600">${escapeHtml(m.slice(5))}</th>`).join("")}
+                                <th class="py-2 pl-4 text-right font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("tables.total"))}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${sortedProperties.map((prop) => `
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-2 pr-4 font-medium text-slate-900">${escapeHtml(prop)}</td>
+                                    ${sortedMonths.map((m) => {
+                                        const count = cellMap[prop]?.[m] || 0;
+                                        return `<td class="px-2 py-2 text-center"><button type="button" data-action="open-heatmap-detail" data-property="${escapeHtml(prop)}" data-month="${escapeHtml(m)}" class="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg transition ${count > 0 ? "bg-indigo-100 font-semibold text-indigo-800 hover:bg-indigo-200" : "text-slate-300"}">${escapeHtml(String(count))}</button></td>`;
+                                    }).join("")}
+                                    <td class="py-2 pl-4 text-right font-semibold text-slate-900">${escapeHtml(String(propertyTotals[prop] || 0))}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
                     </table>
                 </div>
             </section>
         `;
     }
 
-    renderHeatmapDetailModal(allRecords = []) {
+    renderHeatmapDetailModal(records = []) {
         if (!this.heatmapDetailModal) return "";
-        const { propertyName, monthKey } = this.heatmapDetailModal;
 
-        const filtered = allRecords.filter((record) => {
-            return record.propertyName === propertyName
-                && (record.date || "").slice(0, 7) === monthKey;
-        }).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+        const { propertyName, monthKey } = this.heatmapDetailModal;
+        const filtered = records.filter((r) => {
+            return (r.propertyName || "Unknown") === propertyName
+                && (r.date || "").slice(0, 7) === monthKey;
+        });
 
         const totalGuest = filtered.reduce((sum, r) => sum + (r.guestAmount || 0), 0);
         const totalCommission = filtered.reduce((sum, r) => sum + (r.platformCommission || 0), 0);
         const totalVat = filtered.reduce((sum, r) => sum + (r.vatAmount || 0), 0);
-        const totalLaundry = filtered.reduce((sum, r) => sum + (r.effectiveLaundryAmount || 0), 0);
         const totalNet = filtered.reduce((sum, r) => sum + (r.effectiveTotalToAh ?? r.totalToAh ?? 0), 0);
 
         return `
@@ -2746,7 +2331,6 @@ export class CleaningAhManager {
                                     <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.amount"))}</th>
                                     <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("metrics.platformFees"))}</th>
                                     <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("metrics.vat"))}</th>
-                                    <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.laundry"))}</th>
                                     <th class="py-2.5 px-3 text-right">${escapeHtml(this.tr("tables.net"))}</th>
                                 </tr>
                             </thead>
@@ -2762,7 +2346,6 @@ export class CleaningAhManager {
                                             <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
                                             <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.platformCommission))}</td>
                                             <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.vatAmount))}</td>
-                                            <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount))}</td>
                                             <td class="py-2.5 px-3 text-right font-semibold text-slate-900">${escapeHtml(this.formatCurrency(netVal))}</td>
                                         </tr>
                                     `;
@@ -2774,7 +2357,6 @@ export class CleaningAhManager {
                                     <td class="py-2.5 px-3 text-right">${escapeHtml(this.formatCurrency(totalGuest))}</td>
                                     <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalCommission))}</td>
                                     <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalVat))}</td>
-                                    <td class="py-2.5 px-3 text-right text-slate-700">${escapeHtml(this.formatCurrency(totalLaundry))}</td>
                                     <td class="py-2.5 px-3 text-right text-emerald-700">${escapeHtml(this.formatCurrency(totalNet))}</td>
                                 </tr>
                             </tfoot>
@@ -2848,10 +2430,10 @@ export class CleaningAhManager {
 
         const cleanings = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords)
             .filter((r) => (r.date || "").slice(0, 7) === monthKey)
-            .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+            .sort((a, b) => String(a.date || "").localeCompare(String(a.date || "")));
 
         const standaloneLaundry = this.laundryRecords
-            .filter((r) => (r.date || "").slice(0, 7) === monthKey && !r.linkedCleaningId)
+            .filter((r) => (r.date || "").slice(0, 7) === monthKey)
             .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
 
         if (cleanings.length === 0 && standaloneLaundry.length === 0) {
@@ -2896,26 +2478,27 @@ export class CleaningAhManager {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
-        doc.text("Operational review and financial performance analysis for checkout cleanings and laundry services.", 15, 38);
+        doc.text("Operational review and financial performance analysis for cleanings and standalone laundry services.", 15, 38);
 
         const grossGuest = cleanings.reduce((sum, c) => sum + (c.guestAmount || 0), 0);
         const fees = cleanings.reduce((sum, c) => sum + (c.platformCommission || 0), 0);
         const vat = cleanings.reduce((sum, c) => sum + (c.vatAmount || 0), 0);
-        const cleaningLaundry = cleanings.reduce((sum, c) => sum + (c.effectiveLaundryAmount || 0), 0);
+        const netAhCleanings = cleanings.reduce((sum, c) => sum + (c.effectiveTotalToAh ?? c.totalToAh ?? 0), 0);
         const standaloneLaundryAmt = standaloneLaundry.reduce((sum, l) => sum + (l.amount || 0), 0);
-        const totalLaundry = cleaningLaundry + standaloneLaundryAmt;
-        const netAh = cleanings.reduce((sum, c) => sum + (c.effectiveTotalToAh ?? c.totalToAh ?? 0), 0) - standaloneLaundryAmt;
+        const standaloneLaundryKg = standaloneLaundry.reduce((sum, l) => sum + (l.kg || 0), 0);
+
+        const finalNetAh = roundCurrency(netAhCleanings - standaloneLaundryAmt);
 
         const highlightsHead = [["Metric", "Value"]];
         const highlightsBody = [
-            ["Total Checkout Cleanings", String(cleanings.length)],
+            ["Total Cleanings", String(cleanings.length)],
             ["Gross Bookings Revenue", this.formatCurrency(grossGuest)],
             ["Platform Commission Fees", this.formatCurrency(fees)],
             ["VAT Liabilities (Estimated)", this.formatCurrency(vat)],
-            ["Checkout Laundry Expenses", this.formatCurrency(cleaningLaundry)],
+            ["Net AH Cleanings Revenue", this.formatCurrency(netAhCleanings)],
+            ["Standalone Laundry Weight", `${this.formatNumber(standaloneLaundryKg)} kg`],
             ["Standalone Laundry Expenses", this.formatCurrency(standaloneLaundryAmt)],
-            ["Total Monthly Laundry Costs", this.formatCurrency(totalLaundry)],
-            ["Net Monthly AH Revenue", this.formatCurrency(netAh)]
+            ["Final Net AH Profit (Cleanings - Laundry)", this.formatCurrency(finalNetAh)]
         ];
 
         doc.autoTable({
@@ -2938,19 +2521,18 @@ export class CleaningAhManager {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
         doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
-        doc.text("Revenues & Laundry Costs by Property", 15, nextY);
+        doc.text("Cleanings Revenue by Property", 15, nextY);
 
         const propertyGroups = {};
         cleanings.forEach((c) => {
             const prop = c.propertyName || "Unknown";
             if (!propertyGroups[prop]) {
-                propertyGroups[prop] = { count: 0, guestAmount: 0, platformCommission: 0, vatAmount: 0, laundryAmount: 0, netToAh: 0 };
+                propertyGroups[prop] = { count: 0, guestAmount: 0, platformCommission: 0, vatAmount: 0, netToAh: 0 };
             }
             propertyGroups[prop].count++;
             propertyGroups[prop].guestAmount += (c.guestAmount || 0);
             propertyGroups[prop].platformCommission += (c.platformCommission || 0);
             propertyGroups[prop].vatAmount += (c.vatAmount || 0);
-            propertyGroups[prop].laundryAmount += (c.effectiveLaundryAmount || 0);
             propertyGroups[prop].netToAh += (c.effectiveTotalToAh ?? c.totalToAh ?? 0);
         });
 
@@ -2961,14 +2543,13 @@ export class CleaningAhManager {
                 this.formatCurrency(data.guestAmount),
                 this.formatCurrency(data.platformCommission),
                 this.formatCurrency(data.vatAmount),
-                this.formatCurrency(data.laundryAmount),
                 this.formatCurrency(data.netToAh)
             ];
         });
 
         doc.autoTable({
             startY: nextY + 4,
-            head: [["Property", "Cleanings", "Gross Rev", "Platform Fees", "VAT", "Laundry Cost", "Net AH"]],
+            head: [["Property", "Cleanings", "Gross Rev", "Platform Fees", "VAT", "Net AH"]],
             body: propertyRows,
             theme: "striped",
             headStyles: { fillColor: brandColor, textColor: [255, 255, 255] },
@@ -2979,8 +2560,7 @@ export class CleaningAhManager {
                 2: { align: "right" },
                 3: { align: "right" },
                 4: { align: "right" },
-                5: { align: "right" },
-                6: { align: "right", fontStyle: "bold" }
+                5: { align: "right", fontStyle: "bold" }
             },
             margin: { left: 15, right: 15 },
             didDrawPage: drawHeaderFooter
@@ -3002,6 +2582,7 @@ export class CleaningAhManager {
             const laundryRows = standaloneLaundry.map((l) => [
                 l.date,
                 l.propertyName || "Unknown",
+                String(l.quantity ?? 1),
                 this.formatNumber(l.kg),
                 this.formatCurrency(l.laundryRatePerKg || 2.30),
                 this.formatCurrency(l.amount),
@@ -3010,7 +2591,7 @@ export class CleaningAhManager {
 
             doc.autoTable({
                 startY: nextY + 4,
-                head: [["Date", "Property", "Weight (Kg)", "Rate / Kg", "Amount", "Notes"]],
+                head: [["Date", "Property", "Qty", "Weight (Kg)", "Rate / Kg", "Amount", "Notes"]],
                 body: laundryRows,
                 theme: "striped",
                 headStyles: { fillColor: [14, 116, 144], textColor: [255, 255, 255] },
@@ -3019,7 +2600,8 @@ export class CleaningAhManager {
                     0: { fontStyle: "bold" },
                     2: { align: "right" },
                     3: { align: "right" },
-                    4: { align: "right", fontStyle: "bold" }
+                    4: { align: "right" },
+                    5: { align: "right", fontStyle: "bold" }
                 },
                 margin: { left: 15, right: 15 },
                 didDrawPage: drawHeaderFooter
@@ -3167,9 +2749,6 @@ export class CleaningAhManager {
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.count"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.avgKg"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.avgNet"))}</th>
                         <th class="px-3 py-2">${escapeHtml(this.tr("tables.lastEntry"))}</th>
@@ -3190,9 +2769,6 @@ export class CleaningAhManager {
                                 </td>
                                 <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(String(entry.count))}</td>
                                 <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.guestAmount))}</td>
-                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryAmount))}</td>
-                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.laundryKg))}</td>
-                                <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.averageLaundryKgPerCleaning))}</td>
                                 <td class="px-3 py-3 text-sm font-medium text-slate-900">${escapeHtml(this.formatCurrency(entry.totalToAh))}</td>
                                 <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.averageTotalToAh))}</td>
                                 <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(entry.lastEntryDate ? this.formatDate(entry.lastEntryDate) : "—")}</td>
@@ -3226,35 +2802,29 @@ export class CleaningAhManager {
                         </div>
                         <div class="text-sm text-slate-500">${escapeHtml(this.getRecordsLabel(detail.totals.count))}</div>
                     </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                         ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(detail.totals.guestAmount))}
                         ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(detail.totals.totalToAh))}
                         ${this.renderMetricCard(this.tr("metrics.avgNetPerCleaning"), this.formatCurrency(detail.totals.averageTotalToAh))}
-                        ${this.renderMetricCard(this.tr("metrics.laundry"), this.formatCurrency(detail.totals.laundryAmount))}
-                        ${this.renderMetricCard(this.tr("metrics.laundryKg"), this.formatNumber(detail.totals.laundryKg))}
-                        ${this.renderMetricCard(this.tr("metrics.avgKgPerCleaning"), this.formatNumber(detail.totals.averageLaundryKgPerCleaning))}
                         ${this.renderMetricCard(this.tr("metrics.lastEntry"), detail.totals.lastEntryDate ? this.formatDate(detail.totals.lastEntryDate) : "—")}
                     </div>
                 </section>
                 ${this.renderFinancialSummaryTable(this.tr("stats.focusByMonth"), detail.byMonth, [
                     [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
                     [this.tr("tables.count"), (entry) => String(entry.count)],
-                    [this.tr("tables.laundry"), (entry) => this.formatCurrency(entry.laundryAmount)],
-                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
                     [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                 ])}
                 ${this.renderFinancialSummaryTable(this.tr("stats.focusByCategory"), detail.byCategory, [
                     [this.tr("tables.category"), (entry) => this.getCleaningCategoryLabel(entry.key || entry.label)],
                     [this.tr("tables.count"), (entry) => String(entry.count)],
                     [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
                     [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                 ])}
                 ${this.renderFinancialSummaryTable(this.tr("stats.focusByReservation"), detail.byReservationSource, [
                     [this.tr("tables.reservation"), (entry) => this.getReservationSourceLabel(entry.key || entry.label)],
                     [this.tr("tables.count"), (entry) => String(entry.count)],
                     [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.guestAmount)],
-                    [this.tr("tables.avgKg"), (entry) => this.formatNumber(entry.averageLaundryKgPerCleaning)],
                     [this.tr("tables.net"), (entry) => this.formatCurrency(entry.totalToAh)]
                 ])}
                 ${this.renderStatsRecentEntries(detail.recentEntries)}
@@ -3411,17 +2981,9 @@ export class CleaningAhManager {
                             `).join("")}
                         </select>
                     </label>
-                    <label class="block">
+                    <label class="block md:col-span-2">
                         <span class="text-sm text-slate-600">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                         <input type="number" name="guestAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
-                        <input type="number" name="laundryKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryKg))}" placeholder="0">
-                    </label>
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.amount"))}</span>
-                        <input type="number" name="laundryAmount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryAmount))}" placeholder="0">
                     </label>
                 </div>
                 <label class="block">
@@ -3473,10 +3035,9 @@ export class CleaningAhManager {
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_150px_120px_minmax(14rem,1fr)_auto] lg:gap-3">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_150px_minmax(14rem,1fr)_auto] lg:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
                     </div>
@@ -3487,7 +3048,7 @@ export class CleaningAhManager {
                                 categoryKey
                             });
                             return `
-                                <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_150px_120px_minmax(14rem,1fr)_auto] lg:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
+                                <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_150px_minmax(14rem,1fr)_auto] lg:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
                                         <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
@@ -3495,10 +3056,6 @@ export class CleaningAhManager {
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
                                         <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
-                                        <input type="number" name="laundryKg" class="w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(row.laundryKg))}" placeholder="0">
                                     </label>
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(t("common.notes"))}</span>
@@ -3526,24 +3083,16 @@ export class CleaningAhManager {
     renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries) {
         const draft = this.laundryDraft;
         const isBatchMode = !this.editingLaundryId && this.laundryEntryMode === "batch";
-        const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === draft.linkedCleaningId) || null;
-        const unlinkedLaundryEntries = this.getVisibleLaundryRegisterEntries(
-            laundrySummary.entries.filter((entry) => entry.source !== "cleaning" && !entry.linkedCleaningId && !this.isLaundryLinkIgnored(entry))
-        ).slice(0, 8);
         const singlePreview = createStandaloneLaundryRecord({
             date: draft.date,
-            propertyName: linkedCleaning?.propertyName || draft.propertyName,
-            linkedCleaningId: draft.linkedCleaningId,
+            propertyName: draft.propertyName,
+            quantity: toOptionalNumber(draft.quantity),
             kg: toOptionalNumber(draft.kg) || 0,
             amount: toOptionalNumber(draft.amount),
             laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
             notes: draft.notes
         });
         const batchPreview = this.getLaundryBatchPreview();
-        const preferredPropertyName = linkedCleaning?.propertyName || draft.propertyName;
-        const linkOptions = this.getLaundryLinkOptions(draft.linkedCleaningId, preferredPropertyName, { receivedDate: draft.date })
-            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === draft.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkOptionLabel(record, preferredPropertyName, draft.date))}</option>`)
-            .join("");
 
         return `
             <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
@@ -3567,8 +3116,6 @@ export class CleaningAhManager {
                             ? this.renderLaundryBatchForm(batchPreview)
                             : this.renderLaundrySingleForm({
                                 draft,
-                                linkedCleaning,
-                                linkOptions,
                                 preview: singlePreview
                             })}
                     </section>
@@ -3583,7 +3130,6 @@ export class CleaningAhManager {
                         </div>
                         <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(visibleLaundryRegisterEntries.length))}</div>
                     </div>
-                    ${this.renderUnlinkedLaundryReview(unlinkedLaundryEntries)}
                     ${this.renderLaundryRegisterControls()}
                     <div class="mt-5 overflow-x-auto">
                         ${this.renderLaundryTable(visibleLaundryRegisterEntries)}
@@ -3593,37 +3139,33 @@ export class CleaningAhManager {
         `;
     }
 
-    renderLaundrySingleForm({ draft, linkedCleaning, linkOptions, preview }) {
+    renderLaundrySingleForm({ draft, preview }) {
         return `
             <form id="cleaning-ah-laundry-form" class="mt-5 space-y-4">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.laundryReceivedDate"))}</span>
                         <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
                     </label>
-                    <label class="block md:col-span-2 lg:col-span-3">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.linkedCleaning"))}</span>
-                        <select name="linkedCleaningId" id="cleaning-ah-linked-cleaning" class="mt-1 w-full">
-                            <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
-                            ${linkOptions}
-                        </select>
-                        <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.linkedCleaningHint"))}</div>
-                    </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
-                        <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(linkedCleaning?.propertyName || draft.propertyName)}" list="cleaning-ah-property-options" ${linkedCleaning ? "readonly" : ""} required>
+                        <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.quantity") || "Quantity")}</span>
+                        <input type="number" name="quantity" class="mt-1 w-full" step="1" min="0" value="${escapeHtml(toInputNumber(draft.quantity))}" placeholder="1">
                     </label>
                     <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.kg"))}</span>
                         <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0">
                     </label>
                     <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.amount"))}</span>
-                        <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.amount))}" placeholder="0">
-                    </label>
-                    <label class="block">
                         <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
                         <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.amount"))}</span>
+                        <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.amount))}" placeholder="0.00">
                     </label>
                 </div>
                 <label class="block">
@@ -3655,18 +3197,23 @@ export class CleaningAhManager {
                     </label>
                 </div>
                 <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_130px_minmax(14rem,1fr)_auto] lg:gap-3">
+                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(14rem,1.2fr)_100px_110px_minmax(12rem,1fr)_auto] lg:gap-3">
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.quantity") || "Qty")}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
                         <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
                     </div>
                     <div class="divide-y divide-slate-200">
                         ${rows.map((row, index) => `
-                            <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_130px_minmax(14rem,1fr)_auto] lg:items-start" data-laundry-batch-row="${escapeHtml(row.rowId)}">
+                            <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(14rem,1.2fr)_100px_110px_minmax(12rem,1fr)_auto] lg:items-start" data-laundry-batch-row="${escapeHtml(row.rowId)}">
                                 <label class="block">
                                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
                                     <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.quantity") || "Qty")}</span>
+                                    <input type="number" name="quantity" class="w-full" step="1" min="0" value="${escapeHtml(toInputNumber(row.quantity))}" placeholder="1">
                                 </label>
                                 <label class="block">
                                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.kg"))}</span>
@@ -3691,6 +3238,390 @@ export class CleaningAhManager {
                     ${this.renderLaundryBatchPreview(preview)}
                 </div>
             </form>
+        `;
+    }
+
+    renderCleaningPreview(previewRecord) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.commission"), this.formatCurrency(previewRecord.platformCommission))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.vat"), this.formatCurrency(previewRecord.vatAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAh), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderCleaningBatchPreview(preview) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(preview.guestAmount))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(preview.totalToAh), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderLaundryPreview(previewRecord) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.quantity") || "Quantity", String(previewRecord.quantity || 0))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(previewRecord.kg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.ratePerKg"), this.formatCurrency(previewRecord.laundryRatePerKg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(previewRecord.amount), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderLaundryBatchPreview(preview) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
+                <div class="mt-3 grid grid-cols-1 gap-3">
+                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.quantity") || "Quantity", String(preview.quantity || 0))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(preview.kg))}
+                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(preview.amount), "emphasis")}
+                </div>
+            </div>
+        `;
+    }
+
+    renderCleaningInlineEditRow(record) {
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningDraft.categoryKey || this.cleaningDraft.category);
+        const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
+            enableSuggestion: false,
+            excludeRecordId: this.editingCleaningId || "",
+            categoryKey
+        });
+        const previewRecord = createCleaningAhRecord({
+            date: this.cleaningDraft.date,
+            propertyName: this.cleaningDraft.propertyName,
+            categoryKey,
+            category: this.getCleaningCategoryLabel(categoryKey),
+            reservationSource: this.categoryUsesReservationSource(categoryKey)
+                ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
+                : CLEANING_AH_RESERVATION_SOURCES.direct,
+            guestAmount: guestAmountField.numericValue || 0,
+            notes: this.cleaningDraft.notes
+        });
+
+        return `
+            <tr class="border-b border-slate-100">
+                <td colspan="7" class="px-3 pb-4 pt-0">
+                    <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                                <div class="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">${escapeHtml(this.tr("cleanings.editTitle"))}</div>
+                                <div class="mt-1 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName || "")}</div>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button type="button" id="cleaning-ah-cancel-inline-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>
+                                <button type="submit" form="cleaning-ah-inline-cleaning-form" class="view-btn active">${escapeHtml(this.tr("actions.saveChanges"))}</button>
+                            </div>
+                        </div>
+                        ${this.renderCleaningSingleForm({
+                            draft: this.cleaningDraft,
+                            preview: previewRecord,
+                            guestAmountField,
+                            formId: "cleaning-ah-inline-cleaning-form",
+                            previewId: "cleaning-ah-inline-cleaning-preview"
+                        })}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    renderCleaningsTable(records) {
+        if (!records.length) {
+            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.empty"))}</div>`;
+        }
+
+        return `
+            <table class="min-w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
+                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${records.map((record) => {
+                        const isInlineCleaningEditOpen = this.editingCleaningId === record.id;
+                        return `
+                        <tr class="border-b border-slate-100 align-top">
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
+                            <td class="px-3 py-3">
+                                <div class="text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</div>
+                                ${record.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
+                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
+                            </td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
+                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
+                            <td class="px-3 py-3 text-right">
+                                <div class="inline-flex flex-wrap justify-end gap-2">
+                                    ${this.renderTableActionButton({
+                                        action: "edit-cleaning",
+                                        id: record.id,
+                                        label: t("common.edit"),
+                                        iconClass: "fas fa-pen",
+                                        tone: "primary"
+                                    })}
+                                    ${this.renderTableActionButton({
+                                        action: "delete-cleaning",
+                                        id: record.id,
+                                        label: t("common.delete"),
+                                        iconClass: "fas fa-trash",
+                                        tone: "danger"
+                                    })}
+                                </div>
+                            </td>
+                        </tr>
+                        ${isInlineCleaningEditOpen ? this.renderCleaningInlineEditRow(record) : ""}
+                    `;
+                    }).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+    renderLaundryTable(entries) {
+        if (!entries.length) {
+            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.empty"))}</div>`;
+        }
+
+        return `
+            <table class="min-w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundryReceivedDate"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.quantity") || "Qty")}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.ratePerKg"))}</th>
+                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
+                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${entries.map((entry) => `
+                        <tr class="border-b border-slate-100">
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(entry.date))}</td>
+                            <td class="px-3 py-3">
+                                <div class="text-sm font-medium text-slate-900">${escapeHtml(entry.propertyName)}</div>
+                                ${entry.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(entry.notes)}</div>` : ""}
+                            </td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(String(entry.quantity ?? 1))}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.kg))}</td>
+                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryRatePerKg))}</td>
+                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
+                            <td class="px-3 py-3 text-right">
+                                <div class="inline-flex flex-wrap justify-end gap-2">
+                                    ${this.renderTableActionButton({
+                                        action: "edit-laundry",
+                                        id: entry.id,
+                                        label: t("common.edit"),
+                                        iconClass: "fas fa-pen",
+                                        tone: "primary"
+                                    })}
+                                    ${this.renderTableActionButton({
+                                        action: "delete-laundry",
+                                        id: entry.id,
+                                        label: t("common.delete"),
+                                        iconClass: "fas fa-trash",
+                                        tone: "danger"
+                                    })}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+
+    renderLaundrySummaryBlock(laundrySummary) {
+        return `
+            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.laundryKicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.laundryTitle"))}</h3>
+                    </div>
+                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.totals.count))}</div>
+                </div>
+                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
+                    ${this.renderMetricCard(this.tr("metrics.quantity") || "Quantity", String(laundrySummary.totals.quantity || 0))}
+                    ${this.renderMetricCard(this.tr("metrics.kg"), this.formatNumber(laundrySummary.totals.kg))}
+                    ${this.renderMetricCard(this.tr("metrics.amount"), this.formatCurrency(laundrySummary.totals.amount))}
+                    ${this.renderMetricCard(this.tr("metrics.rows"), String(laundrySummary.totals.count))}
+                </div>
+                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByMonth"), laundrySummary.byMonth, [
+                    [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
+                    [this.tr("tables.quantity") || "Qty", (entry) => String(entry.quantity || 0)],
+                    [this.tr("tables.rows"), (entry) => String(entry.count)],
+                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
+                ])}
+                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByProperty"), laundrySummary.byProperty.slice(0, 8), [
+                    [this.tr("tables.property"), (entry) => entry.label],
+                    [this.tr("tables.quantity") || "Qty", (entry) => String(entry.quantity || 0)],
+                    [this.tr("tables.rows"), (entry) => String(entry.count)],
+                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
+                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
+                ])}
+            </section>
+        `;
+    }
+
+    renderImportBlock() {
+        return `
+            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">${escapeHtml(this.tr("import.kicker"))}</div>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("import.title"))}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("import.description"))}</p>
+                    </div>
+                    ${this.importPreview ? `<button type="button" id="cleaning-ah-clear-import" class="text-sm text-slate-500 hover:text-slate-900">${escapeHtml(this.tr("import.clearPreview"))}</button>` : ""}
+                </div>
+                <div class="mt-4 flex flex-col gap-4">
+                    <label class="block">
+                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.csvFile"))}</span>
+                        <input id="cleaning-ah-import-file" type="file" accept=".csv,text/csv" class="mt-1 block w-full text-sm text-slate-600">
+                    </label>
+                    ${this.renderImportPreview()}
+                </div>
+            </section>
+        `;
+    }
+
+    renderImportPreview() {
+        if (!this.importPreview) {
+            return `
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                    ${escapeHtml(this.tr("import.empty"))}
+                </div>
+            `;
+        }
+
+        const previewRows = this.importPreview.newRecords.slice(0, 8)
+            .map((record) => `
+                <tr class="border-t border-slate-200">
+                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
+                    <td class="px-3 py-2 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
+                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.totalToAh))}</td>
+                </tr>
+            `)
+            .join("");
+
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("import.previewKicker"))}</div>
+                        <h4 class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(this.importPreview.fileName)}</h4>
+                        <p class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("import.summary", {
+                            parsed: this.importPreview.parsedCount,
+                            newRows: this.importPreview.newRecords.length,
+                            duplicates: this.importPreview.duplicateCount,
+                            warnings: this.importPreview.warningCount
+                        }))}</p>
+                    </div>
+                    <button type="button" id="cleaning-ah-confirm-import" class="view-btn active" ${this.importPreview.newRecords.length ? "" : "disabled"}>${escapeHtml(this.getImportRowsLabel(this.importPreview.newRecords.length))}</button>
+                </div>
+                ${this.importPreview.warningCount ? `
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        ${escapeHtml(this.tr("import.mismatchWarning", { count: this.importPreview.warningCount }))}
+                    </div>
+                ` : ""}
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
+                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${previewRows || `<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-500">${escapeHtml(this.tr("import.noNewRows"))}</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    renderCleaningRegisterControls() {
+        const filterOptions = this.getCleaningRegisterFilterOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+        const sortOptions = this.getCleaningRegisterSortOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+
+        return `
+            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerFilterLabel"))}</span>
+                    <select id="cleaning-ah-cleaning-register-filter" class="mt-2 w-full">
+                        ${filterOptions}
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerSortLabel"))}</span>
+                    <select id="cleaning-ah-cleaning-register-sort" class="mt-2 w-full">
+                        ${sortOptions}
+                    </select>
+                </label>
+            </div>
+        `;
+    }
+
+    renderLaundryRegisterControls() {
+        const filterOptions = this.getLaundryRegisterFilterOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+        const sortOptions = this.getLaundryRegisterSortOptions()
+            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+            .join("");
+
+        return `
+            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerFilterLabel"))}</span>
+                    <select id="cleaning-ah-laundry-register-filter" class="mt-2 w-full">
+                        ${filterOptions}
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerSortLabel"))}</span>
+                    <select id="cleaning-ah-laundry-register-sort" class="mt-2 w-full">
+                        ${sortOptions}
+                    </select>
+                </label>
+            </div>
         `;
     }
 
@@ -3813,553 +3744,6 @@ export class CleaningAhManager {
                     `).join("")}
                 </tbody>
             </table>
-        `;
-    }
-
-    renderLaundryRegisterControls() {
-        const filterOptions = this.getLaundryRegisterFilterOptions()
-            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
-            .join("");
-        const sortOptions = this.getLaundryRegisterSortOptions()
-            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.laundryRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
-            .join("");
-
-        return `
-            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerFilterLabel"))}</span>
-                    <select id="cleaning-ah-laundry-register-filter" class="mt-2 w-full">
-                        ${filterOptions}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("laundryTab.registerSortLabel"))}</span>
-                    <select id="cleaning-ah-laundry-register-sort" class="mt-2 w-full">
-                        ${sortOptions}
-                    </select>
-                </label>
-            </div>
-        `;
-    }
-
-    renderCleaningRegisterControls() {
-        const filterOptions = this.getCleaningRegisterFilterOptions()
-            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterFilter === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
-            .join("");
-        const sortOptions = this.getCleaningRegisterSortOptions()
-            .map(([value, label]) => `<option value="${escapeHtml(value)}" ${this.cleaningRegisterSort === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
-            .join("");
-
-        return `
-            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerFilterLabel"))}</span>
-                    <select id="cleaning-ah-cleaning-register-filter" class="mt-2 w-full">
-                        ${filterOptions}
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("cleanings.registerSortLabel"))}</span>
-                    <select id="cleaning-ah-cleaning-register-sort" class="mt-2 w-full">
-                        ${sortOptions}
-                    </select>
-                </label>
-            </div>
-        `;
-    }
-
-    renderCleaningPreview(previewRecord) {
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
-                <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.commission"), this.formatCurrency(previewRecord.platformCommission))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.vat"), this.formatCurrency(previewRecord.vatAmount))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.beforeLaundry"), this.formatCurrency(previewRecord.totalToAhWithoutLaundry))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.laundry"), this.formatCurrency(previewRecord.laundryAmount))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(previewRecord.totalToAh), "emphasis")}
-                </div>
-            </div>
-        `;
-    }
-
-    renderCleaningBatchPreview(preview) {
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
-                <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(preview.guestAmount))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.laundry"), this.formatCurrency(preview.laundryAmount))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(preview.totalToAh), "emphasis")}
-                </div>
-            </div>
-        `;
-    }
-
-    renderLaundryPreview(previewRecord) {
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
-                <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(previewRecord.kg))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.ratePerKg"), this.formatCurrency(previewRecord.laundryRatePerKg))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(previewRecord.amount), "emphasis")}
-                </div>
-            </div>
-        `;
-    }
-
-    renderLaundryBatchPreview(preview) {
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
-                <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.kg"), this.formatNumber(preview.kg))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.amount"), this.formatCurrency(preview.amount), "emphasis")}
-                </div>
-            </div>
-        `;
-    }
-
-    renderCleaningQuickLaundryEntry(record) {
-        const draft = this.getCleaningQuickLaundryDraft(record);
-        const isUpdatingExisting = draft.editingLaundryId || draft.updatesInlineCleaning;
-        const kg = toOptionalNumber(draft.kg);
-        const laundryRatePerKg = toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
-        const amount = toOptionalNumber(draft.amount);
-        const amountValue = kg !== null && kg > 0 && (amount === null || amount <= 0)
-            ? roundCurrency(kg * laundryRatePerKg)
-            : draft.amount;
-
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-cleaning-laundry-entry="${escapeHtml(record.id || "")}">
-                <div class="mb-3 text-xs font-medium text-slate-500">${escapeHtml(this.tr("forms.cleaningDate"))}: ${escapeHtml(this.formatDate(record.date))}</div>
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[150px_120px_140px_130px_minmax(0,1fr)]">
-                        <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.laundryReceivedDate"))}</span>
-                            <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(draft.date)}" required>
-                        </label>
-                        <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.kg"))}</span>
-                            <input type="number" name="kg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0">
-                        </label>
-                        <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.ratePerKg"))}</span>
-                            <input type="number" name="laundryRatePerKg" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" required>
-                        </label>
-                        <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.totalAmount"))}</span>
-                            <input type="number" name="amount" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(amountValue))}" placeholder="0">
-                        </label>
-                        <label class="block">
-                            <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</span>
-                            <input type="text" name="notes" class="mt-1 w-full" value="${escapeHtml(draft.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-end gap-3">
-                        <button type="button" data-action="toggle-cleaning-laundry-entry" data-id="${escapeHtml(record.id || "")}" class="text-sm text-slate-500 hover:text-slate-700">${escapeHtml(t("common.cancel"))}</button>
-                        <button type="button" data-action="save-cleaning-laundry" data-id="${escapeHtml(record.id || "")}" class="view-btn active">${escapeHtml(isUpdatingExisting ? this.tr("actions.updateLaundry") : this.tr("actions.saveLaundry"))}</button>
-                    </div>
-                </div>
-                <p class="mt-3 text-xs text-slate-500">${escapeHtml(isUpdatingExisting ? this.tr("cleanings.quickLaundryEditHint") : this.tr("cleanings.quickLaundryHint"))}</p>
-            </div>
-        `;
-    }
-
-    renderCleaningInlineEditRow(record) {
-        const categoryKey = this.getCleaningCategoryKey(this.cleaningDraft.categoryKey || this.cleaningDraft.category);
-        const guestAmountField = this.getCleaningGuestAmountFieldState(this.cleaningDraft, {
-            enableSuggestion: false,
-            excludeRecordId: this.editingCleaningId || "",
-            categoryKey
-        });
-        const previewRecord = createCleaningAhRecord({
-            date: this.cleaningDraft.date,
-            propertyName: this.cleaningDraft.propertyName,
-            categoryKey,
-            category: this.getCleaningCategoryLabel(categoryKey),
-            reservationSource: this.categoryUsesReservationSource(categoryKey)
-                ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
-                : CLEANING_AH_RESERVATION_SOURCES.direct,
-            guestAmount: guestAmountField.numericValue || 0,
-            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
-            notes: this.cleaningDraft.notes
-        });
-
-        return `
-            <tr class="border-b border-slate-100">
-                <td colspan="8" class="px-3 pb-4 pt-0">
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">${escapeHtml(this.tr("cleanings.editTitle"))}</div>
-                                <div class="mt-1 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName || "")}</div>
-                            </div>
-                            <div class="flex flex-wrap gap-3">
-                                <button type="button" id="cleaning-ah-cancel-inline-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>
-                                <button type="submit" form="cleaning-ah-inline-cleaning-form" class="view-btn active">${escapeHtml(this.tr("actions.saveChanges"))}</button>
-                            </div>
-                        </div>
-                        ${this.renderCleaningSingleForm({
-                            draft: this.cleaningDraft,
-                            preview: previewRecord,
-                            guestAmountField,
-                            formId: "cleaning-ah-inline-cleaning-form",
-                            previewId: "cleaning-ah-inline-cleaning-preview"
-                        })}
-                    </div>
-                </td>
-            </tr>
-        `;
-    }
-
-    renderLaundryQuickLinkControls(entry) {
-        if (entry.source === "cleaning") {
-            return "";
-        }
-
-        const isOpen = this.openLaundryLinkEditorId === entry.id;
-        const actionLabel = isOpen
-            ? t("common.cancel")
-            : (entry.linkedCleaningId ? this.tr("actions.changeLink") : this.tr("actions.linkCleaning"));
-
-        if (!isOpen) {
-            return `
-                <button type="button" data-action="toggle-laundry-link-editor" data-id="${escapeHtml(entry.id || "")}" class="mt-1 text-xs font-medium text-sky-600 hover:text-sky-800">
-                    ${escapeHtml(actionLabel)}
-                </button>
-            `;
-        }
-
-        const linkOptions = this.getLaundryLinkOptions(entry.linkedCleaningId, entry.propertyName, { receivedDate: entry.date })
-            .map((record) => `<option value="${escapeHtml(record.id || "")}" ${record.id === entry.linkedCleaningId ? "selected" : ""}>${escapeHtml(this.getCleaningLinkOptionLabel(record, entry.propertyName, entry.date))}</option>`)
-            .join("");
-
-        return `
-            <div class="mt-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2" data-laundry-link-controls>
-                <label class="block">
-                    <span class="sr-only">${escapeHtml(this.tr("tables.linkedCleaning"))}</span>
-                    <select class="w-full text-xs" data-laundry-link-select>
-                        <option value="">${escapeHtml(this.tr("forms.noLinkedCleaning"))}</option>
-                        ${linkOptions}
-                    </select>
-                </label>
-                <div class="mt-1.5 flex flex-wrap items-center justify-end gap-3">
-                    <button type="button" data-action="toggle-laundry-link-editor" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-slate-500 hover:text-slate-700">${escapeHtml(t("common.cancel"))}</button>
-                    <button type="button" data-action="save-laundry-link" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-sky-600 hover:text-sky-800">${escapeHtml(this.tr("actions.saveLink"))}</button>
-                </div>
-            </div>
-        `;
-    }
-
-    renderImportBlock() {
-        return `
-            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">${escapeHtml(this.tr("import.kicker"))}</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("import.title"))}</h3>
-                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("import.description"))}</p>
-                    </div>
-                    ${this.importPreview ? `<button type="button" id="cleaning-ah-clear-import" class="text-sm text-slate-500 hover:text-slate-900">${escapeHtml(this.tr("import.clearPreview"))}</button>` : ""}
-                </div>
-                <div class="mt-4 flex flex-col gap-4">
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.csvFile"))}</span>
-                        <input id="cleaning-ah-import-file" type="file" accept=".csv,text/csv" class="mt-1 block w-full text-sm text-slate-600">
-                    </label>
-                    ${this.renderImportPreview()}
-                </div>
-            </section>
-        `;
-    }
-
-    renderImportPreview() {
-        if (!this.importPreview) {
-            return `
-                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-                    ${escapeHtml(this.tr("import.empty"))}
-                </div>
-            `;
-        }
-
-        const previewRows = this.importPreview.newRecords.slice(0, 8)
-            .map((record) => `
-                <tr class="border-t border-slate-200">
-                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
-                    <td class="px-3 py-2 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</td>
-                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
-                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
-                    <td class="px-3 py-2 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.totalToAh))}</td>
-                </tr>
-            `)
-            .join("");
-
-        return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("import.previewKicker"))}</div>
-                        <h4 class="mt-1 text-lg font-semibold text-slate-900">${escapeHtml(this.importPreview.fileName)}</h4>
-                        <p class="mt-1 text-sm text-slate-600">${escapeHtml(this.tr("import.summary", {
-                            parsed: this.importPreview.parsedCount,
-                            newRows: this.importPreview.newRecords.length,
-                            duplicates: this.importPreview.duplicateCount,
-                            warnings: this.importPreview.warningCount
-                        }))}</p>
-                    </div>
-                    <button type="button" id="cleaning-ah-confirm-import" class="view-btn active" ${this.importPreview.newRecords.length ? "" : "disabled"}>${escapeHtml(this.getImportRowsLabel(this.importPreview.newRecords.length))}</button>
-                </div>
-                ${this.importPreview.warningCount ? `
-                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        ${escapeHtml(this.tr("import.mismatchWarning", { count: this.importPreview.warningCount }))}
-                    </div>
-                ` : ""}
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full text-left">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
-                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
-                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
-                                <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${previewRows || `<tr><td colspan="5" class="px-3 py-4 text-sm text-slate-500">${escapeHtml(this.tr("import.noNewRows"))}</td></tr>`}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
-    renderCleaningsTable(records) {
-        if (!records.length) {
-            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.empty"))}</div>`;
-        }
-
-        return `
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundry"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
-                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${records.map((record) => {
-                        const isQuickLaundryEntryOpen = this.openCleaningLaundryEntryId === record.id;
-                        const isInlineCleaningEditOpen = this.editingCleaningId === record.id;
-                        return `
-                        <tr class="border-b border-slate-100 align-top">
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
-                            <td class="px-3 py-3">
-                                <div class="text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</div>
-                                ${record.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
-                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
-                            </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">
-                                ${escapeHtml(this.formatCurrency(record.effectiveLaundryAmount ?? record.laundryAmount))}
-                                ${record.linkedLaundryAmount ? `<div class="text-xs text-slate-400">${escapeHtml(this.tr("laundryState.linkedAmount", { amount: this.formatCurrency(record.linkedLaundryAmount) }))}</div>` : ""}
-                                ${record.linkedLaundryCount ? `<div class="text-xs text-slate-400">${escapeHtml(this.getLinkedRowsLabel(record.linkedLaundryCount))}</div>` : ""}
-                                <div class="mt-1">${this.renderLaundryStateBadge(record)}</div>
-                            </td>
-                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
-                            <td class="px-3 py-3 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${this.renderTableActionButton({
-                                        action: "toggle-cleaning-laundry-entry",
-                                        id: record.id,
-                                        label: isQuickLaundryEntryOpen ? t("common.cancel") : this.getCleaningQuickLaundryActionLabel(record),
-                                        iconClass: isQuickLaundryEntryOpen ? "fas fa-xmark" : "fas fa-plus",
-                                        tone: "accent"
-                                    })}
-                                    ${this.getCleaningLaundryState(record).key === "waiting" ? this.renderTableActionButton({
-                                        action: "mark-no-laundry",
-                                        id: record.id,
-                                        label: this.tr("actions.markNoLaundry"),
-                                        iconClass: "fas fa-check",
-                                        tone: "primary"
-                                    }) : ""}
-                                    ${this.renderTableActionButton({
-                                        action: "edit-cleaning",
-                                        id: record.id,
-                                        label: t("common.edit"),
-                                        iconClass: "fas fa-pen",
-                                        tone: "primary"
-                                    })}
-                                    ${this.renderTableActionButton({
-                                        action: "delete-cleaning",
-                                        id: record.id,
-                                        label: t("common.delete"),
-                                        iconClass: "fas fa-trash",
-                                        tone: "danger"
-                                    })}
-                                </div>
-                            </td>
-                        </tr>
-                        ${isQuickLaundryEntryOpen ? `
-                            <tr class="border-b border-slate-100">
-                                <td colspan="8" class="px-3 pb-4 pt-0">
-                                    ${this.renderCleaningQuickLaundryEntry(record)}
-                                </td>
-                            </tr>
-                        ` : ""}
-                        ${isInlineCleaningEditOpen ? this.renderCleaningInlineEditRow(record) : ""}
-                    `;
-                    }).join("")}
-                </tbody>
-            </table>
-        `;
-    }
-
-    renderUnlinkedLaundryReview(entries) {
-        const reviewEntries = entries.filter((entry) => !this.isLaundryLinkIgnored(entry));
-        if (!reviewEntries.length) {
-            return "";
-        }
-
-        return `
-            <section class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">${escapeHtml(this.tr("laundryTab.reviewKicker"))}</div>
-                        <h4 class="mt-1 text-base font-semibold text-amber-950">${escapeHtml(this.tr("laundryTab.reviewTitle"))}</h4>
-                    </div>
-                    <div class="text-sm text-amber-800">${escapeHtml(this.getRowsLabel(reviewEntries.length))}</div>
-                </div>
-                <div class="mt-3 space-y-3">
-                    ${reviewEntries.map((entry) => `
-                        <article class="rounded-xl border border-amber-200 bg-white px-3 py-3">
-                            <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-                                <div>
-                                    <div class="text-sm font-semibold text-slate-900">${escapeHtml(entry.propertyName || this.tr("labels.unknown"))}</div>
-                                    <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("forms.laundryReceivedDate"))}: ${escapeHtml(this.formatDate(entry.date))} - ${escapeHtml(this.formatNumber(entry.kg))} kg - ${escapeHtml(this.formatCurrency(entry.amount))}</div>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="inline-flex w-fit items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">${escapeHtml(this.tr("laundryState.needsReview"))}</span>
-                                    <button type="button" data-action="ignore-laundry-link" data-id="${escapeHtml(entry.id || "")}" class="text-xs font-medium text-slate-500 hover:text-slate-800">${escapeHtml(this.tr("actions.ignoreLink"))}</button>
-                                </div>
-                            </div>
-                            ${this.renderLaundryQuickLinkControls(entry)}
-                        </article>
-                    `).join("")}
-                </div>
-            </section>
-        `;
-    }
-
-    renderLaundryTable(entries) {
-        if (!entries.length) {
-            return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">${escapeHtml(this.tr("laundryTab.empty"))}</div>`;
-        }
-
-        return `
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundryReceivedDate"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.linkedCleaning"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.ratePerKg"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
-                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${entries.map((entry) => `
-                        <tr class="border-b border-slate-100">
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(entry.date))}</td>
-                            <td class="px-3 py-3">
-                                <div class="text-sm font-medium text-slate-900">${escapeHtml(entry.propertyName)}</div>
-                                ${entry.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(entry.notes)}</div>` : ""}
-                            </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">
-                                ${entry.linkedCleaningId
-                                    ? `${escapeHtml(this.formatDate(entry.linkedCleaningDate || ""))}${entry.linkedCleaningCategory ? `<div class="text-xs text-slate-400">${escapeHtml(entry.linkedCleaningCategory)}</div>` : ""}`
-                                    : this.isLaundryLinkIgnored(entry)
-                                    ? `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.ignored"))}</span>`
-                                    : `<span class="text-slate-400">${escapeHtml(this.tr("laundryState.notLinked"))}</span>`}
-                                ${this.renderLaundryQuickLinkControls(entry)}
-                            </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.kg))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryRatePerKg))}</td>
-                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
-                            <td class="px-3 py-3 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${entry.linkedCleaningId ? this.renderTableActionButton({
-                                        action: "open-cleaning-from-laundry",
-                                        id: entry.linkedCleaningId || "",
-                                        label: this.tr("actions.openCleaning"),
-                                        iconClass: "fas fa-arrow-up-right-from-square",
-                                        tone: "primary"
-                                    }) : ""}
-                                    ${entry.source !== "cleaning" ? this.renderTableActionButton({
-                                        action: "edit-laundry",
-                                        id: entry.id,
-                                        label: t("common.edit"),
-                                        iconClass: "fas fa-pen",
-                                        tone: "primary"
-                                    }) : ""}
-                                    ${entry.source !== "cleaning" ? this.renderTableActionButton({
-                                        action: "delete-laundry",
-                                        id: entry.id,
-                                        label: t("common.delete"),
-                                        iconClass: "fas fa-trash",
-                                        tone: "danger"
-                                    }) : ""}
-                                </div>
-                            </td>
-                        </tr>
-                    `).join("")}
-                </tbody>
-            </table>
-        `;
-    }
-
-    renderLaundrySummaryBlock(laundrySummary) {
-        return `
-            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("dashboard.laundryKicker"))}</div>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("dashboard.laundryTitle"))}</h3>
-                    </div>
-                    <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(laundrySummary.totals.count))}</div>
-                </div>
-                <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                    ${this.renderMetricCard(this.tr("metrics.kg"), this.formatNumber(laundrySummary.totals.kg))}
-                    ${this.renderMetricCard(this.tr("metrics.amount"), this.formatCurrency(laundrySummary.totals.amount))}
-                    ${this.renderMetricCard(this.tr("metrics.rows"), String(laundrySummary.totals.count))}
-                </div>
-                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByMonth"), laundrySummary.byMonth, [
-                    [this.tr("tables.month"), (entry) => this.formatMonthKey(entry.label)],
-                    [this.tr("tables.rows"), (entry) => String(entry.count)],
-                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
-                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
-                ])}
-                ${this.renderFinancialSummaryTable(this.tr("dashboard.laundryByProperty"), laundrySummary.byProperty.slice(0, 8), [
-                    [this.tr("tables.property"), (entry) => entry.label],
-                    [this.tr("tables.rows"), (entry) => String(entry.count)],
-                    [this.tr("tables.kg"), (entry) => this.formatNumber(entry.kg)],
-                    [this.tr("tables.amount"), (entry) => this.formatCurrency(entry.amount)]
-                ])}
-            </section>
         `;
     }
 
@@ -4552,33 +3936,6 @@ export class CleaningAhManager {
                 document.getElementById("cleaning-ah-fast-register-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
             });
         });
-        document.querySelectorAll("[data-action='update-inline-kg']").forEach((input) => {
-            input.addEventListener("input", () => {
-                this.inlineKgDrafts[input.dataset.id] = input.value;
-                const saveBtn = document.querySelector(`[data-action='save-inline-kg'][data-id='${CSS.escape(input.dataset.id)}']`);
-                if (saveBtn) saveBtn.disabled = !input.value;
-            });
-        });
-        document.querySelectorAll("[data-action='save-inline-kg']").forEach((button) => {
-            button.addEventListener("click", async () => {
-                const id = button.dataset.id;
-                const kg = parseFloat(this.inlineKgDrafts[id]);
-                if (!id || !kg || kg <= 0) return;
-                const record = deriveCleaningAhRecords(this.cleaningRecords, this.laundryRecords).find((r) => r.id === id);
-                if (!record) return;
-                const laundryRatePerKg = CLEANING_AH_DEFAULTS.laundryRatePerKg;
-                const amount = roundCurrency(kg * laundryRatePerKg);
-                this.cleaningLaundryQuickDrafts[id] = {
-                    date: getTodayIsoDate(),
-                    kg: String(kg),
-                    laundryRatePerKg: String(laundryRatePerKg),
-                    amount: String(amount),
-                    notes: ""
-                };
-                delete this.inlineKgDrafts[id];
-                await this.saveCleaningLinkedLaundry(id);
-            });
-        });
 
         const fastRegisterForm = document.getElementById("cleaning-ah-fast-register-form");
         fastRegisterForm?.addEventListener("input", (event) => {
@@ -4721,17 +4078,6 @@ export class CleaningAhManager {
             event.preventDefault();
             this.saveLaundryRecord();
         });
-        document.getElementById("cleaning-ah-linked-cleaning")?.addEventListener("change", (event) => {
-            const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === (event.target.value || ""));
-            if (linkedCleaning) {
-                const propertyInput = document.querySelector('#cleaning-ah-laundry-form input[name="propertyName"]');
-                if (propertyInput) {
-                    propertyInput.value = linkedCleaning.propertyName || "";
-                }
-            }
-            this.laundryDraft = this.readLaundryDraftFromDom();
-            this.updateLaundryPreview();
-        });
         document.getElementById("cleaning-ah-reset-laundry-form")?.addEventListener("click", () => this.resetLaundryForm());
         document.getElementById("cleaning-ah-cancel-laundry-edit")?.addEventListener("click", () => this.resetLaundryForm());
 
@@ -4796,52 +4142,6 @@ export class CleaningAhManager {
         document.querySelectorAll("[data-action='delete-cleaning']").forEach((button) => {
             button.addEventListener("click", () => this.deleteCleaning(button.dataset.id || ""));
         });
-        document.querySelectorAll("[data-action='toggle-cleaning-laundry-entry']").forEach((button) => {
-            button.addEventListener("click", () => {
-                const recordId = button.dataset.id || "";
-                if (!recordId) {
-                    return;
-                }
-
-                if (this.openCleaningLaundryEntryId === recordId) {
-                    this.openCleaningLaundryEntryId = "";
-                    delete this.cleaningLaundryQuickDrafts[recordId];
-                    this.render();
-                    return;
-                }
-
-                const record = this.cleaningRecords.find((entry) => entry.id === recordId);
-                if (!record) {
-                    return;
-                }
-
-                this.openCleaningLaundryEntryId = recordId;
-                this.cleaningLaundryQuickDrafts[recordId] = this.getCleaningQuickLaundryDraft(record);
-                this.render();
-            });
-        });
-        document.querySelectorAll("[data-cleaning-laundry-entry]").forEach((container) => {
-            container.addEventListener("input", (event) => {
-                const recordId = container.dataset.cleaningLaundryEntry || "";
-                if (!recordId) {
-                    return;
-                }
-
-                if (event.target?.name === "kg" || event.target?.name === "laundryRatePerKg") {
-                    this.updateCleaningQuickLaundryAmount(container);
-                }
-                this.cleaningLaundryQuickDrafts[recordId] = this.readCleaningQuickLaundryDraftFromContainer(container, recordId);
-            });
-        });
-        document.querySelectorAll("[data-action='save-cleaning-laundry']").forEach((button) => {
-            button.addEventListener("click", () => {
-                const container = button.closest("[data-cleaning-laundry-entry]");
-                this.saveCleaningLaundryRecord(button.dataset.id || "", container);
-            });
-        });
-        document.querySelectorAll("[data-action='mark-no-laundry']").forEach((button) => {
-            button.addEventListener("click", () => this.markCleaningNoLaundry(button.dataset.id || ""));
-        });
         document.querySelectorAll("[data-action='edit-laundry']").forEach((button) => {
             button.addEventListener("click", () => this.startEditingLaundry(button.dataset.id || ""));
         });
@@ -4853,45 +4153,6 @@ export class CleaningAhManager {
         });
         document.querySelectorAll("[data-action='delete-special-cleaning']").forEach((button) => {
             button.addEventListener("click", () => this.deleteSpecialCleaning(button.dataset.id || ""));
-        });
-        document.querySelectorAll("[data-action='toggle-laundry-link-editor']").forEach((button) => {
-            button.addEventListener("click", () => {
-                const recordId = button.dataset.id || "";
-                this.openLaundryLinkEditorId = this.openLaundryLinkEditorId === recordId ? "" : recordId;
-                this.render();
-            });
-        });
-        document.querySelectorAll("[data-action='save-laundry-link']").forEach((button) => {
-            button.addEventListener("click", () => {
-                const controls = button.closest("[data-laundry-link-controls]");
-                const select = controls?.querySelector("[data-laundry-link-select]");
-                this.saveLaundryLink(button.dataset.id || "", select?.value || "");
-            });
-        });
-        document.querySelectorAll("[data-action='ignore-laundry-link']").forEach((button) => {
-            button.addEventListener("click", () => this.ignoreLaundryLink(button.dataset.id || ""));
-        });
-        document.querySelectorAll("[data-action='open-cleaning-from-laundry']").forEach((button) => {
-            button.addEventListener("click", () => this.openCleaningFromLaundry(button.dataset.id || ""));
-        });
-        document.querySelectorAll("[data-action='filter-prior-waiting']").forEach((button) => {
-            button.addEventListener("click", () => {
-                this.selectedMonthKey = "";
-                this.render();
-            });
-        });
-        document.querySelectorAll("[data-action='dismiss-month-end']").forEach((button) => {
-            button.addEventListener("click", () => {
-                localStorage.setItem("monthEndDismissedAt", getTodayIsoDate());
-                this.render();
-            });
-        });
-        document.querySelectorAll("[data-action='mark-all-overdue-no-laundry']").forEach((button) => {
-            button.addEventListener("click", () => {
-                const idsString = button.dataset.ids || "";
-                const overdueIds = idsString ? idsString.split(",") : [];
-                this.markAllOverdueNoLaundry(overdueIds);
-            });
         });
         document.querySelectorAll("[data-action='open-heatmap-detail']").forEach((button) => {
             button.addEventListener("click", () => {
@@ -4905,6 +4166,12 @@ export class CleaningAhManager {
         document.querySelectorAll("[data-action='close-heatmap-detail']").forEach((element) => {
             element.addEventListener("click", () => {
                 this.heatmapDetailModal = null;
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='set-stats-view-mode']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.statsViewMode = button.dataset.mode || "month";
                 this.render();
             });
         });
@@ -4953,8 +4220,6 @@ export class CleaningAhManager {
             categoryKey: this.getCleaningCategoryKey(formData.get("categoryKey")),
             reservationSource: String(formData.get("reservationSource") || this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             guestAmount: String(formData.get("guestAmount") || "").trim(),
-            laundryKg: String(formData.get("laundryKg") || "").trim(),
-            laundryAmount: String(formData.get("laundryAmount") || "").trim(),
             notes: String(formData.get("notes") || "").trim()
         };
     }
@@ -4974,7 +4239,6 @@ export class CleaningAhManager {
                 rowId: rowElement.dataset.cleaningBatchRow || this.createCleaningBatchRow().rowId,
                 propertyName: normalizeLabel(rowElement.querySelector('[name="propertyName"]')?.value),
                 guestAmount: String(rowElement.querySelector('[name="guestAmount"]')?.value || "").trim(),
-                laundryKg: String(rowElement.querySelector('[name="laundryKg"]')?.value || "").trim(),
                 notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
             }));
 
@@ -4995,8 +4259,8 @@ export class CleaningAhManager {
         const formData = new FormData(form);
         return {
             date: String(formData.get("date") || "").trim(),
-            linkedCleaningId: String(formData.get("linkedCleaningId") || "").trim(),
             propertyName: normalizeLabel(formData.get("propertyName")),
+            quantity: String(formData.get("quantity") || "1").trim(),
             kg: String(formData.get("kg") || "").trim(),
             amount: String(formData.get("amount") || "").trim(),
             laundryRatePerKg: String(formData.get("laundryRatePerKg") || "").trim(),
@@ -5018,6 +4282,7 @@ export class CleaningAhManager {
             .map((rowElement) => ({
                 rowId: rowElement.dataset.laundryBatchRow || this.createLaundryBatchRow().rowId,
                 propertyName: normalizeLabel(rowElement.querySelector('[name="propertyName"]')?.value),
+                quantity: String(rowElement.querySelector('[name="quantity"]')?.value || "1").trim(),
                 kg: String(rowElement.querySelector('[name="kg"]')?.value || "").trim(),
                 notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
             }));
@@ -5064,8 +4329,6 @@ export class CleaningAhManager {
                 ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
                 : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
-            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
-            laundryAmount: toOptionalNumber(this.cleaningDraft.laundryAmount),
             notes: this.cleaningDraft.notes
         });
         container.innerHTML = this.renderCleaningPreview(record);
@@ -5086,6 +4349,7 @@ export class CleaningAhManager {
         const record = createStandaloneLaundryRecord({
             date: this.laundryDraft.date,
             propertyName: this.laundryDraft.propertyName,
+            quantity: toOptionalNumber(this.laundryDraft.quantity) ?? 1,
             kg: toOptionalNumber(this.laundryDraft.kg) || 0,
             amount: toOptionalNumber(this.laundryDraft.amount),
             laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
@@ -5100,21 +4364,6 @@ export class CleaningAhManager {
 
         const preview = this.getLaundryBatchPreview(this.readLaundryBatchDraftFromDom());
         container.innerHTML = this.renderLaundryBatchPreview(preview);
-    }
-
-    updateCleaningQuickLaundryAmount(container) {
-        if (!container) return;
-
-        const kg = toOptionalNumber(container.querySelector('[name="kg"]')?.value);
-        const laundryRatePerKg = toOptionalNumber(container.querySelector('[name="laundryRatePerKg"]')?.value) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
-        const amountInput = container.querySelector('[name="amount"]');
-        if (!amountInput) {
-            return;
-        }
-
-        amountInput.value = kg !== null && kg > 0
-            ? toInputNumber(roundCurrency(kg * laundryRatePerKg))
-            : "";
     }
 
     async saveCleaningRecord({ keepContext = false } = {}) {
@@ -5145,19 +4394,9 @@ export class CleaningAhManager {
                 ? (this.cleaningDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
                 : CLEANING_AH_RESERVATION_SOURCES.direct,
             guestAmount: guestAmountField.numericValue || 0,
-            laundryKg: toOptionalNumber(this.cleaningDraft.laundryKg) || 0,
             notes: this.cleaningDraft.notes,
             source: existingCleaning?.source || "manual"
         });
-        const laundryAmount = toOptionalNumber(this.cleaningDraft.laundryAmount);
-        if (laundryAmount !== null) {
-            record.laundryAmount = roundCurrency(laundryAmount);
-            record.totalToAh = roundCurrency(record.totalToAhWithoutLaundry - record.laundryAmount - (record.suppliesCost || 0));
-            record.fingerprint = createCleaningAhFingerprint(record);
-        }
-        record.laundryStatus = (record.laundryAmount || 0) > 0
-            ? ""
-            : (existingCleaning?.laundryStatus || CLEANING_LAUNDRY_STATUS.pending);
 
         if (!this.editingCleaningId && !this.confirmDuplicateCleaning(record)) {
             return;
@@ -5202,7 +4441,7 @@ export class CleaningAhManager {
         this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
         const categoryKey = this.getCleaningCategoryKey(this.cleaningBatchDraft.categoryKey || this.cleaningBatchDraft.category);
         const meaningfulRows = this.cleaningBatchDraft.rows.filter((row) => {
-            return row.propertyName || row.guestAmount || row.laundryKg || row.notes;
+            return row.propertyName || row.guestAmount || row.notes;
         });
         const validRows = meaningfulRows.filter((row) => {
             const guestAmount = this.getCleaningGuestAmountFieldState({
@@ -5250,13 +4489,9 @@ export class CleaningAhManager {
                         ? (this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
                         : CLEANING_AH_RESERVATION_SOURCES.direct,
                     guestAmount,
-                    laundryKg: toOptionalNumber(row.laundryKg) || 0,
                     notes: row.notes,
                     source: "manual"
                 });
-                record.laundryStatus = (record.laundryAmount || 0) > 0
-                    ? ""
-                    : CLEANING_LAUNDRY_STATUS.pending;
                 const recordRef = doc(collectionRef);
                 batch.set(recordRef, {
                     ...record,
@@ -5275,84 +4510,13 @@ export class CleaningAhManager {
         }
     }
 
-    async saveCleaningLaundryRecord(recordId, container) {
-        const cleaningRecord = this.cleaningRecords.find((entry) => entry.id === recordId);
-        if (!recordId || !cleaningRecord || !container) {
-            return;
-        }
-
-        const draft = this.readCleaningQuickLaundryDraftFromContainer(container, recordId);
-        this.cleaningLaundryQuickDrafts[recordId] = draft;
-
-        const kg = toOptionalNumber(draft.kg);
-        const amount = toOptionalNumber(draft.amount);
-        if (!draft.date || ((kg === null || kg <= 0) && (amount === null || amount <= 0))) {
-            this.setStatus(this.tr("status.linkedLaundryValidationError"), "error");
-            this.render();
-            return;
-        }
-
-        const property = this.findPropertyByName(cleaningRecord.propertyName);
-        const record = createStandaloneLaundryRecord({
-            date: draft.date,
-            linkedCleaningId: cleaningRecord.id,
-            propertyName: cleaningRecord.propertyName,
-            propertyId: property?.id || cleaningRecord.propertyId || "",
-            kg: kg || 0,
-            amount,
-            laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
-            notes: draft.notes,
-            source: "standalone"
-        });
-
-        try {
-            if (draft.editingLaundryId) {
-                const existingLaundry = this.laundryRecords.find((entry) => entry.id === draft.editingLaundryId) || {};
-                await updateDoc(doc(this.db, "cleaningAhLaundryRecords", draft.editingLaundryId), {
-                    ...existingLaundry,
-                    ...record,
-                    updatedAt: new Date()
-                });
-            } else if (draft.updatesInlineCleaning) {
-                const updatedCleaning = createCleaningAhRecord({
-                    ...cleaningRecord,
-                    laundryKg: kg,
-                    laundryAmount: amount,
-                    laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg
-                });
-                await updateDoc(doc(this.db, "cleaningAhRecords", cleaningRecord.id), {
-                    ...cleaningRecord,
-                    ...updatedCleaning,
-                    updatedAt: new Date()
-                });
-            } else {
-                if (!this.confirmDuplicateLaundry(record)) {
-                    return;
-                }
-                await addDoc(this.getLaundryCollectionRef(), {
-                    ...record,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                });
-            }
-            this.openCleaningLaundryEntryId = "";
-            delete this.cleaningLaundryQuickDrafts[recordId];
-            this.setStatus(draft.editingLaundryId || draft.updatesInlineCleaning ? this.tr("status.laundryUpdated") : this.tr("status.laundrySaved"), "success");
-            this.render();
-        } catch (error) {
-            console.error("[Cleaning AH] failed to save cleaning-linked laundry:", error);
-            this.setStatus(this.tr("status.laundrySaveFailed"), "error");
-            this.render();
-        }
-    }
-
     async saveLaundryRecord() {
         this.laundryDraft = this.readLaundryDraftFromDom();
         const existingLaundry = this.editingLaundryId
             ? (this.laundryRecords.find((entry) => entry.id === this.editingLaundryId) || null)
             : null;
-        const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === this.laundryDraft.linkedCleaningId) || null;
-        const propertyName = linkedCleaning?.propertyName || this.laundryDraft.propertyName;
+        const propertyName = this.laundryDraft.propertyName;
+        const quantity = toOptionalNumber(this.laundryDraft.quantity) ?? 1;
         const kg = toOptionalNumber(this.laundryDraft.kg);
         const amount = toOptionalNumber(this.laundryDraft.amount);
         if (!this.laundryDraft.date || !propertyName || ((kg === null || kg <= 0) && (amount === null || amount <= 0))) {
@@ -5363,9 +4527,9 @@ export class CleaningAhManager {
         const property = this.findPropertyByName(propertyName);
         const record = createStandaloneLaundryRecord({
             date: this.laundryDraft.date,
-            linkedCleaningId: this.laundryDraft.linkedCleaningId,
             propertyName,
             propertyId: property?.id || "",
+            quantity,
             kg: kg || 0,
             amount,
             laundryRatePerKg: toOptionalNumber(this.laundryDraft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
@@ -5440,6 +4604,7 @@ export class CleaningAhManager {
                     date: this.laundryBatchDraft.date,
                     propertyName: row.propertyName,
                     propertyId: property?.id || "",
+                    quantity: toOptionalNumber(row.quantity) ?? 1,
                     kg: toOptionalNumber(row.kg) || 0,
                     laundryRatePerKg,
                     notes: row.notes,
@@ -5459,117 +4624,6 @@ export class CleaningAhManager {
         } catch (error) {
             console.error("[Cleaning AH] failed to save laundry batch:", error);
             this.setStatus(this.tr("status.laundryBatchSaveFailed"), "error");
-            this.render();
-        }
-    }
-
-    async saveLaundryLink(recordId, linkedCleaningId) {
-        const existingLaundry = this.laundryRecords.find((entry) => entry.id === recordId);
-        if (!recordId || !existingLaundry) {
-            return;
-        }
-
-        const linkedCleaning = this.cleaningRecords.find((entry) => entry.id === linkedCleaningId) || null;
-        const payload = {
-            linkedCleaningId: linkedCleaning ? linkedCleaning.id : "",
-            linkStatus: linkedCleaning ? "" : "",
-            ignoreLink: false,
-            updatedAt: new Date()
-        };
-
-        if (linkedCleaning) {
-            const property = this.findPropertyByName(linkedCleaning.propertyName);
-            payload.propertyName = linkedCleaning.propertyName || existingLaundry.propertyName || "";
-            payload.propertyId = property?.id || linkedCleaning.propertyId || existingLaundry.propertyId || "";
-        }
-
-        try {
-            await updateDoc(doc(this.db, "cleaningAhLaundryRecords", recordId), payload);
-            this.openLaundryLinkEditorId = "";
-            this.setStatus(
-                linkedCleaning
-                    ? this.tr("status.laundryLinkSaved")
-                    : this.tr("status.laundryLinkCleared"),
-                "success"
-            );
-            this.render();
-        } catch (error) {
-            console.error("[Cleaning AH] failed to update laundry link:", error);
-            this.setStatus(this.tr("status.laundryLinkSaveFailed"), "error");
-            this.render();
-        }
-    }
-
-    async ignoreLaundryLink(recordId) {
-        const existingLaundry = this.laundryRecords.find((entry) => entry.id === recordId);
-        if (!recordId || !existingLaundry) {
-            return;
-        }
-
-        try {
-            await updateDoc(doc(this.db, "cleaningAhLaundryRecords", recordId), {
-                ...existingLaundry,
-                linkedCleaningId: "",
-                linkStatus: "ignored",
-                ignoreLink: true,
-                updatedAt: new Date()
-            });
-            this.openLaundryLinkEditorId = "";
-            this.setStatus(this.tr("status.laundryLinkIgnored"), "success");
-            this.render();
-        } catch (error) {
-            console.error("[Cleaning AH] failed to ignore laundry link:", error);
-            this.setStatus(this.tr("status.laundryLinkIgnoreFailed"), "error");
-            this.render();
-        }
-    }
-
-    async markCleaningNoLaundry(recordId) {
-        const record = this.cleaningRecords.find((entry) => entry.id === recordId);
-        if (!recordId || !record) {
-            return;
-        }
-
-        try {
-            await updateDoc(doc(this.db, "cleaningAhRecords", recordId), {
-                ...record,
-                laundryStatus: CLEANING_LAUNDRY_STATUS.none,
-                updatedAt: new Date()
-            });
-            this.openCleaningLaundryEntryId = "";
-            this.setStatus(this.tr("status.noLaundryMarked"), "success");
-            this.render();
-        } catch (error) {
-            console.error("[Cleaning AH] failed to mark no laundry:", error);
-            this.setStatus(this.tr("status.noLaundryMarkFailed"), "error");
-            this.render();
-        }
-    }
-
-    async markAllOverdueNoLaundry(overdueIds = []) {
-        if (!overdueIds.length) return;
-        if (!confirm(this.tr("confirm.markAllNoLaundry", { count: overdueIds.length }))) {
-            return;
-        }
-
-        try {
-            const batch = writeBatch(this.db);
-            overdueIds.forEach((recordId) => {
-                const record = this.cleaningRecords.find((entry) => entry.id === recordId);
-                if (record) {
-                    batch.update(doc(this.db, "cleaningAhRecords", recordId), {
-                        ...record,
-                        laundryStatus: CLEANING_LAUNDRY_STATUS.none,
-                        updatedAt: new Date()
-                    });
-                }
-            });
-            await batch.commit();
-            this.setStatus(this.tr("status.markAllNoLaundrySuccess", { count: overdueIds.length }), "success");
-            this.render();
-        } catch (error) {
-            console.error("[Cleaning AH] failed to mark all no laundry:", error);
-            this.setStatus(this.tr("status.markAllNoLaundryFailed"), "error");
             this.render();
         }
     }
@@ -5704,16 +4758,12 @@ export class CleaningAhManager {
         this.activeTab = "cleanings";
         this.cleaningEntryMode = "single";
         this.editingCleaningId = record.id;
-        this.openCleaningLaundryEntryId = "";
-        delete this.cleaningLaundryQuickDrafts[record.id];
         this.cleaningDraft = {
             date: record.date || getTodayIsoDate(),
             propertyName: record.propertyName || "",
             categoryKey: this.getCleaningCategoryKey(record.categoryKey || record.category),
             reservationSource: this.getCleaningReservationSource(record),
             guestAmount: toInputNumber(record.guestAmount),
-            laundryKg: toInputNumber(record.laundryKg ?? record.estimatedLaundryKg),
-            laundryAmount: toInputNumber(record.laundryAmount),
             notes: record.notes || ""
         };
         this.render();
@@ -5730,8 +4780,8 @@ export class CleaningAhManager {
         this.editingLaundryId = record.id;
         this.laundryDraft = {
             date: record.date || getTodayIsoDate(),
-            linkedCleaningId: record.linkedCleaningId || "",
             propertyName: record.propertyName || "",
+            quantity: toInputNumber(record.quantity ?? 1),
             kg: toInputNumber(record.kg),
             amount: toInputNumber(record.amount),
             laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
@@ -5759,39 +4809,14 @@ export class CleaningAhManager {
         this.render();
     }
 
-    openCleaningFromLaundry(recordId) {
-        if (!recordId) {
-            return;
-        }
-
-        this.startEditingCleaning(recordId);
-    }
-
     async deleteCleaning(recordId) {
-        const linkedLaundryRecords = this.laundryRecords.filter((entry) => entry.linkedCleaningId === recordId);
-        const confirmationMessage = linkedLaundryRecords.length
-            ? this.tr("confirm.deleteCleaningWithLinked", { count: linkedLaundryRecords.length })
-            : this.tr("confirm.deleteCleaning");
-        if (!recordId || !window.confirm(confirmationMessage)) {
+        if (!recordId || !window.confirm(this.tr("confirm.deleteCleaning"))) {
             return;
         }
 
         try {
-            const batch = writeBatch(this.db);
-            batch.delete(doc(this.db, "cleaningAhRecords", recordId));
-            linkedLaundryRecords.forEach((entry) => {
-                batch.update(doc(this.db, "cleaningAhLaundryRecords", entry.id), {
-                    linkedCleaningId: "",
-                    updatedAt: new Date()
-                });
-            });
-            await batch.commit();
-            this.setStatus(
-                linkedLaundryRecords.length
-                    ? this.tr("status.cleaningDeletedWithLinked", { count: linkedLaundryRecords.length })
-                    : this.tr("status.cleaningDeleted"),
-                "success"
-            );
+            await deleteDoc(doc(this.db, "cleaningAhRecords", recordId));
+            this.setStatus(this.tr("status.cleaningDeleted"), "success");
             if (this.editingCleaningId === recordId) {
                 this.resetCleaningForm();
                 return;
@@ -5967,5 +4992,3 @@ export class CleaningAhManager {
         }
     }
 }
-
-CleaningAhManager.isMonthEndWindow = isMonthEndWindow;

@@ -300,10 +300,11 @@ describe("CleaningAhManager", () => {
     assert.includes(tabHtml, "Calendar");
     assert.includes(html, "Jul 6, 2026");
     assert.includes(html, "Jul 12, 2026");
-    assert.includes(html, "Tropical Pearl");
-    assert.includes(html, "Ocean Refuge");
-    assert.includes(html, "Waiting for laundry");
-    assert.includes(html, "Laundry added");
+    manager.activeTab = "calendar";
+    const activeTabHtml = manager.renderActiveTab([], [
+      { id: "cleaning-1", date: "2026-07-06", propertyName: "Tropical Pearl", guestAmount: 100 }
+    ]);
+    assert.includes(activeTabHtml, "Tropical Pearl");
     assert.includes(html, 'data-action="open-calendar-add-cleaning" data-date="2026-07-06"');
     assert.includes(html, 'data-action="open-calendar-edit-cleaning" data-id="cleaning-1"');
 
@@ -445,7 +446,7 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
-  test("renders the fast registration tab with queue actions and laundry state", () => {
+  test("renders the fast registration tab with queue actions", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
@@ -488,8 +489,6 @@ describe("CleaningAhManager", () => {
             category: "Category",
             reservationSource: "Reservation",
             guestAmount: "Guest amount",
-            kg: "Kg",
-            amount: "Amount",
             notesPlaceholder: "Optional note"
           },
           reservationSources: {
@@ -497,21 +496,12 @@ describe("CleaningAhManager", () => {
             direct: "Direct"
           },
           tables: {
-            guest: "Amount",
-            laundry: "Laundry"
+            guest: "Amount"
           },
           actions: {
             saveCleaning: "Save cleaning",
             saveAndNext: "Save and next",
-            reset: "Reset",
-            addLaundry: "Add laundry",
-            markNoLaundry: "No laundry"
-          },
-          laundryState: {
-            waiting: "Waiting for laundry",
-            none: "No laundry",
-            added: "Laundry added",
-            needsCorrection: "Needs correction"
+            reset: "Reset"
           }
         },
         common: {
@@ -527,8 +517,6 @@ describe("CleaningAhManager", () => {
       categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
       reservationSource: "platform",
       guestAmount: "",
-      laundryKg: "",
-      laundryAmount: "",
       notes: ""
     };
 
@@ -540,8 +528,7 @@ describe("CleaningAhManager", () => {
         propertyName: "Acqua Beach",
         categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
         guestAmount: 150,
-        effectiveLaundryAmount: 0,
-        effectiveTotalToAh: 99.7
+        totalToAh: 99.7
       }
     ]);
 
@@ -549,8 +536,6 @@ describe("CleaningAhManager", () => {
     assert.includes(registerHtml, 'id="cleaning-ah-fast-register-form"');
     assert.includes(registerHtml, 'id="cleaning-ah-fast-property"');
     assert.includes(registerHtml, "Save and next");
-    assert.includes(registerHtml, "Waiting for laundry");
-    assert.includes(registerHtml, 'data-action="mark-no-laundry"');
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
@@ -747,8 +732,7 @@ describe("CleaningAhManager", () => {
 
     resetDom();
   });
-
-  test("includes optional laundry kg in cleaning single and batch previews", () => {
+  test("renders cleaning single and batch previews", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
@@ -758,7 +742,6 @@ describe("CleaningAhManager", () => {
       category: "Limpeza check-out",
       reservationSource: "platform",
       guestAmount: "150",
-      laundryKg: "5",
       notes: ""
     };
     manager.cleaningBatchDraft = {
@@ -766,7 +749,7 @@ describe("CleaningAhManager", () => {
       category: "Limpeza check-out",
       reservationSource: "platform",
       rows: [
-        manager.createCleaningBatchRow({ propertyName: "Acqua Beach", guestAmount: "150", laundryKg: "5", notes: "" })
+        manager.createCleaningBatchRow({ propertyName: "Acqua Beach", guestAmount: "150", notes: "" })
       ]
     };
 
@@ -776,8 +759,7 @@ describe("CleaningAhManager", () => {
         platformCommission: 23.25,
         vatAmount: 27.05,
         totalToAhWithoutLaundry: 99.7,
-        laundryAmount: 11.5,
-        totalToAh: 88.2
+        totalToAh: 99.7
       },
       guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
         enableSuggestion: false
@@ -785,9 +767,9 @@ describe("CleaningAhManager", () => {
     });
     const batchPreview = manager.getCleaningBatchPreview();
 
-    assert.includes(previewRecord, 'name="laundryKg"');
-    assert.equal(batchPreview.laundryAmount, 11.5);
-    assert.equal(batchPreview.totalToAh, 88.2);
+    assert.includes(previewRecord, 'name="guestAmount"');
+    assert.equal(batchPreview.count, 1);
+    assert.equal(batchPreview.totalToAh, 99.7);
 
     resetDom();
   });
@@ -821,7 +803,6 @@ describe("CleaningAhManager", () => {
             guestAmount: "Guest amount",
             chargedAmount: "Charged amount",
             savedAmount: "Saved amount",
-            kg: "Kg",
             notesPlaceholder: "Optional note"
           },
           reservationSources: {
@@ -834,9 +815,7 @@ describe("CleaningAhManager", () => {
           metrics: {
             commission: "Commission",
             vat: "VAT",
-            beforeLaundry: "Before laundry",
-            laundry: "Laundry",
-            currentNet: "Current net"
+            netToAh: "Net to AH"
           }
         },
         common: {
@@ -852,7 +831,6 @@ describe("CleaningAhManager", () => {
       categoryKey: CLEANING_AH_CATEGORY_KEYS.midTerm,
       reservationSource: "platform",
       guestAmount: "150",
-      laundryKg: "5",
       notes: ""
     };
 
@@ -862,8 +840,7 @@ describe("CleaningAhManager", () => {
         platformCommission: 0,
         vatAmount: 0,
         totalToAhWithoutLaundry: 150,
-        laundryAmount: 11.5,
-        totalToAh: 138.5
+        totalToAh: 150
       },
       guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
         enableSuggestion: false
@@ -907,7 +884,6 @@ describe("CleaningAhManager", () => {
             guestAmount: "Guest amount",
             chargedAmount: "Charged amount",
             savedAmount: "Saved amount",
-            kg: "Kg",
             notesPlaceholder: "Optional note"
           },
           reservationSources: {
@@ -920,9 +896,7 @@ describe("CleaningAhManager", () => {
           metrics: {
             commission: "Commission",
             vat: "VAT",
-            beforeLaundry: "Before laundry",
-            laundry: "Laundry",
-            currentNet: "Current net"
+            netToAh: "Net to AH"
           }
         },
         common: {
@@ -938,7 +912,6 @@ describe("CleaningAhManager", () => {
       categoryKey: CLEANING_AH_CATEGORY_KEYS.otherCleanings,
       reservationSource: "platform",
       guestAmount: "150",
-      laundryKg: "5",
       notes: ""
     };
 
@@ -948,8 +921,7 @@ describe("CleaningAhManager", () => {
         platformCommission: 0,
         vatAmount: 27.05,
         totalToAhWithoutLaundry: 122.95,
-        laundryAmount: 11.5,
-        totalToAh: 111.45
+        totalToAh: 122.95
       },
       guestAmountField: manager.getCleaningGuestAmountFieldState(manager.cleaningDraft, {
         enableSuggestion: false
@@ -974,9 +946,6 @@ describe("CleaningAhManager", () => {
     i18n.translations = {
       en: {
         cleaningAh: {
-          actions: {
-            addLaundry: "Add laundry"
-          },
           forms: {
             date: "Date",
             property: "Property",
@@ -994,12 +963,8 @@ describe("CleaningAhManager", () => {
             category: "Category",
             reservation: "Reservation",
             guest: "Guest",
-            laundry: "Laundry",
             net: "Net",
             actions: "Actions"
-          },
-          laundryState: {
-            waiting: "Waiting for laundry"
           }
         },
         common: {
@@ -1049,8 +1014,6 @@ describe("CleaningAhManager", () => {
         category: "Limpeza check-out",
         reservationSource: "direct",
         guestAmount: 150,
-        laundryAmount: 0,
-        effectiveLaundryAmount: 0,
         totalToAh: 99.7,
         notes: "",
         source: "manual"
@@ -1061,10 +1024,8 @@ describe("CleaningAhManager", () => {
     assert.includes(batchHtml, 'name="reservationSource"');
     assert.includes(tableHtml, "Reservation");
     assert.includes(tableHtml, "Direct");
-    assert.includes(tableHtml, 'aria-label="Add laundry"');
     assert.includes(tableHtml, 'aria-label="Edit"');
     assert.includes(tableHtml, 'aria-label="Delete"');
-    assert.includes(tableHtml, 'fas fa-plus');
     assert.includes(tableHtml, 'fas fa-pen');
     assert.includes(tableHtml, 'fas fa-trash');
 
@@ -1074,216 +1035,39 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
-  test("renders quick linked-laundry controls in the cleanings register", () => {
+  test("renders laundry single and batch forms with quantity and rate", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          cleanings: {
-            quickLaundryHint: "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab."
-          },
-          forms: {
-            date: "Date",
-            cleaningDate: "Cleaning date",
-            laundryReceivedDate: "Laundry received date",
-            kg: "Kg",
-            totalAmount: "Total amount",
-            ratePerKg: "Rate / kg",
-            notesPlaceholder: "Optional note"
-          },
-          actions: {
-            addLaundry: "Add laundry",
-            addMoreLaundry: "Add more laundry",
-            saveLaundry: "Save laundry"
-          },
-          tables: {
-            date: "Date",
-            property: "Property",
-            category: "Category",
-            reservation: "Reservation",
-            guest: "Guest",
-            laundry: "Laundry",
-            net: "Net",
-            actions: "Actions"
-          },
-          reservationSources: {
-            platform: "Platform",
-            direct: "Direct"
-          },
-          laundryState: {
-            waiting: "Waiting for laundry"
-          }
-        },
-        common: {
-          cancel: "Cancel",
-          notes: "Notes",
-          edit: "Edit",
-          delete: "Delete"
-        }
-      }
-    };
-    i18n.currentLang = "en";
-
-    manager.openCleaningLaundryEntryId = "cleaning-1";
-    manager.cleaningLaundryQuickDrafts["cleaning-1"] = manager.createCleaningQuickLaundryDraft({ id: "cleaning-1" }, {
-      date: "2026-04-08",
+    manager.laundryDraft = {
+      date: "2026-04-07",
+      propertyName: "Acqua Beach",
+      quantity: "3",
       kg: "5",
+      amount: "11.5",
       laundryRatePerKg: "2.3",
       notes: ""
-    });
-
-    const tableHtml = manager.renderCleaningsTable([
-      {
-        id: "cleaning-1",
-        date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        category: "Limpeza check-out",
-        reservationSource: "platform",
-        guestAmount: 150,
-        laundryAmount: 0,
-        effectiveLaundryAmount: 0,
-        effectiveTotalToAh: 99.7,
-        notes: "",
-        source: "manual"
-      }
-    ]);
-
-    assert.includes(tableHtml, 'data-action="toggle-cleaning-laundry-entry"');
-    assert.includes(tableHtml, 'data-cleaning-laundry-entry="cleaning-1"');
-    assert.includes(tableHtml, 'data-action="save-cleaning-laundry"');
-    assert.includes(tableHtml, 'name="laundryRatePerKg"');
-    assert.includes(tableHtml, 'value="11.5"');
-    assert.ok(tableHtml.indexOf('name="kg"') < tableHtml.indexOf('name="laundryRatePerKg"'));
-    assert.ok(tableHtml.indexOf('name="laundryRatePerKg"') < tableHtml.indexOf('name="amount"'));
-    assert.includes(tableHtml, "Total amount");
-    assert.includes(tableHtml, 'aria-label="Cancel"');
-    assert.includes(tableHtml, 'fas fa-xmark');
-    assert.includes(tableHtml, "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.");
-
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("uses the quick laundry row to update an existing linked amount", () => {
-    resetDom();
-
-    const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          cleanings: {
-            quickLaundryHint: "This saves a linked laundry row for this cleaning and it also appears in the Laundry tab.",
-            quickLaundryEditHint: "This updates the existing laundry amount for this cleaning instead of adding a duplicate row."
-          },
-          forms: {
-            date: "Date",
-            kg: "Kg",
-            amount: "Amount",
-            ratePerKg: "Rate / kg",
-            notesPlaceholder: "Optional note"
-          },
-          actions: {
-            addLaundry: "Add laundry",
-            editLaundry: "Edit laundry",
-            saveLaundry: "Save laundry",
-            updateLaundry: "Update laundry"
-          },
-          tables: {
-            date: "Date",
-            property: "Property",
-            category: "Category",
-            reservation: "Reservation",
-            guest: "Guest",
-            laundry: "Laundry",
-            net: "Net",
-            actions: "Actions"
-          },
-          reservationSources: {
-            platform: "Platform",
-            direct: "Direct"
-          },
-          laundryState: {
-            linkedAmount: "Linked: {{amount}}",
-            waiting: "Waiting for laundry"
-          }
-        },
-        common: {
-          cancel: "Cancel",
-          notes: "Notes",
-          edit: "Edit",
-          delete: "Delete"
-        }
-      }
     };
-    i18n.currentLang = "en";
-    manager.laundryRecords = [
-      {
-        id: "laundry-1",
-        linkedCleaningId: "cleaning-1",
-        date: "2026-04-08",
-        propertyName: "Acqua Beach",
-        kg: 5,
-        amount: 11.5,
-        laundryRatePerKg: 2.3,
-        notes: "Original invoice"
-      }
-    ];
-    manager.openCleaningLaundryEntryId = "cleaning-1";
+    manager.laundryBatchDraft = {
+      date: "2026-04-07",
+      laundryRatePerKg: "2.3",
+      rows: [
+        manager.createLaundryBatchRow({ propertyName: "Acqua Beach", quantity: "3", kg: "5", notes: "" })
+      ]
+    };
 
-    const draft = manager.getCleaningQuickLaundryDraft({ id: "cleaning-1", date: "2026-04-07", propertyName: "Acqua Beach" });
-    const tableHtml = manager.renderCleaningsTable([
-      {
-        id: "cleaning-1",
-        date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        category: "Limpeza check-out",
-        reservationSource: "platform",
-        guestAmount: 150,
-        laundryAmount: 0,
-        linkedLaundryAmount: 11.5,
-        linkedLaundryCount: 1,
-        effectiveLaundryAmount: 11.5,
-        effectiveTotalToAh: 88.2,
-        notes: "",
-        source: "manual"
-      }
-    ]);
+    const singleHtml = manager.renderLaundrySingleForm({
+      draft: manager.laundryDraft,
+      preview: { amount: 11.5 }
+    });
+    const batchPreview = manager.getLaundryBatchPreview();
 
-    assert.equal(manager.getCleaningQuickLaundryActionLabel({ id: "cleaning-1" }), "Edit laundry");
-    assert.equal(draft.editingLaundryId, "laundry-1");
-    assert.equal(draft.amount, "11.5");
-    assert.includes(tableHtml, 'name="amount"');
-    assert.includes(tableHtml, 'value="11.5"');
-    assert.includes(tableHtml, "Update laundry");
-    assert.includes(tableHtml, "instead of adding a duplicate row");
-
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("calculates quick laundry amount from kg and rate", () => {
-    resetDom(`
-      <div data-cleaning-laundry-entry="cleaning-1">
-        <input name="kg" value="2">
-        <input name="laundryRatePerKg" value="2.3">
-        <input name="amount" value="">
-      </div>
-    `);
-
-    const manager = new CleaningAhManager(null);
-    const container = document.querySelector("[data-cleaning-laundry-entry]");
-
-    manager.updateCleaningQuickLaundryAmount(container);
-
-    assert.equal(container.querySelector('[name="amount"]').value, "4.6");
+    assert.includes(singleHtml, 'name="quantity"');
+    assert.includes(singleHtml, 'name="kg"');
+    assert.includes(singleHtml, 'name="laundryRatePerKg"');
+    assert.equal(batchPreview.quantity, 3);
+    assert.equal(batchPreview.kg, 5);
+    assert.equal(batchPreview.amount, 11.5);
 
     resetDom();
   });
@@ -1317,7 +1101,6 @@ describe("CleaningAhManager", () => {
             category: "Category",
             reservationSource: "Reservation",
             guestAmount: "Guest amount",
-            kg: "Kg",
             notesPlaceholder: "Optional note"
           },
           reservationSources: {
@@ -1330,9 +1113,7 @@ describe("CleaningAhManager", () => {
           metrics: {
             commission: "Commission",
             vat: "VAT",
-            beforeLaundry: "Before laundry",
-            laundry: "Laundry",
-            currentNet: "Current net"
+            netToAh: "Net to AH"
           },
           tables: {
             date: "Date",
@@ -1340,17 +1121,12 @@ describe("CleaningAhManager", () => {
             category: "Category",
             reservation: "Reservation",
             guest: "Guest",
-            laundry: "Laundry",
             net: "Net",
             actions: "Actions"
           },
           actions: {
-            addLaundry: "Add laundry",
             cancelEdit: "Cancel edit",
             saveChanges: "Save changes"
-          },
-          laundryState: {
-            waiting: "Waiting for laundry"
           }
         },
         common: {
@@ -1368,7 +1144,6 @@ describe("CleaningAhManager", () => {
       categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
       reservationSource: "platform",
       guestAmount: "150",
-      laundryKg: "",
       notes: "Needs correction"
     };
 
@@ -1380,9 +1155,7 @@ describe("CleaningAhManager", () => {
         categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
         reservationSource: "platform",
         guestAmount: 150,
-        laundryAmount: 0,
-        effectiveLaundryAmount: 0,
-        effectiveTotalToAh: 99.7,
+        totalToAh: 99.7,
         notes: "",
         source: "manual"
       }
@@ -1398,7 +1171,7 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
-  test("renders quick link controls for standalone laundry rows in the register", () => {
+  test("renders standalone laundry table with quantity column and actions", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
@@ -1412,303 +1185,47 @@ describe("CleaningAhManager", () => {
           delete: "Delete"
         },
         cleaningAh: {
-          actions: {
-            linkCleaning: "Link cleaning",
-            changeLink: "Change link",
-            saveLink: "Save link",
-            openCleaning: "Open cleaning"
-          },
-          tables: {
-            linkedCleaning: "Linked cleaning"
-          },
-          forms: {
-            noLinkedCleaning: "No linked cleaning"
-          }
-        }
-      }
-    };
-    i18n.currentLang = "en";
-    manager.cleaningRecords = [
-      {
-        id: "cleaning-1",
-        date: "2026-04-06",
-        propertyName: "Acqua Beach",
-        category: "Limpeza check-out",
-        laundryAmount: 0
-      }
-    ];
-
-    const collapsedHtml = manager.renderLaundryTable([
-      {
-        id: "laundry-1",
-        date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        linkedCleaningId: "",
-        linkedCleaningDate: "",
-        linkedCleaningCategory: "",
-        kg: 5,
-        laundryRatePerKg: 2.3,
-        amount: 11.5,
-        notes: "",
-        source: "standalone"
-      }
-    ]);
-    manager.openLaundryLinkEditorId = "laundry-1";
-    const standaloneHtml = manager.renderLaundryTable([
-      {
-        id: "laundry-1",
-        date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        linkedCleaningId: "",
-        linkedCleaningDate: "",
-        linkedCleaningCategory: "",
-        kg: 5,
-        laundryRatePerKg: 2.3,
-        amount: 11.5,
-        notes: "",
-        source: "standalone"
-      }
-    ]);
-    const cleaningHtml = manager.renderLaundryTable([
-      {
-        id: "cleaning-embedded",
-        date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        linkedCleaningId: "cleaning-1",
-        linkedCleaningDate: "2026-04-06",
-        linkedCleaningCategory: "Limpeza check-out",
-        kg: 5,
-        laundryRatePerKg: 2.3,
-        amount: 11.5,
-        notes: "",
-        source: "cleaning"
-      }
-    ]);
-
-    assert.includes(collapsedHtml, 'data-action="toggle-laundry-link-editor"');
-    assert.includes(collapsedHtml, 'aria-label="Edit"');
-    assert.includes(collapsedHtml, 'aria-label="Delete"');
-    assert.includes(collapsedHtml, 'fas fa-pen');
-    assert.includes(collapsedHtml, 'fas fa-trash');
-    assert.includes(standaloneHtml, 'data-action="save-laundry-link"');
-    assert.includes(standaloneHtml, 'data-laundry-link-select');
-    assert.includes(cleaningHtml, 'aria-label="Open cleaning"');
-    assert.includes(cleaningHtml, 'fa-arrow-up-right-from-square');
-    assert.equal(cleaningHtml.includes('data-action="save-laundry-link"'), false);
-
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("prioritizes same-property waiting cleanings when linking received laundry", () => {
-    resetDom();
-
-    const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          categories: {
-            checkout: { label: "Check-out" }
-          },
-          labels: {
-            unknown: "Unknown"
-          },
-          laundryMatching: {
-            sameProperty: "same property",
-            waiting: "waiting for kg"
-          },
-          counts: {
-            daysAfterCleaning: {
-              one: "1 day after cleaning",
-              other: "{{count}} days after cleaning"
-            }
-          }
-        }
-      }
-    };
-    i18n.currentLang = "en";
-    manager.cleaningRecords = [
-      {
-        id: "close-same-property",
-        date: "2026-04-06",
-        propertyName: "Acqua Beach",
-        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
-        laundryAmount: 0
-      },
-      {
-        id: "old-same-property",
-        date: "2026-04-01",
-        propertyName: "Acqua Beach",
-        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
-        laundryAmount: 0
-      },
-      {
-        id: "other-property",
-        date: "2026-04-07",
-        propertyName: "Bravo",
-        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
-        laundryAmount: 0
-      },
-      {
-        id: "already-has-laundry",
-        date: "2026-04-08",
-        propertyName: "Acqua Beach",
-        categoryKey: CLEANING_AH_CATEGORY_KEYS.checkout,
-        laundryAmount: 9.2
-      }
-    ];
-
-    const options = manager.getLaundryLinkOptions("", "Acqua Beach", { receivedDate: "2026-04-08" });
-    const label = manager.getCleaningLinkOptionLabel(options[0], "Acqua Beach", "2026-04-08");
-
-    assert.deepEqual(options.map((record) => record.id), [
-      "close-same-property",
-      "old-same-property",
-      "other-property"
-    ]);
-    assert.includes(label, "same property");
-    assert.includes(label, "waiting for kg");
-    assert.includes(label, "2 days after cleaning");
-
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("renders unlinked laundry rows as review items with link controls", () => {
-    resetDom();
-
-    const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          laundryTab: {
-            reviewKicker: "Needs review",
-            reviewTitle: "Unlinked laundry rows"
-          },
-          laundryState: {
-            needsReview: "Needs review"
-          },
-          forms: {
-            laundryReceivedDate: "Laundry received date",
-            noLinkedCleaning: "No linked cleaning"
-          },
-          actions: {
-            linkCleaning: "Link cleaning",
-            saveLink: "Save link",
-            ignoreLink: "Ignore"
-          },
-          tables: {
-            linkedCleaning: "Linked cleaning"
-          },
-          labels: {
-            unknown: "Unknown"
-          },
-          counts: {
-            rows: {
-              one: "1 row",
-              other: "{{count}} rows"
-            }
-          }
-        },
-        common: {
-          cancel: "Cancel"
-        }
-      }
-    };
-    i18n.currentLang = "en";
-
-    const html = manager.renderUnlinkedLaundryReview([
-      {
-        id: "laundry-1",
-        date: "2026-04-08",
-        propertyName: "Acqua Beach",
-        linkedCleaningId: "",
-        kg: 5,
-        amount: 11.5,
-        source: "standalone"
-      }
-    ]);
-
-    assert.includes(html, "Unlinked laundry rows");
-    assert.includes(html, "Needs review");
-    assert.includes(html, "Laundry received date");
-    assert.includes(html, 'data-action="toggle-laundry-link-editor"');
-    assert.includes(html, 'data-action="ignore-laundry-link"');
-    assert.includes(html, "Ignore");
-
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("keeps ignored laundry rows out of review while showing ignored state in register", () => {
-    resetDom();
-
-    const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          laundryState: {
-            ignored: "Ignored",
-            notLinked: "Not linked"
-          },
-          actions: {
-            linkCleaning: "Link cleaning",
-            saveLink: "Save link"
-          },
           tables: {
             date: "Date",
-            laundryReceivedDate: "Laundry received",
             property: "Property",
-            linkedCleaning: "Linked cleaning",
+            quantity: "Qty",
             kg: "Kg",
             ratePerKg: "Rate / kg",
             amount: "Amount",
             actions: "Actions"
-          },
-          forms: {
-            noLinkedCleaning: "No linked cleaning"
           }
-        },
-        common: {
-          cancel: "Cancel",
-          edit: "Edit",
-          delete: "Delete"
         }
       }
     };
     i18n.currentLang = "en";
 
-    const ignoredEntry = {
-      id: "laundry-ignored",
-      date: "2026-04-08",
-      propertyName: "Acqua Beach",
-      linkedCleaningId: "",
-      kg: 5,
-      amount: 11.5,
-      laundryRatePerKg: 2.3,
-      linkStatus: "ignored",
-      ignoreLink: true,
-      source: "standalone"
-    };
+    const tableHtml = manager.renderLaundryTable([
+      {
+        id: "laundry-1",
+        date: "2026-04-07",
+        propertyName: "Acqua Beach",
+        quantity: 2,
+        kg: 5,
+        laundryRatePerKg: 2.3,
+        amount: 11.5,
+        notes: "",
+        source: "standalone"
+      }
+    ]);
 
-    assert.equal(manager.renderUnlinkedLaundryReview([ignoredEntry]), "");
-    assert.includes(manager.renderLaundryTable([ignoredEntry]), "Ignored");
+    assert.includes(tableHtml, "Qty");
+    assert.includes(tableHtml, "Acqua Beach");
+    assert.includes(tableHtml, 'aria-label="Edit"');
+    assert.includes(tableHtml, 'aria-label="Delete"');
+    assert.includes(tableHtml, 'fas fa-pen');
+    assert.includes(tableHtml, 'fas fa-trash');
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
     resetDom();
   });
 
-  test("renders cleaning register controls and applies cleaning register filters", () => {
+  test("renders cleaning register controls and applies cleaning register sort", () => {
     resetDom();
 
     const manager = new CleaningAhManager(null);
@@ -1722,12 +1239,10 @@ describe("CleaningAhManager", () => {
             registerSortLabel: "Order by",
             storedKicker: "Stored data",
             storedTitle: "Cleanings",
-            storedDescription: "Use Show and Order by to focus on rows that already have laundry linked or are still waiting on laundry.",
+            storedDescription: "Use Show and Order by to explore cleanings.",
             empty: "No cleaning records match the current filters.",
             registerFilters: {
-              all: "All rows",
-              withLaundry: "With laundry",
-              waitingLaundry: "Waiting on laundry"
+              all: "All rows"
             },
             registerSortOptions: {
               dateDesc: "Newest first",
@@ -1744,134 +1259,27 @@ describe("CleaningAhManager", () => {
       }
     };
     i18n.currentLang = "en";
-    manager.cleaningRegisterFilter = "waiting-laundry";
     manager.cleaningRegisterSort = "property-asc";
 
     const visibleEntries = manager.getVisibleCleaningRegisterEntries([
       {
-        id: "cleaning-with-laundry",
+        id: "cleaning-1",
         date: "2026-04-07",
-        propertyName: "Acqua Beach",
-        effectiveLaundryAmount: 11.5,
-        effectiveTotalToAh: 88.2
+        propertyName: "Bravo",
+        totalToAh: 88.2
       },
       {
-        id: "cleaning-waiting",
+        id: "cleaning-2",
         date: "2026-04-06",
-        propertyName: "Bravo",
-        effectiveLaundryAmount: 0,
-        effectiveTotalToAh: 99.7
+        propertyName: "Acqua Beach",
+        totalToAh: 99.7
       }
     ]);
     const controlsHtml = manager.renderCleaningRegisterControls();
-    const tabHtml = manager.renderCleaningsTab(visibleEntries);
 
-    assert.equal(visibleEntries.length, 1);
-    assert.equal(visibleEntries[0].id, "cleaning-waiting");
-    assert.includes(controlsHtml, 'id="cleaning-ah-cleaning-register-filter"');
+    assert.equal(visibleEntries[0].id, "cleaning-2");
     assert.includes(controlsHtml, 'id="cleaning-ah-cleaning-register-sort"');
-    assert.includes(controlsHtml, "Waiting on laundry");
-    assert.includes(tabHtml, "Use Show and Order by to focus on rows that already have laundry linked or are still waiting on laundry.");
 
-    i18n.translations = previousTranslations;
-    i18n.currentLang = previousLang;
-    resetDom();
-  });
-
-  test("isMonthEndWindow returns true during first 3 days and last 3 days of any month", () => {
-    // First 3 days
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-01"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-02"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-03"), true);
-    
-    // Middle of month
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-15"), false);
-    
-    // Last 3 days of July (31 days)
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-28"), false);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-29"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-30"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-07-31"), true);
-
-    // Last 3 days of June (30 days)
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-27"), false);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-28"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-29"), true);
-    assert.equal(CleaningAhManager.isMonthEndWindow("2026-06-30"), true);
-  });
-
-  test("renders month-end checklist banner when inside window and has unresolved items", () => {
-    resetDom();
-    const manager = new CleaningAhManager(null);
-    const previousTranslations = i18n.translations;
-    const previousLang = i18n.currentLang;
-    i18n.translations = {
-      en: {
-        cleaningAh: {
-          register: {
-            monthEndChecklistTitle: "Month-End Close Checklist",
-            monthEndChecklistDescription: "Please resolve the following prior-month pending items:",
-            monthEndPriorWaiting: {
-              one: "1 prior-month cleaning awaiting laundry decision",
-              other: "{{count}} prior-month cleanings awaiting laundry decision"
-            },
-            monthEndUnlinkedLaundry: {
-              one: "1 standalone laundry record with no linked cleaning",
-              other: "{{count}} standalone laundry records with no linked cleaning"
-            },
-            viewPriorWaiting: "View pending",
-            dismissForToday: "Dismiss for today"
-          },
-          laundryState: {
-            waiting: "waiting"
-          }
-        }
-      }
-    };
-    i18n.currentLang = "en";
-
-    const realDate = Date;
-    globalThis.Date = function(...args) {
-      if (args.length === 0) {
-        return new realDate("2026-07-01T12:00:00Z");
-      }
-      return new realDate(...args);
-    };
-    globalThis.Date.now = () => new realDate("2026-07-01T12:00:00Z").getTime();
-    globalThis.Date.prototype = realDate.prototype;
-
-    manager.cleaningRecords = [
-      {
-        id: "cleaning-prior",
-        date: "2026-06-25",
-        monthKey: "2026-06",
-        propertyName: "Acqua Beach",
-        laundryStatus: "waiting"
-      }
-    ];
-    manager.laundryRecords = [
-      {
-        id: "laundry-unlinked",
-        date: "2026-06-26",
-        propertyName: "Villa Mar",
-        linkedCleaningId: ""
-      }
-    ];
-
-    const allDerived = [
-      {
-        id: "cleaning-prior",
-        date: "2026-06-25",
-        propertyName: "Acqua Beach"
-      }
-    ];
-
-    const bannerHtml = manager.renderMonthEndChecklistBanner(allDerived);
-    assert.includes(bannerHtml, "Month-End Close Checklist");
-    assert.includes(bannerHtml, "1 prior-month cleaning awaiting laundry decision");
-    assert.includes(bannerHtml, "1 standalone laundry record with no linked cleaning");
-
-    globalThis.Date = realDate;
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
     resetDom();
@@ -1949,5 +1357,101 @@ describe("CleaningAhManager", () => {
     } finally {
       window.jspdf = originalJspdf;
     }
+  });
+
+  test("renders stats tab with 3-pillar summary and consolidated monthly statement", () => {
+    resetDom();
+    const manager = new CleaningAhManager(null);
+    const previousTranslations = i18n.translations;
+    const previousLang = i18n.currentLang;
+    i18n.translations = {
+      en: {
+        cleaningAh: {
+          stats: {
+            consolidatedKicker: "Consolidated Financials",
+            consolidatedTitle: "Overall Performance & Final Net",
+            consolidatedDescription: "Cleanings revenue, laundry expenses, and what AH earned in total after all costs.",
+            cleaningsTitle: "Cleanings Summary",
+            laundryTitle: "Laundry Summary",
+            everythingTogetherTitle: "Final Take-Home (Everything Together)",
+            consolidatedByMonthKicker: "Combined Breakdown",
+            consolidatedByMonthTitle: "Monthly Consolidated Statement",
+            consolidatedByMonthDescription: "Side-by-side monthly comparison of cleanings net, laundry expenses, and final take-home earnings.",
+            exportReport: "Export PDF Summary"
+          },
+          metrics: {
+            guestTotal: "Amount total",
+            platformFees: "Platform fees",
+            vat: "VAT",
+            cleaningsNet: "Cleanings net",
+            laundryExpenses: "Laundry expenses",
+            finalNetProfit: "Final net earnings",
+            quantity: "Quantity",
+            kg: "Kg"
+          },
+          tables: {
+            month: "Month",
+            rows: "rows",
+            total: "Total"
+          },
+          tabs: {
+            cleanings: "Cleanings",
+            laundry: "Laundry"
+          }
+        }
+      }
+    };
+    i18n.currentLang = "en";
+
+    const cleaningSummary = {
+      totals: {
+        count: 10,
+        guestAmount: 1500,
+        platformCommission: 232.5,
+        vatAmount: 270.5,
+        totalToAh: 997,
+        averageTotalToAh: 99.7
+      },
+      byMonth: [
+        { key: "2026-04", label: "2026-04", count: 10, guestAmount: 1500, totalToAh: 997 }
+      ],
+      byCategory: []
+    };
+    const laundrySummary = {
+      totals: {
+        count: 5,
+        quantity: 12,
+        kg: 40,
+        amount: 92
+      },
+      byMonth: [
+        { key: "2026-04", label: "2026-04", count: 5, quantity: 12, kg: 40, amount: 92 }
+      ],
+      byProperty: []
+    };
+
+    const html = manager.renderStatsTab(
+      cleaningSummary,
+      [],
+      [],
+      "",
+      null,
+      laundrySummary,
+      []
+    );
+
+    // Cleanings pillar
+    assert.includes(html, "Cleanings Summary");
+    // Laundry pillar
+    assert.includes(html, "Laundry Summary");
+    assert.includes(html, "40 kg");
+    // Consolidated / Final Take-Home pillar (Everything together: 997 - 92 = 905)
+    assert.includes(html, "Final Take-Home (Everything Together)");
+    assert.includes(html, "Monthly Consolidated Statement");
+    assert.includes(html, "905"); // 997 - 92 = 905 EUR
+
+    i18n.translations = previousTranslations;
+    i18n.currentLang = previousLang;
+    resetDom();
   });
 });

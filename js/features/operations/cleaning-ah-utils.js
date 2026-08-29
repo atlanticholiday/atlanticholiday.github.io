@@ -323,13 +323,7 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
     );
     const vatRate = toFiniteNumber(input.vatRate, defaults.vatRate);
     const vatMode = input.vatMode || defaults.vatMode || 'extract';
-    const laundryRatePerKg = toFiniteNumber(
-        input.laundryRatePerKg,
-        defaults.laundryRatePerKg
-    );
-    const laundryKg = toNullableFiniteNumber(input.laundryKg);
     const suppliesCost = roundCurrency(toFiniteNumber(input.suppliesCost, defaults.suppliesCost));
-    const explicitLaundryAmount = toNullableFiniteNumber(input.laundryAmount);
 
     const platformCommission = roundCurrency(guestAmount * platformCommissionRate);
     const vatAmount = roundCurrency(
@@ -340,15 +334,7 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
             : guestAmount * (vatRate / (1 + vatRate))
     );
     const totalToAhWithoutLaundry = roundCurrency(guestAmount - platformCommission - vatAmount);
-    const laundryAmount = roundCurrency(
-        explicitLaundryAmount !== null && explicitLaundryAmount > 0
-            ? explicitLaundryAmount
-            : (laundryKg || 0) * laundryRatePerKg
-    );
-    const totalToAh = roundCurrency(totalToAhWithoutLaundry - laundryAmount - suppliesCost);
-    const estimatedLaundryKg = laundryKg === null && laundryAmount > 0
-        ? roundCurrency(laundryAmount / laundryRatePerKg)
-        : null;
+    const totalToAh = roundCurrency(totalToAhWithoutLaundry - suppliesCost);
 
     return {
         categoryKey: categoryConfig.key,
@@ -357,14 +343,10 @@ export function computeCleaningAhAmounts(input = {}, defaults = CLEANING_AH_DEFA
         platformCommissionRate,
         vatRate,
         vatMode,
-        laundryRatePerKg,
-        laundryKg,
-        estimatedLaundryKg,
         suppliesCost,
         platformCommission,
         vatAmount,
         totalToAhWithoutLaundry,
-        laundryAmount,
         totalToAh
     };
 }
@@ -389,7 +371,6 @@ export function createCleaningAhFingerprint(record = {}) {
         normalizeGroupingKey(record.propertyName),
         normalizeGroupingKey(record.category),
         roundCurrency(record.guestAmount || 0).toFixed(2),
-        roundCurrency(record.laundryAmount || 0).toFixed(2),
         roundCurrency(record.totalToAh || 0).toFixed(2)
     ].join('|');
 }
@@ -438,7 +419,6 @@ export function createCleaningAhRecord(input = {}, options = {}) {
         categoryKey: categoryConfig.key,
         category: normalizeLabel(input.category) || getCleaningAhCategoryLabel(categoryConfig.key),
         reservationSource: inferredReservationSource,
-        laundryStatus: normalizeLabel(input.laundryStatus),
         source: input.source || 'manual',
         notes: normalizeLabel(input.notes),
         sourceMonthLabel: normalizeLabel(input.sourceMonthLabel),
@@ -446,10 +426,6 @@ export function createCleaningAhRecord(input = {}, options = {}) {
         importRowNumber: Number.isInteger(input.importRowNumber) ? input.importRowNumber : null,
         ...finalFinancials
     };
-
-    if (record.laundryKg === null && computedValues.estimatedLaundryKg !== null) {
-        record.estimatedLaundryKg = computedValues.estimatedLaundryKg;
-    }
 
     const warnings = preserveProvidedFinancials
         ? buildValidationWarnings(importedValues, computedValues)
@@ -465,6 +441,7 @@ export function createCleaningAhRecord(input = {}, options = {}) {
 export function createStandaloneLaundryRecord(input = {}, defaults = CLEANING_AH_DEFAULTS) {
     const date = String(input.date || '').trim();
     const monthKey = input.monthKey || getMonthKey(date);
+    const quantity = toNullableFiniteNumber(input.quantity);
     const kg = roundCurrency(toFiniteNumber(input.kg, 0));
     const laundryRatePerKg = toFiniteNumber(
         input.laundryRatePerKg,
@@ -478,12 +455,12 @@ export function createStandaloneLaundryRecord(input = {}, defaults = CLEANING_AH
         monthKey,
         propertyName: normalizeLabel(input.propertyName),
         propertyId: normalizeLabel(input.propertyId),
-        linkedCleaningId: normalizeLabel(input.linkedCleaningId),
+        quantity,
         kg,
         amount,
         laundryRatePerKg,
         notes: normalizeLabel(input.notes),
-        source: input.source || 'manual'
+        source: input.source || 'standalone'
     };
 }
 
@@ -593,11 +570,8 @@ function createEmptyCleaningAggregate() {
         platformCommission: 0,
         vatAmount: 0,
         totalToAhWithoutLaundry: 0,
-        laundryAmount: 0,
-        laundryKg: 0,
         suppliesCost: 0,
         totalToAh: 0,
-        cleaningsWithLaundry: 0,
         platformCount: 0,
         directCount: 0,
         lastEntryDate: ''
@@ -605,8 +579,6 @@ function createEmptyCleaningAggregate() {
 }
 
 function applyCleaningAggregate(target, record) {
-    const effectiveLaundryAmount = toFiniteNumber(record.effectiveLaundryAmount ?? record.laundryAmount, 0);
-    const effectiveLaundryKg = toFiniteNumber(record.effectiveLaundryKg ?? record.laundryKg ?? record.kg, 0);
     const reservationSource = normalizeReservationSource(record.reservationSource);
     const recordDate = String(record.date || '');
 
@@ -615,13 +587,8 @@ function applyCleaningAggregate(target, record) {
     target.platformCommission = roundCurrency(target.platformCommission + toFiniteNumber(record.platformCommission, 0));
     target.vatAmount = roundCurrency(target.vatAmount + toFiniteNumber(record.vatAmount, 0));
     target.totalToAhWithoutLaundry = roundCurrency(target.totalToAhWithoutLaundry + toFiniteNumber(record.totalToAhWithoutLaundry, 0));
-    target.laundryAmount = roundCurrency(target.laundryAmount + effectiveLaundryAmount);
-    target.laundryKg = roundCurrency(target.laundryKg + effectiveLaundryKg);
     target.suppliesCost = roundCurrency(target.suppliesCost + toFiniteNumber(record.suppliesCost, 0));
     target.totalToAh = roundCurrency(target.totalToAh + toFiniteNumber(record.effectiveTotalToAh ?? record.totalToAh, 0));
-    if (effectiveLaundryAmount > 0) {
-        target.cleaningsWithLaundry += 1;
-    }
     if (reservationSource === CLEANING_AH_RESERVATION_SOURCES.direct) {
         target.directCount += 1;
     } else {
@@ -637,68 +604,24 @@ function finalizeCleaningAggregate(target) {
         ...target,
         averageTotalToAh: target.count
             ? roundCurrency(target.totalToAh / target.count)
-            : 0,
-        averageLaundryKgPerCleaning: target.count
-            ? roundCurrency(target.laundryKg / target.count)
             : 0
     };
 }
 
-function buildLinkedLaundryMap(standaloneLaundryRecords = []) {
-    const linkedLaundryMap = new Map();
-
-    standaloneLaundryRecords.forEach((record) => {
-        const linkedCleaningId = normalizeLabel(record.linkedCleaningId);
-        if (!linkedCleaningId) {
-            return;
-        }
-
-        const existing = linkedLaundryMap.get(linkedCleaningId) || {
-            amount: 0,
-            kg: 0,
-            count: 0
-        };
-        existing.amount = roundCurrency(existing.amount + resolveLaundryAmount(record, 'amount'));
-        existing.kg = roundCurrency(existing.kg + resolveLaundryKg(record));
-        existing.count += 1;
-        linkedLaundryMap.set(linkedCleaningId, existing);
-    });
-
-    return linkedLaundryMap;
-}
-
-export function deriveCleaningAhRecords(records = [], standaloneLaundryRecords = []) {
-    const linkedLaundryMap = buildLinkedLaundryMap(standaloneLaundryRecords);
-
+export function deriveCleaningAhRecords(records = []) {
     return records.map((record) => {
-        const inlineLaundryAmount = resolveLaundryAmount(record, 'laundryAmount');
-        const linkedLaundry = linkedLaundryMap.get(record.id) || { amount: 0, kg: 0, count: 0 };
-        const effectiveLaundryAmount = roundCurrency(inlineLaundryAmount + linkedLaundry.amount);
-        const effectiveLaundryKg = roundCurrency(
-            (inlineLaundryAmount > 0 ? resolveLaundryKg(record) : 0) + linkedLaundry.kg
+        const totalToAh = roundCurrency(
+            toFiniteNumber(record.totalToAh, toFiniteNumber(record.totalToAhWithoutLaundry, 0))
         );
-        const totalToAhWithoutLaundry = roundCurrency(
-            toFiniteNumber(record.totalToAhWithoutLaundry, toFiniteNumber(record.totalToAh, 0))
-        );
-        const effectiveTotalToAh = roundCurrency(
-            totalToAhWithoutLaundry - effectiveLaundryAmount - toFiniteNumber(record.suppliesCost, 0)
-        );
-
         return {
             ...record,
-            inlineLaundryAmount,
-            linkedLaundryAmount: linkedLaundry.amount,
-            linkedLaundryKg: linkedLaundry.kg,
-            linkedLaundryCount: linkedLaundry.count,
-            effectiveLaundryAmount,
-            effectiveLaundryKg,
-            effectiveTotalToAh
+            effectiveTotalToAh: totalToAh
         };
     });
 }
 
-export function summarizeCleaningAhRecords(records = [], standaloneLaundryRecords = []) {
-    const derivedRecords = deriveCleaningAhRecords(records, standaloneLaundryRecords);
+export function summarizeCleaningAhRecords(records = []) {
+    const derivedRecords = deriveCleaningAhRecords(records);
     const monthGroups = new Map();
     const propertyGroups = new Map();
     const categoryGroups = new Map();
@@ -809,30 +732,6 @@ export function sortCleaningAhPropertyRows(rows = [], sort = 'net-desc') {
                 || left.label.localeCompare(right.label);
         }
 
-        if (sort === 'laundry-desc') {
-            return compareSummaryNumbers(right.laundryAmount, left.laundryAmount)
-                || compareSummaryNumbers(right.totalToAh, left.totalToAh)
-                || left.label.localeCompare(right.label);
-        }
-
-        if (sort === 'laundry-asc') {
-            return compareSummaryNumbers(left.laundryAmount, right.laundryAmount)
-                || compareSummaryNumbers(left.totalToAh, right.totalToAh)
-                || left.label.localeCompare(right.label);
-        }
-
-        if (sort === 'kg-desc') {
-            return compareSummaryNumbers(right.laundryKg, left.laundryKg)
-                || compareSummaryNumbers(right.laundryAmount, left.laundryAmount)
-                || left.label.localeCompare(right.label);
-        }
-
-        if (sort === 'kg-asc') {
-            return compareSummaryNumbers(left.laundryKg, right.laundryKg)
-                || compareSummaryNumbers(left.laundryAmount, right.laundryAmount)
-                || left.label.localeCompare(right.label);
-        }
-
         if (sort === 'last-entry-asc') {
             return compareSummaryDates(left.lastEntryDate, right.lastEntryDate)
                 || left.label.localeCompare(right.label);
@@ -920,23 +819,13 @@ export function summarizeCleaningAhPropertyDetail(records = [], propertyName = '
     };
 }
 
-function resolveLaundryKg(record) {
-    const explicitKg = toNullableFiniteNumber(record.kg ?? record.laundryKg);
-    if (explicitKg !== null) {
-        return explicitKg;
-    }
-
-    const estimatedKg = toNullableFiniteNumber(record.estimatedLaundryKg);
-    return estimatedKg !== null ? estimatedKg : 0;
-}
-
 export function resolveLaundryAmount(record = {}, amountField = 'amount') {
     const explicitAmount = toNullableFiniteNumber(record[amountField]);
     if (explicitAmount !== null && explicitAmount > 0) {
         return roundCurrency(explicitAmount);
     }
 
-    const kg = resolveLaundryKg(record);
+    const kg = toNullableFiniteNumber(record.kg) || 0;
     if (kg <= 0) {
         return roundCurrency(explicitAmount || 0);
     }
@@ -945,72 +834,53 @@ export function resolveLaundryAmount(record = {}, amountField = 'amount') {
     return roundCurrency(kg * laundryRatePerKg);
 }
 
-export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryRecords = []) {
-    const cleaningsById = new Map(cleaningRecords.map((record) => [record.id, record]));
-    const combinedEntries = [
-        ...cleaningRecords
-            .filter((record) => resolveLaundryAmount(record, 'laundryAmount') > 0)
-            .map((record) => ({
-                id: record.id || '',
-                date: record.date,
-                monthKey: record.monthKey || getMonthKey(record.date),
-                propertyName: record.propertyName,
-                propertyId: record.propertyId || '',
-                kg: resolveLaundryKg(record),
-                amount: resolveLaundryAmount(record, 'laundryAmount'),
-                laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
-                source: 'cleaning',
-                category: record.category,
-                linkedCleaningId: record.id || '',
-                linkedCleaningDate: record.date || '',
-                linkedCleaningCategory: record.category || '',
-                notes: record.notes || ''
-            })),
-        ...standaloneLaundryRecords.map((record) => {
-            const linkedCleaning = cleaningsById.get(record.linkedCleaningId);
-            return {
-                id: record.id || '',
-                date: record.date,
-                monthKey: record.monthKey || getMonthKey(record.date),
-                propertyName: linkedCleaning?.propertyName || record.propertyName,
-                propertyId: record.propertyId || '',
-                kg: resolveLaundryKg(record),
-                amount: resolveLaundryAmount(record, 'amount'),
-                laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
-                source: record.source || 'manual',
-                category: record.category || '',
-                linkedCleaningId: linkedCleaning ? (record.linkedCleaningId || '') : '',
-                linkedCleaningDate: linkedCleaning?.date || '',
-                linkedCleaningCategory: linkedCleaning?.category || '',
-                linkStatus: record.linkStatus || '',
-                ignoreLink: record.ignoreLink === true,
-                notes: record.notes || ''
-            };
-        })
-    ].sort((left, right) => String(right.date).localeCompare(String(left.date)));
+export function summarizeLaundryRecords(standaloneLaundryRecords = []) {
+    const entries = standaloneLaundryRecords
+        .map((record) => ({
+            id: record.id || '',
+            date: record.date,
+            monthKey: record.monthKey || getMonthKey(record.date),
+            propertyName: record.propertyName || 'Unknown',
+            propertyId: record.propertyId || '',
+            quantity: toNullableFiniteNumber(record.quantity),
+            kg: roundCurrency(toFiniteNumber(record.kg, 0)),
+            amount: resolveLaundryAmount(record, 'amount'),
+            laundryRatePerKg: toFiniteNumber(record.laundryRatePerKg, CLEANING_AH_DEFAULTS.laundryRatePerKg),
+            source: record.source || 'standalone',
+            notes: record.notes || ''
+        }))
+        .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
 
     const monthGroups = new Map();
     const propertyGroups = new Map();
     const totals = {
         count: 0,
+        quantity: 0,
         kg: 0,
         amount: 0
     };
 
-    combinedEntries.forEach((entry) => {
+    entries.forEach((entry) => {
         totals.count += 1;
-        totals.kg = roundCurrency(totals.kg + resolveLaundryKg(entry));
+        if (entry.quantity !== null) {
+            totals.quantity += entry.quantity;
+        }
+        totals.kg = roundCurrency(totals.kg + entry.kg);
         totals.amount = roundCurrency(totals.amount + toFiniteNumber(entry.amount, 0));
 
         const monthGroup = monthGroups.get(entry.monthKey) || {
             key: entry.monthKey,
             label: entry.monthKey,
             count: 0,
+            quantity: 0,
             kg: 0,
             amount: 0
         };
         monthGroup.count += 1;
-        monthGroup.kg = roundCurrency(monthGroup.kg + resolveLaundryKg(entry));
+        if (entry.quantity !== null) {
+            monthGroup.quantity += entry.quantity;
+        }
+        monthGroup.kg = roundCurrency(monthGroup.kg + entry.kg);
         monthGroup.amount = roundCurrency(monthGroup.amount + toFiniteNumber(entry.amount, 0));
         monthGroups.set(entry.monthKey, monthGroup);
 
@@ -1019,18 +889,22 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
             key: propertyKey,
             label: entry.propertyName || 'Unknown',
             count: 0,
+            quantity: 0,
             kg: 0,
             amount: 0
         };
         propertyGroup.count += 1;
-        propertyGroup.kg = roundCurrency(propertyGroup.kg + resolveLaundryKg(entry));
+        if (entry.quantity !== null) {
+            propertyGroup.quantity += entry.quantity;
+        }
+        propertyGroup.kg = roundCurrency(propertyGroup.kg + entry.kg);
         propertyGroup.amount = roundCurrency(propertyGroup.amount + toFiniteNumber(entry.amount, 0));
         propertyGroups.set(propertyKey, propertyGroup);
     });
 
     return {
         totals,
-        entries: combinedEntries,
+        entries,
         byMonth: [...monthGroups.values()].sort((left, right) => left.label.localeCompare(right.label)),
         byProperty: [...propertyGroups.values()].sort((left, right) => {
             if (right.amount !== left.amount) {
@@ -1040,6 +914,107 @@ export function summarizeLaundryRecords(cleaningRecords = [], standaloneLaundryR
             return left.label.localeCompare(right.label);
         })
     };
+}
+
+export function combineCleaningAndLaundryMonthlySummaries(cleaningByMonth = [], laundryByMonth = []) {
+    const monthsMap = new Map();
+
+    cleaningByMonth.forEach((cleaning) => {
+        const key = cleaning.key || cleaning.label || 'unknown';
+        monthsMap.set(key, {
+            key,
+            label: cleaning.label || key,
+            cleaningsCount: cleaning.count || 0,
+            cleaningsGuestAmount: cleaning.guestAmount || 0,
+            cleaningsPlatformCommission: cleaning.platformCommission || 0,
+            cleaningsVatAmount: cleaning.vatAmount || 0,
+            cleaningsNetToAh: cleaning.totalToAh || 0,
+            laundryCount: 0,
+            laundryQuantity: 0,
+            laundryKg: 0,
+            laundryAmount: 0,
+            finalNetEarnings: roundCurrency(cleaning.totalToAh || 0)
+        });
+    });
+
+    laundryByMonth.forEach((laundry) => {
+        const key = laundry.key || laundry.label || 'unknown';
+        const existing = monthsMap.get(key) || {
+            key,
+            label: laundry.label || key,
+            cleaningsCount: 0,
+            cleaningsGuestAmount: 0,
+            cleaningsPlatformCommission: 0,
+            cleaningsVatAmount: 0,
+            cleaningsNetToAh: 0,
+            laundryCount: 0,
+            laundryQuantity: 0,
+            laundryKg: 0,
+            laundryAmount: 0,
+            finalNetEarnings: 0
+        };
+
+        existing.laundryCount = (existing.laundryCount || 0) + (laundry.count || 0);
+        existing.laundryQuantity = (existing.laundryQuantity || 0) + (laundry.quantity || 0);
+        existing.laundryKg = roundCurrency((existing.laundryKg || 0) + (laundry.kg || 0));
+        existing.laundryAmount = roundCurrency((existing.laundryAmount || 0) + (laundry.amount || 0));
+        existing.finalNetEarnings = roundCurrency(existing.cleaningsNetToAh - existing.laundryAmount);
+
+        monthsMap.set(key, existing);
+    });
+
+    return [...monthsMap.values()].sort((left, right) => String(right.label || '').localeCompare(String(left.label || '')));
+}
+
+export function combineCleaningAndLaundryPropertySummaries(cleaningByProperty = [], laundryByProperty = []) {
+    const propertiesMap = new Map();
+
+    cleaningByProperty.forEach((cleaning) => {
+        const key = cleaning.key || cleaning.label || 'unknown';
+        propertiesMap.set(key, {
+            key,
+            label: cleaning.label || key,
+            cleaningsCount: cleaning.count || 0,
+            cleaningsGuestAmount: cleaning.guestAmount || 0,
+            cleaningsNetToAh: cleaning.totalToAh || 0,
+            laundryCount: 0,
+            laundryQuantity: 0,
+            laundryKg: 0,
+            laundryAmount: 0,
+            finalNetEarnings: roundCurrency(cleaning.totalToAh || 0)
+        });
+    });
+
+    laundryByProperty.forEach((laundry) => {
+        const key = laundry.key || laundry.label || 'unknown';
+        const existing = propertiesMap.get(key) || {
+            key,
+            label: laundry.label || key,
+            cleaningsCount: 0,
+            cleaningsGuestAmount: 0,
+            cleaningsNetToAh: 0,
+            laundryCount: 0,
+            laundryQuantity: 0,
+            laundryKg: 0,
+            laundryAmount: 0,
+            finalNetEarnings: 0
+        };
+
+        existing.laundryCount = (existing.laundryCount || 0) + (laundry.count || 0);
+        existing.laundryQuantity = (existing.laundryQuantity || 0) + (laundry.quantity || 0);
+        existing.laundryKg = roundCurrency((existing.laundryKg || 0) + (laundry.kg || 0));
+        existing.laundryAmount = roundCurrency((existing.laundryAmount || 0) + (laundry.amount || 0));
+        existing.finalNetEarnings = roundCurrency(existing.cleaningsNetToAh - existing.laundryAmount);
+
+        propertiesMap.set(key, existing);
+    });
+
+    return [...propertiesMap.values()].sort((left, right) => {
+        if (right.finalNetEarnings !== left.finalNetEarnings) {
+            return right.finalNetEarnings - left.finalNetEarnings;
+        }
+        return left.label.localeCompare(right.label);
+    });
 }
 
 function compareLaundryEntryDatesDescending(left, right) {
@@ -1062,36 +1037,10 @@ function compareCleaningEntryProperties(left, right) {
     return normalizeGroupingKey(left.propertyName).localeCompare(normalizeGroupingKey(right.propertyName));
 }
 
-function hasCleaningLaundry(entry) {
-    return toFiniteNumber(entry.effectiveLaundryAmount, 0) > 0
-        || resolveLaundryAmount(entry, 'laundryAmount') > 0
-        || toFiniteNumber(entry.linkedLaundryAmount, 0) > 0
-        || toFiniteNumber(entry.linkedLaundryCount, 0) > 0;
-}
-
-function hasResolvedLaundryState(entry) {
-    return hasCleaningLaundry(entry) || normalizeLabel(entry.laundryStatus) === 'none';
-}
-
 export function filterCleaningRegisterEntries(entries = [], options = {}) {
-    const filter = options.filter || 'all';
     const sort = options.sort || 'date-desc';
 
-    const filteredEntries = entries.filter((entry) => {
-        const cleaningHasLaundry = hasCleaningLaundry(entry);
-
-        if (filter === 'with-laundry') {
-            return cleaningHasLaundry;
-        }
-
-        if (filter === 'waiting-laundry') {
-            return !hasResolvedLaundryState(entry);
-        }
-
-        return true;
-    });
-
-    return [...filteredEntries].sort((left, right) => {
+    return [...entries].sort((left, right) => {
         if (sort === 'date-asc') {
             return String(left.date || '').localeCompare(String(right.date || ''))
                 || compareCleaningEntryProperties(left, right);
@@ -1137,24 +1086,9 @@ export function filterCleaningRegisterEntries(entries = [], options = {}) {
 }
 
 export function filterLaundryRegisterEntries(entries = [], options = {}) {
-    const filter = options.filter || 'all';
     const sort = options.sort || 'date-desc';
 
-    const filteredEntries = entries.filter((entry) => {
-        const hasLinkedCleaning = normalizeLabel(entry.linkedCleaningId) !== '';
-
-        if (filter === 'linked') {
-            return hasLinkedCleaning;
-        }
-
-        if (filter === 'unlinked') {
-            return !hasLinkedCleaning;
-        }
-
-        return true;
-    });
-
-    return [...filteredEntries].sort((left, right) => {
+    return [...entries].sort((left, right) => {
         if (sort === 'date-asc') {
             return String(left.date || '').localeCompare(String(right.date || ''))
                 || compareLaundryEntryProperties(left, right);
@@ -1167,6 +1101,16 @@ export function filterLaundryRegisterEntries(entries = [], options = {}) {
 
         if (sort === 'property-desc') {
             return compareLaundryEntryProperties(right, left)
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'quantity-desc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(right.quantity, 0), toFiniteNumber(left.quantity, 0))
+                || compareLaundryEntryDatesDescending(left, right);
+        }
+
+        if (sort === 'quantity-asc') {
+            return compareLaundryEntryNumbers(toFiniteNumber(left.quantity, 0), toFiniteNumber(right.quantity, 0))
                 || compareLaundryEntryDatesDescending(left, right);
         }
 
