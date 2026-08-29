@@ -1714,6 +1714,7 @@
       "ratePerKg": "Rate / kg",
       "amount": "Amount",
       "month": "Month",
+      "total": "Total",
       "count": "Count",
       "rows": "Rows",
       "avgNet": "Avg net",

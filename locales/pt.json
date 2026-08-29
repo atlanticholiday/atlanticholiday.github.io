@@ -1723,6 +1723,7 @@
             "ratePerKg": "Preço / kg",
             "amount": "Valor",
             "month": "Mês",
+            "total": "Total",
             "count": "Contagem",
             "rows": "Linhas",
             "avgNet": "Média líquida",

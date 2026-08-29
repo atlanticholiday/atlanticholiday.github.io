@@ -1757,16 +1757,16 @@ export class CleaningAhManager {
 
     renderTabBar(overdueCount = 0) {
         const tabs = [
-            ["register", this.tr("tabs.register")],
-            ["calendar", this.tr("tabs.calendar")],
             ["cleanings", this.tr("tabs.cleanings")],
             ["laundry", this.tr("tabs.laundry")],
             ["special-cleanings", this.tr("tabs.specialCleanings")],
-            ["stats", this.tr("tabs.stats")]
+            ["stats", this.tr("tabs.stats")],
+            ["calendar", this.tr("tabs.calendar")],
+            ["register", this.tr("tabs.register")]
         ];
 
         return `
-            <nav class="cleaning-ah-tabs-bar" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
+            <nav class="cleaning-view-tabs" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
                 ${tabs.map(([key, label]) => {
                     const isRegister = key === "register";
                     const badge = isRegister && overdueCount > 0
@@ -1777,7 +1777,7 @@ export class CleaningAhManager {
                         <button
                             type="button"
                             data-tab="${key}"
-                            class="cleaning-ah-tab-btn view-btn ${isActive ? "is-active active" : ""}"
+                            class="cleaning-view-tab ${isActive ? "is-active" : ""}"
                         >${escapeHtml(label)}${badge}</button>
                     `;
                 }).join("")}
