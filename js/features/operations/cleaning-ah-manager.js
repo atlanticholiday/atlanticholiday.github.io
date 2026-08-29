@@ -467,29 +467,35 @@ export class CleaningAhManager {
         if (!document.getElementById("cleaning-ah-page")) {
             const page = document.createElement("div");
             page.id = "cleaning-ah-page";
-            page.className = "hidden min-h-screen bg-slate-50";
+            page.className = "hidden min-h-screen bg-[#fafbfc]";
             page.innerHTML = `
-                <div id="cleaning-ah-shell" class="mx-auto w-full max-w-[2400px] px-4 py-6 xl:px-8 2xl:px-10">
-                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-                        <div class="flex items-center gap-3">
-                            <button id="back-to-landing-from-cleaning-ah-btn" class="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <div class="border-b border-[#e1e4e8] bg-white">
+                    <div class="mx-auto flex max-w-[2400px] flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between xl:px-8 2xl:px-10">
+                        <div class="flex items-center gap-3.5">
+                            <button id="back-to-landing-from-cleaning-ah-btn" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                                 <span id="cleaning-ah-back-label"></span>
                             </button>
+                            <div class="h-5 w-px bg-slate-200"></div>
+                            <div class="cleaning-ah-project-badge">
+                                <i class="fas fa-broom"></i>
+                            </div>
                             <div>
-                                <div id="cleaning-ah-header-kicker" class="text-xs uppercase tracking-[0.28em] text-sky-600 font-semibold"></div>
-                                <h1 id="cleaning-ah-header-title" class="text-2xl font-semibold text-slate-900"></h1>
-                                <p id="cleaning-ah-header-subtitle" class="text-sm text-slate-600 mt-1"></p>
+                                <div id="cleaning-ah-header-kicker" class="text-[10px] uppercase font-bold tracking-wider text-[#ef5b6c]"></div>
+                                <h1 id="cleaning-ah-header-title" class="text-xl font-bold tracking-tight text-slate-900"></h1>
+                                <p id="cleaning-ah-header-subtitle" class="text-xs text-slate-500 font-medium"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 self-start md:self-auto">
-                            <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
-                                <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
-                                <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+                        <div class="flex items-center gap-3 self-start sm:self-auto">
+                            <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
+                                <button type="button" class="lang-btn rounded-lg px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white hover:shadow-sm" data-lang-option="en" title="English">EN</button>
+                                <button type="button" class="lang-btn rounded-lg px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white hover:shadow-sm" data-lang-option="pt" title="Português">PT</button>
                             </div>
-                            <button id="cleaning-ah-sign-out-btn" class="text-sm text-red-600 hover:underline"></button>
+                            <button id="cleaning-ah-sign-out-btn" class="text-xs font-medium text-slate-500 hover:text-rose-600 transition"></button>
                         </div>
                     </div>
+                </div>
+                <div id="cleaning-ah-shell" class="mx-auto w-full max-w-[2400px] px-4 py-6 xl:px-8 2xl:px-10">
                     <div id="cleaning-ah-root" class="space-y-6"></div>
                 </div>
             `;
@@ -1513,34 +1519,23 @@ export class CleaningAhManager {
             .join("");
 
         return `
-            <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                    <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.search"))}</span>
-                        <input id="cleaning-ah-search" type="search" class="mt-2 w-full" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.month"))}</span>
-                        <select id="cleaning-ah-month-filter" class="mt-2 w-full">
-                            <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
-                            ${monthOptions}
-                        </select>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.property"))}</span>
-                        <select id="cleaning-ah-property-filter" class="mt-2 w-full">
-                            <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
-                            ${propertyOptions}
-                        </select>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("filters.category"))}</span>
-                        <select id="cleaning-ah-category-filter" class="mt-2 w-full">
-                            <option value="">${escapeHtml(this.tr("filters.allCategories"))}</option>
-                            ${categoryOptions}
-                        </select>
-                    </label>
+            <section class="cleaning-ah-toolbar">
+                <div class="cleaning-ah-search-box">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input id="cleaning-ah-search" type="search" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                 </div>
+                <select id="cleaning-ah-month-filter" class="cleaning-ah-select">
+                    <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
+                    ${monthOptions}
+                </select>
+                <select id="cleaning-ah-property-filter" class="cleaning-ah-select">
+                    <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
+                    ${propertyOptions}
+                </select>
+                <select id="cleaning-ah-category-filter" class="cleaning-ah-select">
+                    <option value="">${escapeHtml(this.tr("filters.allCategories"))}</option>
+                    ${categoryOptions}
+                </select>
             </section>
         `;
     }
@@ -1556,17 +1551,18 @@ export class CleaningAhManager {
         ];
 
         return `
-            <nav class="flex flex-wrap gap-2" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
+            <nav class="cleaning-ah-tabs-bar" aria-label="${escapeHtml(this.tr("tabs.ariaLabel"))}">
                 ${tabs.map(([key, label]) => {
                     const isRegister = key === "register";
                     const badge = isRegister && overdueCount > 0
-                        ? `<span class="ml-1.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white leading-none" aria-label="${escapeHtml(String(overdueCount))} overdue">${escapeHtml(String(overdueCount))}</span>`
+                        ? `<span class="tab-badge" aria-label="${escapeHtml(String(overdueCount))} overdue">${escapeHtml(String(overdueCount))}</span>`
                         : "";
+                    const isActive = this.activeTab === key;
                     return `
                         <button
                             type="button"
                             data-tab="${key}"
-                            class="view-btn ${this.activeTab === key ? "active" : ""}"
+                            class="cleaning-ah-tab-btn view-btn ${isActive ? "is-active active" : ""}"
                         >${escapeHtml(label)}${badge}</button>
                     `;
                 }).join("")}
@@ -2051,81 +2047,81 @@ export class CleaningAhManager {
         const combinedByProperty = combineCleaningAndLaundryPropertySummaries(cleaningSummary.byProperty, laundrySummary.byProperty || []);
 
         return `
-            <section class="space-y-6">
-                <!-- 1. Executive 3-Card Summary (The Bottom Line) -->
+            <section class="space-y-5">
+                <!-- 1. Asana 3-Card Summary (The Bottom Line) -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <!-- Cleanings Card -->
-                    <div class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-col justify-between">
+                    <div class="cleaning-ah-card flex flex-col justify-between">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("stats.cleaningsTitle"))}</span>
-                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</span>
+                            <span class="cleaning-ah-card-kicker">${escapeHtml(this.tr("stats.cleaningsTitle"))}</span>
+                            <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">${escapeHtml(this.getRecordsLabel(cleaningSummary.totals.count))}</span>
                         </div>
-                        <div class="my-4">
-                            <div class="text-3xl font-bold text-slate-900">${escapeHtml(this.formatCurrency(cleaningsNet))}</div>
-                            <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("metrics.netToAh"))}</div>
+                        <div class="my-3">
+                            <div class="cleaning-ah-card-value">${escapeHtml(this.formatCurrency(cleaningsNet))}</div>
+                            <div class="mt-1 text-xs text-slate-500 font-medium">${escapeHtml(this.tr("metrics.netToAh"))}</div>
                         </div>
-                        <div class="border-t border-slate-100 pt-3 text-xs text-slate-500 space-y-1">
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.guestTotal"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(this.formatCurrency(cleaningSummary.totals.guestAmount))}</span></div>
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.platformFees"))} + ${escapeHtml(this.tr("metrics.vat"))}:</span> <span class="font-medium text-slate-700">-${escapeHtml(this.formatCurrency(cleaningSummary.totals.platformCommission + cleaningSummary.totals.vatAmount))}</span></div>
+                        <div class="border-t border-[#e1e4e8] pt-2.5 text-xs text-slate-500 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.guestTotal"))}:</span> <span class="font-semibold text-slate-700">${escapeHtml(this.formatCurrency(cleaningSummary.totals.guestAmount))}</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.platformFees"))} + ${escapeHtml(this.tr("metrics.vat"))}:</span> <span class="font-semibold text-slate-700">-${escapeHtml(this.formatCurrency(cleaningSummary.totals.platformCommission + cleaningSummary.totals.vatAmount))}</span></div>
                         </div>
                     </div>
 
                     <!-- Laundry Card -->
-                    <div class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-col justify-between">
+                    <div class="cleaning-ah-card flex flex-col justify-between">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">${escapeHtml(this.tr("stats.laundryTitle"))}</span>
-                            <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">${escapeHtml(String(laundrySummary.totals.count))} ${escapeHtml(this.tr("tables.rows") || "rows")}</span>
+                            <span class="cleaning-ah-card-kicker">${escapeHtml(this.tr("stats.laundryTitle"))}</span>
+                            <span class="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-700">${escapeHtml(String(laundrySummary.totals.count))} ${escapeHtml(this.tr("tables.rows") || "rows")}</span>
                         </div>
-                        <div class="my-4">
-                            <div class="text-3xl font-bold text-rose-600">${escapeHtml(this.formatCurrency(laundryExpenses))}</div>
-                            <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
+                        <div class="my-3">
+                            <div class="cleaning-ah-card-value text-rose-600">${escapeHtml(this.formatCurrency(laundryExpenses))}</div>
+                            <div class="mt-1 text-xs text-slate-500 font-medium">${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
                         </div>
-                        <div class="border-t border-slate-100 pt-3 text-xs text-slate-500 space-y-1">
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.quantity"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(String(laundrySummary.totals.quantity || 0))}</span></div>
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.kg"))}:</span> <span class="font-medium text-slate-700">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</span></div>
+                        <div class="border-t border-[#e1e4e8] pt-2.5 text-xs text-slate-500 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.quantity"))}:</span> <span class="font-semibold text-slate-700">${escapeHtml(String(laundrySummary.totals.quantity || 0))} items</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("metrics.kg"))}:</span> <span class="font-semibold text-slate-700">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</span></div>
                         </div>
                     </div>
 
                     <!-- Final Profit Card (Everything Together) -->
-                    <div class="rounded-3xl border-2 border-emerald-300 bg-emerald-50/70 p-6 shadow-sm flex flex-col justify-between">
+                    <div class="cleaning-ah-card cleaning-ah-card--profit flex flex-col justify-between">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">${escapeHtml(this.tr("stats.everythingTogetherTitle"))}</span>
-                            <span class="rounded-full bg-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</span>
+                            <span class="cleaning-ah-card-kicker text-emerald-800">${escapeHtml(this.tr("stats.everythingTogetherTitle"))}</span>
+                            <span class="rounded-full bg-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</span>
                         </div>
-                        <div class="my-4">
-                            <div class="text-3xl font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</div>
-                            <div class="mt-1 text-xs font-medium text-emerald-800">${escapeHtml(this.tr("metrics.cleaningsNet"))} − ${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
+                        <div class="my-3">
+                            <div class="cleaning-ah-card-value ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</div>
+                            <div class="mt-1 text-xs font-semibold text-emerald-800">${escapeHtml(this.tr("metrics.cleaningsNet"))} − ${escapeHtml(this.tr("metrics.laundryExpenses"))}</div>
                         </div>
-                        <div class="border-t border-emerald-200/80 pt-3 text-xs text-emerald-900 space-y-1">
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.cleanings"))}:</span> <span class="font-semibold text-emerald-950">+${escapeHtml(this.formatCurrency(cleaningsNet))}</span></div>
-                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.laundry"))}:</span> <span class="font-semibold text-rose-700">-${escapeHtml(this.formatCurrency(laundryExpenses))}</span></div>
+                        <div class="border-t border-emerald-200/80 pt-2.5 text-xs text-emerald-950 space-y-1">
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.cleanings"))}:</span> <span class="font-bold text-emerald-900">+${escapeHtml(this.formatCurrency(cleaningsNet))}</span></div>
+                            <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.laundry"))}:</span> <span class="font-bold text-rose-700">-${escapeHtml(this.formatCurrency(laundryExpenses))}</span></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. View Switcher & Export Actions -->
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="inline-flex rounded-2xl bg-slate-200/80 p-1 text-xs font-semibold shadow-inner">
+                <!-- 2. Asana Segmented View Switcher & Export Actions -->
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
+                    <div class="cleaning-ah-segmented-control">
                         <button type="button" data-action="set-stats-view-mode" data-mode="month"
-                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "month" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
-                            <i class="fas fa-calendar-alt mr-1.5"></i>
-                            ${escapeHtml(this.tr("stats.byMonth"))}
+                            class="${this.statsViewMode === "month" ? "is-active" : ""}">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>${escapeHtml(this.tr("stats.byMonth"))}</span>
                         </button>
                         <button type="button" data-action="set-stats-view-mode" data-mode="property"
-                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "property" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
-                            <i class="fas fa-building mr-1.5"></i>
-                            ${escapeHtml(this.tr("stats.topProperties"))}
+                            class="${this.statsViewMode === "property" ? "is-active" : ""}">
+                            <i class="fas fa-building"></i>
+                            <span>${escapeHtml(this.tr("stats.topProperties"))}</span>
                         </button>
                         <button type="button" data-action="set-stats-view-mode" data-mode="heatmap"
-                            class="rounded-xl px-4 py-2 transition ${this.statsViewMode === "heatmap" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-600 hover:text-slate-900"}">
-                            <i class="fas fa-th mr-1.5"></i>
-                            ${escapeHtml(this.tr("stats.heatmapTitle"))}
+                            class="${this.statsViewMode === "heatmap" ? "is-active" : ""}">
+                            <i class="fas fa-th"></i>
+                            <span>${escapeHtml(this.tr("stats.heatmapTitle"))}</span>
                         </button>
                     </div>
 
-                    <button type="button" data-action="open-export-modal" class="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition active:scale-95">
-                        <i class="fas fa-file-export mr-1.5"></i>
-                        ${escapeHtml(this.tr("stats.exportReport"))}
+                    <button type="button" data-action="open-export-modal" class="cleaning-ah-btn-primary">
+                        <i class="fas fa-file-export"></i>
+                        <span>${escapeHtml(this.tr("stats.exportReport"))}</span>
                     </button>
                 </div>
 
@@ -2142,99 +2138,95 @@ export class CleaningAhManager {
 
         if (this.statsViewMode === "property") {
             return `
-                <section class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
-                    <div class="mb-4 flex items-center justify-between">
-                        <div>
-                            <h4 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("stats.topProperties"))}</h4>
-                            <p class="text-xs text-slate-500">Breakdown of cleanings net, laundry expenses, and final take-home per property.</p>
-                        </div>
+                <div class="cleaning-ah-table-container">
+                    <div class="px-5 py-4 border-b border-[#e1e4e8] bg-white">
+                        <h4 class="text-sm font-bold text-slate-900">${escapeHtml(this.tr("stats.topProperties"))}</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Performance statement ranked by net revenue per property.</p>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                        <table class="cleaning-ah-table">
                             <thead>
-                                <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                    <th class="py-3 pr-4 text-left font-semibold">${escapeHtml(this.tr("tables.property"))}</th>
-                                    <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
-                                    <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
-                                    <th class="py-3 pr-4 text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
-                                    <th class="py-3 pr-4 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.cleanings"))}</th>
-                                    <th class="py-3 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
+                                <tr>
+                                    <th class="text-left">${escapeHtml(this.tr("tables.property"))}</th>
+                                    <th class="text-right">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
+                                    <th class="text-right">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
+                                    <th class="text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
+                                    <th class="text-right">${escapeHtml(this.tr("tabs.cleanings"))}</th>
+                                    <th class="text-right">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody>
                                 ${combinedByProperty.map((row) => `
-                                    <tr class="hover:bg-slate-50/80 transition">
-                                        <td class="py-3 pr-4 font-semibold text-slate-900">${escapeHtml(row.label)}</td>
-                                        <td class="py-3 pr-4 text-right font-medium text-slate-900">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
-                                        <td class="py-3 pr-4 text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
-                                        <td class="py-3 pr-4 text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
-                                        <td class="py-3 pr-4 text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
-                                        <td class="py-3 text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
+                                    <tr>
+                                        <td class="font-semibold text-slate-900">${escapeHtml(row.label)}</td>
+                                        <td class="text-right font-medium text-slate-800">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
+                                        <td class="text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
+                                        <td class="text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
+                                        <td class="text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
+                                        <td class="text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
                                     </tr>
                                 `).join("")}
                             </tbody>
-                            <tfoot class="border-t-2 border-slate-300 bg-slate-50/80 font-semibold">
+                            <tfoot>
                                 <tr>
-                                    <td class="py-3 pr-4 text-slate-900">${escapeHtml(this.tr("tables.total"))}</td>
-                                    <td class="py-3 pr-4 text-right text-slate-900">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
-                                    <td class="py-3 pr-4 text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
-                                    <td class="py-3 pr-4 text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
-                                    <td class="py-3 pr-4 text-right text-xs text-slate-600">${escapeHtml(String(cleaningSummary.totals.count))}</td>
-                                    <td class="py-3 text-right text-xs text-slate-600">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
+                                    <td>${escapeHtml(this.tr("tables.total"))}</td>
+                                    <td class="text-right">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
+                                    <td class="text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
+                                    <td class="text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
+                                    <td class="text-right text-xs">${escapeHtml(String(cleaningSummary.totals.count))}</td>
+                                    <td class="text-right text-xs">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                </section>
+                </div>
             `;
         }
 
         // Default: By Month
         return `
-            <section class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
-                <div class="mb-4 flex items-center justify-between">
-                    <div>
-                        <h4 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("stats.consolidatedByMonthTitle"))}</h4>
-                        <p class="text-xs text-slate-500">${escapeHtml(this.tr("stats.consolidatedByMonthDescription"))}</p>
-                    </div>
+            <div class="cleaning-ah-table-container">
+                <div class="px-5 py-4 border-b border-[#e1e4e8] bg-white">
+                    <h4 class="text-sm font-bold text-slate-900">${escapeHtml(this.tr("stats.consolidatedByMonthTitle"))}</h4>
+                    <p class="text-xs text-slate-500 mt-0.5">${escapeHtml(this.tr("stats.consolidatedByMonthDescription"))}</p>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="cleaning-ah-table">
                         <thead>
-                            <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                <th class="py-3 pr-4 text-left font-semibold">${escapeHtml(this.tr("tables.month"))}</th>
-                                <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
-                                <th class="py-3 pr-4 text-right font-semibold">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
-                                <th class="py-3 pr-4 text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
-                                <th class="py-3 pr-4 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.cleanings"))}</th>
-                                <th class="py-3 text-right font-semibold text-slate-500">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
+                            <tr>
+                                <th class="text-left">${escapeHtml(this.tr("tables.month"))}</th>
+                                <th class="text-right">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
+                                <th class="text-right">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
+                                <th class="text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
+                                <th class="text-right">${escapeHtml(this.tr("tabs.cleanings"))}</th>
+                                <th class="text-right">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             ${combinedMonthly.map((row) => `
-                                <tr class="hover:bg-slate-50/80 transition">
-                                    <td class="py-3 pr-4 font-semibold text-slate-900">${escapeHtml(this.formatMonthKey(row.label))}</td>
-                                    <td class="py-3 pr-4 text-right font-medium text-slate-900">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
-                                    <td class="py-3 pr-4 text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
-                                    <td class="py-3 pr-4 text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
-                                    <td class="py-3 pr-4 text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
-                                    <td class="py-3 text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
+                                <tr>
+                                    <td class="font-semibold text-slate-900">${escapeHtml(this.formatMonthKey(row.label))}</td>
+                                    <td class="text-right font-medium text-slate-800">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
+                                    <td class="text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
+                                    <td class="text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
+                                    <td class="text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
+                                    <td class="text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
                                 </tr>
                             `).join("")}
                         </tbody>
-                        <tfoot class="border-t-2 border-slate-300 bg-slate-50/80 font-semibold">
+                        <tfoot>
                             <tr>
-                                <td class="py-3 pr-4 text-slate-900">${escapeHtml(this.tr("tables.total"))}</td>
-                                <td class="py-3 pr-4 text-right text-slate-900">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
-                                <td class="py-3 pr-4 text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
-                                <td class="py-3 pr-4 text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
-                                <td class="py-3 pr-4 text-right text-xs text-slate-600">${escapeHtml(String(cleaningSummary.totals.count))}</td>
-                                <td class="py-3 text-right text-xs text-slate-600">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
+                                <td>${escapeHtml(this.tr("tables.total"))}</td>
+                                <td class="text-right">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
+                                <td class="text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
+                                <td class="text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
+                                <td class="text-right text-xs">${escapeHtml(String(cleaningSummary.totals.count))}</td>
+                                <td class="text-right text-xs">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-            </section>
+            </div>
         `;
     }
 
@@ -3347,57 +3339,65 @@ export class CleaningAhManager {
         }
 
         return `
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.category"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.reservation"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.guest"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.net"))}</th>
-                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${records.map((record) => {
-                        const isInlineCleaningEditOpen = this.editingCleaningId === record.id;
-                        return `
-                        <tr class="border-b border-slate-100 align-top">
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
-                            <td class="px-3 py-3">
-                                <div class="text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</div>
-                                ${record.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(record.notes)}</div>` : ""}
-                                ${record.importWarnings?.length ? `<div class="mt-1 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
-                            </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getCleaningCategoryLabel(record.categoryKey || record.category))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
-                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
-                            <td class="px-3 py-3 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${this.renderTableActionButton({
-                                        action: "edit-cleaning",
-                                        id: record.id,
-                                        label: t("common.edit"),
-                                        iconClass: "fas fa-pen",
-                                        tone: "primary"
-                                    })}
-                                    ${this.renderTableActionButton({
-                                        action: "delete-cleaning",
-                                        id: record.id,
-                                        label: t("common.delete"),
-                                        iconClass: "fas fa-trash",
-                                        tone: "danger"
-                                    })}
-                                </div>
-                            </td>
+            <div class="cleaning-ah-table-container">
+                <table class="cleaning-ah-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">${escapeHtml(this.tr("tables.date"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("tables.property"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("tables.category"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("tables.reservation"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.guest"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.net"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                         </tr>
-                        ${isInlineCleaningEditOpen ? this.renderCleaningInlineEditRow(record) : ""}
-                    `;
-                    }).join("")}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${records.map((record) => {
+                            const isInlineCleaningEditOpen = this.editingCleaningId === record.id;
+                            const catKey = this.getCleaningCategoryKey(record.categoryKey || record.category);
+                            const pillClass = catKey === "check_out"
+                                ? "cleaning-ah-pill--checkout"
+                                : catKey === "owner"
+                                ? "cleaning-ah-pill--owner"
+                                : "cleaning-ah-pill--direct";
+                            return `
+                            <tr>
+                                <td class="text-xs text-slate-500 font-medium whitespace-nowrap">${escapeHtml(this.formatDate(record.date))}</td>
+                                <td>
+                                    <div class="font-semibold text-slate-900">${escapeHtml(record.propertyName)}</div>
+                                    ${record.notes ? `<div class="mt-0.5 text-xs text-slate-400">${escapeHtml(record.notes)}</div>` : ""}
+                                    ${record.importWarnings?.length ? `<div class="mt-0.5 text-xs text-amber-600">${escapeHtml(this.getWarningsLabel(record.importWarnings.length))}</div>` : ""}
+                                </td>
+                                <td><span class="cleaning-ah-pill ${pillClass}">${escapeHtml(this.getCleaningCategoryLabel(catKey))}</span></td>
+                                <td><span class="cleaning-ah-pill ${this.getCleaningReservationSource(record) === "platform" ? "cleaning-ah-pill--platform" : "cleaning-ah-pill--direct"}">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</span></td>
+                                <td class="text-right text-xs font-medium text-slate-600">${escapeHtml(this.formatCurrency(record.guestAmount))}</td>
+                                <td class="text-right font-bold text-slate-900">${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}</td>
+                                <td class="text-right whitespace-nowrap">
+                                    <div class="inline-flex justify-end gap-1.5">
+                                        ${this.renderTableActionButton({
+                                            action: "edit-cleaning",
+                                            id: record.id,
+                                            label: t("common.edit"),
+                                            iconClass: "fas fa-pen",
+                                            tone: "primary"
+                                        })}
+                                        ${this.renderTableActionButton({
+                                            action: "delete-cleaning",
+                                            id: record.id,
+                                            label: t("common.delete"),
+                                            iconClass: "fas fa-trash",
+                                            tone: "danger"
+                                        })}
+                                    </div>
+                                </td>
+                            </tr>
+                            ${isInlineCleaningEditOpen ? this.renderCleaningInlineEditRow(record) : ""}
+                        `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
 
@@ -3407,52 +3407,54 @@ export class CleaningAhManager {
         }
 
         return `
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.laundryReceivedDate"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.quantity") || "Qty")}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.kg"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.ratePerKg"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.amount"))}</th>
-                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${entries.map((entry) => `
-                        <tr class="border-b border-slate-100">
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(entry.date))}</td>
-                            <td class="px-3 py-3">
-                                <div class="text-sm font-medium text-slate-900">${escapeHtml(entry.propertyName)}</div>
-                                ${entry.notes ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(entry.notes)}</div>` : ""}
-                            </td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(String(entry.quantity ?? 1))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatNumber(entry.kg))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryRatePerKg))}</td>
-                            <td class="px-3 py-3 text-sm font-semibold text-slate-900">${escapeHtml(this.formatCurrency(entry.amount))}</td>
-                            <td class="px-3 py-3 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${this.renderTableActionButton({
-                                        action: "edit-laundry",
-                                        id: entry.id,
-                                        label: t("common.edit"),
-                                        iconClass: "fas fa-pen",
-                                        tone: "primary"
-                                    })}
-                                    ${this.renderTableActionButton({
-                                        action: "delete-laundry",
-                                        id: entry.id,
-                                        label: t("common.delete"),
-                                        iconClass: "fas fa-trash",
-                                        tone: "danger"
-                                    })}
-                                </div>
-                            </td>
+            <div class="cleaning-ah-table-container">
+                <table class="cleaning-ah-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">${escapeHtml(this.tr("tables.laundryReceivedDate"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("tables.property"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.quantity") || "Qty")}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.kg"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.ratePerKg"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.amount"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                         </tr>
-                    `).join("")}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${entries.map((entry) => `
+                            <tr>
+                                <td class="text-xs text-slate-500 font-medium whitespace-nowrap">${escapeHtml(this.formatDate(entry.date))}</td>
+                                <td>
+                                    <div class="font-semibold text-slate-900">${escapeHtml(entry.propertyName)}</div>
+                                    ${entry.notes ? `<div class="mt-0.5 text-xs text-slate-400">${escapeHtml(entry.notes)}</div>` : ""}
+                                </td>
+                                <td class="text-right text-xs font-semibold text-slate-700">${escapeHtml(String(entry.quantity ?? 1))}</td>
+                                <td class="text-right text-xs text-slate-600">${escapeHtml(this.formatNumber(entry.kg))} kg</td>
+                                <td class="text-right text-xs text-slate-600">${escapeHtml(this.formatCurrency(entry.laundryRatePerKg))}</td>
+                                <td class="text-right font-bold text-rose-600">${escapeHtml(this.formatCurrency(entry.amount))}</td>
+                                <td class="text-right whitespace-nowrap">
+                                    <div class="inline-flex justify-end gap-1.5">
+                                        ${this.renderTableActionButton({
+                                            action: "edit-laundry",
+                                            id: entry.id,
+                                            label: t("common.edit"),
+                                            iconClass: "fas fa-pen",
+                                            tone: "primary"
+                                        })}
+                                        ${this.renderTableActionButton({
+                                            action: "delete-laundry",
+                                            id: entry.id,
+                                            label: t("common.delete"),
+                                            iconClass: "fas fa-trash",
+                                            tone: "danger"
+                                        })}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
 
@@ -3701,49 +3703,51 @@ export class CleaningAhManager {
         }
 
         return `
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-500">
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.date"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("tables.property"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("specialCleanings.typeLabel"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("specialCleanings.costLabel"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(this.tr("specialCleanings.descriptionLabel"))}</th>
-                        <th class="px-3 py-2">${escapeHtml(t("common.notes"))}</th>
-                        <th class="px-3 py-2 text-right">${escapeHtml(this.tr("tables.actions"))}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${records.map((record) => `
-                        <tr class="border-b border-slate-100">
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatDate(record.date))}</td>
-                            <td class="px-3 py-3 text-sm font-medium text-slate-900">${escapeHtml(record.propertyName)}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.getSpecialCleaningTypeLabel(record.specialType))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(this.formatCurrency(record.cost || 0))}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.description || "—")}</td>
-                            <td class="px-3 py-3 text-sm text-slate-600">${escapeHtml(record.notes || "—")}</td>
-                            <td class="px-3 py-3 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-2">
-                                    ${this.renderTableActionButton({
-                                        action: "edit-special-cleaning",
-                                        id: record.id,
-                                        label: t("common.edit"),
-                                        iconClass: "fas fa-pen",
-                                        tone: "primary"
-                                    })}
-                                    ${this.renderTableActionButton({
-                                        action: "delete-special-cleaning",
-                                        id: record.id,
-                                        label: t("common.delete"),
-                                        iconClass: "fas fa-trash",
-                                        tone: "danger"
-                                    })}
-                                </div>
-                            </td>
+            <div class="cleaning-ah-table-container">
+                <table class="cleaning-ah-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">${escapeHtml(this.tr("tables.date"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("tables.property"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("specialCleanings.typeLabel"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("specialCleanings.costLabel"))}</th>
+                            <th class="text-left">${escapeHtml(this.tr("specialCleanings.descriptionLabel"))}</th>
+                            <th class="text-left">${escapeHtml(t("common.notes"))}</th>
+                            <th class="text-right">${escapeHtml(this.tr("tables.actions"))}</th>
                         </tr>
-                    `).join("")}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${records.map((record) => `
+                            <tr>
+                                <td class="text-xs text-slate-500 font-medium whitespace-nowrap">${escapeHtml(this.formatDate(record.date))}</td>
+                                <td class="font-semibold text-slate-900">${escapeHtml(record.propertyName)}</td>
+                                <td><span class="cleaning-ah-pill cleaning-ah-pill--checkout">${escapeHtml(this.getSpecialCleaningTypeLabel(record.specialType))}</span></td>
+                                <td class="text-right font-bold text-slate-900">${escapeHtml(this.formatCurrency(record.cost || 0))}</td>
+                                <td class="text-xs text-slate-600">${escapeHtml(record.description || "—")}</td>
+                                <td class="text-xs text-slate-500">${escapeHtml(record.notes || "—")}</td>
+                                <td class="text-right whitespace-nowrap">
+                                    <div class="inline-flex justify-end gap-1.5">
+                                        ${this.renderTableActionButton({
+                                            action: "edit-special-cleaning",
+                                            id: record.id,
+                                            label: t("common.edit"),
+                                            iconClass: "fas fa-pen",
+                                            tone: "primary"
+                                        })}
+                                        ${this.renderTableActionButton({
+                                            action: "delete-special-cleaning",
+                                            id: record.id,
+                                            label: t("common.delete"),
+                                            iconClass: "fas fa-trash",
+                                            tone: "danger"
+                                        })}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
 

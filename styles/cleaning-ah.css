@@ -1,0 +1,413 @@
+/* ==========================================================================
+   Cleaning AH - Asana Style Theme
+   ========================================================================== */
+
+#cleaning-ah-page {
+    --cleaning-accent: #ef5b6c;
+    --cleaning-accent-hover: #dd4c5f;
+    --cleaning-accent-soft: rgba(239, 91, 108, 0.1);
+    --cleaning-ink: #1f2328;
+    --cleaning-muted: #656d76;
+    --cleaning-line: #e1e4e8;
+    --cleaning-surface: #ffffff;
+    --cleaning-surface-subtle: #f6f8fa;
+    --cleaning-surface-hover: #f3f4f6;
+    --cleaning-input-bg: #f6f8fa;
+    --cleaning-green: #1a7f37;
+    --cleaning-green-soft: #dafbe1;
+    --cleaning-sky: #0969da;
+    --cleaning-sky-soft: #ddf4ff;
+    color: var(--cleaning-ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background-color: #fafbfc;
+}
+
+#cleaning-ah-page.hidden {
+    display: none !important;
+}
+
+#cleaning-ah-page button,
+#cleaning-ah-page input,
+#cleaning-ah-page textarea,
+#cleaning-ah-page select {
+    font: inherit;
+}
+
+#cleaning-ah-page button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Header & Project Branding */
+.cleaning-ah-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--cleaning-line);
+}
+
+.cleaning-ah-project-badge {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ef5b6c 0%, #e03b50 100%);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(239, 91, 108, 0.25);
+    flex-shrink: 0;
+}
+
+.cleaning-ah-project-badge svg,
+.cleaning-ah-project-badge i {
+    font-size: 18px;
+    width: 20px;
+    height: 20px;
+}
+
+/* Asana Underline View Tabs */
+.cleaning-ah-tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 24px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--cleaning-line);
+    overflow-x: auto;
+}
+
+.cleaning-ah-tab-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cleaning-muted);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 140ms ease, border-color 140ms ease;
+}
+
+.cleaning-ah-tab-btn:hover {
+    color: var(--cleaning-ink);
+    border-bottom-color: #d0d7de;
+}
+
+.cleaning-ah-tab-btn.is-active {
+    color: var(--cleaning-ink);
+    font-weight: 650;
+    border-bottom-color: var(--cleaning-accent);
+}
+
+.cleaning-ah-tab-btn .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    background: var(--cleaning-accent);
+    border-radius: 999px;
+    line-height: 1;
+}
+
+/* Asana Toolbar / Filters */
+.cleaning-ah-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: #ffffff;
+    border: 1px solid var(--cleaning-line);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.cleaning-ah-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 220px;
+}
+
+.cleaning-ah-search-box svg {
+    position: absolute;
+    left: 12px;
+    width: 15px;
+    height: 15px;
+    color: #8c959f;
+    pointer-events: none;
+}
+
+.cleaning-ah-search-box input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 34px;
+    font-size: 13px;
+    color: var(--cleaning-ink);
+    background: var(--cleaning-input-bg);
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    outline: none;
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-ah-search-box input:focus {
+    background: #ffffff;
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-ah-select {
+    height: 36px;
+    padding: 0 28px 0 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cleaning-ink);
+    background: var(--cleaning-input-bg);
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.cleaning-ah-select:hover {
+    background: #ffffff;
+    border-color: #afb8c1;
+}
+
+.cleaning-ah-select:focus {
+    background: #ffffff;
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+/* Asana Cards & KPI Widgets */
+.cleaning-ah-card {
+    background: #ffffff;
+    border: 1px solid var(--cleaning-line);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.cleaning-ah-card:hover {
+    border-color: #d0d7de;
+}
+
+.cleaning-ah-card--accent {
+    border-color: rgba(239, 91, 108, 0.35);
+    background: linear-gradient(180deg, #ffffff 0%, #fff7f8 100%);
+}
+
+.cleaning-ah-card--profit {
+    border: 2px solid #34d399;
+    background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
+}
+
+.cleaning-ah-card-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cleaning-muted);
+}
+
+.cleaning-ah-card-value {
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    color: var(--cleaning-ink);
+    line-height: 1.2;
+}
+
+/* Asana Action Buttons */
+.cleaning-ah-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--cleaning-accent);
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(120, 30, 43, 0.15);
+    cursor: pointer;
+    transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-ah-btn-primary:hover {
+    background: var(--cleaning-accent-hover);
+    box-shadow: 0 3px 8px rgba(239, 91, 108, 0.25);
+    transform: translateY(-1px);
+}
+
+.cleaning-ah-btn-primary:active {
+    transform: scale(0.98);
+}
+
+.cleaning-ah-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cleaning-ink);
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.cleaning-ah-btn-secondary:hover {
+    background: #f6f8fa;
+    border-color: #afb8c1;
+}
+
+/* Asana Segmented View Switcher */
+.cleaning-ah-segmented-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: #eaecef;
+    border-radius: 11px;
+}
+
+.cleaning-ah-segmented-control button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cleaning-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-ah-segmented-control button:hover {
+    color: var(--cleaning-ink);
+}
+
+.cleaning-ah-segmented-control button.is-active {
+    color: var(--cleaning-ink);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Asana List Table */
+.cleaning-ah-table-container {
+    background: #ffffff;
+    border: 1px solid var(--cleaning-line);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.cleaning-ah-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.cleaning-ah-table thead {
+    background: #fafafa;
+    border-bottom: 1px solid var(--cleaning-line);
+}
+
+.cleaning-ah-table th {
+    padding: 11px 16px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--cleaning-muted);
+    border-bottom: 1px solid var(--cleaning-line);
+    white-space: nowrap;
+}
+
+.cleaning-ah-table td {
+    padding: 12px 16px;
+    color: var(--cleaning-ink);
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+}
+
+.cleaning-ah-table tbody tr {
+    transition: background-color 120ms ease;
+}
+
+.cleaning-ah-table tbody tr:hover {
+    background: #fbfbfc;
+}
+
+.cleaning-ah-table tfoot td {
+    padding: 13px 16px;
+    font-weight: 700;
+    background: #fafafa;
+    border-top: 2px solid var(--cleaning-line);
+    border-bottom: 0;
+}
+
+/* Category & Status Badges */
+.cleaning-ah-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.cleaning-ah-pill--checkout {
+    color: #1e40af;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.cleaning-ah-pill--direct {
+    color: #065f46;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+
+.cleaning-ah-pill--platform {
+    color: #9d174d;
+    background: #fdf2f8;
+    border: 1px solid #fbcfe8;
+}
+
+.cleaning-ah-pill--owner {
+    color: #854d0e;
+    background: #fefce8;
+    border: 1px solid #fef08a;
+}
