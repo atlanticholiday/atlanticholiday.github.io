@@ -36,7 +36,7 @@ describe("PWA", () => {
     assert.includes(serviceWorker, 'addEventListener("install"', "Service worker is missing install handler");
     assert.includes(serviceWorker, 'addEventListener("activate"', "Service worker is missing activate handler");
     assert.includes(serviceWorker, 'addEventListener("fetch"', "Service worker is missing fetch handler");
-    assert.includes(serviceWorker, '"./styles/theme.css?v=20260829-black-theme"', "Service worker is missing black theme styles");
+    assert.includes(serviceWorker, '"./styles/theme.css?v=20260829-dark-controls"', "Service worker is missing black theme styles");
     assert.includes(serviceWorker, '"./js/core/theme-manager.js"', "Service worker is missing the theme manager");
   });
 });

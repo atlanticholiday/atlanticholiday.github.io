@@ -5560,8 +5560,8 @@ header h1, header h2, header h3 {
 }
 
 #landing-page .dashboard-logo--xl {
-    width: 68px !important;
-    height: 68px !important;
+    width: 112px !important;
+    height: 44px !important;
 }
 
 #landing-page .header-title {
@@ -5592,8 +5592,8 @@ header h1, header h2, header h3 {
     }
 
     #landing-page .dashboard-logo--xl {
-        width: 52px !important;
-        height: 52px !important;
+        width: 88px !important;
+        height: 36px !important;
     }
 
     #landing-page .header-title {

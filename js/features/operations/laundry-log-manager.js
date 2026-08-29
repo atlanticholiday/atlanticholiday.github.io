@@ -306,7 +306,7 @@ export class LaundryLogManager {
                             </div>
                         </div>
                         <div id="laundry-log-header-actions" class="flex items-center gap-3 self-start md:self-auto">
-                            <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
+                            <div class="language-switcher inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
                                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
                                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
                             </div>
@@ -352,6 +352,7 @@ export class LaundryLogManager {
         this.updateStaticCopy();
         i18n.setupLanguageSwitcher?.();
         i18n.updateLanguageSwitcher?.();
+        window.ThemeManager?.mountControls?.();
         this.syncAccessVisibility();
     }
 

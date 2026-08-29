@@ -132,6 +132,7 @@
     window.ThemeManager = Object.freeze({
         applyTheme,
         getTheme,
+        mountControls,
         toggleTheme
     });
 }());

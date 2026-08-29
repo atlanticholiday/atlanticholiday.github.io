@@ -1,4 +1,4 @@
-const CACHE_NAME = "horario-pwa-v12-black-theme";
+const CACHE_NAME = "horario-pwa-v13-dark-controls";
 
 const APP_SHELL_URLS = [
   "./",
@@ -17,7 +17,7 @@ const APP_SHELL_URLS = [
   "./styles/reservations-enhanced.css",
   "./styles/fullcalendar.css",
   "./styles/tasks.css",
-  "./styles/theme.css?v=20260829-black-theme",
+  "./styles/theme.css?v=20260829-dark-controls",
   "./js/core/theme-manager.js",
   "./locales/en.json",
   "./locales/pt.json"

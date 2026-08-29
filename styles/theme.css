@@ -164,6 +164,10 @@ html[data-theme="dark"] :is(.bg-gray-50, .bg-slate-50) {
     background-color: var(--theme-canvas) !important;
 }
 
+html[data-theme="dark"] :is(.bg-stone-50, #laundry-log-page) {
+    background-color: var(--theme-canvas) !important;
+}
+
 html[data-theme="dark"] :is(.bg-gray-100, .bg-slate-100, .bg-gray-200, .bg-slate-200) {
     background-color: var(--theme-surface-muted) !important;
 }
@@ -283,6 +287,85 @@ html[data-theme="dark"] :is(.user-management-inspector-option label, .user-manag
 
 html[data-theme="dark"] :is(.user-management-inspector-option label span, .user-management-app-option label) {
     color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(
+    .app-switcher-trigger,
+    .landing-search-btn,
+    .landing-sign-out-btn,
+    .quick-search-trigger
+) {
+    border-color: var(--theme-border) !important;
+    background: var(--theme-surface-raised) !important;
+    color: #e4e4e7 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] :is(
+    .app-switcher-trigger:hover,
+    .app-switcher-trigger[aria-expanded="true"],
+    .landing-search-btn:hover,
+    .landing-sign-out-btn:hover,
+    .quick-search-trigger:hover
+) {
+    border-color: rgba(233, 75, 90, 0.42) !important;
+    background: #2a2529 !important;
+    color: #fb7185 !important;
+}
+
+html[data-theme="dark"] :is(.landing-search-btn kbd, .quick-search-trigger kbd, .quick-search-footer kbd) {
+    border-color: #52525b !important;
+    background: #111114 !important;
+    color: #d4d4d8 !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-panel, .quick-search-panel) {
+    border-color: var(--theme-border) !important;
+    background: var(--theme-surface) !important;
+    color: var(--theme-text) !important;
+    box-shadow: 0 28px 72px rgba(0, 0, 0, 0.58) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-panel__header, .app-switcher-dashboard-link, .quick-search-footer) {
+    border-color: var(--theme-border) !important;
+    background: rgba(24, 24, 27, 0.97) !important;
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-search, .quick-search-input-row, .quick-search-close) {
+    border-color: var(--theme-border) !important;
+    background: #111114 !important;
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-search input[type="search"], .quick-search-input-row input) {
+    background: transparent !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-item, .app-switcher-close, .app-switcher-dashboard-link) {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-item:hover, .app-switcher-close:hover, .quick-search-result:hover, .quick-search-result.is-active) {
+    background: var(--theme-surface-muted) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-item__copy strong, .quick-search-result-main strong, .quick-search-empty strong) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(.app-switcher-item__copy small, .quick-search-result-main small, .quick-search-empty span) {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] #laundry-log-page :is(#laundry-log-header-title, #laundry-log-header-subtitle, #back-to-landing-from-laundry-log-btn) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] #laundry-log-page #laundry-log-header-subtitle {
+    color: var(--theme-text-muted) !important;
 }
 
 html[data-theme="dark"] .theme-toggle {
