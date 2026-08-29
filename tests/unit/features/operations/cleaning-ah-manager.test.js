@@ -1454,4 +1454,78 @@ describe("CleaningAhManager", () => {
     i18n.currentLang = previousLang;
     resetDom();
   });
+
+  test("groups cleanings by month with count and net sums for Asana section view", () => {
+    const manager = new CleaningAhManager(null);
+    const records = [
+      { id: "c1", monthKey: "2026-04", date: "2026-04-10", guestAmount: 100, effectiveTotalToAh: 68 },
+      { id: "c2", monthKey: "2026-04", date: "2026-04-15", guestAmount: 120, effectiveTotalToAh: 82 },
+      { id: "c3", monthKey: "2026-03", date: "2026-03-20", guestAmount: 90, effectiveTotalToAh: 60 }
+    ];
+
+    const groups = manager.groupCleaningsByMonth(records);
+    assert.equal(groups.length, 2);
+    assert.equal(groups[0].monthKey, "2026-04");
+    assert.equal(groups[0].records.length, 2);
+    assert.equal(groups[0].netSum, 150);
+    assert.equal(groups[0].guestSum, 220);
+
+    assert.equal(groups[1].monthKey, "2026-03");
+    assert.equal(groups[1].records.length, 1);
+    assert.equal(groups[1].netSum, 60);
+  });
+
+  test("opens and closes Asana slide-over drawer for cleanings, laundry, and special cleanings", () => {
+    resetDom();
+    const manager = new CleaningAhManager(null);
+    manager.cleaningRecords = [
+      { id: "c-100", propertyName: "Acqua Beach", date: "2026-04-05", guestAmount: 110, category: "Limpeza check-out", notes: "First clean" }
+    ];
+    manager.laundryRecords = [
+      { id: "l-100", propertyName: "Sunset Villa", date: "2026-04-06", quantity: 2, kg: 10, laundryRatePerKg: 2.3, notes: "Towels" }
+    ];
+    manager.specialCleaningRecords = [
+      { id: "s-100", propertyName: "Ocean View", date: "2026-04-07", specialType: "deep", cost: 150, description: "Full spring clean", notes: "" }
+    ];
+
+    // Open cleaning drawer for edit
+    manager.openCleaningDrawer("c-100");
+    assert.equal(manager.activeDrawer.type, "cleaning");
+    assert.equal(manager.activeDrawer.id, "c-100");
+    assert.equal(manager.editingCleaningId, "c-100");
+    assert.equal(manager.cleaningDraft.propertyName, "Acqua Beach");
+
+    let drawerHtml = manager.renderSlideOverDrawer();
+    assert.includes(drawerHtml, "data-cleaning-detail");
+    assert.includes(drawerHtml, "cleaning-detail is-open");
+    assert.includes(drawerHtml, "Acqua Beach");
+
+    // Close drawer
+    manager.closeDrawer();
+    assert.equal(manager.activeDrawer, null);
+    assert.equal(manager.editingCleaningId, null);
+
+    // Open laundry drawer for new
+    manager.openLaundryDrawer(null, { propertyName: "Test Prop" });
+    assert.equal(manager.activeDrawer.type, "laundry");
+    assert.equal(manager.activeDrawer.id, null);
+    assert.equal(manager.laundryDraft.propertyName, "Test Prop");
+
+    drawerHtml = manager.renderSlideOverDrawer();
+    assert.includes(drawerHtml, "cleaning-detail is-open");
+    assert.includes(drawerHtml, "Test Prop");
+
+    // Open special cleaning drawer
+    manager.openSpecialCleaningDrawer("s-100");
+    assert.equal(manager.activeDrawer.type, "special");
+    assert.equal(manager.editingSpecialCleaningId, "s-100");
+
+    drawerHtml = manager.renderSlideOverDrawer();
+    assert.includes(drawerHtml, "Full spring clean");
+
+    manager.closeDrawer();
+    assert.equal(manager.activeDrawer, null);
+    resetDom();
+  });
 });
+

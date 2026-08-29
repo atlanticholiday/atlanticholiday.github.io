@@ -130,7 +130,7 @@ export class CleaningAhManager {
         this.laundryUnsubscribe = null;
         this.specialCleaningUnsubscribe = null;
 
-        this.activeTab = "register";
+        this.activeTab = "cleanings";
         this.searchQuery = "";
         this.selectedMonthKey = "";
         this.selectedPropertyName = "";
@@ -139,6 +139,8 @@ export class CleaningAhManager {
         this.statsPropertySort = "net-desc";
         this.statsSelectedPropertyName = "";
         this.statsViewMode = "month";
+        this.activeDrawer = null;
+        this.collapsedSections = new Set();
         this.calendarDate = getTodayIsoDate();
         this.cleaningRegisterFilter = "all";
         this.cleaningRegisterSort = "date-desc";
@@ -1371,24 +1373,6 @@ export class CleaningAhManager {
 
         root.innerHTML = `
             ${this.renderStatusMessage()}
-            ${this.activeTab !== "stats" ? `
-                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-600">${escapeHtml(this.tr("formula.kicker"))}</div>
-                        <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("formula.title"))}</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">${escapeHtml(this.tr("formula.body"))}</p>
-                    </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-                        ${this.renderMetricCard(this.tr("metrics.checkOuts"), String(cleaningSummary.totals.count), "compact")}
-                        ${this.renderMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(cleaningSummary.totals.guestAmount), "compact")}
-                        ${this.renderMetricCard(this.tr("metrics.platformFees"), this.formatCurrency(cleaningSummary.totals.platformCommission), "compact")}
-                        ${this.renderMetricCard(this.tr("metrics.vat"), this.formatCurrency(cleaningSummary.totals.vatAmount), "compact")}
-                        ${this.renderMetricCard(this.tr("metrics.netToAh"), this.formatCurrency(cleaningSummary.totals.totalToAh), "compact")}
-                    </div>
-                </section>
-            ` : ""}
-
-            ${this.renderFilters()}
             ${this.renderTabBar()}
             ${this.renderActiveTab(
                 visibleCleaningRegisterEntries,
@@ -1404,6 +1388,7 @@ export class CleaningAhManager {
                 selectedStatsPropertyDetail,
                 allDerivedCleanings
             )}
+            ${this.renderSlideOverDrawer()}
             ${this.renderHeatmapDetailModal(statsCleaningSummary.records)}
             ${this.renderExportReportModal(statsCleaningSummary.records, laundrySummary)}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
@@ -1418,6 +1403,236 @@ export class CleaningAhManager {
             document.getElementById(this.focusAfterRender)?.focus();
             this.focusAfterRender = "";
         }
+    }
+
+    renderSlideOverDrawer() {
+        if (!this.activeDrawer) {
+            return `<div class="cleaning-detail-overlay" data-action="close-drawer"></div><aside class="cleaning-detail" data-cleaning-detail aria-hidden="true"></aside>`;
+        }
+
+        const { type, id } = this.activeDrawer;
+        const isEditing = Boolean(id);
+
+        if (type === "cleaning") {
+            const draft = this.cleaningDraft;
+            const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
+            const categoryOptions = this.getKnownCategories()
+                .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === categoryKey ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
+                .join("");
+            const isPlatform = (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform) === CLEANING_AH_RESERVATION_SOURCES.platform;
+            const guestAmountNum = Number(draft.guestAmount) || 0;
+            const commission = isPlatform ? roundCurrency(guestAmountNum * 0.155) : 0;
+            const vat = isPlatform ? roundCurrency((guestAmountNum - commission) * 0.22 / 1.22) : roundCurrency(guestAmountNum * 0.22 / 1.22);
+            const netAh = roundCurrency(guestAmountNum - commission - vat);
+
+            return `
+                <div class="cleaning-detail-overlay is-open" data-action="close-drawer"></div>
+                <aside class="cleaning-detail is-open" data-cleaning-detail aria-hidden="false">
+                    <div class="cleaning-detail__topbar">
+                        <h3>${isEditing ? escapeHtml(this.tr("cleanings.editTitle") || "Detalhes da Limpeza") : escapeHtml(this.tr("cleanings.addTitle") || "Nova Limpeza")}</h3>
+                        <div class="cleaning-detail__actions">
+                            ${isEditing ? `
+                                <button type="button" class="cleaning-detail__close-btn text-rose-600 hover:bg-rose-50" data-action="drawer-delete-cleaning" data-id="${escapeHtml(id)}" title="${escapeHtml(t("common.delete"))}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ""}
+                            <button type="button" class="cleaning-detail__close-btn" data-action="close-drawer" title="Fechar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <form id="cleaning-ah-drawer-cleaning-form" class="cleaning-detail__scroll space-y-5">
+                        <div class="cleaning-detail__metadata">
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.property"))}</label>
+                                <input type="text" name="propertyName" class="cleaning-metadata-input" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.cleaningDate"))}</label>
+                                <input type="date" name="date" class="cleaning-metadata-input" value="${escapeHtml(draft.date)}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.category"))}</label>
+                                <select name="categoryKey" class="cleaning-metadata-select">
+                                    ${categoryOptions}
+                                </select>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.reservationSource"))}</label>
+                                <select name="reservationSource" class="cleaning-metadata-select" ${this.categoryUsesReservationSource(categoryKey) ? "" : "disabled"}>
+                                    <option value="platform" ${draft.reservationSource === "platform" ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.platform"))}</option>
+                                    <option value="direct" ${draft.reservationSource === "direct" ? "selected" : ""}>${escapeHtml(this.tr("reservationSources.direct"))}</option>
+                                </select>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</label>
+                                <input type="number" name="guestAmount" class="cleaning-metadata-input" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.guestAmount))}" placeholder="0.00" required>
+                            </div>
+                        </div>
+
+                        <!-- Live Calculation Card -->
+                        <div class="cleaning-detail__live-calc">
+                            <h4>${escapeHtml(this.tr("formula.title") || "Cálculo Líquido AH")}</h4>
+                            <div class="cleaning-detail__live-calc-grid">
+                                <div class="cleaning-calc-box">
+                                    <small>${escapeHtml(this.tr("metrics.platformFees"))}</small>
+                                    <strong class="text-rose-600">-${escapeHtml(this.formatCurrency(commission))}</strong>
+                                </div>
+                                <div class="cleaning-calc-box">
+                                    <small>${escapeHtml(this.tr("metrics.vat"))}</small>
+                                    <strong class="text-rose-600">-${escapeHtml(this.formatCurrency(vat))}</strong>
+                                </div>
+                                <div class="cleaning-calc-box bg-emerald-50 border-emerald-200">
+                                    <small class="text-emerald-800">${escapeHtml(this.tr("metrics.netToAh"))}</small>
+                                    <strong class="text-emerald-700">${escapeHtml(this.formatCurrency(netAh))}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">${escapeHtml(t("common.notes"))}</label>
+                            <textarea name="notes" class="cleaning-detail__textarea" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
+                        </div>
+                    </form>
+                    <div class="cleaning-detail__footer">
+                        <button type="button" class="cleaning-btn-secondary text-xs" data-action="close-drawer">${escapeHtml(this.tr("actions.cancelEdit") || "Cancelar")}</button>
+                        <button type="submit" form="cleaning-ah-drawer-cleaning-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveCleaning") || "Guardar")}</button>
+                    </div>
+                </aside>
+            `;
+        }
+
+        if (type === "laundry") {
+            const draft = this.laundryDraft;
+            const quantity = Number(draft.quantity) || 1;
+            const kg = Number(draft.kg) || 0;
+            const rate = Number(draft.laundryRatePerKg) || CLEANING_AH_DEFAULTS.laundryRatePerKg;
+            const total = roundCurrency(kg > 0 ? kg * rate : quantity * rate);
+
+            return `
+                <div class="cleaning-detail-overlay is-open" data-action="close-drawer"></div>
+                <aside class="cleaning-detail is-open" data-cleaning-detail aria-hidden="false">
+                    <div class="cleaning-detail__topbar">
+                        <h3>${isEditing ? "Detalhes da Lavandaria" : "Nova Lavandaria"}</h3>
+                        <div class="cleaning-detail__actions">
+                            ${isEditing ? `
+                                <button type="button" class="cleaning-detail__close-btn text-rose-600 hover:bg-rose-50" data-action="drawer-delete-laundry" data-id="${escapeHtml(id)}" title="${escapeHtml(t("common.delete"))}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ""}
+                            <button type="button" class="cleaning-detail__close-btn" data-action="close-drawer" title="Fechar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <form id="cleaning-ah-drawer-laundry-form" class="cleaning-detail__scroll space-y-5">
+                        <div class="cleaning-detail__metadata">
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.property"))}</label>
+                                <input type="text" name="propertyName" class="cleaning-metadata-input" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("tables.laundryReceivedDate"))}</label>
+                                <input type="date" name="date" class="cleaning-metadata-input" value="${escapeHtml(draft.date)}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("tables.quantity") || "Quantidade")}</label>
+                                <input type="number" name="quantity" class="cleaning-metadata-input" min="1" step="1" value="${escapeHtml(draft.quantity || "1")}">
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("metrics.kg"))}</label>
+                                <input type="number" name="kg" class="cleaning-metadata-input" min="0" step="0.01" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0.00">
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("tables.ratePerKg"))}</label>
+                                <input type="number" name="laundryRatePerKg" class="cleaning-metadata-input" min="0" step="0.01" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" placeholder="2.30">
+                            </div>
+                        </div>
+
+                        <!-- Total Expense Box -->
+                        <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <small class="text-xs font-semibold uppercase tracking-wider text-rose-700">Despesa Total de Lavandaria</small>
+                                <div class="text-xl font-bold text-rose-800">${escapeHtml(this.formatCurrency(total))}</div>
+                            </div>
+                            <i class="fas fa-tshirt text-2xl text-rose-300"></i>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">${escapeHtml(t("common.notes"))}</label>
+                            <textarea name="notes" class="cleaning-detail__textarea" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
+                        </div>
+                    </form>
+                    <div class="cleaning-detail__footer">
+                        <button type="button" class="cleaning-btn-secondary text-xs" data-action="close-drawer">${escapeHtml(this.tr("actions.cancelEdit") || "Cancelar")}</button>
+                        <button type="submit" form="cleaning-ah-drawer-laundry-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveLaundry") || "Guardar")}</button>
+                    </div>
+                </aside>
+            `;
+        }
+
+        if (type === "special") {
+            const draft = this.specialCleaningDraft;
+            const typeOptions = this.getSpecialCleaningTypeOptions()
+                .map(([key, label]) => `<option value="${escapeHtml(key)}" ${key === draft.specialType ? "selected" : ""}>${escapeHtml(label)}</option>`)
+                .join("");
+
+            return `
+                <div class="cleaning-detail-overlay is-open" data-action="close-drawer"></div>
+                <aside class="cleaning-detail is-open" data-cleaning-detail aria-hidden="false">
+                    <div class="cleaning-detail__topbar">
+                        <h3>${isEditing ? escapeHtml(this.tr("specialCleanings.editTitle") || "Detalhes da Limpeza Especial") : escapeHtml(this.tr("specialCleanings.addTitle") || "Nova Limpeza Especial")}</h3>
+                        <div class="cleaning-detail__actions">
+                            ${isEditing ? `
+                                <button type="button" class="cleaning-detail__close-btn text-rose-600 hover:bg-rose-50" data-action="drawer-delete-special" data-id="${escapeHtml(id)}" title="${escapeHtml(t("common.delete"))}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ""}
+                            <button type="button" class="cleaning-detail__close-btn" data-action="close-drawer" title="Fechar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <form id="cleaning-ah-drawer-special-form" class="cleaning-detail__scroll space-y-5">
+                        <div class="cleaning-detail__metadata">
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.property"))}</label>
+                                <input type="text" name="propertyName" class="cleaning-metadata-input" value="${escapeHtml(draft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("forms.date"))}</label>
+                                <input type="date" name="date" class="cleaning-metadata-input" value="${escapeHtml(draft.date)}" required>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("specialCleanings.typeLabel"))}</label>
+                                <select name="specialType" class="cleaning-metadata-select">
+                                    ${typeOptions}
+                                </select>
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("specialCleanings.costLabel"))}</label>
+                                <input type="number" name="cost" class="cleaning-metadata-input" step="0.01" min="0" value="${escapeHtml(toInputNumber(draft.cost))}" placeholder="0.00">
+                            </div>
+                            <div class="cleaning-metadata-field">
+                                <label>${escapeHtml(this.tr("specialCleanings.descriptionLabel"))}</label>
+                                <input type="text" name="description" class="cleaning-metadata-input" value="${escapeHtml(draft.description)}" placeholder="${escapeHtml(this.tr("specialCleanings.descriptionPlaceholder"))}">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">${escapeHtml(t("common.notes"))}</label>
+                            <textarea name="notes" class="cleaning-detail__textarea" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(draft.notes)}</textarea>
+                        </div>
+                    </form>
+                    <div class="cleaning-detail__footer">
+                        <button type="button" class="cleaning-btn-secondary text-xs" data-action="close-drawer">${escapeHtml(this.tr("actions.cancelEdit") || "Cancelar")}</button>
+                        <button type="submit" form="cleaning-ah-drawer-special-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveSpecialCleaning") || "Guardar")}</button>
+                    </div>
+                </aside>
+            `;
+        }
+
+        return "";
     }
 
     renderStatusMessage() {
@@ -2863,78 +3078,301 @@ export class CleaningAhManager {
         `;
     }
 
+    groupCleaningsByMonth(records = []) {
+        const map = new Map();
+        records.forEach((record) => {
+            const monthKey = record.monthKey || (record.date ? record.date.slice(0, 7) : "unknown");
+            if (!map.has(monthKey)) {
+                map.set(monthKey, { monthKey, records: [], netSum: 0, guestSum: 0 });
+            }
+            const group = map.get(monthKey);
+            group.records.push(record);
+            group.netSum = roundCurrency(group.netSum + (record.effectiveTotalToAh ?? record.totalToAh ?? 0));
+            group.guestSum = roundCurrency(group.guestSum + (record.guestAmount ?? 0));
+        });
+        return Array.from(map.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    }
+
+    groupLaundryByMonth(records = []) {
+        const map = new Map();
+        records.forEach((record) => {
+            const monthKey = record.monthKey || (record.date ? record.date.slice(0, 7) : "unknown");
+            if (!map.has(monthKey)) {
+                map.set(monthKey, { monthKey, records: [], amountSum: 0, kgSum: 0, qtySum: 0 });
+            }
+            const group = map.get(monthKey);
+            group.records.push(record);
+            group.amountSum = roundCurrency(group.amountSum + (record.amount || 0));
+            group.kgSum = roundCurrency(group.kgSum + (record.kg || 0));
+            group.qtySum += (record.quantity || 1);
+        });
+        return Array.from(map.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    }
+
+    groupSpecialCleaningsByMonth(records = []) {
+        const map = new Map();
+        records.forEach((record) => {
+            const monthKey = record.monthKey || (record.date ? record.date.slice(0, 7) : "unknown");
+            if (!map.has(monthKey)) {
+                map.set(monthKey, { monthKey, records: [], costSum: 0 });
+            }
+            const group = map.get(monthKey);
+            group.records.push(record);
+            group.costSum = roundCurrency(group.costSum + (record.cost || 0));
+        });
+        return Array.from(map.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    }
+
+    openCleaningDrawer(recordId = null, defaults = {}) {
+        if (recordId) {
+            const record = this.cleaningRecords.find((r) => r.id === recordId);
+            if (record) {
+                this.editingCleaningId = record.id;
+                this.cleaningDraft = {
+                    id: record.id,
+                    date: record.date || getTodayIsoDate(),
+                    propertyName: record.propertyName || "",
+                    categoryKey: this.getCleaningCategoryKey(record.categoryKey || record.category),
+                    reservationSource: this.getCleaningReservationSource(record),
+                    guestAmount: toInputNumber(record.guestAmount),
+                    notes: record.notes || ""
+                };
+                this.activeDrawer = { type: "cleaning", id: record.id };
+                this.render();
+                return;
+            }
+        }
+        this.editingCleaningId = null;
+        this.cleaningDraft = {
+            ...this.createDefaultCleaningDraft(),
+            date: defaults.date || (defaults.month ? `${defaults.month}-01` : getTodayIsoDate()),
+            propertyName: defaults.propertyName || ""
+        };
+        this.activeDrawer = { type: "cleaning", id: null };
+        this.render();
+    }
+
+    openLaundryDrawer(recordId = null, defaults = {}) {
+        if (recordId) {
+            const record = this.laundryRecords.find((r) => r.id === recordId);
+            if (record) {
+                this.editingLaundryId = record.id;
+                this.laundryDraft = {
+                    id: record.id,
+                    date: record.date || getTodayIsoDate(),
+                    propertyName: record.propertyName || "",
+                    quantity: String(record.quantity ?? 1),
+                    kg: toInputNumber(record.kg),
+                    laundryRatePerKg: toInputNumber(record.laundryRatePerKg || this.getLaundryRateForProperty(record.propertyName)),
+                    notes: record.notes || ""
+                };
+                this.activeDrawer = { type: "laundry", id: record.id };
+                this.render();
+                return;
+            }
+        }
+        this.editingLaundryId = null;
+        this.laundryDraft = {
+            ...this.createDefaultLaundryDraft(),
+            date: defaults.date || (defaults.month ? `${defaults.month}-01` : getTodayIsoDate()),
+            propertyName: defaults.propertyName || ""
+        };
+        this.activeDrawer = { type: "laundry", id: null };
+        this.render();
+    }
+
+    openSpecialCleaningDrawer(recordId = null, defaults = {}) {
+        if (recordId) {
+            const record = this.specialCleaningRecords.find((r) => r.id === recordId);
+            if (record) {
+                this.editingSpecialCleaningId = record.id;
+                this.specialCleaningDraft = {
+                    id: record.id,
+                    date: record.date || getTodayIsoDate(),
+                    propertyName: record.propertyName || "",
+                    specialType: record.specialType || "deep",
+                    cost: toInputNumber(record.cost),
+                    description: record.description || "",
+                    notes: record.notes || ""
+                };
+                this.activeDrawer = { type: "special", id: record.id };
+                this.render();
+                return;
+            }
+        }
+        this.editingSpecialCleaningId = null;
+        this.specialCleaningDraft = {
+            ...this.createDefaultSpecialCleaningDraft(),
+            date: defaults.date || (defaults.month ? `${defaults.month}-01` : getTodayIsoDate()),
+            propertyName: defaults.propertyName || ""
+        };
+        this.activeDrawer = { type: "special", id: null };
+        this.render();
+    }
+
+    closeDrawer() {
+        this.activeDrawer = null;
+        this.editingCleaningId = null;
+        this.editingLaundryId = null;
+        this.editingSpecialCleaningId = null;
+        this.render();
+    }
+
     renderCleaningsTab(filteredCleanings) {
-        const draft = this.cleaningDraft;
-        const categoryKey = this.getCleaningCategoryKey(draft.categoryKey || draft.category);
-        const categoryLabel = this.getCleaningCategoryLabel(categoryKey);
-        const isEditing = Boolean(this.editingCleaningId);
-        const isBatchMode = !isEditing && this.cleaningEntryMode === "batch";
-        const guestAmountField = this.getCleaningGuestAmountFieldState(draft, {
-            enableSuggestion: !isEditing,
-            excludeRecordId: this.editingCleaningId || "",
-            categoryKey
-        });
-        const previewRecord = createCleaningAhRecord({
-            date: draft.date,
-            propertyName: draft.propertyName,
-            categoryKey,
-            category: categoryLabel,
-            reservationSource: this.categoryUsesReservationSource(categoryKey)
-                ? (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform)
-                : CLEANING_AH_RESERVATION_SOURCES.direct,
-            guestAmount: guestAmountField.numericValue || 0,
-            laundryKg: toOptionalNumber(draft.laundryKg) || 0,
-            laundryAmount: toOptionalNumber(draft.laundryAmount),
-            notes: draft.notes
-        });
-        const batchPreview = this.getCleaningBatchPreview();
+        const groups = this.groupCleaningsByMonth(filteredCleanings);
+        const isBatchMode = this.cleaningEntryMode === "batch";
 
         return `
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
-                <div class="space-y-6">
-                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                            <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">${escapeHtml(this.tr("cleanings.entryKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(isEditing ? this.tr("cleanings.editTitle") : isBatchMode ? this.tr("cleanings.batchTitle") : this.tr("cleanings.addTitle"))}</h3>
-                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isEditing ? this.tr("cleanings.inlineEditHint") : isBatchMode ? this.tr("cleanings.batchDescription") : this.tr("cleanings.description"))}</p>
-                                ${this.renderCleaningEntryModeSwitcher()}
-                            </div>
-                            <div class="flex flex-wrap gap-3 xl:justify-end">
-                                ${isEditing ? `<button type="button" id="cleaning-ah-cancel-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : `
-                                    <button type="submit" form="${isBatchMode ? "cleaning-ah-cleaning-batch-form" : "cleaning-ah-cleaning-form"}" class="view-btn active">${escapeHtml(isBatchMode ? this.tr("actions.saveCleaningBatch") : this.tr("actions.saveCleaning"))}</button>
-                                    <button type="button" id="${isBatchMode ? "cleaning-ah-reset-cleaning-batch-form" : "cleaning-ah-reset-cleaning-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
-                                `}
-                            </div>
+            <div class="space-y-4">
+                <!-- Asana Action Toolbar -->
+                <div class="cleaning-action-toolbar">
+                    <div class="cleaning-toolbar-left">
+                        <button type="button" data-action="open-cleaning-drawer" class="cleaning-btn-create">
+                            <i class="fas fa-plus"></i>
+                            <span>${escapeHtml(this.tr("cleanings.addTitle") || "Adicionar limpeza")}</span>
+                        </button>
+                        <button type="button" data-action="toggle-cleaning-batch-view" class="cleaning-btn-secondary text-xs">
+                            <i class="fas ${isBatchMode ? "fa-list" : "fa-layer-group"} mr-1.5"></i>
+                            <span>${isBatchMode ? "Ver como Lista" : "Entrada em Lote"}</span>
+                        </button>
+                    </div>
+                    <div class="cleaning-toolbar-right">
+                        <div class="relative flex items-center">
+                            <i class="fas fa-search absolute left-3 text-xs text-slate-400"></i>
+                            <input id="cleaning-ah-search" type="search" class="cleaning-search-input" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                         </div>
-                        ${isEditing
-                            ? `<div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">${escapeHtml(this.tr("cleanings.inlineEditHint"))}</div>`
-                            : isBatchMode
-                            ? this.renderCleaningBatchForm(batchPreview)
-                            : this.renderCleaningSingleForm({
-                                draft,
-                                preview: previewRecord,
-                                guestAmountField
-                            })}
-                    </section>
-                    ${this.renderImportBlock()}
+                        <select id="cleaning-ah-month-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
+                            ${this.getMonthOptions().map((m) => `<option value="${m}" ${m === this.selectedMonthKey ? "selected" : ""}>${this.formatMonthKey(m)}</option>`).join("")}
+                        </select>
+                        <select id="cleaning-ah-property-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
+                            ${this.getFilterPropertyNames().map((p) => `<option value="${escapeHtml(p)}" ${normalizeKey(p) === normalizeKey(this.selectedPropertyName) ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
+                        </select>
+                        <select id="cleaning-ah-category-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allCategories"))}</option>
+                            ${this.getKnownCategories().map((c) => `<option value="${escapeHtml(c.key)}" ${c.key === this.selectedCategory ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("")}
+                        </select>
+                    </div>
                 </div>
 
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("cleanings.storedKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("cleanings.storedTitle"))}</h3>
-                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("cleanings.storedDescription"))}</p>
+                ${isBatchMode ? `
+                    <div class="p-6 bg-white border border-[#e1e4e8] rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("cleanings.batchTitle"))}</h3>
+                                <p class="text-xs text-slate-500">${escapeHtml(this.tr("cleanings.batchDescription"))}</p>
+                            </div>
+                            <button type="submit" form="cleaning-ah-cleaning-batch-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveCleaningBatch"))}</button>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(filteredCleanings.length))}</div>
+                        ${this.renderCleaningBatchForm(this.getCleaningBatchPreview())}
                     </div>
-                    ${this.renderCleaningRegisterControls()}
-                    <div class="mt-5 overflow-x-auto">
-                        ${this.renderCleaningsTable(filteredCleanings)}
+                ` : `
+                    <div class="cleaning-list-container border border-[#e1e4e8] rounded-2xl overflow-hidden shadow-sm">
+                        ${this.renderAsanaCleaningsList(groups, filteredCleanings)}
                     </div>
-                </section>
-            </section>
+                `}
+
+                ${this.renderImportBlock()}
+            </div>
+        `;
+    }
+
+    renderAsanaCleaningsList(groups, allFiltered = []) {
+        if (!allFiltered.length) {
+            return `
+                <div class="p-12 text-center text-slate-500">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400 text-lg">
+                        <i class="fas fa-broom"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">${escapeHtml(this.tr("cleanings.empty"))}</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Clique em "+ Adicionar limpeza" para registar a primeira limpeza nesta vista.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="cleaning-list-table">
+                ${groups.map((group) => {
+                    const isCollapsed = this.collapsedSections.has(group.monthKey);
+                    return `
+                        <div class="cleaning-section ${isCollapsed ? "is-collapsed" : ""}">
+                            <div class="cleaning-section__heading" data-action="toggle-section" data-section="${escapeHtml(group.monthKey)}">
+                                <span class="cleaning-section__toggle">
+                                    <i class="fas fa-chevron-down"></i>
+                                </span>
+                                <h2>${escapeHtml(this.formatMonthKey(group.monthKey))}</h2>
+                                <div class="cleaning-section__meta">
+                                    <span>${escapeHtml(this.getRecordsLabel(group.records.length))}</span>
+                                    <span>·</span>
+                                    <span>${escapeHtml(this.tr("metrics.netToAh"))}: <strong>${escapeHtml(this.formatCurrency(group.netSum))}</strong></span>
+                                </div>
+                            </div>
+                            <div class="cleaning-section__content">
+                                <div class="cleaning-list__columns">
+                                    <span>#</span>
+                                    <span>${escapeHtml(this.tr("tables.property"))}</span>
+                                    <span>${escapeHtml(this.tr("tables.date"))}</span>
+                                    <span>${escapeHtml(this.tr("tables.category"))}</span>
+                                    <span>${escapeHtml(this.tr("tables.reservation"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.guest"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.net"))}</span>
+                                    <span></span>
+                                </div>
+                                ${group.records.map((record) => this.renderAsanaCleaningRow(record)).join("")}
+                                <button type="button" class="cleaning-add-row" data-action="open-cleaning-drawer" data-month="${escapeHtml(group.monthKey)}">
+                                    <i class="fas fa-plus"></i>
+                                    <span>${escapeHtml(this.tr("cleanings.addTitle") || "Adicionar limpeza...")}</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    renderAsanaCleaningRow(record) {
+        const catKey = this.getCleaningCategoryKey(record.categoryKey || record.category);
+        const isPlatform = this.getCleaningReservationSource(record) === "platform";
+        const pillClass = catKey === "check_out"
+            ? "cleaning-pill--checkout"
+            : catKey === "owner"
+            ? "cleaning-pill--owner"
+            : "cleaning-pill--direct";
+
+        return `
+            <article class="cleaning-row" data-action="open-cleaning-drawer" data-id="${escapeHtml(record.id)}">
+                <span>
+                    <button type="button" class="cleaning-check-btn" data-action="open-cleaning-drawer" data-id="${escapeHtml(record.id)}" title="Ver detalhes">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </span>
+                <span>
+                    <strong class="font-semibold text-slate-900 truncate">${escapeHtml(record.propertyName)}</strong>
+                    ${record.notes ? `<small class="text-slate-400 ml-2 truncate font-normal">(${escapeHtml(record.notes)})</small>` : ""}
+                </span>
+                <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
+                    ${escapeHtml(this.formatDate(record.date))}
+                </span>
+                <span>
+                    <span class="cleaning-pill ${pillClass}">${escapeHtml(this.getCleaningCategoryLabel(catKey))}</span>
+                </span>
+                <span>
+                    <span class="cleaning-pill ${isPlatform ? "cleaning-pill--platform" : "cleaning-pill--direct"}">${escapeHtml(this.getReservationSourceLabel(this.getCleaningReservationSource(record)))}</span>
+                </span>
+                <span class="text-right text-xs font-medium text-slate-600">
+                    ${escapeHtml(this.formatCurrency(record.guestAmount))}
+                </span>
+                <span class="text-right font-bold text-slate-900">
+                    ${escapeHtml(this.formatCurrency(record.effectiveTotalToAh ?? record.totalToAh))}
+                </span>
+                <span class="text-right">
+                    <button type="button" class="text-slate-400 hover:text-slate-700" data-action="open-cleaning-drawer" data-id="${escapeHtml(record.id)}">
+                        <i class="fas fa-pen text-xs"></i>
+                    </button>
+                </span>
+            </article>
         `;
     }
 
@@ -3073,61 +3511,150 @@ export class CleaningAhManager {
     }
 
     renderLaundryTab(filteredStandaloneLaundry, laundrySummary, visibleLaundryRegisterEntries) {
-        const draft = this.laundryDraft;
-        const isBatchMode = !this.editingLaundryId && this.laundryEntryMode === "batch";
-        const singlePreview = createStandaloneLaundryRecord({
-            date: draft.date,
-            propertyName: draft.propertyName,
-            quantity: toOptionalNumber(draft.quantity),
-            kg: toOptionalNumber(draft.kg) || 0,
-            amount: toOptionalNumber(draft.amount),
-            laundryRatePerKg: toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg,
-            notes: draft.notes
-        });
-        const batchPreview = this.getLaundryBatchPreview();
+        const groups = this.groupLaundryByMonth(filteredStandaloneLaundry);
+        const isBatchMode = this.laundryEntryMode === "batch";
 
         return `
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.82fr)_minmax(0,1.55fr)] 2xl:grid-cols-[minmax(34rem,0.78fr)_minmax(0,1.75fr)]">
-                <div class="space-y-6">
-                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                            <div>
-                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">${escapeHtml(this.tr("laundryTab.entryKicker"))}</div>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingLaundryId ? this.tr("laundryTab.editTitle") : isBatchMode ? this.tr("laundryTab.batchTitle") : this.tr("laundryTab.addTitle"))}</h3>
-                                <p class="mt-2 text-sm text-slate-600">${escapeHtml(isBatchMode ? this.tr("laundryTab.batchDescription") : this.tr("laundryTab.description"))}</p>
-                                <p class="mt-1 text-xs font-medium text-amber-700">${escapeHtml(this.tr("laundryTab.vatNote"))}</p>
-                                ${this.renderLaundryEntryModeSwitcher()}
-                            </div>
-                            <div class="flex flex-wrap gap-3 xl:justify-end">
-                                ${this.editingLaundryId ? `<button type="button" id="cleaning-ah-cancel-laundry-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
-                                <button type="submit" form="${isBatchMode ? "cleaning-ah-laundry-batch-form" : "cleaning-ah-laundry-form"}" class="view-btn active">${escapeHtml(this.editingLaundryId ? this.tr("actions.saveChanges") : isBatchMode ? this.tr("actions.saveLaundryBatch") : this.tr("actions.saveLaundry"))}</button>
-                                <button type="button" id="${isBatchMode ? "cleaning-ah-reset-laundry-batch-form" : "cleaning-ah-reset-laundry-form"}" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
-                            </div>
+            <div class="space-y-4">
+                <!-- Asana Action Toolbar -->
+                <div class="cleaning-action-toolbar">
+                    <div class="cleaning-toolbar-left">
+                        <button type="button" data-action="open-laundry-drawer" class="cleaning-btn-create">
+                            <i class="fas fa-plus"></i>
+                            <span>${escapeHtml(this.tr("laundryTab.addTitle") || "Adicionar lavandaria")}</span>
+                        </button>
+                        <button type="button" data-action="toggle-laundry-batch-view" class="cleaning-btn-secondary text-xs">
+                            <i class="fas ${isBatchMode ? "fa-list" : "fa-layer-group"} mr-1.5"></i>
+                            <span>${isBatchMode ? "Ver como Lista" : "Entrada em Lote"}</span>
+                        </button>
+                    </div>
+                    <div class="cleaning-toolbar-right">
+                        <div class="relative flex items-center">
+                            <i class="fas fa-search absolute left-3 text-xs text-slate-400"></i>
+                            <input id="cleaning-ah-search" type="search" class="cleaning-search-input" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                         </div>
-                        ${isBatchMode
-                            ? this.renderLaundryBatchForm(batchPreview)
-                            : this.renderLaundrySingleForm({
-                                draft,
-                                preview: singlePreview
-                            })}
-                    </section>
-                    ${this.renderLaundrySummaryBlock(laundrySummary)}
+                        <select id="cleaning-ah-month-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
+                            ${this.getMonthOptions().map((m) => `<option value="${m}" ${m === this.selectedMonthKey ? "selected" : ""}>${this.formatMonthKey(m)}</option>`).join("")}
+                        </select>
+                        <select id="cleaning-ah-property-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
+                            ${this.getFilterPropertyNames().map((p) => `<option value="${escapeHtml(p)}" ${normalizeKey(p) === normalizeKey(this.selectedPropertyName) ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
+                        </select>
+                    </div>
                 </div>
 
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("laundryTab.activityKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("laundryTab.activityTitle"))}</h3>
+                ${isBatchMode ? `
+                    <div class="p-6 bg-white border border-[#e1e4e8] rounded-2xl shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("laundryTab.batchTitle"))}</h3>
+                                <p class="text-xs text-slate-500">${escapeHtml(this.tr("laundryTab.batchDescription"))}</p>
+                            </div>
+                            <button type="submit" form="cleaning-ah-laundry-batch-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveLaundryBatch"))}</button>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(visibleLaundryRegisterEntries.length))}</div>
+                        ${this.renderLaundryBatchForm(this.getLaundryBatchPreview())}
                     </div>
-                    ${this.renderLaundryRegisterControls()}
-                    <div class="mt-5 overflow-x-auto">
-                        ${this.renderLaundryTable(visibleLaundryRegisterEntries)}
+                ` : `
+                    <div class="cleaning-list-container border border-[#e1e4e8] rounded-2xl overflow-hidden shadow-sm">
+                        ${this.renderAsanaLaundryList(groups, filteredStandaloneLaundry)}
                     </div>
-                </section>
-            </section>
+                `}
+
+                ${this.renderLaundrySummaryBlock(laundrySummary)}
+            </div>
+        `;
+    }
+
+    renderAsanaLaundryList(groups, allFiltered = []) {
+        if (!allFiltered.length) {
+            return `
+                <div class="p-12 text-center text-slate-500">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400 text-lg">
+                        <i class="fas fa-tshirt"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">${escapeHtml(this.tr("laundryTab.empty"))}</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Clique em "+ Adicionar lavandaria" para registar despesas de lavandaria.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="cleaning-list-table">
+                ${groups.map((group) => {
+                    const isCollapsed = this.collapsedSections.has(`laundry-${group.monthKey}`);
+                    return `
+                        <div class="cleaning-section ${isCollapsed ? "is-collapsed" : ""}">
+                            <div class="cleaning-section__heading" data-action="toggle-section" data-section="laundry-${escapeHtml(group.monthKey)}">
+                                <span class="cleaning-section__toggle">
+                                    <i class="fas fa-chevron-down"></i>
+                                </span>
+                                <h2>${escapeHtml(this.formatMonthKey(group.monthKey))}</h2>
+                                <div class="cleaning-section__meta">
+                                    <span>${escapeHtml(String(group.records.length))} registos</span>
+                                    <span>·</span>
+                                    <span>${escapeHtml(this.formatNumber(group.kgSum))} kg</span>
+                                    <span>·</span>
+                                    <span>Despesa: <strong class="text-rose-600">${escapeHtml(this.formatCurrency(group.amountSum))}</strong></span>
+                                </div>
+                            </div>
+                            <div class="cleaning-section__content">
+                                <div class="cleaning-list__columns" style="grid-template-columns: 44px minmax(220px, 2fr) 110px 100px 100px 100px 130px 60px;">
+                                    <span>#</span>
+                                    <span>${escapeHtml(this.tr("tables.property"))}</span>
+                                    <span>${escapeHtml(this.tr("tables.date"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.quantity") || "Qty")}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.kg"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.ratePerKg"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("tables.amount"))}</span>
+                                    <span></span>
+                                </div>
+                                ${group.records.map((record) => this.renderAsanaLaundryRow(record)).join("")}
+                                <button type="button" class="cleaning-add-row" data-action="open-laundry-drawer" data-month="${escapeHtml(group.monthKey)}">
+                                    <i class="fas fa-plus"></i>
+                                    <span>${escapeHtml(this.tr("laundryTab.addTitle") || "Adicionar lavandaria...")}</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    renderAsanaLaundryRow(record) {
+        return `
+            <article class="cleaning-row" style="grid-template-columns: 44px minmax(220px, 2fr) 110px 100px 100px 100px 130px 60px;" data-action="open-laundry-drawer" data-id="${escapeHtml(record.id)}">
+                <span>
+                    <button type="button" class="cleaning-check-btn" data-action="open-laundry-drawer" data-id="${escapeHtml(record.id)}" title="Ver detalhes">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </span>
+                <span>
+                    <strong class="font-semibold text-slate-900 truncate">${escapeHtml(record.propertyName)}</strong>
+                    ${record.notes ? `<small class="text-slate-400 ml-2 truncate font-normal">(${escapeHtml(record.notes)})</small>` : ""}
+                </span>
+                <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
+                    ${escapeHtml(this.formatDate(record.date))}
+                </span>
+                <span class="text-right text-xs font-semibold text-slate-700">
+                    ${escapeHtml(String(record.quantity ?? 1))}
+                </span>
+                <span class="text-right text-xs text-slate-600">
+                    ${escapeHtml(this.formatNumber(record.kg))} kg
+                </span>
+                <span class="text-right text-xs text-slate-600">
+                    ${escapeHtml(this.formatCurrency(record.laundryRatePerKg))}
+                </span>
+                <span class="text-right font-bold text-rose-600">
+                    ${escapeHtml(this.formatCurrency(record.amount))}
+                </span>
+                <span class="text-right">
+                    <button type="button" class="text-slate-400 hover:text-slate-700" data-action="open-laundry-drawer" data-id="${escapeHtml(record.id)}">
+                        <i class="fas fa-pen text-xs"></i>
+                    </button>
+                </span>
+            </article>
         `;
     }
 
@@ -3628,72 +4155,125 @@ export class CleaningAhManager {
     }
 
     renderSpecialCleaningsTab(records) {
-        const typeOptions = this.getSpecialCleaningTypeOptions()
-            .map(([key, label]) => `<option value="${escapeHtml(key)}" ${key === this.specialCleaningDraft.specialType ? "selected" : ""}>${escapeHtml(label)}</option>`)
-            .join("");
+        const groups = this.groupSpecialCleaningsByMonth(records);
 
         return `
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(28rem,0.78fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(32rem,0.72fr)_minmax(0,1.85fr)]">
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-600">${escapeHtml(this.tr("specialCleanings.entryKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.editingSpecialCleaningId ? this.tr("specialCleanings.editTitle") : this.tr("specialCleanings.addTitle"))}</h3>
-                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("specialCleanings.description"))}</p>
-                        </div>
-                        <div class="flex flex-wrap gap-3 xl:justify-end">
-                            ${this.editingSpecialCleaningId ? `<button type="button" id="cleaning-ah-cancel-special-cleaning-edit" class="view-btn">${escapeHtml(this.tr("actions.cancelEdit"))}</button>` : ""}
-                            <button type="submit" form="cleaning-ah-special-cleaning-form" class="view-btn active">${escapeHtml(this.editingSpecialCleaningId ? this.tr("actions.saveChanges") : this.tr("actions.saveSpecialCleaning"))}</button>
-                            <button type="button" id="cleaning-ah-reset-special-cleaning-form" class="view-btn">${escapeHtml(this.tr("actions.reset"))}</button>
-                        </div>
+            <div class="space-y-4">
+                <!-- Asana Action Toolbar -->
+                <div class="cleaning-action-toolbar">
+                    <div class="cleaning-toolbar-left">
+                        <button type="button" data-action="open-special-drawer" class="cleaning-btn-create">
+                            <i class="fas fa-plus"></i>
+                            <span>${escapeHtml(this.tr("specialCleanings.addTitle") || "Adicionar limpeza especial")}</span>
+                        </button>
+                        <span class="text-xs text-slate-500 hidden sm:inline">${escapeHtml(this.tr("specialCleanings.costHint"))}</span>
                     </div>
-                    <form id="cleaning-ah-special-cleaning-form" class="mt-5 space-y-4">
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.date"))}</span>
-                                <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(this.specialCleaningDraft.date)}" required>
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.property"))}</span>
-                                <input type="text" name="propertyName" class="mt-1 w-full" value="${escapeHtml(this.specialCleaningDraft.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}" required>
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(this.tr("specialCleanings.typeLabel"))}</span>
-                                <select name="specialType" class="mt-1 w-full">
-                                    ${typeOptions}
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(this.tr("specialCleanings.costLabel"))}</span>
-                                <input type="number" name="cost" class="mt-1 w-full" step="0.01" min="0" value="${escapeHtml(toInputNumber(this.specialCleaningDraft.cost))}" placeholder="0.00">
-                                <div class="mt-1 text-xs text-slate-500">${escapeHtml(this.tr("specialCleanings.costHint"))}</div>
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-slate-600">${escapeHtml(this.tr("specialCleanings.descriptionLabel"))}</span>
-                                <input type="text" name="description" class="mt-1 w-full" value="${escapeHtml(this.specialCleaningDraft.description)}" placeholder="${escapeHtml(this.tr("specialCleanings.descriptionPlaceholder"))}">
-                            </label>
+                    <div class="cleaning-toolbar-right">
+                        <div class="relative flex items-center">
+                            <i class="fas fa-search absolute left-3 text-xs text-slate-400"></i>
+                            <input id="cleaning-ah-search" type="search" class="cleaning-search-input" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                         </div>
-                        <label class="block">
-                            <span class="text-sm text-slate-600">${escapeHtml(t("common.notes"))}</span>
-                            <textarea name="notes" class="mt-1 w-full min-h-[92px]" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">${escapeHtml(this.specialCleaningDraft.notes)}</textarea>
-                        </label>
-                    </form>
-                </section>
+                        <select id="cleaning-ah-month-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
+                            ${this.getMonthOptions().map((m) => `<option value="${m}" ${m === this.selectedMonthKey ? "selected" : ""}>${this.formatMonthKey(m)}</option>`).join("")}
+                        </select>
+                        <select id="cleaning-ah-property-filter" class="cleaning-select-filter">
+                            <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
+                            ${this.getFilterPropertyNames().map((p) => `<option value="${escapeHtml(p)}" ${normalizeKey(p) === normalizeKey(this.selectedPropertyName) ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
+                        </select>
+                    </div>
+                </div>
 
-                <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">${escapeHtml(this.tr("specialCleanings.registerKicker"))}</div>
-                            <h3 class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(this.tr("specialCleanings.registerTitle"))}</h3>
-                            <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("specialCleanings.registerDescription"))}</p>
+                <div class="cleaning-list-container border border-[#e1e4e8] rounded-2xl overflow-hidden shadow-sm">
+                    ${this.renderAsanaSpecialCleaningsList(groups, records)}
+                </div>
+            </div>
+        `;
+    }
+
+    renderAsanaSpecialCleaningsList(groups, allFiltered = []) {
+        if (!allFiltered.length) {
+            return `
+                <div class="p-12 text-center text-slate-500">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400 text-lg">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">${escapeHtml(this.tr("specialCleanings.empty"))}</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Clique em "+ Adicionar limpeza especial" para registar limpezas profundas ou extraordinárias.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="cleaning-list-table">
+                ${groups.map((group) => {
+                    const isCollapsed = this.collapsedSections.has(`special-${group.monthKey}`);
+                    return `
+                        <div class="cleaning-section ${isCollapsed ? "is-collapsed" : ""}">
+                            <div class="cleaning-section__heading" data-action="toggle-section" data-section="special-${escapeHtml(group.monthKey)}">
+                                <span class="cleaning-section__toggle">
+                                    <i class="fas fa-chevron-down"></i>
+                                </span>
+                                <h2>${escapeHtml(this.formatMonthKey(group.monthKey))}</h2>
+                                <div class="cleaning-section__meta">
+                                    <span>${escapeHtml(String(group.records.length))} registos</span>
+                                    <span>·</span>
+                                    <span>Custo total: <strong class="text-slate-900">${escapeHtml(this.formatCurrency(group.costSum))}</strong></span>
+                                </div>
+                            </div>
+                            <div class="cleaning-section__content">
+                                <div class="cleaning-list__columns" style="grid-template-columns: 44px minmax(200px, 2fr) 110px 140px 120px minmax(180px, 2fr) 60px;">
+                                    <span>#</span>
+                                    <span>${escapeHtml(this.tr("tables.property"))}</span>
+                                    <span>${escapeHtml(this.tr("tables.date"))}</span>
+                                    <span>${escapeHtml(this.tr("specialCleanings.typeLabel"))}</span>
+                                    <span class="text-right">${escapeHtml(this.tr("specialCleanings.costLabel"))}</span>
+                                    <span>${escapeHtml(this.tr("specialCleanings.descriptionLabel"))}</span>
+                                    <span></span>
+                                </div>
+                                ${group.records.map((record) => this.renderAsanaSpecialCleaningRow(record)).join("")}
+                                <button type="button" class="cleaning-add-row" data-action="open-special-drawer" data-month="${escapeHtml(group.monthKey)}">
+                                    <i class="fas fa-plus"></i>
+                                    <span>${escapeHtml(this.tr("specialCleanings.addTitle") || "Adicionar limpeza especial...")}</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="text-sm text-slate-500">${escapeHtml(this.getRowsLabel(records.length))}</div>
-                    </div>
-                    <div class="mt-5 overflow-x-auto">
-                        ${this.renderSpecialCleaningsTable(records)}
-                    </div>
-                </section>
-            </section>
+                    `;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    renderAsanaSpecialCleaningRow(record) {
+        return `
+            <article class="cleaning-row" style="grid-template-columns: 44px minmax(200px, 2fr) 110px 140px 120px minmax(180px, 2fr) 60px;" data-action="open-special-drawer" data-id="${escapeHtml(record.id)}">
+                <span>
+                    <button type="button" class="cleaning-check-btn" data-action="open-special-drawer" data-id="${escapeHtml(record.id)}" title="Ver detalhes">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </span>
+                <span>
+                    <strong class="font-semibold text-slate-900 truncate">${escapeHtml(record.propertyName)}</strong>
+                    ${record.notes ? `<small class="text-slate-400 ml-2 truncate font-normal">(${escapeHtml(record.notes)})</small>` : ""}
+                </span>
+                <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
+                    ${escapeHtml(this.formatDate(record.date))}
+                </span>
+                <span>
+                    <span class="cleaning-pill cleaning-pill--direct">${escapeHtml(this.getSpecialCleaningTypeLabel(record.specialType))}</span>
+                </span>
+                <span class="text-right font-bold text-slate-900">
+                    ${escapeHtml(this.formatCurrency(record.cost))}
+                </span>
+                <span class="text-xs text-slate-600 truncate">
+                    ${escapeHtml(record.description || "—")}
+                </span>
+                <span class="text-right">
+                    <button type="button" class="text-slate-400 hover:text-slate-700" data-action="open-special-drawer" data-id="${escapeHtml(record.id)}">
+                        <i class="fas fa-pen text-xs"></i>
+                    </button>
+                </span>
+            </article>
         `;
     }
 
@@ -4202,10 +4782,119 @@ export class CleaningAhManager {
                 this.render();
             });
         });
+
+        document.querySelectorAll("[data-action='open-cleaning-drawer']").forEach((button) => {
+            button.addEventListener("click", () => this.openCleaningDrawer(button.dataset.id || null, { month: button.dataset.month }));
+        });
+        document.querySelectorAll("[data-action='open-laundry-drawer']").forEach((button) => {
+            button.addEventListener("click", () => this.openLaundryDrawer(button.dataset.id || null, { month: button.dataset.month }));
+        });
+        document.querySelectorAll("[data-action='open-special-drawer']").forEach((button) => {
+            button.addEventListener("click", () => this.openSpecialCleaningDrawer(button.dataset.id || null, { month: button.dataset.month }));
+        });
+        document.querySelectorAll("[data-action='close-drawer']").forEach((element) => {
+            element.addEventListener("click", () => this.closeDrawer());
+        });
+        document.querySelectorAll("[data-action='toggle-section']").forEach((element) => {
+            element.addEventListener("click", () => {
+                const s = element.dataset.section;
+                if (this.collapsedSections.has(s)) {
+                    this.collapsedSections.delete(s);
+                } else {
+                    this.collapsedSections.add(s);
+                }
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='toggle-cleaning-batch-view']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.cleaningEntryMode = this.cleaningEntryMode === "batch" ? "single" : "batch";
+                this.render();
+            });
+        });
+        document.querySelectorAll("[data-action='toggle-laundry-batch-view']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.laundryEntryMode = this.laundryEntryMode === "batch" ? "single" : "batch";
+                this.render();
+            });
+        });
+        document.getElementById("cleaning-ah-drawer-cleaning-form")?.addEventListener("input", (event) => {
+            this.cleaningDraft = this.readCleaningDraftFromForm(event.currentTarget);
+            this.updateCleaningDrawerLiveCalc();
+        });
+        document.getElementById("cleaning-ah-drawer-cleaning-form")?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.cleaningDraft = this.readCleaningDraftFromForm(event.currentTarget);
+            this.saveCleaningRecord();
+            this.closeDrawer();
+        });
+        document.getElementById("cleaning-ah-drawer-laundry-form")?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.laundryDraft = this.readLaundryDraftFromDom();
+            this.saveLaundryRecord();
+            this.closeDrawer();
+        });
+        document.getElementById("cleaning-ah-drawer-special-form")?.addEventListener("submit", (event) => {
+            event.preventDefault();
+            this.specialCleaningDraft = this.readSpecialCleaningDraftFromDom();
+            this.saveSpecialCleaningRecord();
+            this.closeDrawer();
+        });
+        document.querySelectorAll("[data-action='drawer-delete-cleaning']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.deleteCleaning(button.dataset.id || "");
+                this.closeDrawer();
+            });
+        });
+        document.querySelectorAll("[data-action='drawer-delete-laundry']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.deleteLaundry(button.dataset.id || "");
+                this.closeDrawer();
+            });
+        });
+        document.querySelectorAll("[data-action='drawer-delete-special']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.deleteSpecialCleaning(button.dataset.id || "");
+                this.closeDrawer();
+            });
+        });
+    }
+
+    updateCleaningDrawerLiveCalc() {
+        const form = document.getElementById("cleaning-ah-drawer-cleaning-form");
+        if (!form) return;
+        const draft = this.readCleaningDraftFromForm(form);
+        const isPlatform = (draft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform) === CLEANING_AH_RESERVATION_SOURCES.platform;
+        const guestAmountNum = Number(draft.guestAmount) || 0;
+        const commission = isPlatform ? roundCurrency(guestAmountNum * 0.155) : 0;
+        const vat = isPlatform ? roundCurrency((guestAmountNum - commission) * 0.22 / 1.22) : roundCurrency(guestAmountNum * 0.22 / 1.22);
+        const netAh = roundCurrency(guestAmountNum - commission - vat);
+
+        const card = form.querySelector(".cleaning-detail__live-calc");
+        if (card) {
+            card.innerHTML = `
+                <h4>${escapeHtml(this.tr("formula.title") || "Cálculo Líquido AH")}</h4>
+                <div class="cleaning-detail__live-calc-grid">
+                    <div class="cleaning-calc-box">
+                        <small>${escapeHtml(this.tr("metrics.platformFees"))}</small>
+                        <strong class="text-rose-600">-${escapeHtml(this.formatCurrency(commission))}</strong>
+                    </div>
+                    <div class="cleaning-calc-box">
+                        <small>${escapeHtml(this.tr("metrics.vat"))}</small>
+                        <strong class="text-rose-600">-${escapeHtml(this.formatCurrency(vat))}</strong>
+                    </div>
+                    <div class="cleaning-calc-box bg-emerald-50 border-emerald-200">
+                        <small class="text-emerald-800">${escapeHtml(this.tr("metrics.netToAh"))}</small>
+                        <strong class="text-emerald-700">${escapeHtml(this.formatCurrency(netAh))}</strong>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     readCleaningDraftFromDom() {
-        const form = document.getElementById("cleaning-ah-inline-cleaning-form")
+        const form = document.getElementById("cleaning-ah-drawer-cleaning-form")
+            || document.getElementById("cleaning-ah-inline-cleaning-form")
             || document.getElementById("cleaning-ah-calendar-cleaning-form")
             || document.getElementById("cleaning-ah-fast-register-form")
             || document.getElementById("cleaning-ah-cleaning-form");
@@ -4255,7 +4944,8 @@ export class CleaningAhManager {
     }
 
     readLaundryDraftFromDom() {
-        const form = document.getElementById("cleaning-ah-laundry-form");
+        const form = document.getElementById("cleaning-ah-drawer-laundry-form")
+            || document.getElementById("cleaning-ah-laundry-form");
         if (!form) {
             return { ...this.laundryDraft };
         }
@@ -4299,7 +4989,8 @@ export class CleaningAhManager {
     }
 
     readSpecialCleaningDraftFromDom() {
-        const form = document.getElementById("cleaning-ah-special-cleaning-form");
+        const form = document.getElementById("cleaning-ah-drawer-special-form")
+            || document.getElementById("cleaning-ah-special-cleaning-form");
         if (!form) {
             return { ...this.specialCleaningDraft };
         }

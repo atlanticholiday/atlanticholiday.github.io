@@ -1,17 +1,17 @@
 /* ==========================================================================
-   Cleaning AH - Asana Style Theme
+   Cleaning AH - Authentic Asana Workspace Theme
    ========================================================================== */
 
 #cleaning-ah-page {
     --cleaning-accent: #ef5b6c;
     --cleaning-accent-hover: #dd4c5f;
-    --cleaning-accent-soft: rgba(239, 91, 108, 0.1);
+    --cleaning-accent-soft: rgba(239, 91, 108, 0.12);
     --cleaning-ink: #1f2328;
     --cleaning-muted: #656d76;
     --cleaning-line: #e1e4e8;
     --cleaning-surface: #ffffff;
-    --cleaning-surface-subtle: #f6f8fa;
-    --cleaning-surface-hover: #f3f4f6;
+    --cleaning-surface-subtle: #fafafa;
+    --cleaning-surface-hover: #f6f8fa;
     --cleaning-input-bg: #f6f8fa;
     --cleaning-green: #1a7f37;
     --cleaning-green-soft: #dafbe1;
@@ -19,7 +19,8 @@
     --cleaning-sky-soft: #ddf4ff;
     color: var(--cleaning-ink);
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background-color: #fafbfc;
+    background-color: #ffffff;
+    min-height: 100vh;
 }
 
 #cleaning-ah-page.hidden {
@@ -37,54 +38,69 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Header & Project Branding */
-.cleaning-ah-topbar {
+/* ==========================================================================
+   Top Project Header & Branding (Asana Style)
+   ========================================================================== */
+.cleaning-project-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 28px;
+    padding: 16px 28px 12px;
     background: #ffffff;
-    border-bottom: 1px solid var(--cleaning-line);
 }
 
-.cleaning-ah-project-badge {
+.cleaning-project-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cleaning-project-icon {
     display: grid;
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     place-items: center;
     color: #ffffff;
     background: linear-gradient(135deg, #ef5b6c 0%, #e03b50 100%);
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(239, 91, 108, 0.25);
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(239, 91, 108, 0.25);
     flex-shrink: 0;
 }
 
-.cleaning-ah-project-badge svg,
-.cleaning-ah-project-badge i {
-    font-size: 18px;
-    width: 20px;
-    height: 20px;
+.cleaning-project-icon i,
+.cleaning-project-icon svg {
+    font-size: 16px;
 }
 
-/* Asana Underline View Tabs */
-.cleaning-ah-tabs-bar {
+.cleaning-project-title-group h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--cleaning-ink);
+    margin: 0;
+}
+
+/* ==========================================================================
+   Asana Underline View Tabs
+   ========================================================================== */
+.cleaning-view-tabs {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 0 24px;
+    gap: 2px;
+    padding: 0 28px;
     background: #ffffff;
     border-bottom: 1px solid var(--cleaning-line);
     overflow-x: auto;
 }
 
-.cleaning-ah-tab-btn {
+.cleaning-view-tab {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 14px;
+    padding: 11px 15px 13px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 550;
     color: var(--cleaning-muted);
     background: transparent;
     border: 0;
@@ -94,18 +110,18 @@
     transition: color 140ms ease, border-color 140ms ease;
 }
 
-.cleaning-ah-tab-btn:hover {
+.cleaning-view-tab:hover {
     color: var(--cleaning-ink);
     border-bottom-color: #d0d7de;
 }
 
-.cleaning-ah-tab-btn.is-active {
+.cleaning-view-tab.is-active {
     color: var(--cleaning-ink);
     font-weight: 650;
     border-bottom-color: var(--cleaning-accent);
 }
 
-.cleaning-ah-tab-btn .tab-badge {
+.cleaning-view-tab .tab-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -120,263 +136,497 @@
     line-height: 1;
 }
 
-/* Asana Toolbar / Filters */
-.cleaning-ah-toolbar {
+/* ==========================================================================
+   Asana Action Toolbar
+   ========================================================================== */
+.cleaning-action-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    padding: 14px 20px;
+    padding: 14px 28px;
     background: #ffffff;
-    border: 1px solid var(--cleaning-line);
-    border-radius: 16px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid var(--cleaning-line);
 }
 
-.cleaning-ah-search-box {
-    position: relative;
+.cleaning-toolbar-left {
     display: flex;
     align-items: center;
-    flex: 1;
-    min-width: 220px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-.cleaning-ah-search-box svg {
-    position: absolute;
-    left: 12px;
-    width: 15px;
-    height: 15px;
-    color: #8c959f;
-    pointer-events: none;
+.cleaning-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-left: auto;
 }
 
-.cleaning-ah-search-box input {
-    width: 100%;
-    height: 36px;
-    padding: 0 12px 0 34px;
-    font-size: 13px;
-    color: var(--cleaning-ink);
-    background: var(--cleaning-input-bg);
-    border: 1px solid #d0d7de;
-    border-radius: 10px;
-    outline: none;
-    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.cleaning-ah-search-box input:focus {
-    background: #ffffff;
-    border-color: var(--cleaning-accent);
-    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
-}
-
-.cleaning-ah-select {
-    height: 36px;
-    padding: 0 28px 0 12px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--cleaning-ink);
-    background: var(--cleaning-input-bg);
-    border: 1px solid #d0d7de;
-    border-radius: 10px;
-    outline: none;
-    cursor: pointer;
-    transition: background-color 140ms ease, border-color 140ms ease;
-}
-
-.cleaning-ah-select:hover {
-    background: #ffffff;
-    border-color: #afb8c1;
-}
-
-.cleaning-ah-select:focus {
-    background: #ffffff;
-    border-color: var(--cleaning-accent);
-    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
-}
-
-/* Asana Cards & KPI Widgets */
-.cleaning-ah-card {
-    background: #ffffff;
-    border: 1px solid var(--cleaning-line);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
-}
-
-.cleaning-ah-card:hover {
-    border-color: #d0d7de;
-}
-
-.cleaning-ah-card--accent {
-    border-color: rgba(239, 91, 108, 0.35);
-    background: linear-gradient(180deg, #ffffff 0%, #fff7f8 100%);
-}
-
-.cleaning-ah-card--profit {
-    border: 2px solid #34d399;
-    background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
-}
-
-.cleaning-ah-card-kicker {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--cleaning-muted);
-}
-
-.cleaning-ah-card-value {
-    font-size: 28px;
-    font-weight: 750;
-    letter-spacing: -0.02em;
-    color: var(--cleaning-ink);
-    line-height: 1.2;
-}
-
-/* Asana Action Buttons */
-.cleaning-ah-btn-primary {
+/* Asana Primary Create Button */
+.cleaning-btn-create {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    height: 36px;
-    padding: 0 16px;
+    height: 34px;
+    padding: 0 14px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 650;
     color: #ffffff;
     background: var(--cleaning-accent);
     border: 0;
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: 0 1px 2px rgba(120, 30, 43, 0.15);
     cursor: pointer;
     transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-.cleaning-ah-btn-primary:hover {
+.cleaning-btn-create:hover {
     background: var(--cleaning-accent-hover);
     box-shadow: 0 3px 8px rgba(239, 91, 108, 0.25);
     transform: translateY(-1px);
 }
 
-.cleaning-ah-btn-primary:active {
+.cleaning-btn-create:active {
     transform: scale(0.98);
 }
 
-.cleaning-ah-btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    height: 36px;
-    padding: 0 14px;
+.cleaning-btn-create i,
+.cleaning-btn-create svg {
+    font-size: 13px;
+}
+
+.cleaning-search-input {
+    width: 220px;
+    height: 34px;
+    padding: 0 12px 0 32px;
     font-size: 12px;
-    font-weight: 600;
     color: var(--cleaning-ink);
-    background: #ffffff;
+    background: var(--cleaning-input-bg);
     border: 1px solid #d0d7de;
-    border-radius: 10px;
+    border-radius: 8px;
+    outline: none;
+    transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-search-input:focus {
+    background: #ffffff;
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-select-filter {
+    height: 34px;
+    padding: 0 26px 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cleaning-ink);
+    background: var(--cleaning-input-bg);
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    outline: none;
     cursor: pointer;
     transition: background-color 140ms ease, border-color 140ms ease;
 }
 
-.cleaning-ah-btn-secondary:hover {
-    background: #f6f8fa;
+.cleaning-select-filter:hover {
+    background: #ffffff;
     border-color: #afb8c1;
 }
 
-/* Asana Segmented View Switcher */
-.cleaning-ah-segmented-control {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 3px;
-    background: #eaecef;
-    border-radius: 11px;
-}
-
-.cleaning-ah-segmented-control button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--cleaning-muted);
-    background: transparent;
-    border: 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
-}
-
-.cleaning-ah-segmented-control button:hover {
-    color: var(--cleaning-ink);
-}
-
-.cleaning-ah-segmented-control button.is-active {
-    color: var(--cleaning-ink);
+/* ==========================================================================
+   Asana List View & Collapsible Section Layout
+   ========================================================================== */
+.cleaning-list-container {
+    min-width: 0;
+    overflow-x: auto;
     background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* Asana List Table */
-.cleaning-ah-table-container {
-    background: #ffffff;
-    border: 1px solid var(--cleaning-line);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-}
-
-.cleaning-ah-table {
+.cleaning-list-table {
+    min-width: 900px;
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 13px;
 }
 
-.cleaning-ah-table thead {
+.cleaning-list__columns {
+    display: grid;
+    grid-template-columns: 44px minmax(220px, 2fr) 110px 140px 120px 130px 130px 60px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    min-height: 34px;
+    align-items: center;
+    color: #656d76;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     background: #fafafa;
     border-bottom: 1px solid var(--cleaning-line);
 }
 
-.cleaning-ah-table th {
-    padding: 11px 16px;
-    font-size: 11px;
-    font-weight: 650;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--cleaning-muted);
-    border-bottom: 1px solid var(--cleaning-line);
+.cleaning-list__columns > span {
+    padding: 0 12px;
+    border-right: 1px solid var(--cleaning-line);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.cleaning-ah-table td {
-    padding: 12px 16px;
-    color: var(--cleaning-ink);
-    border-bottom: 1px solid #f0f2f5;
-    vertical-align: middle;
+.cleaning-list__columns > span:last-child {
+    border-right: 0;
 }
 
-.cleaning-ah-table tbody tr {
+/* Section Grouping */
+.cleaning-section {
+    border-bottom: 1px solid var(--cleaning-line);
+}
+
+.cleaning-section__heading {
+    display: flex;
+    height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    background: #fbfbfc;
+    border-bottom: 1px solid var(--cleaning-line);
+    cursor: pointer;
+    user-select: none;
     transition: background-color 120ms ease;
 }
 
-.cleaning-ah-table tbody tr:hover {
-    background: #fbfbfc;
+.cleaning-section__heading:hover {
+    background: #f3f4f6;
 }
 
-.cleaning-ah-table tfoot td {
-    padding: 13px 16px;
+.cleaning-section__toggle {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    color: #656d76;
+    font-size: 11px;
+    transition: transform 150ms ease;
+}
+
+.cleaning-section.is-collapsed .cleaning-section__toggle {
+    transform: rotate(-90deg);
+}
+
+.cleaning-section.is-collapsed .cleaning-section__content {
+    display: none;
+}
+
+.cleaning-section__heading h2 {
+    margin: 0;
+    font-size: 13px;
     font-weight: 700;
-    background: #fafafa;
-    border-top: 2px solid var(--cleaning-line);
-    border-bottom: 0;
+    color: var(--cleaning-ink);
 }
 
-/* Category & Status Badges */
-.cleaning-ah-pill {
+.cleaning-section__meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--cleaning-muted);
+}
+
+.cleaning-section__meta strong {
+    color: var(--cleaning-ink);
+}
+
+/* Asana Table Rows */
+.cleaning-row {
+    display: grid;
+    grid-template-columns: 44px minmax(220px, 2fr) 110px 140px 120px 130px 130px 60px;
+    min-height: 44px;
+    align-items: stretch;
+    color: #1f2328;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f2f5;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+}
+
+.cleaning-row:hover {
+    background: #f6f8fa;
+}
+
+.cleaning-row > span {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-right: 1px solid #f6f8fa;
+}
+
+.cleaning-row > span:last-child {
+    border-right: 0;
+}
+
+.cleaning-check-btn {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    margin: auto;
+    place-items: center;
+    color: transparent;
+    border: 1.5px solid #afb8c1;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.cleaning-check-btn:hover {
+    border-color: #22a06b;
+    background: rgba(34, 160, 107, 0.08);
+}
+
+.cleaning-row.is-done .cleaning-check-btn {
+    border-color: #22a06b;
+    background: #22a06b;
+    color: #ffffff;
+}
+
+.cleaning-add-row {
+    display: flex;
+    width: 100%;
+    height: 38px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 24px;
+    color: #8c959f;
+    font-size: 12px;
+    font-weight: 500;
+    border: 0;
+    border-bottom: 1px solid var(--cleaning-line);
+    background: #ffffff;
+    cursor: pointer;
+    transition: color 120ms ease, background-color 120ms ease;
+}
+
+.cleaning-add-row:hover {
+    color: var(--cleaning-ink);
+    background: #fafafa;
+}
+
+/* ==========================================================================
+   Asana Slide-Over Detail Drawer (Right Panel)
+   ========================================================================== */
+.cleaning-detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+}
+
+.cleaning-detail-overlay.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.cleaning-detail {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    right: 0;
+    display: grid;
+    width: min(580px, 94vw);
+    height: 100svh;
+    grid-template-rows: 58px minmax(0, 1fr) 68px;
+    visibility: hidden;
+    overflow: hidden;
+    background: #ffffff;
+    border-left: 1px solid #dfe0e3;
+    box-shadow: -14px 0 36px rgba(32, 34, 38, 0.12);
+    opacity: 0;
+    transform: translateX(28px);
+    transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 220ms;
+}
+
+.cleaning-detail.is-open {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.cleaning-detail__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--cleaning-line);
+    background: #ffffff;
+}
+
+.cleaning-detail__topbar h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cleaning-ink);
+}
+
+.cleaning-detail__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cleaning-detail__close-btn {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    color: #656d76;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.cleaning-detail__close-btn:hover {
+    background: #f3f4f6;
+    color: var(--cleaning-ink);
+}
+
+.cleaning-detail__scroll {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 28px 40px;
+}
+
+.cleaning-detail__metadata {
+    display: grid;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.cleaning-metadata-field {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--cleaning-muted);
+}
+
+.cleaning-metadata-field > label {
+    font-weight: 600;
+    color: #57606a;
+}
+
+.cleaning-metadata-input,
+.cleaning-metadata-select {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--cleaning-ink);
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-metadata-input:focus,
+.cleaning-metadata-select:focus {
+    background: #ffffff;
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-detail__live-calc {
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.cleaning-detail__live-calc h4 {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.cleaning-detail__live-calc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.cleaning-calc-box {
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.cleaning-calc-box small {
+    display: block;
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.cleaning-calc-box strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 750;
+    color: #0f172a;
+    margin-top: 2px;
+}
+
+.cleaning-detail__textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--cleaning-ink);
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.cleaning-detail__textarea:focus {
+    background: #ffffff;
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-detail__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-top: 1px solid var(--cleaning-line);
+    background: #ffffff;
+}
+
+/* ==========================================================================
+   Asana Category Pills & Badges
+   ========================================================================== */
+.cleaning-pill {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -388,26 +638,99 @@
     white-space: nowrap;
 }
 
-.cleaning-ah-pill--checkout {
+.cleaning-pill--checkout {
     color: #1e40af;
     background: #eff6ff;
     border: 1px solid #bfdbfe;
 }
 
-.cleaning-ah-pill--direct {
+.cleaning-pill--direct {
     color: #065f46;
     background: #ecfdf5;
     border: 1px solid #a7f3d0;
 }
 
-.cleaning-ah-pill--platform {
+.cleaning-pill--platform {
     color: #9d174d;
     background: #fdf2f8;
     border: 1px solid #fbcfe8;
 }
 
-.cleaning-ah-pill--owner {
+.cleaning-pill--owner {
     color: #854d0e;
     background: #fefce8;
     border: 1px solid #fef08a;
+}
+
+/* ==========================================================================
+   Asana Stats / Painel Cards & Segmented Switcher
+   ========================================================================== */
+.cleaning-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 24px 28px 12px;
+}
+
+.cleaning-kpi-card {
+    background: #ffffff;
+    border: 1px solid var(--cleaning-line);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.cleaning-kpi-card--profit {
+    border: 2px solid #34d399;
+    background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
+}
+
+.cleaning-kpi-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cleaning-muted);
+}
+
+.cleaning-kpi-value {
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    color: var(--cleaning-ink);
+    margin: 8px 0 4px;
+}
+
+.cleaning-segmented-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: #eaecef;
+    border-radius: 10px;
+}
+
+.cleaning-segmented-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cleaning-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-segmented-tab:hover {
+    color: var(--cleaning-ink);
+}
+
+.cleaning-segmented-tab.is-active {
+    color: var(--cleaning-ink);
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
