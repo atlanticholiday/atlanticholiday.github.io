@@ -65,6 +65,48 @@ service cloud.firestore {
         && data.employeeId == accessData().linkedEmployeeId;
     }
 
+    function taskAssignedToCurrentUser(data) {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && data.assigneeIds is list
+        && accessData().linkedEmployeeId in data.assigneeIds;
+    }
+
+    function canReadTaskData(data) {
+      return privileged() || taskAssignedToCurrentUser(data);
+    }
+
+    function colleagueTaskCreateAllowed() {
+      return taskAssignedToCurrentUser(request.resource.data)
+        && request.resource.data.createdBy is map
+        && request.resource.data.createdBy.uid == request.auth.uid;
+    }
+
+    function colleagueTaskUpdateAllowed() {
+      return taskAssignedToCurrentUser(resource.data)
+        && taskAssignedToCurrentUser(request.resource.data)
+        && request.resource.data.assigneeIds == resource.data.assigneeIds
+        && request.resource.data.assignees == resource.data.assignees
+        && request.resource.data.departmentId == resource.data.departmentId
+        && request.resource.data.departmentName == resource.data.departmentName
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedBy is map
+        && request.resource.data.updatedBy.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title',
+          'description',
+          'section',
+          'priority',
+          'dueDate',
+          'status',
+          'completedAt',
+          'attachments',
+          'updatedAt',
+          'updatedBy'
+        ]);
+    }
+
     function ownsNewRecord() {
       return request.resource.data.userId == request.auth.uid;
     }
@@ -310,6 +352,34 @@ service cloud.firestore {
 
     match /heatedPools/{recordId} {
       allow read, write: if privileged() || hasApp('heatedPools') || hasApp('reservations');
+    }
+
+    match /taskDepartments/{departmentId} {
+      allow read: if approved();
+      allow create, update, delete: if privileged();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if canReadTaskData(resource.data);
+      allow create: if privileged() || colleagueTaskCreateAllowed();
+      allow update: if privileged() || colleagueTaskUpdateAllowed();
+      allow delete: if privileged();
+
+      match /comments/{commentId} {
+        allow read: if canReadTaskData(
+          get(/databases/$(database)/documents/tasks/$(taskId)).data
+        );
+        allow create: if canReadTaskData(
+            get(/databases/$(database)/documents/tasks/$(taskId)).data
+          )
+          && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if privileged()
+          || (
+            canReadTaskData(get(/databases/$(database)/documents/tasks/$(taskId)).data)
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == request.auth.uid
+          );
+      }
     }
 
     match /laundryHandoffRecords/{recordId} {

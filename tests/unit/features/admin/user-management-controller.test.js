@@ -345,11 +345,12 @@ describe("UserManagementController", () => {
     assert.includes(previewText, "Manager / Supervisor");
     assert.includes(previewText, "No User Management");
     assert.includes(previewText, "restricted colleague views");
-    assert.equal(document.querySelectorAll(".user-access-preview__dashboard-card").length, 5);
+    assert.equal(document.querySelectorAll(".user-access-preview__dashboard-card").length, 6);
     assert.includes(previewText, "Explore their workspace");
     assert.ok(document.getElementById("start-interactive-access-preview-btn"));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-time-clock-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-schedule-btn"]'));
+    assert.ok(document.querySelector('[data-preview-button-id="go-to-tasks-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-laundry-log-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-reservations-btn"]'));
     assert.ok(document.querySelector('[data-preview-button-id="go-to-heated-pools-btn"]'));

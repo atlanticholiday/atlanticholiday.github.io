@@ -1026,6 +1026,10 @@ export class DataManager {
         });
     }
 
+    canAccessTasks() {
+        return Boolean(this.currentUserContext.uid) && !this.isTimeClockStationUser();
+    }
+
     isScheduleOnlyUser() {
         return this.isClockOnlyUser();
     }

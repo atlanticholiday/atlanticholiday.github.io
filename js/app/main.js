@@ -2,7 +2,7 @@ import { deleteApp, initializeApp } from "https://www.gstatic.com/firebasejs/11.
 import { browserSessionPersistence, createUserWithEmailAndPassword, getAuth, inMemoryPersistence, onAuthStateChanged, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, clearIndexedDbPersistence, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 import { Config } from '../core/config.js';
 import { i18n, t } from '../core/i18n.js';
@@ -41,6 +41,7 @@ import { DataManager } from '../features/scheduling/data-manager.js';
 import { EventManager } from '../features/scheduling/event-manager.js';
 import { HolidayCalculator } from '../features/scheduling/holiday-calculator.js';
 import { NavigationManager } from '../features/scheduling/navigation-manager.js';
+import { TaskManager } from '../features/tasks/task-manager.js';
 import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
@@ -79,7 +80,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -233,7 +234,7 @@ function syncAccessModeUi() {
     const stationMode = dataManager.isTimeClockStationUser();
     const scheduleOnlyMode = dataManager.isScheduleOnlyUser();
     const canAccessWorkSchedule = dataManager.canAccessWorkSchedule();
-    const hasGrantedApps = dataManager.hasAnyGrantedAppAccess?.();
+    const hasGrantedApps = dataManager.hasAnyGrantedAppAccess?.() || dataManager.canAccessTasks?.();
     const limitedTimeClockMode = stationMode || (clockOnlyMode && !hasGrantedApps);
 
     if (stationMode && i18n.getCurrentLanguage() !== 'pt') {
@@ -249,6 +250,7 @@ function syncAccessModeUi() {
 
     const dashboardButtons = [
         'go-to-schedule-btn',
+        'go-to-tasks-btn',
         'go-to-user-management-btn',
         ...getAppAccessOptions().map((option) => option.buttonId)
     ];
@@ -259,6 +261,8 @@ function syncAccessModeUi() {
             const appOption = getAppAccessOptionByButtonId(buttonId);
             const shouldHide = buttonId === 'go-to-schedule-btn'
                 ? (stationMode || !canAccessWorkSchedule)
+                : buttonId === 'go-to-tasks-btn'
+                ? !dataManager.canAccessTasks?.()
                 : buttonId === 'go-to-user-management-btn'
                 ? (!dataManager.hasAdminRole())
                 : appOption
@@ -351,7 +355,9 @@ function routeCurrentUserAccess() {
     if (!navigationManager || !dataManager) return;
 
     const shouldOpenTimeClockFirst = dataManager.isTimeClockStationUser()
-        || (dataManager.isClockOnlyUser() && !dataManager.hasAnyGrantedAppAccess?.());
+        || (dataManager.isClockOnlyUser()
+            && !dataManager.hasAnyGrantedAppAccess?.()
+            && !dataManager.canAccessTasks?.());
 
     if (shouldOpenTimeClockFirst) {
         navigationManager.showTimeClockPage();
@@ -412,6 +418,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         navigationManager = new NavigationManager({
             getDataManager: () => dataManager
         });
+        taskManager = new TaskManager({
+            db,
+            dataManager,
+            uploadAttachment: async ({ taskId, file }) => {
+                const safeName = String(file.name || 'attachment').replace(/[^a-zA-Z0-9._-]+/g, '-');
+                const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${safeName}`;
+                const path = `task-attachments/${taskId}/${uniqueName}`;
+                const fileRef = storageRef(getStorage(app), path);
+                await uploadBytes(fileRef, file, { contentType: file.type || 'application/octet-stream' });
+                return { url: await getDownloadURL(fileRef), storagePath: path };
+            },
+            deleteAttachment: async (path) => {
+                if (!path) return;
+                await deleteObject(storageRef(getStorage(app), path));
+            }
+        });
+        taskManager.init();
+        window.taskManager = taskManager;
         quickSearchManager = new QuickSearchManager({
             navigationManager,
             getDataManager: () => dataManager,
@@ -697,6 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         isArchived: Boolean(accessEntry.linkedEmployeeArchived)
                     } : null
                 });
+                taskManager?.setUser({ uid: user.uid, email: user.email });
                 // Bind user to Checklists manager for per-user persistence key
                 if (checklistsManager) {
                     checklistsManager.setUser(userId);
@@ -797,6 +822,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 unsubscribeScheduleUiRefresh?.();
                 unsubscribeScheduleUiRefresh = null;
                 dataManager?.clearCurrentUserContext?.();
+                taskManager?.setUser(null);
                 dataManager?.stopRealtimeListeners?.();
                 dataManager?.resetSessionState?.();
                 quickSearchManager?.setEnabled(false);
@@ -975,6 +1001,10 @@ function setupGlobalEventListeners() {
         setTimeout(() => {
             uiManager?.renderTimeClockPage?.();
         }, 50);
+    });
+
+    document.addEventListener('tasksPageOpened', () => {
+        taskManager?.open();
     });
 
     document.addEventListener('openEmployeeScheduleRequested', () => {

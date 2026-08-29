@@ -36,6 +36,8 @@ import "./unit/features/properties/property-form-utils.test.js";
 import "./unit/features/properties/property-import-utils.test.js";
 import "./unit/features/properties/properties-dashboard-controller.test.js";
 import "./unit/features/search/quick-search-manager.test.js";
+import "./unit/features/tasks/task-utils.test.js";
+import "./unit/features/tasks/task-manager.test.js";
 import "./unit/features/scheduling/attendance-print-period.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
@@ -57,6 +59,7 @@ import "./smoke/html-pages.test.js";
 import "./smoke/linen-inventory-security.test.js";
 import "./smoke/locales.test.js";
 import "./smoke/pwa.test.js";
+import "./smoke/task-security.test.js";
 
 const results = await run();
 const total = results.reduce((sum, suite) => sum + suite.tests.length, 0);

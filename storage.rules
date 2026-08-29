@@ -48,6 +48,31 @@ service firebase.storage {
         && 'welcomePacks' in accessData().allowedApps;
     }
 
+    function canAccessTask(taskId) {
+      return firestore.exists(/databases/(default)/documents/tasks/$(taskId))
+        && (
+          privileged()
+          || (
+            accessData().linkedEmployeeId is string
+            && firestore.get(/databases/(default)/documents/tasks/$(taskId)).data.assigneeIds is list
+            && accessData().linkedEmployeeId in firestore.get(/databases/(default)/documents/tasks/$(taskId)).data.assigneeIds
+          )
+        );
+    }
+
+    function allowedTaskAttachmentType() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType.matches('video/.*')
+        || request.resource.contentType.matches('audio/.*')
+        || request.resource.contentType == 'application/pdf'
+        || request.resource.contentType == 'text/plain'
+        || request.resource.contentType == 'text/csv'
+        || request.resource.contentType == 'application/msword'
+        || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        || request.resource.contentType == 'application/vnd.ms-excel'
+        || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+
     function allowedAttachmentType() {
       return request.resource.contentType.matches('image/.*')
         || request.resource.contentType == 'application/pdf'
@@ -85,6 +110,14 @@ service firebase.storage {
           || request.resource.contentType.matches('image/.*')
         );
       allow delete: if privileged() || hasWelcomePackAccess();
+    }
+
+    match /task-attachments/{taskId}/{fileName} {
+      allow read: if canAccessTask(taskId);
+      allow create, update: if canAccessTask(taskId)
+        && request.resource.size < 100 * 1024 * 1024
+        && allowedTaskAttachmentType();
+      allow delete: if canAccessTask(taskId);
     }
 
     match /{allPaths=**} {

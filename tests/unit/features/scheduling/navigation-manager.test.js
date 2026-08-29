@@ -8,6 +8,7 @@ describe("NavigationManager", () => {
       hasAdminRole() { return false; },
       hasPrivilegedRole() { return false; },
       canAccessWorkSchedule() { return true; },
+      canAccessTasks() { return true; },
       canAccessApp(appKey) { return appKey === "laundryLog"; }
     };
     const employeeNavigation = new NavigationManager({
@@ -19,6 +20,7 @@ describe("NavigationManager", () => {
     assert.equal(employeeNavigation.canOpenPage("cleaningBills"), false);
     assert.equal(employeeNavigation.canOpenPage("userManagement"), false);
     assert.equal(employeeNavigation.canOpenPage("laundryLog"), true);
+    assert.equal(employeeNavigation.canOpenPage("tasks"), true);
     assert.equal(employeeNavigation.canOpenPage("unknown"), false);
 
     const managerNavigation = new NavigationManager({

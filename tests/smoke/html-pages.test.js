@@ -39,9 +39,31 @@ describe("HTML smoke", () => {
     }
   });
 
+  test("floating quick search stays out of the Tasks workspace", async () => {
+    const response = await fetch("../styles/tasks.css");
+    assert.ok(response.ok, "Failed to fetch Tasks styles");
+
+    const style = document.createElement("style");
+    style.textContent = await response.text();
+    const page = document.createElement("div");
+    page.id = "tasks-page";
+    const trigger = document.createElement("button");
+    trigger.className = "quick-search-trigger";
+    document.head.appendChild(style);
+    document.body.append(page, trigger);
+
+    try {
+      assert.equal(getComputedStyle(trigger).display, "none", "Quick search must not cover the Tasks drawer");
+    } finally {
+      trigger.remove();
+      page.remove();
+      style.remove();
+    }
+  });
+
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
-      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-vacation-center-btn", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page", "go-to-nuki-doors-btn", "nuki-doors-page", "nuki-doors-root"] },
+      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-tasks-btn", "tasks-page", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page", "go-to-nuki-doors-btn", "nuki-doors-page", "nuki-doors-root"] },
       { path: "../property-settings.html", markers: ["property-settings-form", "save-settings"] },
       { path: "../inventory.html", markers: ["inventory"] }
     ];
@@ -62,6 +84,7 @@ describe("HTML smoke", () => {
         assert.equal(documentRef.getElementById("operational-guidelines-page")?.parentElement?.tagName, "BODY", "operational-guidelines-page should be a top-level page");
         assert.equal(documentRef.getElementById("vacation-center-page")?.parentElement?.tagName, "BODY", "vacation-center-page should be a top-level page");
         assert.equal(documentRef.getElementById("staff-page")?.parentElement?.tagName, "BODY", "staff-page should be a top-level page");
+        assert.equal(documentRef.getElementById("tasks-page")?.parentElement?.tagName, "BODY", "tasks-page should be a top-level page");
       }
     }
   });

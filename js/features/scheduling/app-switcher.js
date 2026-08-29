@@ -3,6 +3,7 @@ import { t } from '../../core/i18n.js';
 const DESTINATIONS = Object.freeze([
     { pageName: 'timeClock', buttonId: 'go-to-time-clock-btn', fallbackLabel: 'Time Clock', tone: 'slate', category: 'teamScheduling' },
     { pageName: 'schedule', buttonId: 'go-to-schedule-btn', fallbackLabel: 'Work Schedule', tone: 'emerald', category: 'teamScheduling' },
+    { pageName: 'tasks', buttonId: 'go-to-tasks-btn', fallbackLabel: 'Tasks', tone: 'rose', category: 'teamScheduling' },
     { pageName: 'vacationCenter', buttonId: 'go-to-vacation-center-btn', fallbackLabel: 'Vacation Center', tone: 'sky', category: 'teamScheduling' },
     { pageName: 'staff', buttonId: 'go-to-staff-btn', fallbackLabel: 'Staff', tone: 'violet', category: 'teamScheduling' },
     { pageName: 'reservations', buttonId: 'go-to-reservations-btn', fallbackLabel: 'Weekly Reservations', tone: 'indigo', category: 'reservationsGuests' },

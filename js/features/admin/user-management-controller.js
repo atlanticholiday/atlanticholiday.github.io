@@ -1299,6 +1299,7 @@ export class UserManagementController {
         const visibleButtonIds = new Set();
         if (preview.surfaces.timeClock) visibleButtonIds.add('go-to-time-clock-btn');
         if (preview.surfaces.schedule) visibleButtonIds.add('go-to-schedule-btn');
+        if (preview.surfaces.tasks) visibleButtonIds.add('go-to-tasks-btn');
         if (preview.surfaces.userManagement) visibleButtonIds.add('go-to-user-management-btn');
         if (preview.isPrivileged) {
             ['go-to-visits-btn', 'go-to-cleaning-bills-btn', 'go-to-commission-calculator-btn']
@@ -1309,7 +1310,7 @@ export class UserManagementController {
             if (appOption?.buttonId) visibleButtonIds.add(appOption.buttonId);
         });
 
-        const opensDirectlyToTimeClock = preview.isStation || preview.accessLevel === 'employee';
+        const opensDirectlyToTimeClock = preview.isStation;
         let dashboardBody = '';
 
         if (opensDirectlyToTimeClock) {
@@ -1432,6 +1433,11 @@ export class UserManagementController {
                     ? this.translate('timeClock.landing.scheduleDescription', 'Open the work schedule in read-only mode.')
                     : this.translate('apps.workScheduleDesc', 'Plan staff schedules and holidays.'),
                 icon: 'WS'
+            },
+            'go-to-tasks-btn': {
+                label: this.translate('apps.tasks', 'Tasks'),
+                description: this.translate('apps.tasksDesc', 'Department work and personal assignments.'),
+                icon: 'TK'
             },
             'go-to-user-management-btn': {
                 label: this.translate('apps.userManagement', 'User Management'),
@@ -1562,6 +1568,14 @@ export class UserManagementController {
             surfaces.push(this.createPreviewSurfaceMarkup(
                 this.translate('userManagement.preview.surfaces.schedule', 'Work Schedule'),
                 this.getPreviewSurfaceDetail('schedule', preview.surfaces.schedule)
+            ));
+        }
+        if (preview.surfaces.tasks) {
+            surfaces.push(this.createPreviewSurfaceMarkup(
+                this.translate('apps.tasks', 'Tasks'),
+                preview.surfaces.tasks === 'manager'
+                    ? this.translate('userManagement.preview.surfaceDetails.managerTasks', 'Can manage departments, assignments, files, and comments.')
+                    : this.translate('userManagement.preview.surfaceDetails.personalTasks', 'Can see and collaborate on tasks assigned to the linked colleague.')
             ));
         }
         if (preview.surfaces.userManagement) {

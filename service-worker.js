@@ -1,4 +1,4 @@
-const CACHE_NAME = "horario-pwa-v10-dialog-hotfix";
+const CACHE_NAME = "horario-pwa-v11-tasks";
 
 const APP_SHELL_URLS = [
   "./",
@@ -16,6 +16,7 @@ const APP_SHELL_URLS = [
   "./styles/property-settings-update.css",
   "./styles/reservations-enhanced.css",
   "./styles/fullcalendar.css",
+  "./styles/tasks.css",
   "./locales/en.json",
   "./locales/pt.json"
 ];

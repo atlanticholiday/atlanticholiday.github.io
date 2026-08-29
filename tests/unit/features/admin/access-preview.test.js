@@ -8,6 +8,7 @@ describe("Access preview", () => {
     assert.equal(preview.accessLevel, "admin");
     assert.equal(preview.surfaces.userManagement, true);
     assert.equal(preview.surfaces.schedule, "full");
+    assert.equal(preview.surfaces.tasks, "manager");
     assert.ok(preview.appKeys.includes("staff"));
     assert.ok(preview.appScopes.every((app) => app.scope === "manager"));
   });
@@ -21,6 +22,7 @@ describe("Access preview", () => {
     assert.equal(preview.accessLevel, "employee-with-apps");
     assert.equal(preview.surfaces.timeClock, "self-service");
     assert.equal(preview.surfaces.schedule, "monthly-readonly");
+    assert.equal(preview.surfaces.tasks, "personal");
     assert.equal(preview.surfaces.userManagement, false);
     assert.ok(preview.appKeys.includes("heatedPools"));
     assert.equal(preview.appScopes.find((app) => app.key === "laundryLog").scope, "colleague-workflow");
@@ -36,6 +38,7 @@ describe("Access preview", () => {
     assert.equal(preview.accessLevel, "station");
     assert.equal(preview.surfaces.timeClock, "station");
     assert.equal(preview.surfaces.userManagement, false);
+    assert.equal(preview.surfaces.tasks, null);
     assert.deepEqual(preview.appKeys, []);
   });
 

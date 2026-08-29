@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="styles/fullcalendar.css">
     <link rel="stylesheet" href="styles/vacation-center.css">
     <link rel="stylesheet" href="styles/app-switcher.css">
+    <link rel="stylesheet" href="styles/tasks.css">
 </head>
 
 <body class="bg-gray-50 text-gray-800">
@@ -206,6 +207,19 @@
                     <div class="card-body">
                         <h3 id="go-to-schedule-title">Work Schedule</h3>
                         <p id="go-to-schedule-description">Plan staff schedules and holidays.</p>
+                    </div>
+                </button>
+
+                <button id="go-to-tasks-btn" class="dashboard-card">
+                    <div class="card-icon bg-rose-500/10 text-rose-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="4" y="3" width="16" height="18" rx="2" stroke-width="2"></rect>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 8 1.5 1.5L12 7m2 2h3M8 14l1.5 1.5L12 13m2 2h3"></path>
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <h3 data-i18n="apps.tasks">Tasks</h3>
+                        <p data-i18n="apps.tasksDesc">Department work and personal assignments.</p>
                     </div>
                 </button>
 
@@ -617,6 +631,8 @@
     </div>
 
     <!-- User Management Pages -->
+    <div id="tasks-page" class="hidden"></div>
+
     <div id="user-management-page" class="user-management-page-shell hidden min-h-screen bg-slate-100">
         <header class="dashboard-header user-management-header">
             <div class="container user-management-shell-container mx-auto flex flex-col gap-6 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
@@ -3819,7 +3835,7 @@ Mountain Villa, Sintra Hills, V4"
         })();
     </script>
     <script type="module" src="js/pwa-register.js"></script>
-    <script type="module" src="js/app/main.js?v=20260712-import-cache-fix"></script>
+    <script type="module" src="js/app/main.js?v=20260829-tasks"></script>
 </body>
 
 </html>

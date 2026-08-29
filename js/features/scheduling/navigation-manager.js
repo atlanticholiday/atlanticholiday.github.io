@@ -16,6 +16,7 @@ export class NavigationManager {
         this.appSwitcher = null;
         this.pages = {
             landing: 'landing-page',
+            tasks: 'tasks-page',
             properties: 'properties-page',
             operations: 'operations-page',
             welcomePacks: 'welcome-packs-page',
@@ -159,6 +160,10 @@ export class NavigationManager {
             return Boolean(dataManager.canAccessWorkSchedule?.());
         }
 
+        if (pageName === 'tasks') {
+            return Boolean(dataManager.canAccessTasks?.());
+        }
+
         if (pageName === 'userManagement') {
             return Boolean(dataManager.hasAdminRole?.());
         }
@@ -194,6 +199,11 @@ export class NavigationManager {
 
     showPropertiesPage() {
         this.showPage('properties');
+    }
+
+    showTasksPage() {
+        this.showPage('tasks');
+        document.dispatchEvent(new CustomEvent('tasksPageOpened'));
     }
 
     showOperationsPage() {
@@ -350,6 +360,7 @@ export class NavigationManager {
         const goToOperationalGuidelinesBtn = document.getElementById('go-to-operational-guidelines-btn');
         const goToHeatedPoolsBtn = document.getElementById('go-to-heated-pools-btn');
         const goToScheduleBtn = document.getElementById('go-to-schedule-btn');
+        const goToTasksBtn = document.getElementById('go-to-tasks-btn');
         const goToChecklistsBtn = document.getElementById('go-to-checklists-btn');
         const goToVehiclesBtn = document.getElementById('go-to-vehicles-btn');
         const goToOwnersBtn = document.getElementById('go-to-owners-btn');
@@ -425,6 +436,16 @@ export class NavigationManager {
                 document.dispatchEvent(event);
             });
         }
+
+        if (goToTasksBtn) {
+            goToTasksBtn.addEventListener('click', () => {
+                this.showTasksPage();
+            });
+        }
+
+        document.addEventListener('tasksBackRequested', () => {
+            this.showPreviousPage('landing');
+        });
 
         if (goToChecklistsBtn) {
             goToChecklistsBtn.addEventListener('click', () => {

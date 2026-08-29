@@ -51,6 +51,7 @@ export function buildEffectiveAccessPreview(user = {}, { hasEmployeeLink = false
         surfaces: {
             timeClock: isStation ? 'station' : (isPrivileged ? 'manager' : (isSelfService ? 'self-service' : null)),
             schedule: isPrivileged ? 'full' : (isSelfService ? 'monthly-readonly' : null),
+            tasks: isStation ? null : (isPrivileged ? 'manager' : (hasEmployeeLink ? 'personal' : null)),
             userManagement: isAdmin
         },
         appScopes: appKeys.map((key) => ({
