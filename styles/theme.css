@@ -1,0 +1,320 @@
+/* Shared light / black appearance */
+:root {
+    --theme-canvas: #f5f5f7;
+    --theme-surface: #ffffff;
+    --theme-surface-raised: #ffffff;
+    --theme-surface-muted: #f1f5f9;
+    --theme-text: #1d1d1f;
+    --theme-text-muted: #64748b;
+    --theme-border: #e2e8f0;
+}
+
+html[data-theme="dark"] {
+    --theme-canvas: #09090b;
+    --theme-surface: #18181b;
+    --theme-surface-raised: #202024;
+    --theme-surface-muted: #27272a;
+    --theme-text: #f4f4f5;
+    --theme-text-muted: #a1a1aa;
+    --theme-border: #3f3f46;
+    --bg-page: var(--theme-canvas);
+    --bg-card: var(--theme-surface);
+    --text-heading: var(--theme-text);
+    --text-muted: var(--theme-text-muted);
+    --border-color: var(--theme-border);
+    --brand-color-light: rgba(233, 75, 90, 0.17);
+    --brand-color-light-border: rgba(233, 75, 90, 0.34);
+    --brand-color-ultra-light: rgba(233, 75, 90, 0.08);
+    --brand-color-ghost: rgba(233, 75, 90, 0.06);
+    --gradient-glass: linear-gradient(135deg, rgba(31, 31, 35, 0.96) 0%, rgba(20, 20, 23, 0.9) 100%);
+    --gradient-glass-border: linear-gradient(135deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.03) 100%);
+    --gradient-radial: radial-gradient(circle at 50% 50%, rgba(233, 75, 90, 0.05) 0%, transparent 70%);
+    --shadow-glass: 0 10px 32px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255, 255, 255, 0.04);
+    --shadow-glass-hover: 0 16px 42px rgba(0, 0, 0, 0.44), 0 1px 0 rgba(255, 255, 255, 0.07);
+    --shadow-glass-active: 0 5px 18px rgba(0, 0, 0, 0.32);
+}
+
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+    transition-property: background-color, background-image, border-color, color, box-shadow, fill, stroke !important;
+    transition-duration: 220ms !important;
+    transition-timing-function: ease !important;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 2.35rem;
+    min-height: 2.05rem;
+    padding: 0.35rem 0.55rem;
+    border: 0;
+    border-left: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: var(--radius-sm, 8px);
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.theme-toggle svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+.theme-toggle:hover {
+    background: rgba(233, 75, 90, 0.08);
+    color: var(--brand-color, #e94b5a);
+    transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid rgba(233, 75, 90, 0.48);
+    outline-offset: 2px;
+}
+
+.theme-toggle-floating {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10001;
+    min-height: 2.5rem;
+    padding-inline: 0.8rem;
+    border: 1px solid var(--theme-border);
+    border-radius: 999px;
+    background: var(--theme-surface-raised);
+    box-shadow: var(--shadow-glass, 0 8px 24px rgba(0, 0, 0, 0.12));
+    color: var(--theme-text-muted);
+}
+
+html[data-theme="dark"] body {
+    background:
+        radial-gradient(circle at 18% 82%, rgba(233, 75, 90, 0.055) 0%, transparent 42%),
+        radial-gradient(circle at 82% 18%, rgba(233, 75, 90, 0.035) 0%, transparent 38%),
+        linear-gradient(180deg, #0c0c0f 0%, var(--theme-canvas) 100%) !important;
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] body::before {
+    background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(233, 75, 90, 0.012) 45deg, transparent 90deg);
+}
+
+html[data-theme="dark"] #login-screen,
+html[data-theme="dark"] #setup-screen,
+html[data-theme="dark"] .dashboard-hero,
+html[data-theme="dark"] .user-management-page-shell {
+    background:
+        radial-gradient(circle at 28% 72%, rgba(233, 75, 90, 0.08) 0%, transparent 44%),
+        radial-gradient(circle at 72% 28%, rgba(233, 75, 90, 0.045) 0%, transparent 40%),
+        linear-gradient(180deg, #0c0c0f 0%, #09090b 100%) !important;
+}
+
+html[data-theme="dark"] :is(.employee-card, .modal-content, .day-cell, .hero-inner, .landing-card, .dashboard-card, .dashboard-header, .language-switcher, .inventory-lang-switcher) {
+    background: var(--gradient-glass) !important;
+    border-color: rgba(255, 255, 255, 0.09) !important;
+    box-shadow: var(--shadow-glass);
+}
+
+html[data-theme="dark"] :is(.employee-card, .modal-content, .day-cell, .hero-inner, .landing-card, .dashboard-card):hover {
+    background: var(--theme-surface-raised) !important;
+    border-color: rgba(233, 75, 90, 0.25) !important;
+}
+
+html[data-theme="dark"] :is(input, textarea, select) {
+    background-color: #111114 !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(input, textarea)::placeholder {
+    color: #71717a !important;
+    opacity: 1;
+}
+
+html[data-theme="dark"] option {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] :is(table, thead, tbody, tr, th, td) {
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] :is(th, [class*="table-head"]) {
+    background-color: #202024 !important;
+    color: #d4d4d8 !important;
+}
+
+html[data-theme="dark"] :is(.bg-white, .bg-white\/90, .bg-white\/95, .bg-white\/80) {
+    background-color: var(--theme-surface) !important;
+}
+
+html[data-theme="dark"] :is(.bg-gray-50, .bg-slate-50) {
+    background-color: var(--theme-canvas) !important;
+}
+
+html[data-theme="dark"] :is(.bg-gray-100, .bg-slate-100, .bg-gray-200, .bg-slate-200) {
+    background-color: var(--theme-surface-muted) !important;
+}
+
+html[data-theme="dark"] :is(.text-gray-900, .text-slate-900, .text-gray-800, .text-slate-800, .text-gray-700, .text-slate-700) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(.text-gray-600, .text-slate-600, .text-gray-500, .text-slate-500, .text-gray-400, .text-slate-400) {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.border-gray-100, .border-slate-100, .border-gray-200, .border-slate-200, .border-gray-300, .border-slate-300) {
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] :is(.header-sub, .hero-subtitle, .card-body p, .page-mini, .form-label, .info-value) {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.hero-title, .card-body h3, .section-title, .header-title) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(.property-info, .form-section, #settings-sidebar, .info-card) {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+    box-shadow: var(--shadow-glass) !important;
+}
+
+html[data-theme="dark"] #settings-sidebar .category-list a {
+    color: var(--theme-text-muted);
+}
+
+html[data-theme="dark"] #settings-sidebar .category-list a:hover {
+    background: var(--theme-surface-muted);
+    color: var(--theme-text);
+}
+
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .form-label {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(
+    .user-management-page-shell .user-management-header,
+    .user-management-directory-shell,
+    .user-management-inspector,
+    .user-management-search-field,
+    .user-management-filter-select,
+    .user-management-secondary-action,
+    .user-management-icon-button,
+    .user-management-dialog-panel
+) {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] :is(
+    .user-management-directory-toolbar,
+    .user-management-directory-panel,
+    .user-management-user-row,
+    .user-management-inspector-header,
+    .user-management-inspector-section,
+    .user-management-filter-summary
+) {
+    border-color: var(--theme-border) !important;
+}
+
+html[data-theme="dark"] :is(
+    .user-management-table-head,
+    .user-management-inspector-summary,
+    .user-management-inspector-savebar,
+    .user-management-inspector-empty-icon,
+    .user-management-user-row-button:hover
+) {
+    background: var(--theme-surface-muted) !important;
+}
+
+html[data-theme="dark"] :is(
+    .user-management-directory-heading h2,
+    .user-management-user-cell strong,
+    .user-management-inspector-empty h3,
+    .user-management-inspector-identity h3,
+    .user-management-inspector-summary span,
+    .user-management-inspector-section-head h4,
+    .user-management-account-actions h4,
+    .user-management-main-tab-active
+) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] :is(
+    .user-management-user-cell small,
+    .user-management-table-cell,
+    .user-management-inspector-empty,
+    .user-management-inspector-identity > p:last-child,
+    .user-management-inspector-summary small,
+    .user-management-inspector-section-head p,
+    .user-management-account-actions p,
+    .user-management-inspector-note
+) {
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] .user-management-user-row-selected .user-management-user-row-button,
+html[data-theme="dark"] .user-management-inspector-option input:checked + label,
+html[data-theme="dark"] .user-management-app-option input:checked + label {
+    background: rgba(233, 75, 90, 0.1) !important;
+}
+
+html[data-theme="dark"] :is(.user-management-inspector-option label, .user-management-app-option label) {
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text-muted) !important;
+}
+
+html[data-theme="dark"] :is(.user-management-inspector-option label span, .user-management-app-option label) {
+    color: var(--theme-text) !important;
+}
+
+html[data-theme="dark"] .theme-toggle {
+    border-left-color: rgba(255, 255, 255, 0.1);
+    color: #d4d4d8;
+}
+
+html[data-theme="dark"] .theme-toggle:hover {
+    background: rgba(233, 75, 90, 0.14);
+    color: #fb7185;
+}
+
+@media (max-width: 640px) {
+    .theme-toggle-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .theme-toggle-floating {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 2.5rem;
+        padding: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-toggle {
+        transition: none;
+    }
+}

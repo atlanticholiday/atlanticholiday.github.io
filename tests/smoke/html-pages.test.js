@@ -74,6 +74,8 @@ describe("HTML smoke", () => {
       const html = await response.text();
 
       assert.includes(html.toLowerCase(), "<!doctype html", `${page.path} is missing a doctype`);
+      assert.includes(html, 'src="js/core/theme-manager.js"', `${page.path} is missing the theme manager`);
+      assert.includes(html, 'href="styles/theme.css?v=20260829-black-theme"', `${page.path} is missing theme styles`);
       page.markers.forEach((marker) => {
         assert.includes(html, marker, `${page.path} is missing marker ${marker}`);
       });
