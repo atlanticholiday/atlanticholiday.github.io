@@ -87,6 +87,11 @@ export function roundCurrency(value) {
     return Math.round(toFiniteNumber(value, 0) * 100) / 100;
 }
 
+export function calculateAverageRemainingPerCleaning(finalNetEarnings, cleaningCount) {
+    const count = toFiniteNumber(cleaningCount, 0);
+    return count > 0 ? roundCurrency(toFiniteNumber(finalNetEarnings, 0) / count) : null;
+}
+
 export function parseEuroCurrency(value) {
     if (typeof value === 'number') {
         return Number.isFinite(value) ? roundCurrency(value) : null;

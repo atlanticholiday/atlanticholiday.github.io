@@ -98,6 +98,83 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("keeps each tab's filters independent and restores them when returning", () => {
+    resetDom('<div id="cleaning-ah-root"></div>');
+    const manager = new CleaningAhManager(null);
+    manager.cleaningRecords = [
+      { id: "c1", date: "2026-04-05", monthKey: "2026-04", propertyName: "Acqua Beach", categoryKey: "checkout", totalToAh: 100 },
+      { id: "c2", date: "2026-05-05", monthKey: "2026-05", propertyName: "Calas Loft", categoryKey: "owner-checkout", totalToAh: 200 }
+    ];
+    manager.laundryRecords = [
+      { id: "l1", date: "2026-04-07", monthKey: "2026-04", propertyName: "Acqua Beach", kg: 10, amount: 23 },
+      { id: "l2", date: "2026-05-07", monthKey: "2026-05", propertyName: "Calas Loft", kg: 20, amount: 46 }
+    ];
+    const root = document.getElementById("cleaning-ah-root");
+    const switchTab = (tab) => root.querySelector(`[data-tab="${tab}"]`).click();
+    const setFilter = (id, value, event = "change") => {
+      const input = document.getElementById(id);
+      input.value = value;
+      input.dispatchEvent(new Event(event, { bubbles: true }));
+    };
+    const filters = () => [manager.searchQuery, manager.selectedMonthKey, manager.selectedPropertyName, manager.selectedCategory];
+    const assertControls = (expected) => {
+      assert.deepEqual(filters(), expected);
+      assert.equal(document.getElementById("cleaning-ah-search").value, expected[0]);
+      assert.equal(document.getElementById("cleaning-ah-month-filter").value, expected[1]);
+      assert.equal(document.getElementById("cleaning-ah-property-filter").value, expected[2]);
+      const category = document.getElementById("cleaning-ah-category-filter");
+      if (category) assert.equal(category.value, expected[3]);
+    };
+
+    try {
+      manager.render();
+      setFilter("cleaning-ah-search", "Acqua", "input");
+      setFilter("cleaning-ah-month-filter", "2026-04");
+      setFilter("cleaning-ah-property-filter", "Acqua Beach");
+      setFilter("cleaning-ah-category-filter", "checkout");
+      assert.deepEqual(manager.getFilteredCleaningRecords().map((record) => record.id), ["c1"]);
+
+      switchTab("stats");
+      assertControls(["", "", "", ""]);
+      assert.equal(root.querySelector(".cleaning-ah-card-value").textContent, manager.formatCurrency(300));
+      setFilter("cleaning-ah-month-filter", "2026-05");
+      setFilter("cleaning-ah-property-filter", "Calas Loft");
+      setFilter("cleaning-ah-category-filter", "owner-checkout");
+      assert.equal(root.querySelector(".cleaning-ah-card--profit .cleaning-ah-card-value").textContent, manager.formatCurrency(154));
+      manager.statsCategoryKey = "owner-checkout";
+
+      switchTab("laundry");
+      assertControls(["", "", "", ""]);
+      assert.equal(manager.getFilteredStandaloneLaundryRecords().length, 2);
+      setFilter("cleaning-ah-search", "Acqua", "input");
+      setFilter("cleaning-ah-month-filter", "2026-04");
+      assert.equal(manager.getFilteredStandaloneLaundryRecords().length, 1);
+
+      switchTab("special-cleanings");
+      assertControls(["", "", "", ""]);
+      setFilter("cleaning-ah-search", "special only", "input");
+
+      for (const tab of ["calendar", "register"]) {
+        switchTab(tab);
+        assert.deepEqual(filters(), ["", "", "", ""]);
+        assert.equal(manager.getFilteredCleaningRecords().length, 2);
+      }
+      switchTab("cleanings");
+      assertControls(["Acqua", "2026-04", "Acqua Beach", "checkout"]);
+      switchTab("stats");
+      assertControls(["", "2026-05", "Calas Loft", "owner-checkout"]);
+      assert.equal(manager.statsCategoryKey, "owner-checkout");
+      switchTab("special-cleanings");
+      assertControls(["special only", "", "", ""]);
+
+      // Editing shortcuts switch tabs too, without carrying filters with them.
+      manager.startEditingLaundry("l1");
+      assertControls(["Acqua", "2026-04", "", ""]);
+    } finally {
+      resetDom();
+    }
+  });
+
   test("limits property filter options to names that have entries", () => {
     resetDom();
 
@@ -1449,6 +1526,9 @@ describe("CleaningAhManager", () => {
     assert.includes(html, "Final Take-Home (Everything Together)");
     assert.includes(html, "Monthly Consolidated Statement");
     assert.includes(html, "905"); // 997 - 92 = 905 EUR
+    const renderedStats = document.createElement("div");
+    renderedStats.innerHTML = html;
+    assert.equal(renderedStats.querySelector("[data-cleaning-average-remaining]").textContent, manager.formatCurrency(90.5));
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;
@@ -1490,6 +1570,8 @@ describe("CleaningAhManager", () => {
       const april = rows.find((row) => row.cells[0].textContent === manager.formatMonthKey("2026-04"));
       assert.equal(april.cells[2].textContent, manager.formatCurrency(31.5));
       assert.equal(april.cells[3].textContent, manager.formatCurrency(168.5));
+      assert.equal(april.cells[4].textContent, manager.formatCurrency(84.25));
+      assert.equal(root.querySelector("tfoot tr").cells[4].textContent, manager.formatCurrency(78.25));
 
       manager.statsViewMode = "property";
       manager.render();
@@ -1498,6 +1580,7 @@ describe("CleaningAhManager", () => {
         .find((row) => row.cells[0].textContent === "Acqua Beach");
       assert.equal(propertyRow.cells[2].textContent, manager.formatCurrency(23.5));
       assert.equal(propertyRow.cells[3].textContent, manager.formatCurrency(76.5));
+      assert.equal(propertyRow.cells[4].textContent, manager.formatCurrency(76.5));
 
       manager.statsViewMode = "month";
       manager.selectedMonthKey = "2026-04";
@@ -1518,7 +1601,7 @@ describe("CleaningAhManager", () => {
     }
   });
 
-  test("opens property stats from the ranking and returns without changing the filters", () => {
+  test("opens property stats in a popup without replacing the ranking or changing the filters", () => {
     resetDom('<div id="cleaning-ah-root"></div>');
     const manager = new CleaningAhManager(null);
     manager.activeTab = "stats";
@@ -1536,35 +1619,56 @@ describe("CleaningAhManager", () => {
     const root = document.getElementById("cleaning-ah-root");
     const openProperty = (name) => [...root.querySelectorAll("[data-action='open-stats-property']")]
       .find((button) => button.dataset.propertyName === name).click();
-    const cardValues = () => [...root.querySelectorAll(".cleaning-ah-card-value")].map((card) => card.textContent);
-    const back = () => root.querySelector("[data-action='close-stats-property']").click();
+    const dialog = () => root.querySelector("#cleaning-ah-property-stats-dialog");
+    const cardValues = (scope = dialog() || root) => [...scope.querySelectorAll(".cleaning-ah-card-value")].map((card) => card.textContent);
+    const close = () => dialog().querySelector("[data-action='close-stats-property']").click();
 
     try {
       manager.render();
+      const ranking = root.querySelector("table");
+      const rankingHtml = ranking.innerHTML;
       openProperty("Villa Magnólia");
+      assert.ok(dialog().open);
+      assert.equal(root.querySelector("table"), ranking);
+      assert.equal(ranking.innerHTML, rankingHtml);
       assert.equal(root.querySelector("#cleaning-ah-property-stats-title").textContent, "Villa Magnólia");
       assert.deepEqual(cardValues(), [300, 43, 257].map((value) => manager.formatCurrency(value)));
-      assert.equal(root.querySelectorAll("tbody tr").length, 2);
-      const april = [...root.querySelectorAll("tbody tr")].find((row) => row.cells[0].textContent === manager.formatMonthKey("2026-04"));
+      assert.equal(dialog().querySelector("[data-cleaning-average-remaining]").textContent, manager.formatCurrency(128.5));
+      assert.equal(dialog().querySelectorAll("tbody tr").length, 2);
+      const april = [...dialog().querySelectorAll("tbody tr")].find((row) => row.cells[0].textContent === manager.formatMonthKey("2026-04"));
       assert.equal(april.cells[3].textContent, manager.formatCurrency(80));
-      assert.ok(!root.querySelector("[data-action='open-export-modal']"));
-      assert.ok(!root.querySelector("[data-action='open-stats-property']"));
-      back();
+      assert.ok(!dialog().querySelector("[data-action='open-export-modal']"));
+      assert.equal(root.querySelectorAll("[data-action='open-stats-property']").length, 3);
+      dialog().querySelector("h2").click();
+      assert.ok(dialog().open);
+      close();
+      assert.equal(dialog(), null);
+      assert.equal(root.querySelector("table"), ranking);
       assert.equal(manager.statsViewMode, "property");
       assert.deepEqual(cardValues(), [700, 55, 645].map((value) => manager.formatCurrency(value)));
+      assert.equal(root.querySelector("[data-cleaning-average-remaining]").textContent, manager.formatCurrency(215));
 
       manager.selectedMonthKey = "2026-04";
       manager.render();
       openProperty("Villa Magnólia");
       assert.deepEqual(cardValues(), [100, 20, 80].map((value) => manager.formatCurrency(value)));
-      assert.equal(root.querySelectorAll("tbody tr").length, 1);
-      back();
+      assert.equal(dialog().querySelector("[data-cleaning-average-remaining]").textContent, manager.formatCurrency(80));
+      assert.equal(dialog().querySelectorAll("tbody tr").length, 1);
+      dialog().dispatchEvent(new Event("cancel", { cancelable: true }));
+      assert.equal(dialog(), null);
       assert.equal(manager.selectedMonthKey, "2026-04");
 
       openProperty("Laundry Only");
       assert.deepEqual(cardValues(), [0, 12, -12].map((value) => manager.formatCurrency(value)));
-      assert.includes(root.textContent, "4 kg");
-      back();
+      assert.equal(dialog().querySelector("[data-cleaning-average-remaining]").textContent, "—");
+      assert.equal(dialog().querySelector("tbody tr").cells[4].textContent, "—");
+      assert.includes(dialog().textContent, "4 kg");
+      manager.render();
+      assert.ok(dialog().open);
+      assert.deepEqual(cardValues(), [0, 12, -12].map((value) => manager.formatCurrency(value)));
+      const bounds = dialog().getBoundingClientRect();
+      dialog().dispatchEvent(new MouseEvent("click", { clientX: bounds.left - 1, clientY: bounds.top - 1 }));
+      assert.equal(dialog(), null);
       assert.equal(manager.statsDetailPropertyName, "");
     } finally {
       resetDom();

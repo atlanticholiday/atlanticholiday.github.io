@@ -1462,6 +1462,7 @@
             "netToAh": "Líquido para a AH",
             "ahBeforeLaundry": "AH antes da lavandaria",
             "avgNetPerCleaning": "Média líquida / limpeza",
+            "avgRemainingPerCleaning": "Média restante / limpeza",
             "quantity": "Quantidade",
             "kg": "Kg",
             "amount": "Valor",
@@ -1542,6 +1543,7 @@
                 "vat": "O IVA aparece apenas nas categorias que usam a regra de 22% de IVA extraído. As limpezas mid-term não adicionam IVA aqui.",
                 "ahBeforeLaundry": "Este valor mostra o que sobra para a AH depois da comissão e do IVA, mas antes de descontar a lavandaria.",
                 "avgNetPerCleaning": "Este valor é o líquido total para a AH dividido pelo número de limpezas na vista filtrada atual.",
+                "avgRemainingPerCleaning": "Ganhos finais após comissões da plataforma, IVA e custos de lavandaria divididos pelo número de limpezas. Apresenta — quando não existem limpezas.",
                 "avgKgPerCleaning": "Este valor é o total de kg de lavandaria associados dividido pelo número de limpezas na vista filtrada atual."
             },
             "sortOptions": {

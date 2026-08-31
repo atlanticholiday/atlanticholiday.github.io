@@ -3,6 +3,7 @@ import {
     CLEANING_AH_CATEGORY_KEYS,
     CLEANING_AH_DEFAULTS,
     CLEANING_AH_RESERVATION_SOURCES,
+    calculateAverageRemainingPerCleaning,
     computeCleaningAhAmounts,
     createCleaningAhFingerprint,
     createCleaningAhRecord,
@@ -22,6 +23,15 @@ import {
 } from "../../../../js/features/operations/cleaning-ah-utils.js";
 
 describe("Cleaning AH utilities", () => {
+    test("averages remaining earnings per cleaning, including losses and no-cleaning periods", () => {
+        assert.equal(calculateAverageRemainingPerCleaning(22628.13, 454), 49.84);
+        assert.equal(calculateAverageRemainingPerCleaning(257, 2), 128.5);
+        assert.equal(calculateAverageRemainingPerCleaning(-12, 2), -6);
+        assert.equal(calculateAverageRemainingPerCleaning(0, 2), 0);
+        assert.equal(calculateAverageRemainingPerCleaning(-12, 0), null);
+        assert.equal(calculateAverageRemainingPerCleaning(0, 0), null);
+    });
+
     test("computes platform commission, extracted VAT, and totals for manual entries", () => {
         const result = computeCleaningAhAmounts({
             guestAmount: 120

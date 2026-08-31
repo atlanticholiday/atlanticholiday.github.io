@@ -842,3 +842,41 @@
     padding: 14px 16px;
     border-bottom: 0;
 }
+
+html:has(.cleaning-ah-property-dialog[open]) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+
+.cleaning-ah-property-dialog {
+    width: min(1200px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 48px);
+    margin: auto;
+    padding: 0;
+    border: 1px solid #e1e4e8;
+    border-radius: 20px;
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 24px 80px rgb(15 23 42 / 24%);
+    overflow: hidden;
+}
+
+.cleaning-ah-property-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.cleaning-ah-property-dialog::backdrop {
+    background: rgb(15 23 42 / 45%);
+}
+
+.cleaning-ah-property-dialog__header {
+    flex-shrink: 0;
+}
+
+.cleaning-ah-property-dialog__body {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}

@@ -12,6 +12,7 @@ import {
     CLEANING_AH_CATEGORY_KEYS,
     CLEANING_AH_DEFAULTS,
     CLEANING_AH_RESERVATION_SOURCES,
+    calculateAverageRemainingPerCleaning,
     createCleaningAhFingerprint,
     createCleaningAhRecord,
     createStandaloneLaundryRecord,
@@ -130,15 +131,13 @@ export class CleaningAhManager {
         this.laundryUnsubscribe = null;
         this.specialCleaningUnsubscribe = null;
 
+        this.tabFilters = new Map();
         this.activeTab = "cleanings";
-        this.searchQuery = "";
-        this.selectedMonthKey = "";
-        this.selectedPropertyName = "";
-        this.selectedCategory = "";
         this.statsCategoryKey = "";
         this.statsPropertySort = "net-desc";
         this.statsSelectedPropertyName = "";
         this.statsDetailPropertyName = "";
+        this.statsPropertyScrollPosition = null;
         this.statsViewMode = "month";
         this.activeDrawer = null;
         this.collapsedSections = new Set();
@@ -186,6 +185,30 @@ export class CleaningAhManager {
             });
             window.addEventListener("languageChanged", this.handleLanguageChange);
         }
+    }
+
+    get activeTab() {
+        return this._activeTab;
+    }
+
+    set activeTab(tab) {
+        if (tab === this._activeTab) return;
+        // All tab switches, including edit shortcuts, preserve each tab's filters.
+        if (this._activeTab) {
+            this.tabFilters.set(this._activeTab, {
+                searchQuery: this.searchQuery,
+                selectedMonthKey: this.selectedMonthKey,
+                selectedPropertyName: this.selectedPropertyName,
+                selectedCategory: this.selectedCategory
+            });
+        }
+        this._activeTab = tab;
+        Object.assign(this, this.tabFilters.get(tab) || {
+            searchQuery: "",
+            selectedMonthKey: "",
+            selectedPropertyName: "",
+            selectedCategory: ""
+        });
     }
 
     tr(key, replacements = {}) {
@@ -1332,6 +1355,7 @@ export class CleaningAhManager {
     render() {
         const root = document.getElementById("cleaning-ah-root");
         if (!root) return;
+        const propertyDialogScrollTop = document.getElementById("cleaning-ah-property-stats-body")?.scrollTop || 0;
 
         if (!this.hasAccess()) {
             root.innerHTML = `
@@ -1356,7 +1380,8 @@ export class CleaningAhManager {
         const visibleLaundryRegisterEntries = this.getVisibleLaundryRegisterEntries(laundrySummary.entries);
         const statsCategoryOptions = this.getStatsCategoryOptions(cleaningSummary);
         if (
-            this.statsCategoryKey
+            this.activeTab === "stats"
+            && this.statsCategoryKey
             && !statsCategoryOptions.some((entry) => entry.key === this.statsCategoryKey)
         ) {
             this.statsCategoryKey = "";
@@ -1392,10 +1417,12 @@ export class CleaningAhManager {
             ${this.renderSlideOverDrawer()}
             ${this.renderHeatmapDetailModal(statsCleaningSummary.records)}
             ${this.renderExportReportModal(statsCleaningSummary.records, laundrySummary)}
+            ${this.activeTab === "stats" ? this.renderStatsPropertyModal(statsCleaningSummary, laundrySummary) : ""}
             <datalist id="cleaning-ah-property-options">${this.getKnownPropertyNames().map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
         `;
 
         this.bindUiEvents();
+        this.bindStatsPropertyModal(propertyDialogScrollTop);
         this.updateCleaningPreview();
         this.updateCleaningBatchPreview();
         this.updateLaundryPreview();
@@ -1735,20 +1762,20 @@ export class CleaningAhManager {
             .join("");
 
         return `
-            <section class="cleaning-ah-toolbar">
-                <div class="cleaning-ah-search-box">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input id="cleaning-ah-search" type="search" value="${escapeHtml(this.searchQuery)}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
+            <section class="flex flex-wrap items-center justify-end gap-2">
+                <div class="relative flex items-center">
+                    <i class="fas fa-search absolute left-3 text-xs text-slate-400" aria-hidden="true"></i>
+                    <input id="cleaning-ah-search" type="search" class="cleaning-search-input" value="${escapeHtml(this.searchQuery)}" aria-label="${escapeHtml(this.tr("filters.searchPlaceholder"))}" placeholder="${escapeHtml(this.tr("filters.searchPlaceholder"))}">
                 </div>
-                <select id="cleaning-ah-month-filter" class="cleaning-ah-select">
+                <select id="cleaning-ah-month-filter" class="cleaning-select-filter" aria-label="${escapeHtml(this.tr("tables.month"))}">
                     <option value="">${escapeHtml(this.tr("filters.allMonths"))}</option>
                     ${monthOptions}
                 </select>
-                <select id="cleaning-ah-property-filter" class="cleaning-ah-select">
+                <select id="cleaning-ah-property-filter" class="cleaning-select-filter" aria-label="${escapeHtml(this.tr("tables.property"))}">
                     <option value="">${escapeHtml(this.tr("filters.allProperties"))}</option>
                     ${propertyOptions}
                 </select>
-                <select id="cleaning-ah-category-filter" class="cleaning-ah-select">
+                <select id="cleaning-ah-category-filter" class="cleaning-select-filter" aria-label="${escapeHtml(this.tr("tables.category"))}">
                     <option value="">${escapeHtml(this.tr("filters.allCategories"))}</option>
                     ${categoryOptions}
                 </select>
@@ -2254,35 +2281,91 @@ export class CleaningAhManager {
         `;
     }
 
-    renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail, laundrySummary = {}, allStatsRecords = []) {
-        const detailPropertyName = this.statsDetailPropertyName;
-        if (detailPropertyName) {
-            const matchesProperty = (record) => normalizeKey(record.propertyName || "Unknown") === normalizeKey(detailPropertyName);
-            cleaningSummary = summarizeCleaningAhRecords((cleaningSummary.records || []).filter(matchesProperty));
-            laundrySummary = summarizeLaundryRecords((laundrySummary.entries || []).filter(matchesProperty));
+    openStatsProperty(propertyName) {
+        const root = document.getElementById("cleaning-ah-root");
+        if (!root || !propertyName) return;
+        this.statsDetailPropertyName = propertyName;
+        this.statsPropertyScrollPosition = { left: window.scrollX, top: window.scrollY };
+        const cleanings = this.getStatsScopedCleaningRecords(this.getFilteredCleaningRecords(), this.statsCategoryKey);
+        root.insertAdjacentHTML("beforeend", this.renderStatsPropertyModal(
+            summarizeCleaningAhRecords(cleanings),
+            summarizeLaundryRecords(this.getFilteredStandaloneLaundryRecords())
+        ));
+        this.bindStatsPropertyModal();
+    }
+
+    closeStatsProperty() {
+        const propertyName = this.statsDetailPropertyName;
+        this.statsDetailPropertyName = "";
+        const dialog = document.getElementById("cleaning-ah-property-stats-dialog");
+        dialog?.close();
+        dialog?.remove();
+        [...document.querySelectorAll("[data-action='open-stats-property']")]
+            .find((button) => button.dataset.propertyName === propertyName)?.focus({ preventScroll: true });
+        if (this.statsPropertyScrollPosition) {
+            window.scrollTo({ ...this.statsPropertyScrollPosition, behavior: "instant" });
+            this.statsPropertyScrollPosition = null;
         }
-        const laundryByMonth = laundrySummary.byMonth || [];
+    }
+
+    bindStatsPropertyModal(scrollTop = 0) {
+        const dialog = document.getElementById("cleaning-ah-property-stats-dialog");
+        if (!dialog) return;
+        dialog.querySelector("[data-action='close-stats-property']").addEventListener("click", () => this.closeStatsProperty());
+        dialog.addEventListener("cancel", (event) => {
+            event.preventDefault();
+            this.closeStatsProperty();
+        });
+        dialog.addEventListener("click", (event) => {
+            if (event.target !== dialog) return;
+            const bounds = dialog.getBoundingClientRect();
+            if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+                this.closeStatsProperty();
+            }
+        });
+        dialog.showModal();
+        document.getElementById("cleaning-ah-property-stats-body").scrollTop = scrollTop;
+    }
+
+    renderStatsPropertyModal(cleaningSummary, laundrySummary) {
+        const propertyName = this.statsDetailPropertyName;
+        if (!propertyName) return "";
+        const matchesProperty = (record) => normalizeKey(record.propertyName || "Unknown") === normalizeKey(propertyName);
+        const propertyCleanings = summarizeCleaningAhRecords((cleaningSummary.records || []).filter(matchesProperty));
+        const propertyLaundry = summarizeLaundryRecords((laundrySummary.entries || []).filter(matchesProperty));
+        const combinedMonthly = combineCleaningAndLaundryMonthlySummaries(propertyCleanings.byMonth, propertyLaundry.byMonth);
+        const finalNet = roundCurrency(propertyCleanings.totals.totalToAh - propertyLaundry.totals.amount);
+
+        return `
+            <dialog id="cleaning-ah-property-stats-dialog" class="cleaning-ah-property-dialog" aria-labelledby="cleaning-ah-property-stats-title">
+                <div class="cleaning-ah-property-dialog__header flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div class="min-w-0">
+                        <div class="cleaning-ah-card-kicker">${escapeHtml(this.tr("stats.focusKicker"))}</div>
+                        <h2 id="cleaning-ah-property-stats-title" class="mt-1 text-xl font-semibold text-slate-900">${escapeHtml(propertyName)}</h2>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.focusDescription"))}</p>
+                    </div>
+                    <button type="button" autofocus data-action="close-stats-property" aria-label="${escapeHtml(t("common.close"))}" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div id="cleaning-ah-property-stats-body" class="cleaning-ah-property-dialog__body space-y-5 p-5">
+                    ${this.renderStatsSummaryCards(propertyCleanings, propertyLaundry)}
+                    ${this.renderStatsViewContent(combinedMonthly, [], propertyCleanings, propertyLaundry, finalNet, [], "month")}
+                </div>
+            </dialog>
+        `;
+    }
+
+    formatAverageRemainingPerCleaning(finalNetEarnings, cleaningCount) {
+        const average = calculateAverageRemainingPerCleaning(finalNetEarnings, cleaningCount);
+        return average === null ? "—" : this.formatCurrency(average);
+    }
+
+    renderStatsSummaryCards(cleaningSummary, laundrySummary) {
         const cleaningsNet = cleaningSummary.totals.totalToAh || 0;
         const laundryExpenses = laundrySummary.totals.amount || 0;
         const finalNet = roundCurrency(cleaningsNet - laundryExpenses);
-        const combinedMonthly = combineCleaningAndLaundryMonthlySummaries(cleaningSummary.byMonth, laundryByMonth);
-        const combinedByProperty = combineCleaningAndLaundryPropertySummaries(cleaningSummary.byProperty, laundrySummary.byProperty || []);
-
         return `
-            <section class="space-y-5">
-                ${detailPropertyName ? `
-                    <div class="space-y-3">
-                        <button type="button" data-action="close-stats-property" class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">
-                            <i class="fas fa-arrow-left" aria-hidden="true"></i>
-                            ${escapeHtml(t("common.back"))} · ${escapeHtml(this.tr("stats.topProperties"))}
-                        </button>
-                        <div>
-                            <div class="cleaning-ah-card-kicker">${escapeHtml(this.tr("stats.focusKicker"))}</div>
-                            <h2 id="cleaning-ah-property-stats-title" tabindex="-1" class="mt-1 text-xl font-semibold text-slate-900 focus:outline-none">${escapeHtml(detailPropertyName)}</h2>
-                            <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.focusDescription"))}</p>
-                        </div>
-                    </div>
-                ` : ""}
                 <!-- 1. Asana 3-Card Summary (The Bottom Line) -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <!-- Cleanings Card -->
@@ -2330,12 +2413,30 @@ export class CleaningAhManager {
                         <div class="border-t border-emerald-200/80 pt-2.5 text-xs text-emerald-950 space-y-1">
                             <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.cleanings"))}:</span> <span class="font-bold text-emerald-900">+${escapeHtml(this.formatCurrency(cleaningsNet))}</span></div>
                             <div class="flex justify-between"><span>${escapeHtml(this.tr("tabs.laundry"))}:</span> <span class="font-bold text-rose-700">-${escapeHtml(this.formatCurrency(laundryExpenses))}</span></div>
+                            <div class="mt-2 flex items-baseline justify-between gap-3 border-t border-emerald-200/80 pt-2" title="${escapeHtml(this.tr("stats.metricHelp.avgRemainingPerCleaning"))}">
+                                <span>${escapeHtml(this.tr("metrics.avgRemainingPerCleaning"))}:</span>
+                                <strong data-cleaning-average-remaining class="shrink-0 text-base ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatAverageRemainingPerCleaning(finalNet, cleaningSummary.totals.count))}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
+        `;
+    }
+
+    renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail, laundrySummary = {}, allStatsRecords = []) {
+        const laundryByMonth = laundrySummary.byMonth || [];
+        const cleaningsNet = cleaningSummary.totals.totalToAh || 0;
+        const laundryExpenses = laundrySummary.totals.amount || 0;
+        const finalNet = roundCurrency(cleaningsNet - laundryExpenses);
+        const combinedMonthly = combineCleaningAndLaundryMonthlySummaries(cleaningSummary.byMonth, laundryByMonth);
+        const combinedByProperty = combineCleaningAndLaundryPropertySummaries(cleaningSummary.byProperty, laundrySummary.byProperty || []);
+
+        return `
+            <section class="space-y-5">
+                ${this.renderFilters()}
+                ${this.renderStatsSummaryCards(cleaningSummary, laundrySummary)}
 
                 <!-- 2. Asana Segmented View Switcher & Export Actions -->
-                ${detailPropertyName ? "" : `
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
                     <div class="cleaning-ah-segmented-control">
                         <button type="button" data-action="set-stats-view-mode" data-mode="month"
@@ -2360,10 +2461,9 @@ export class CleaningAhManager {
                         <span>${escapeHtml(this.tr("stats.exportReport"))}</span>
                     </button>
                 </div>
-                `}
 
                 <!-- 3. Dynamic View Content (By Month / By Property / Heatmap) -->
-                ${this.renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords, detailPropertyName ? "month" : this.statsViewMode)}
+                ${this.renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords)}
             </section>
         `;
     }
@@ -2388,6 +2488,7 @@ export class CleaningAhManager {
                                     <th class="text-right">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
                                     <th class="text-right">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
                                     <th class="text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
+                                    <th class="text-right" title="${escapeHtml(this.tr("stats.metricHelp.avgRemainingPerCleaning"))}">${escapeHtml(this.tr("metrics.avgRemainingPerCleaning"))}</th>
                                     <th class="text-right">${escapeHtml(this.tr("tabs.cleanings"))}</th>
                                     <th class="text-right">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
                                 </tr>
@@ -2399,6 +2500,7 @@ export class CleaningAhManager {
                                         <td class="text-right font-medium text-slate-800">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
                                         <td class="text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
                                         <td class="text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
+                                        <td class="text-right font-semibold">${escapeHtml(this.formatAverageRemainingPerCleaning(row.finalNetEarnings, row.cleaningsCount))}</td>
                                         <td class="text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
                                         <td class="text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
                                     </tr>
@@ -2410,6 +2512,7 @@ export class CleaningAhManager {
                                     <td class="text-right">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
                                     <td class="text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
                                     <td class="text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
+                                    <td class="text-right font-semibold">${escapeHtml(this.formatAverageRemainingPerCleaning(finalNet, cleaningSummary.totals.count))}</td>
                                     <td class="text-right text-xs">${escapeHtml(String(cleaningSummary.totals.count))}</td>
                                     <td class="text-right text-xs">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
                                 </tr>
@@ -2435,7 +2538,8 @@ export class CleaningAhManager {
                                 <th class="text-right">${escapeHtml(this.tr("metrics.cleaningsNet"))}</th>
                                 <th class="text-right">${escapeHtml(this.tr("metrics.laundryExpenses"))}</th>
                                 <th class="text-right font-bold text-slate-900">${escapeHtml(this.tr("metrics.finalNetProfit"))}</th>
-                                <th class="text-right">${escapeHtml(this.tr("tabs.cleanings"))}</th>
+                                <th class="text-right" title="${escapeHtml(this.tr("stats.metricHelp.avgRemainingPerCleaning"))}">${escapeHtml(this.tr("metrics.avgRemainingPerCleaning"))}</th>
+                                    <th class="text-right">${escapeHtml(this.tr("tabs.cleanings"))}</th>
                                 <th class="text-right">${escapeHtml(this.tr("tabs.laundry"))} (kg)</th>
                             </tr>
                         </thead>
@@ -2446,7 +2550,8 @@ export class CleaningAhManager {
                                     <td class="text-right font-medium text-slate-800">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
                                     <td class="text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
                                     <td class="text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
-                                    <td class="text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
+                                    <td class="text-right font-semibold">${escapeHtml(this.formatAverageRemainingPerCleaning(row.finalNetEarnings, row.cleaningsCount))}</td>
+                                        <td class="text-right text-xs text-slate-500">${escapeHtml(String(row.cleaningsCount))}</td>
                                     <td class="text-right text-xs text-slate-500">${row.laundryKg > 0 ? escapeHtml(this.formatNumber(row.laundryKg) + " kg") : "—"}</td>
                                 </tr>
                             `).join("")}
@@ -2457,7 +2562,8 @@ export class CleaningAhManager {
                                 <td class="text-right">${escapeHtml(this.formatCurrency(cleaningSummary.totals.totalToAh))}</td>
                                 <td class="text-right text-rose-600">${escapeHtml(this.formatCurrency(laundrySummary.totals.amount))}</td>
                                 <td class="text-right text-base font-extrabold ${finalNet >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(finalNet))}</td>
-                                <td class="text-right text-xs">${escapeHtml(String(cleaningSummary.totals.count))}</td>
+                                <td class="text-right font-semibold">${escapeHtml(this.formatAverageRemainingPerCleaning(finalNet, cleaningSummary.totals.count))}</td>
+                                    <td class="text-right text-xs">${escapeHtml(String(cleaningSummary.totals.count))}</td>
                                 <td class="text-right text-xs">${escapeHtml(this.formatNumber(laundrySummary.totals.kg))} kg</td>
                             </tr>
                         </tfoot>
@@ -4462,6 +4568,7 @@ export class CleaningAhManager {
 
         document.getElementById("cleaning-ah-search")?.addEventListener("input", (event) => {
             this.searchQuery = event.target.value || "";
+            this.focusAfterRender = "cleaning-ah-search";
             this.render();
         });
         document.getElementById("cleaning-ah-month-filter")?.addEventListener("change", (event) => {
@@ -4498,17 +4605,8 @@ export class CleaningAhManager {
         });
         document.querySelectorAll("[data-action='open-stats-property']").forEach((button) => {
             button.addEventListener("click", () => {
-                this.statsDetailPropertyName = button.dataset.propertyName || "";
-                this.focusAfterRender = "cleaning-ah-property-stats-title";
-                this.render();
+                this.openStatsProperty(button.dataset.propertyName || "");
             });
-        });
-        document.querySelector("[data-action='close-stats-property']")?.addEventListener("click", () => {
-            const propertyName = this.statsDetailPropertyName;
-            this.statsDetailPropertyName = "";
-            this.render();
-            [...document.querySelectorAll("[data-action='open-stats-property']")]
-                .find((button) => button.dataset.propertyName === propertyName)?.focus();
         });
         document.getElementById("cleaning-ah-cleaning-register-filter")?.addEventListener("change", (event) => {
             this.cleaningRegisterFilter = event.target.value || "all";

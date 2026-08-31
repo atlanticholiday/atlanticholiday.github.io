@@ -1453,6 +1453,7 @@
       "netToAh": "Net to AH",
       "ahBeforeLaundry": "AH before laundry",
       "avgNetPerCleaning": "Avg net / cleaning",
+      "avgRemainingPerCleaning": "Avg remaining / cleaning",
       "quantity": "Quantity",
       "kg": "Kg",
       "amount": "Amount",
@@ -1532,6 +1533,7 @@
         "vat": "VAT appears only on categories that use the extracted 22% VAT rule. Mid-term cleanings do not add VAT here.",
         "ahBeforeLaundry": "This is the amount left for AH after commission and VAT, but before subtracting laundry costs.",
         "avgNetPerCleaning": "This is total net to AH divided by the number of cleaning entries in the current filtered view.",
+        "avgRemainingPerCleaning": "Final earnings after platform fees, VAT and laundry costs divided by the number of cleanings. Shown as — when there are no cleanings.",
         "avgKgPerCleaning": "This is total linked laundry kg divided by the number of cleaning entries in the current filtered view."
       },
       "sortOptions": {
