@@ -138,6 +138,7 @@ export class CleaningAhManager {
         this.statsCategoryKey = "";
         this.statsPropertySort = "net-desc";
         this.statsSelectedPropertyName = "";
+        this.statsDetailPropertyName = "";
         this.statsViewMode = "month";
         this.activeDrawer = null;
         this.collapsedSections = new Set();
@@ -2254,6 +2255,12 @@ export class CleaningAhManager {
     }
 
     renderStatsTab(cleaningSummary, statsPropertyRows, statsCategoryOptions, selectedStatsPropertyName, selectedStatsPropertyDetail, laundrySummary = {}, allStatsRecords = []) {
+        const detailPropertyName = this.statsDetailPropertyName;
+        if (detailPropertyName) {
+            const matchesProperty = (record) => normalizeKey(record.propertyName || "Unknown") === normalizeKey(detailPropertyName);
+            cleaningSummary = summarizeCleaningAhRecords((cleaningSummary.records || []).filter(matchesProperty));
+            laundrySummary = summarizeLaundryRecords((laundrySummary.entries || []).filter(matchesProperty));
+        }
         const laundryByMonth = laundrySummary.byMonth || [];
         const cleaningsNet = cleaningSummary.totals.totalToAh || 0;
         const laundryExpenses = laundrySummary.totals.amount || 0;
@@ -2263,6 +2270,19 @@ export class CleaningAhManager {
 
         return `
             <section class="space-y-5">
+                ${detailPropertyName ? `
+                    <div class="space-y-3">
+                        <button type="button" data-action="close-stats-property" class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">
+                            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                            ${escapeHtml(t("common.back"))} · ${escapeHtml(this.tr("stats.topProperties"))}
+                        </button>
+                        <div>
+                            <div class="cleaning-ah-card-kicker">${escapeHtml(this.tr("stats.focusKicker"))}</div>
+                            <h2 id="cleaning-ah-property-stats-title" tabindex="-1" class="mt-1 text-xl font-semibold text-slate-900 focus:outline-none">${escapeHtml(detailPropertyName)}</h2>
+                            <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("stats.focusDescription"))}</p>
+                        </div>
+                    </div>
+                ` : ""}
                 <!-- 1. Asana 3-Card Summary (The Bottom Line) -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <!-- Cleanings Card -->
@@ -2315,6 +2335,7 @@ export class CleaningAhManager {
                 </div>
 
                 <!-- 2. Asana Segmented View Switcher & Export Actions -->
+                ${detailPropertyName ? "" : `
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
                     <div class="cleaning-ah-segmented-control">
                         <button type="button" data-action="set-stats-view-mode" data-mode="month"
@@ -2339,19 +2360,20 @@ export class CleaningAhManager {
                         <span>${escapeHtml(this.tr("stats.exportReport"))}</span>
                     </button>
                 </div>
+                `}
 
                 <!-- 3. Dynamic View Content (By Month / By Property / Heatmap) -->
-                ${this.renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords)}
+                ${this.renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords, detailPropertyName ? "month" : this.statsViewMode)}
             </section>
         `;
     }
 
-    renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords) {
-        if (this.statsViewMode === "heatmap") {
+    renderStatsViewContent(combinedMonthly, combinedByProperty, cleaningSummary, laundrySummary, finalNet, allStatsRecords, viewMode = this.statsViewMode) {
+        if (viewMode === "heatmap") {
             return this.renderPropertyMonthHeatmap(allStatsRecords);
         }
 
-        if (this.statsViewMode === "property") {
+        if (viewMode === "property") {
             return `
                 <div class="cleaning-ah-table-container">
                     <div class="px-5 py-4 border-b border-[#e1e4e8] bg-white">
@@ -2373,7 +2395,7 @@ export class CleaningAhManager {
                             <tbody>
                                 ${combinedByProperty.map((row) => `
                                     <tr>
-                                        <td class="font-semibold text-slate-900">${escapeHtml(row.label)}</td>
+                                        <td class="font-semibold text-slate-900"><button type="button" data-action="open-stats-property" data-property-name="${escapeHtml(row.label)}" aria-label="${escapeHtml(`${this.tr("stats.focusTitle")}: ${row.label}`)}" class="block w-full cursor-pointer rounded text-left text-sky-700 underline decoration-sky-200 underline-offset-4 hover:text-sky-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-600">${escapeHtml(row.label)}</button></td>
                                         <td class="text-right font-medium text-slate-800">${escapeHtml(this.formatCurrency(row.cleaningsNetToAh))}</td>
                                         <td class="text-right font-medium text-rose-600">${row.laundryAmount > 0 ? escapeHtml(this.formatCurrency(row.laundryAmount)) : "—"}</td>
                                         <td class="text-right font-bold ${row.finalNetEarnings >= 0 ? "text-emerald-700" : "text-rose-600"}">${escapeHtml(this.formatCurrency(row.finalNetEarnings))}</td>
@@ -4473,6 +4495,20 @@ export class CleaningAhManager {
                 this.statsSelectedPropertyName = button.dataset.propertyName || "";
                 this.render();
             });
+        });
+        document.querySelectorAll("[data-action='open-stats-property']").forEach((button) => {
+            button.addEventListener("click", () => {
+                this.statsDetailPropertyName = button.dataset.propertyName || "";
+                this.focusAfterRender = "cleaning-ah-property-stats-title";
+                this.render();
+            });
+        });
+        document.querySelector("[data-action='close-stats-property']")?.addEventListener("click", () => {
+            const propertyName = this.statsDetailPropertyName;
+            this.statsDetailPropertyName = "";
+            this.render();
+            [...document.querySelectorAll("[data-action='open-stats-property']")]
+                .find((button) => button.dataset.propertyName === propertyName)?.focus();
         });
         document.getElementById("cleaning-ah-cleaning-register-filter")?.addEventListener("change", (event) => {
             this.cleaningRegisterFilter = event.target.value || "all";

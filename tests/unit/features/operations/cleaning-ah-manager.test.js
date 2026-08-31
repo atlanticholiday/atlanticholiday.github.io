@@ -1518,6 +1518,59 @@ describe("CleaningAhManager", () => {
     }
   });
 
+  test("opens property stats from the ranking and returns without changing the filters", () => {
+    resetDom('<div id="cleaning-ah-root"></div>');
+    const manager = new CleaningAhManager(null);
+    manager.activeTab = "stats";
+    manager.statsViewMode = "property";
+    manager.cleaningRecords = [
+      { id: "c1", date: "2026-04-05", monthKey: "2026-04", propertyName: "Villa Magnólia", totalToAh: 100 },
+      { id: "c2", date: "2026-05-05", monthKey: "2026-05", propertyName: "Villa Magnólia", totalToAh: 200 },
+      { id: "c3", date: "2026-04-06", monthKey: "2026-04", propertyName: "Calas Loft", totalToAh: 400 }
+    ];
+    manager.laundryRecords = [
+      { id: "l1", date: "2026-04-07", monthKey: "2026-04", propertyName: "Villa Magnólia", quantity: 2, kg: 5, amount: 20 },
+      { id: "l2", date: "2026-05-07", monthKey: "2026-05", propertyName: "Villa Magnólia", quantity: 1, kg: 10, laundryRatePerKg: 2.3 },
+      { id: "l3", date: "2026-04-08", monthKey: "2026-04", propertyName: "Laundry Only", quantity: 3, kg: 4, amount: 12 }
+    ];
+    const root = document.getElementById("cleaning-ah-root");
+    const openProperty = (name) => [...root.querySelectorAll("[data-action='open-stats-property']")]
+      .find((button) => button.dataset.propertyName === name).click();
+    const cardValues = () => [...root.querySelectorAll(".cleaning-ah-card-value")].map((card) => card.textContent);
+    const back = () => root.querySelector("[data-action='close-stats-property']").click();
+
+    try {
+      manager.render();
+      openProperty("Villa Magnólia");
+      assert.equal(root.querySelector("#cleaning-ah-property-stats-title").textContent, "Villa Magnólia");
+      assert.deepEqual(cardValues(), [300, 43, 257].map((value) => manager.formatCurrency(value)));
+      assert.equal(root.querySelectorAll("tbody tr").length, 2);
+      const april = [...root.querySelectorAll("tbody tr")].find((row) => row.cells[0].textContent === manager.formatMonthKey("2026-04"));
+      assert.equal(april.cells[3].textContent, manager.formatCurrency(80));
+      assert.ok(!root.querySelector("[data-action='open-export-modal']"));
+      assert.ok(!root.querySelector("[data-action='open-stats-property']"));
+      back();
+      assert.equal(manager.statsViewMode, "property");
+      assert.deepEqual(cardValues(), [700, 55, 645].map((value) => manager.formatCurrency(value)));
+
+      manager.selectedMonthKey = "2026-04";
+      manager.render();
+      openProperty("Villa Magnólia");
+      assert.deepEqual(cardValues(), [100, 20, 80].map((value) => manager.formatCurrency(value)));
+      assert.equal(root.querySelectorAll("tbody tr").length, 1);
+      back();
+      assert.equal(manager.selectedMonthKey, "2026-04");
+
+      openProperty("Laundry Only");
+      assert.deepEqual(cardValues(), [0, 12, -12].map((value) => manager.formatCurrency(value)));
+      assert.includes(root.textContent, "4 kg");
+      back();
+      assert.equal(manager.statsDetailPropertyName, "");
+    } finally {
+      resetDom();
+    }
+  });
+
   test("groups cleanings by month with count and net sums for Asana section view", () => {
     const manager = new CleaningAhManager(null);
     const records = [
