@@ -1351,7 +1351,7 @@ export class CleaningAhManager {
         const cleaningSummary = summarizeCleaningAhRecords(filteredCleanings, filteredStandaloneLaundry);
         const derivedCleanings = cleaningSummary.records;
         const visibleCleaningRegisterEntries = this.getVisibleCleaningRegisterEntries(derivedCleanings);
-        const laundrySummary = summarizeLaundryRecords(filteredCleanings, filteredStandaloneLaundry);
+        const laundrySummary = summarizeLaundryRecords(filteredStandaloneLaundry);
         const visibleLaundryRegisterEntries = this.getVisibleLaundryRegisterEntries(laundrySummary.entries);
         const statsCategoryOptions = this.getStatsCategoryOptions(cleaningSummary);
         if (

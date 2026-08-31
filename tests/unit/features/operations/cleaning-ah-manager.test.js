@@ -1455,6 +1455,69 @@ describe("CleaningAhManager", () => {
     resetDom();
   });
 
+  test("renders laundry expenses from laundry records and deducts them from cleaning earnings", () => {
+    resetDom('<div id="cleaning-ah-root"></div>');
+    const manager = new CleaningAhManager(null);
+    manager.activeTab = "stats";
+    manager.cleaningRecords = [
+      { id: "c1", date: "2026-04-05", monthKey: "2026-04", propertyName: "Acqua Beach", totalToAh: 100 },
+      { id: "c2", date: "2026-04-06", monthKey: "2026-04", propertyName: "Calas Loft", totalToAh: 100 }
+    ];
+    manager.laundryRecords = [
+      { id: "l1", date: "2026-04-07", monthKey: "2026-04", propertyName: "Acqua Beach", quantity: 2, kg: 5, laundryRatePerKg: 2.3, amount: 0 },
+      { id: "l2", date: "2026-04-08", monthKey: "2026-04", propertyName: "Calas Loft", quantity: 3, kg: 5, laundryRatePerKg: 2.3, amount: 20 },
+      { id: "l3", date: "2026-05-01", monthKey: "2026-05", propertyName: "Acqua Beach", quantity: 1, kg: 4, laundryRatePerKg: 3 }
+    ];
+
+    const root = document.getElementById("cleaning-ah-root");
+    const assertSummary = ({ count, quantity, kg, amount, net }) => {
+      const cards = root.querySelectorAll(".cleaning-ah-card");
+      const laundryCard = cards[1];
+      assert.equal(laundryCard.querySelector(".cleaning-ah-card-value").textContent, manager.formatCurrency(amount));
+      assert.includes(laundryCard.textContent, `${count} ${manager.tr("tables.rows")}`);
+      assert.includes(laundryCard.textContent, `${quantity} items`);
+      assert.includes(laundryCard.textContent, `${manager.formatNumber(kg)} kg`);
+      assert.equal(cards[2].querySelector(".cleaning-ah-card-value").textContent, manager.formatCurrency(net));
+      const totals = root.querySelector("tfoot tr").cells;
+      assert.equal(totals[2].textContent, manager.formatCurrency(amount));
+      assert.equal(totals[3].textContent, manager.formatCurrency(net));
+    };
+
+    try {
+      manager.render();
+      assertSummary({ count: 3, quantity: 6, kg: 14, amount: 43.5, net: 156.5 });
+      const rows = [...root.querySelectorAll("tbody tr")];
+      const april = rows.find((row) => row.cells[0].textContent === manager.formatMonthKey("2026-04"));
+      assert.equal(april.cells[2].textContent, manager.formatCurrency(31.5));
+      assert.equal(april.cells[3].textContent, manager.formatCurrency(168.5));
+
+      manager.statsViewMode = "property";
+      manager.render();
+      assertSummary({ count: 3, quantity: 6, kg: 14, amount: 43.5, net: 156.5 });
+      const propertyRow = [...root.querySelectorAll("tbody tr")]
+        .find((row) => row.cells[0].textContent === "Acqua Beach");
+      assert.equal(propertyRow.cells[2].textContent, manager.formatCurrency(23.5));
+      assert.equal(propertyRow.cells[3].textContent, manager.formatCurrency(76.5));
+
+      manager.statsViewMode = "month";
+      manager.selectedMonthKey = "2026-04";
+      manager.selectedPropertyName = "Acqua Beach";
+      manager.render();
+      assertSummary({ count: 1, quantity: 2, kg: 5, amount: 11.5, net: 88.5 });
+
+      // Laundry-only months must still contribute expenses, even without cleanings.
+      manager.selectedMonthKey = "2026-05";
+      manager.render();
+      assertSummary({ count: 1, quantity: 1, kg: 4, amount: 12, net: -12 });
+
+      manager.laundryRecords = [];
+      manager.render();
+      assertSummary({ count: 0, quantity: 0, kg: 0, amount: 0, net: 0 });
+    } finally {
+      resetDom();
+    }
+  });
+
   test("groups cleanings by month with count and net sums for Asana section view", () => {
     const manager = new CleaningAhManager(null);
     const records = [
