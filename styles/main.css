@@ -5555,13 +5555,50 @@ header h1, header h2, header h3 {
     margin-right: 0 !important;
 }
 
-#landing-page .header-brand {
-    gap: 0.85rem;
+/* Frame the original PNG artwork without its square canvas margins. */
+.brand-wordmark {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    width: 128px;
+    aspect-ratio: 640 / 260;
+    overflow: hidden;
 }
 
-#landing-page .dashboard-logo--xl {
-    width: 112px !important;
-    height: 44px !important;
+.brand-wordmark img {
+    position: absolute;
+    width: 168.90625%; /* Original 1081px canvas in a 640px artwork window. */
+    max-width: none;
+    height: auto;
+    left: -32.8125%;
+    top: -148.076923%;
+}
+
+#landing-page .dashboard-header {
+    padding: 0;
+}
+
+#landing-page .dashboard-header .container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+#landing-page .header-left {
+    display: none;
+}
+
+#landing-page .header-brand {
+    gap: 0.85rem;
+    min-width: 0;
+    text-align: left;
+}
+
+#landing-page .landing-header-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
 }
 
 #landing-page .header-title {
@@ -5572,7 +5609,6 @@ header h1, header h2, header h3 {
 
 @media (max-width: 640px) {
     #landing-page .dashboard-header .container {
-        grid-template-columns: minmax(0, 1fr) auto;
         gap: 0.65rem;
         padding: 10px 12px !important;
     }
@@ -5591,26 +5627,22 @@ header h1, header h2, header h3 {
         min-width: 0;
     }
 
-    #landing-page .dashboard-logo--xl {
-        width: 88px !important;
-        height: 36px !important;
-    }
-
     #landing-page .header-title {
         font-size: 1.05rem;
         line-height: 1.05;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     #landing-page .landing-header-actions {
+        flex-basis: 100%;
         gap: 0.45rem;
         min-width: 0;
     }
 
     #landing-page .landing-search-btn,
     #landing-page .landing-sign-out-btn {
+        min-width: 44px;
+        min-height: 44px;
         padding: 0.55rem 0.72rem;
     }
 
@@ -5620,6 +5652,15 @@ header h1, header h2, header h3 {
     }
 
     #landing-page .landing-sign-out-btn .header-signout-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    #landing-page .theme-toggle-label {
         display: none;
     }
 }
@@ -10501,6 +10542,19 @@ body.heated-pools-dialog-open {
     box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
 }
 
+/* The landing header already opens global search. */
+body:has(#landing-page:not(.hidden)) .quick-search-trigger {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .landing-search-btn kbd,
+    .quick-search-trigger kbd,
+    .quick-search-footer > span:last-child {
+        display: none;
+    }
+}
+
 .quick-search-trigger kbd,
 .quick-search-footer kbd {
     display: inline-flex;
@@ -10692,8 +10746,9 @@ body.heated-pools-dialog-open {
 
 @media (max-width: 640px) {
     .quick-search-trigger {
-        left: 1rem;
+        left: auto;
         right: 1rem;
+        bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
         justify-content: center;
     }
 

@@ -527,6 +527,9 @@ export class QuickSearchManager {
             return;
         }
 
+        if (!this.isOpen) {
+            this.returnFocusElement = this.documentRef.activeElement;
+        }
         this.isOpen = true;
         this.query = "";
         this.activeIndex = 0;
@@ -539,9 +542,14 @@ export class QuickSearchManager {
     }
 
     close() {
+        const wasOpen = this.isOpen;
         this.isOpen = false;
         this.overlay?.classList.add("hidden");
-        this.triggerButton?.focus?.();
+        if (wasOpen) {
+            const focusTarget = [this.returnFocusElement, ...(this.openButtons || []), this.triggerButton]
+                .find((element) => element?.isConnected && element.getClientRects().length > 0);
+            focusTarget?.focus?.();
+        }
     }
 
     getItems() {
