@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="js/core/theme-manager.js"></script>
-    <link rel="stylesheet" href="styles/main.css?v=20260823-dialog-hotfix">
+    <link rel="stylesheet" href="styles/main.css?v=20260831-schedule">
     <!-- Extra styles for All Info page -->
     <link rel="stylesheet" href="styles/allinfo.css">
     <link rel="stylesheet" href="styles/reservations-enhanced.css">
@@ -1377,7 +1377,7 @@ Mountain Villa, Sintra Hills, V4"
                             title="Português">PT</button>
                     </div>
                     <button id="schedule-help-btn"
-                        class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all font-medium"
+                        class="schedule-help-button"
                         data-i18n-title="common.help">
                         <i class="fas fa-question-circle mr-1"></i><span data-i18n="common.help">Help</span>
                     </button>
@@ -1390,6 +1390,7 @@ Mountain Villa, Sintra Hills, V4"
                         <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
+            </div>
         </header>
 
         <div id="loading" class="text-center p-8">
@@ -1402,146 +1403,56 @@ Mountain Villa, Sintra Hills, V4"
                 <div class="schedule-workspace-shell">
                     <div id="schedule-access-banner" class="hidden"></div>
                     <div class="schedule-workspace-layout">
-                        <aside id="schedule-workspace-dock"
-                            class="schedule-workspace-dock schedule-control-rail rounded-[24px] bg-transparent">
-                            <div class="schedule-workspace-dock__inner px-2 py-1 lg:px-1">
-                                <div class="schedule-workspace-dock__copy">
-                                    <div class="space-y-2">
-                                        <div id="view-header-kicker"
-                                            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"></div>
-                                        <h2 id="view-header"
-                                            class="text-2xl font-semibold tracking-tight text-slate-950 lg:text-3xl"></h2>
-                                        <p id="view-header-context"
-                                            class="max-w-2xl text-sm leading-6 text-slate-600"></p>
+                        <nav class="schedule-view-nav" aria-label="Schedule views" data-i18n-aria-label="schedule.navigation.views">
+                            <div id="schedule-planning-group" class="schedule-view-tabs">
+                                <button id="monthly-view-btn" type="button" class="schedule-view-tab active-segment" aria-pressed="true" data-i18n="schedule.views.monthly">Monthly</button>
+                                <button id="yearly-view-btn" type="button" class="schedule-view-tab" aria-pressed="false" data-i18n="schedule.views.yearly">Yearly</button>
+                                <details id="schedule-reference-group" class="schedule-menu">
+                                    <summary class="schedule-view-tab"><span id="schedule-more-label" data-i18n="schedule.navigation.more">More</span><span aria-hidden="true">⌄</span></summary>
+                                    <div class="schedule-menu-items">
+                                        <button id="stats-view-btn" type="button" data-i18n="schedule.views.stats">Stats</button>
+                                        <button id="madeira-holidays-view-btn" type="button" data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
                                     </div>
-                                </div>
-                                <div class="schedule-workspace-dock__nav">
-                                    <div class="schedule-workspace-dock__nav-copy">
-                                        <p id="schedule-navigation-subtitle" class="text-sm text-slate-500"
-                                            data-i18n="schedule.navigation.subtitle">Choose a planning view or open a reference view.</p>
-                                    </div>
-                                    <div class="schedule-workspace-dock__nav-groups">
-                                        <div id="schedule-planning-group"
-                                            class="w-full rounded-[24px] border border-slate-200 bg-slate-50/85 p-2">
-                                            <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                                data-i18n="schedule.navigation.planning">Planning</div>
-                                            <div class="flex flex-wrap gap-1">
-                                                <button id="monthly-view-btn"
-                                                    class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand active-segment"
-                                                    data-i18n="schedule.views.monthly">Monthly</button>
-                                                <button id="yearly-view-btn"
-                                                    class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                                    data-i18n="schedule.views.yearly">Yearly</button>
-                                                <button id="vacation-board-view-btn"
-                                                    class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                                    data-i18n="schedule.views.vacationBoard">Vacation Board</button>
+                                </details>
+                            </div>
+                            <button id="schedule-vacation-center-btn" type="button" class="schedule-vacation-link hidden"><span data-i18n="vacationCenter.title">Vacation Center</span><span aria-hidden="true">↗</span></button>
+                        </nav>
+                        <section class="schedule-board-shell" aria-labelledby="view-header">
+                            <div class="schedule-board-shell__inner">
+                                <div class="schedule-board-heading">
+                                    <h2 id="view-header" aria-live="polite"></h2>
+                                    <div id="calendar-controls" class="schedule-toolbar">
+                                        <div class="schedule-period-controls">
+                                            <button id="prev-btn" type="button" class="schedule-icon-button" aria-label="Previous period" data-i18n-aria-label="schedule.navigation.previousPeriod">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18-6-6 6-6"/></svg>
+                                            </button>
+                                            <button id="schedule-today-btn" type="button" data-i18n="schedule.navigation.today">Today</button>
+                                            <button id="next-btn" type="button" class="schedule-icon-button" aria-label="Next period" data-i18n-aria-label="schedule.navigation.nextPeriod">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/></svg>
+                                            </button>
+                                        </div>
+                                        <details id="schedule-export-menu" class="schedule-menu">
+                                            <summary class="schedule-export-trigger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg><span data-i18n="schedule.navigation.export">Export</span></summary>
+                                            <div class="schedule-menu-items">
+                                                <button id="print-weekly-btn" type="button" data-i18n="schedule.navigation.printRoster">Print weekly roster</button>
+                                                <button id="print-timesheet-btn" type="button" data-i18n="timeClock.actions.openPrintView">Attendance print view</button>
+                                                <button id="pdf-download-btn" type="button" class="hidden" data-i18n="schedule.navigation.downloadReport">Download monthly PDF</button>
                                             </div>
-                                        </div>
-                                        <div id="schedule-reference-group"
-                                            class="w-full rounded-[24px] border border-slate-200 bg-slate-50/85 p-2">
-                                            <div class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                                data-i18n="schedule.navigation.reference">Reference</div>
-                                            <div class="flex flex-wrap gap-1">
-                                                <button id="stats-view-btn"
-                                                    class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                                    data-i18n="schedule.views.stats">Stats</button>
-                                                <button id="madeira-holidays-view-btn"
-                                                    class="px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand"
-                                                    data-i18n="schedule.views.madeiraHolidays">Madeira Holidays</button>
-                                            </div>
-                                        </div>
+                                        </details>
                                     </div>
                                 </div>
-                                <div id="schedule-shell-summary" class="schedule-shell-summary"></div>
-                                <div class="schedule-rail-legend">
-                                    <div class="schedule-rail-section-title" data-i18n="schedule.legend.title">Legend</div>
-                                    <div class="schedule-legend-row flex flex-wrap items-center gap-3 text-sm">
-                                        <div class="schedule-legend-item flex items-center gap-2">
-                                            <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-                                            <span data-i18n="schedule.legend.working">Working</span>
-                                        </div>
-                                        <div class="schedule-legend-item flex items-center gap-2">
-                                            <div class="w-3 h-3 bg-yellow-600 rounded-full"></div>
-                                            <span data-i18n="schedule.legend.holiday">Holiday â˜…</span>
-                                        </div>
-                                        <div class="schedule-legend-item flex items-center gap-2">
-                                            <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-                                            <span data-i18n="schedule.legend.offWeekend">Off/Weekend</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <p class="schedule-calendar-hint" data-i18n="schedule.navigation.dayHint">Select a day to view the team and attendance.</p>
+                                <div id="calendar-grid" class="schedule-month-grid hidden md:grid grid-cols-7"></div>
+                                <div id="calendar-mobile-cards" class="hidden md:hidden"></div>
+                                <div id="yearly-summary-container" class="hidden"></div>
+                                <div id="madeira-holidays-container" class="hidden"></div>
+                                <div id="stats-container" class="hidden"></div>
                             </div>
-                        </aside>
-
-                    <section class="schedule-board-shell overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-                    <div id="add-colleague-section" class="hidden">
-                        <!-- Removed inline form, moved to modal -->
+                        </section>
                     </div>
-                    <div class="schedule-board-shell__inner px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
-                        <div id="calendar-controls" class="schedule-toolbar relative mb-5 flex flex-col gap-4 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
-                            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                            <button id="prev-btn"
-                                class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <button id="next-btn"
-                                class="rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                            </div>
-                            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-end">
-                            <button id="print-weekly-btn"
-                                class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900"
-                                title="Print Weekly Roster">
-                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" />
-                                </svg>
-                            </button>
-                            <button id="print-timesheet-btn"
-                                class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-3 text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900"
-                                title="Open Attendance Print View"
-                                data-i18n-title="timeClock.actions.openPrintView">
-                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </button>
-
-                            <button id="pdf-download-btn"
-                                class="hidden inline-flex items-center justify-center rounded-full bg-slate-950 p-3 text-white shadow-sm transition-colors hover:bg-slate-800"
-                                title="Download Monthly Team Report PDF">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                            </button>
-                            </div>
-
-                        </div>
-                        <div id="calendar-grid" class="schedule-month-grid hidden md:grid grid-cols-7 gap-3"></div>
-                        <div id="calendar-mobile-cards" class="hidden space-y-3 md:hidden"></div>
-                        <div id="yearly-summary-container" class="hidden"></div>
-                        <div id="vacation-board-container" class="hidden"></div>
-                        <div id="madeira-holidays-container" class="hidden"></div>
-
-                        <div id="stats-container" class="hidden"></div>
-                    </div>
-                    </section>
-                    </div>
+                </div>
             </div>
         </div>
-    </div>
-
     </div>
 
     <div id="airbnb-reservation-invoices-page" class="hidden min-h-screen bg-gray-50">

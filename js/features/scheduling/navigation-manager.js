@@ -365,6 +365,9 @@ export class NavigationManager {
         const goToTimeClockBtn = document.getElementById('go-to-time-clock-btn');
         const goToBuildPlannerBtn = document.getElementById('go-to-build-planner-btn');
         const goToVacationCenterBtn = document.getElementById('go-to-vacation-center-btn');
+        document.getElementById('schedule-vacation-center-btn')?.addEventListener('click', () => {
+            this.showVacationCenterPage();
+        });
 
         if (goToPropertiesBtn) {
             goToPropertiesBtn.addEventListener('click', () => {

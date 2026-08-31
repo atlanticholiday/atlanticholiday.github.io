@@ -145,6 +145,9 @@ class I18n {
             const key = el.getAttribute('data-i18n-title');
             el.title = this.t(key);
         });
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+            el.setAttribute('aria-label', this.t(el.getAttribute('data-i18n-aria-label')));
+        });
     }
 
     /**

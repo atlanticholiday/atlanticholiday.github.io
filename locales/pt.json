@@ -2216,6 +2216,15 @@
         "subtitle": "Calendário da equipa, escala e planeamento de férias",
         "loading": "A carregar o seu horário...",
         "navigation": {
+            "more": "Mais",
+            "views": "Vistas do horário",
+            "today": "Hoje",
+            "previousPeriod": "Período anterior",
+            "nextPeriod": "Período seguinte",
+            "export": "Exportar",
+            "printRoster": "Imprimir horário semanal",
+            "downloadReport": "Descarregar PDF mensal",
+            "dayHint": "Selecione um dia para ver a equipa e as presenças.",
             "subtitle": "Escolha uma vista de planeamento ou abra uma vista de referência.",
             "planning": "Planeamento",
             "reference": "Referência"

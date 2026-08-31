@@ -54,8 +54,38 @@ export class ScheduleManager {
                 // Clone to remove old listeners
                 const newBtn = btn.cloneNode(true);
                 btn.replaceWith(newBtn);
-                newBtn.addEventListener('click', () => this.uiManager.switchView(view));
+                newBtn.addEventListener('click', () => {
+                    this.uiManager.switchView(view);
+                    const menu = newBtn.closest('details');
+                    if (menu) {
+                        menu.open = false;
+                        menu.querySelector('summary')?.focus();
+                    }
+                });
             }
+        });
+        document.getElementById('schedule-today-btn')?.addEventListener('click', () => {
+            this.dataManager.setCurrentDate(new Date());
+            this.uiManager.updateView();
+        });
+        document.querySelectorAll('.schedule-menu').forEach((menu) => {
+            menu.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    menu.open = false;
+                    menu.querySelector('summary')?.focus();
+                }
+            });
+            menu.addEventListener('click', (event) => {
+                if (event.target.closest('button')) {
+                    menu.open = false;
+                    menu.querySelector('summary')?.focus();
+                }
+            });
+        });
+        document.addEventListener('click', (event) => {
+            document.querySelectorAll('.schedule-menu[open]').forEach((menu) => {
+                if (!menu.contains(event.target)) menu.open = false;
+            });
         });
     }
 

@@ -8,8 +8,7 @@ import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './tim
 import { filterTimeClockStationEmployees, getTimeClockStationEmployeeInitials } from './time-clock-station.js';
 import { renderMadeiraReferenceView } from './views/madeira-reference-view.js';
 import { renderMonthlyCalendarMobileCards, renderMonthlyCalendarView } from './views/monthly-schedule-view.js';
-import { renderVacationBoardView } from './views/vacation-board-view.js';
-import { getScheduleViewMeta, renderScheduleAccessBanner, renderScheduleWorkspaceSummary } from './views/schedule-shell-view.js';
+import { getScheduleViewMeta, renderScheduleAccessBanner } from './views/schedule-shell-view.js';
 import { renderStatsScheduleView } from './views/stats-schedule-view.js';
 import { renderYearlySummaryView } from './views/yearly-schedule-view.js';
 
@@ -31,11 +30,6 @@ export class UIManager {
         this.timeClockStationResetTimer = null;
         this.timeClockStationIdleTimer = null;
         this.timeClockStationIdleMs = 60000;
-        this.vacationBoardFilters = {
-            search: '',
-            department: 'all'
-        };
-
         this.dataManager.subscribeToDataChanges(() => {
             this.updateView();
             this.renderTimeClockPage();
@@ -2472,10 +2466,6 @@ export class UIManager {
         renderMadeiraReferenceView();
     }
 
-    renderVacationBoard() {
-        renderVacationBoardView(this);
-    }
-
     isScheduleOnlyMode() {
         return this.dataManager.isScheduleOnlyUser();
     }
@@ -2508,23 +2498,26 @@ export class UIManager {
             if (buttonConfig.view === activeView) {
                 element.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
                 element.classList.remove('text-gray-600', 'hover:text-gray-900');
-                element.style.setProperty('color', '#0f172a', 'important');
+                element.style.removeProperty('color');
             } else {
                 element.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'active-segment');
                 element.classList.add('text-gray-600', 'hover:text-gray-900');
                 element.style.removeProperty('color');
             }
+            element.setAttribute('aria-pressed', String(buttonConfig.view === activeView));
         });
 
         const referenceGroup = document.getElementById('schedule-reference-group');
         referenceGroup?.classList.toggle('hidden', scheduleOnlyMode);
-
-        const navigationSubtitle = document.getElementById('schedule-navigation-subtitle');
-        if (navigationSubtitle) {
-            navigationSubtitle.textContent = scheduleOnlyMode
-                ? t('schedule.selfService.navigationSubtitle')
-                : t('schedule.navigation.subtitle');
+        referenceGroup?.classList.toggle('is-active', ['stats', 'madeira-holidays'].includes(activeView));
+        const moreLabel = document.getElementById('schedule-more-label');
+        if (moreLabel) {
+            moreLabel.textContent = t('schedule.navigation.more');
         }
+        document.getElementById('schedule-vacation-center-btn')?.classList.toggle('hidden',
+            scheduleOnlyMode || !this.dataManager.canAccessApp?.('vacationCenter'));
+        document.getElementById('schedule-export-menu')?.classList.toggle('hidden', scheduleOnlyMode);
+
 
         const helpButton = document.getElementById('schedule-help-btn');
         helpButton?.classList.toggle('hidden', scheduleOnlyMode);
@@ -2554,28 +2547,20 @@ export class UIManager {
         this.dataManager.ensureHolidaysForYear(currentDate.getFullYear() - 1);
         this.dataManager.ensureHolidaysForYear(currentDate.getFullYear() + 1);
         this.renderEmployeeList();
-        renderScheduleWorkspaceSummary(this.dataManager);
         renderScheduleAccessBanner(this.dataManager);
         this.syncScheduleNavigationState(currentView);
 
         const viewHeader = document.getElementById('view-header');
-        const viewHeaderKicker = document.getElementById('view-header-kicker');
-        const viewHeaderContext = document.getElementById('view-header-context');
         const calendarControls = document.getElementById('calendar-controls');
         const pdfDownloadButton = document.getElementById('pdf-download-btn');
 
-        if (viewHeaderKicker) {
-            viewHeaderKicker.textContent = t(viewMeta.titleKey);
-        }
-        if (viewHeaderContext) {
-            viewHeaderContext.textContent = t(viewMeta.descriptionKey);
-        }
+        if (viewHeader) viewHeader.textContent = t(viewMeta.titleKey);
+        document.querySelector('.schedule-calendar-hint')?.classList.toggle('hidden', currentView !== 'monthly');
 
         const mainViews = {
             calendar: document.getElementById('calendar-grid'),
             calendarMobile: document.getElementById('calendar-mobile-cards'),
             yearly: document.getElementById('yearly-summary-container'),
-            vacationBoard: document.getElementById('vacation-board-container'),
             madeiraHolidays: document.getElementById('madeira-holidays-container'),
             stats: document.getElementById('stats-container')
         };
@@ -2618,18 +2603,6 @@ export class UIManager {
 
             mainViews.yearly?.classList.remove('hidden');
             this.renderYearlySummary();
-            return;
-        }
-
-        if (currentView === 'vacation-board') {
-            if (viewHeader) {
-                viewHeader.textContent = new Intl.DateTimeFormat(displayLocale, {
-                    year: 'numeric'
-                }).format(currentDate);
-            }
-
-            mainViews.vacationBoard?.classList.remove('hidden');
-            this.renderVacationBoard();
             return;
         }
 
@@ -2820,8 +2793,8 @@ export class UIManager {
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-gray-800">Employee Sidebar</h4>
-                                            <p class="text-sm text-gray-600">The left sidebar shows your team members. Click on any colleague to see their details, summary, or to edit their working days.</p>
+                                            <h4 class="font-bold text-gray-800">Team Details</h4>
+                                            <p class="text-sm text-gray-600">Select a calendar day to see the team and attendance. Manage colleague profiles and working days in Staff, and leave in the Vacation Center.</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-4 items-start">
@@ -2831,8 +2804,8 @@ export class UIManager {
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 class="font-bold text-gray-800">Color Legend</h4>
-                                            <p class="text-sm text-gray-600"><span class="inline-block w-3 h-3 bg-green-600 rounded-full mr-1"></span> Working &nbsp; <span class="inline-block w-3 h-3 bg-yellow-600 rounded-full mr-1"></span> Holiday &nbsp; <span class="inline-block w-3 h-3 bg-gray-400 rounded-full mr-1"></span> Off/Weekend</p>
+                                            <h4 class="font-bold text-gray-800">Calendar Labels</h4>
+                                            <p class="text-sm text-gray-600">Each day shows the number working. Amber labels show holidays and vacations; coral labels show absences and low staffing. Weekends have a light background.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2851,7 +2824,7 @@ export class UIManager {
                                         <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
                                             <li>Each cell shows how many colleagues are working that day</li>
                                             <li>Click on any day to view/edit who is working</li>
-                                            <li>Days with ★ indicate public holidays</li>
+                                            <li>Public holidays are labelled in amber</li>
                                             <li>Weekends are shown in gray</li>
                                         </ul>
                                     </div>
@@ -2861,11 +2834,11 @@ export class UIManager {
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <h4 class="font-bold text-gray-800 mb-2">📄 Download PDF</h4>
-                                        <p class="text-sm text-gray-600">Click the <strong>download icon</strong> (📥) in the calendar controls to generate a printable PDF report of the month.</p>
+                                        <p class="text-sm text-gray-600">Choose <strong>Export → Download monthly PDF</strong> to generate a printable PDF report of the month.</p>
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <h4 class="font-bold text-gray-800 mb-2">🖨️ Weekly Roster</h4>
-                                        <p class="text-sm text-gray-600">Click the <strong>print icon</strong> to view and print a weekly roster table showing shifts for each colleague.</p>
+                                        <p class="text-sm text-gray-600">Choose <strong>Export → Print weekly roster</strong> to view and print a weekly roster table showing shifts for each colleague.</p>
                                     </div>
                                 </div>
                             </div>

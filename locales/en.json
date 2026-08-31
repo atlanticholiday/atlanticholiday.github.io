@@ -2211,6 +2211,15 @@
     "subtitle": "Team calendar, staffing and vacation planning",
     "loading": "Loading your schedule...",
     "navigation": {
+      "more": "More",
+      "views": "Schedule views",
+      "today": "Today",
+      "previousPeriod": "Previous period",
+      "nextPeriod": "Next period",
+      "export": "Export",
+      "printRoster": "Print weekly roster",
+      "downloadReport": "Download monthly PDF",
+      "dayHint": "Select a day to view the team and attendance.",
       "subtitle": "Choose a planning view or open a reference view.",
       "planning": "Planning",
       "reference": "Reference"

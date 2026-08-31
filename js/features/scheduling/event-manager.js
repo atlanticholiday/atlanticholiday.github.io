@@ -65,6 +65,7 @@ export class EventManager {
         document.getElementById('prev-btn').addEventListener('click', () => {
             const currentView = this.dataManager.getCurrentView();
             const currentDate = this.dataManager.getCurrentDate();
+            currentDate.setDate(1); // Avoid skipping February/short months from the 29th–31st.
             if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() - 1);
             else if (currentView === 'yearly') currentDate.setFullYear(currentDate.getFullYear() - 1);
             this.dataManager.setCurrentDate(currentDate);
@@ -74,6 +75,7 @@ export class EventManager {
         document.getElementById('next-btn').addEventListener('click', () => {
             const currentView = this.dataManager.getCurrentView();
             const currentDate = this.dataManager.getCurrentDate();
+            currentDate.setDate(1);
             if (currentView === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1);
             else if (currentView === 'yearly') currentDate.setFullYear(currentDate.getFullYear() + 1);
             this.dataManager.setCurrentDate(currentDate);
