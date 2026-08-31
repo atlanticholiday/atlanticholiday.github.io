@@ -82,7 +82,7 @@ describe("HTML smoke", () => {
 
       if (page.path === "../index.html") {
         const documentRef = new DOMParser().parseFromString(html, "text/html");
-        assert.equal(documentRef.querySelector("#landing-page .dashboard-logo")?.getAttribute("src"), "assets/atlantic-holiday-logo.svg", "Landing header should use the tightly cropped logo");
+        assert.equal(documentRef.querySelector("#landing-page .brand-wordmark img")?.getAttribute("src"), "assets/atlantic-holiday-logo.png", "Landing header should use the official logo artwork");
         assert.equal(documentRef.getElementById("welcome-packs-page")?.parentElement?.tagName, "BODY", "welcome-packs-page should be a top-level page");
         assert.equal(documentRef.getElementById("operational-guidelines-page")?.parentElement?.tagName, "BODY", "operational-guidelines-page should be a top-level page");
         assert.equal(documentRef.getElementById("vacation-center-page")?.parentElement?.tagName, "BODY", "vacation-center-page should be a top-level page");

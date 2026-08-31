@@ -10,6 +10,7 @@
 }
 
 .vacation-center-page-header {
+    padding: 0;
     border-bottom: 1px solid #e2e8f0;
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(14px);
@@ -17,12 +18,14 @@
 
 .vacation-center-page-header__inner {
     display: flex;
+    flex-wrap: wrap;
     width: min(1540px, calc(100vw - 40px));
     min-height: 76px;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 12px 24px;
     margin: 0 auto;
+    padding: 12px 0;
 }
 
 .vacation-center-page-header__brand,
@@ -30,10 +33,21 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
+}
+
+.vacation-center-page-header__actions {
+    flex-wrap: wrap;
+}
+
+.vacation-center-page-header__title {
+    min-width: 0;
+    text-align: left;
 }
 
 .vacation-center-back {
     display: inline-flex;
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
     align-items: center;
@@ -68,6 +82,8 @@
 }
 
 .vacation-center-signout {
+    min-height: 44px;
+    padding: 0 8px;
     color: #64748b;
     font-size: 0.8rem;
     font-weight: 700;
@@ -96,6 +112,7 @@
 
 .vacation-center-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
@@ -105,6 +122,7 @@
 
 .vacation-center-view-switch {
     display: flex;
+    flex-wrap: wrap;
     gap: 22px;
 }
 
@@ -120,7 +138,7 @@
 .vacation-center-view-switch button::after {
     position: absolute;
     right: 0;
-    bottom: -21px;
+    bottom: 0;
     left: 0;
     height: 2px;
     background: transparent;
@@ -142,10 +160,13 @@
 }
 
 .vacation-center-toolbar__actions {
+    flex-wrap: wrap;
+    min-width: 0;
     gap: 10px;
 }
 
 .vacation-center-year-control {
+    flex-shrink: 0;
     overflow: hidden;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
@@ -189,7 +210,7 @@
     min-height: 44px;
     align-items: center;
     gap: 8px;
-    padding: 0 16px;
+    padding: 8px 16px;
     border: 0;
     border-radius: 10px;
     background: var(--vacation-accent);
@@ -206,6 +227,8 @@
 
 .vacation-center-book svg {
     width: 17px;
+    height: 17px;
+    flex-shrink: 0;
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
@@ -242,6 +265,7 @@
 
 .vacation-center-total {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
@@ -1227,6 +1251,12 @@
 }
 
 @media (max-width: 980px) {
+    .vacation-center-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 16px;
+    }
+
     .vacation-center-balances {
         grid-template-columns: 1fr;
     }
@@ -1255,12 +1285,27 @@
         width: min(100% - 24px, 1540px);
     }
 
-    .vacation-center-page-header__title span,
-    .vacation-center-signout span {
+    .vacation-center-page-header__brand {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 8px 12px;
+        width: 100%;
+    }
+
+    .vacation-center-page-header__brand .brand-wordmark {
+        width: 112px;
+    }
+
+    .vacation-center-page-header__title {
+        grid-column: 2;
+    }
+
+    .vacation-center-page-header__title span {
         display: none;
     }
 
     .vacation-center-page-header__actions {
+        width: 100%;
         gap: 6px;
     }
 
@@ -1278,8 +1323,15 @@
         padding: 15px;
     }
 
-    .vacation-center-view-switch button::after {
-        bottom: -16px;
+    .vacation-center-view-switch {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .vacation-center-view-switch button {
+        min-width: 0;
+        font-size: 0.78rem;
     }
 
     .vacation-center-toolbar__actions {
@@ -1288,7 +1340,7 @@
     }
 
     .vacation-center-book {
-        flex: 1;
+        flex: 1 1 150px;
         justify-content: center;
     }
 
@@ -1301,6 +1353,7 @@
     }
 
     .vacation-center-total {
+        gap: 4px 10px;
         padding: 12px 15px;
     }
 
