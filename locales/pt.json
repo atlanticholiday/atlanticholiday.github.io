@@ -173,6 +173,7 @@
         "scheduledOff": "Folga Programada"
     },
     "landing": {
+        "title": "Portal da Equipa",
         "welcome": "Bem-vindo ao seu centro de operações",
         "subtitle": "Gerir propriedades, horários, segurança e muito mais - tudo num só lugar.",
         "mainApps": "Aplicações Principais",

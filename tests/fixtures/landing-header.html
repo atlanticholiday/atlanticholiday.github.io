@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../../">
+  <title>Landing header preview</title>
+</head>
+<body>
+  <script type="module">
+    // Render production markup and controls without authentication or business data.
+    import { AppSwitcher } from './js/features/scheduling/app-switcher.js';
+    import { i18n } from './js/core/i18n.js';
+
+    const response = await fetch('index.html');
+    const source = new DOMParser().parseFromString(await response.text(), 'text/html');
+    for (const link of source.querySelectorAll('link[rel="stylesheet"]')) {
+      document.head.appendChild(link.cloneNode(true));
+    }
+    const tailwind = document.createElement('script');
+    tailwind.src = source.querySelector('script[src*="@tailwindcss/browser"]').src;
+    document.head.appendChild(tailwind);
+    const page = document.createElement('div');
+    page.id = 'landing-page';
+    page.appendChild(source.querySelector('.landing-dashboard-header').cloneNode(true));
+    document.body.appendChild(page);
+    await import('./js/core/theme-manager.js');
+    const switcher = new AppSwitcher({});
+    switcher.installTriggers();
+    await i18n.loadTranslations('en');
+    await i18n.loadTranslations('pt');
+    function translate(lang) {
+      i18n.currentLang = lang;
+      i18n.updateUI();
+      i18n.updateLanguageSwitcher();
+      switcher.updateTriggerLabels();
+      document.documentElement.lang = lang;
+      window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+    }
+    translate(new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en');
+    document.querySelectorAll('[data-lang-option]').forEach(button => {
+      button.addEventListener('click', () => translate(button.dataset.langOption));
+    });
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ describe("Locales smoke", () => {
 
       const json = await response.json();
       assert.ok(json && typeof json === "object" && !Array.isArray(json), `${path} should contain an object`);
+      assert.equal(json.landing.title, path.includes("/en.") ? "Team Hub" : "Portal da Equipa");
     }
   });
 });

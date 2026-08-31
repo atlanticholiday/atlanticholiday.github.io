@@ -5305,52 +5305,57 @@ header h1, header h2, header h3 {
 }
 
 #landing-page .dashboard-header .container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    display: grid;
+    /* Equal side tracks keep the title centered, regardless of control widths. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 12px 24px;
 }
 
 #landing-page .header-left {
-    display: none;
+    display: flex;
 }
 
 #landing-page .header-brand {
-    gap: 0.85rem;
     min-width: 0;
-    text-align: left;
+    text-align: center;
 }
 
 #landing-page .landing-header-actions {
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
     min-width: 0;
+    max-width: 100%;
 }
 
 #landing-page .header-title {
+    margin: 0;
     font-size: 1.18rem;
     line-height: 1.05;
     letter-spacing: 0;
 }
 
+@media (max-width: 1100px) {
+    #landing-page .landing-header-actions {
+        grid-column: 1 / -1;
+        justify-self: center;
+        justify-content: center;
+    }
+}
+
 @media (max-width: 640px) {
     #landing-page .dashboard-header .container {
+        grid-template-columns: minmax(0, 1fr);
         gap: 0.65rem;
         padding: 10px 12px !important;
     }
 
     #landing-page .header-left {
-        display: none;
+        justify-self: center;
     }
 
     #landing-page .header-brand {
-        justify-self: start;
-        gap: 0.65rem;
-        min-width: 0;
-    }
-
-    #landing-page .leading-tight {
-        min-width: 0;
+        justify-self: center;
     }
 
     #landing-page .header-title {
@@ -5360,7 +5365,6 @@ header h1, header h2, header h3 {
     }
 
     #landing-page .landing-header-actions {
-        flex-basis: 100%;
         gap: 0.45rem;
         min-width: 0;
     }
@@ -5395,10 +5399,6 @@ header h1, header h2, header h3 {
     #landing-page .dashboard-header .container {
         gap: 0.5rem;
         padding: 10px !important;
-    }
-
-    #landing-page .header-brand {
-        gap: 0.5rem;
     }
 
     #landing-page .header-title {

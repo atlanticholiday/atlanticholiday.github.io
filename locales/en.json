@@ -173,6 +173,7 @@
     "scheduledOff": "Scheduled Off"
   },
     "landing": {
+        "title": "Team Hub",
         "welcome": "Welcome to your operations hub",
         "subtitle": "Manage properties, schedules, safety and more - all in one beautiful place.",
         "mainApps": "Main Apps",
