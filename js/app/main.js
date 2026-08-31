@@ -19,7 +19,6 @@ import { CommissionCalculatorManager } from '../features/operations/commission-c
 import { HeatedPoolsManager } from '../features/operations/heated-pools-manager.js';
 import { LaundryLogManager } from '../features/operations/laundry-log-manager.js';
 import { LinenInventoryManager } from '../features/operations/linen-inventory-manager.js';
-import { NukiDoorsManager } from '../features/operations/nuki-doors-manager.js';
 import { OperationsManager } from '../features/operations/operations-manager.js';
 import { OwnersManager } from '../features/operations/owners-manager.js';
 import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
@@ -80,7 +79,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, nukiDoorsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -478,14 +477,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         airbnbReservationInvoicesManager = new AirbnbReservationInvoicesManager();
         window.airbnbReservationInvoicesManager = airbnbReservationInvoicesManager;
         airbnbReservationInvoicesManager.init();
-        nukiDoorsManager = new NukiDoorsManager({
-            listDoors: httpsCallable(functionsInstance, 'nukiListDoors'),
-            doorAction: httpsCallable(functionsInstance, 'nukiDoorAction'),
-            listDevices: httpsCallable(functionsInstance, 'nukiListDevices'),
-            saveDoor: httpsCallable(functionsInstance, 'nukiSaveDoor'),
-            deleteDoor: httpsCallable(functionsInstance, 'nukiDeleteDoor')
-        });
-        window.nukiDoorsManager = nukiDoorsManager;
         operationalGuidelinesManager = new OperationalGuidelinesManager();
         window.operationalGuidelinesManager = operationalGuidelinesManager;
         operationalGuidelinesManager.init();
@@ -885,7 +876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupGlobalEventListeners() {
     // Sign out event listener
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #linen-inventory-sign-out-btn, #nuki-doors-sign-out-btn, #heated-pools-sign-out-btn, #vacation-center-sign-out-btn')) {
+        if (e.target.closest('#sign-out-btn, #landing-sign-out-btn, #properties-sign-out-btn, #operations-sign-out-btn, #reservations-sign-out-btn, #vehicles-sign-out-btn, #owners-sign-out-btn, #welcome-sign-out-btn, #operational-guidelines-sign-out-btn, #time-clock-sign-out-btn, #laundry-log-sign-out-btn, #linen-inventory-sign-out-btn, #heated-pools-sign-out-btn, #vacation-center-sign-out-btn')) {
             signOut(auth);
         }
     });
@@ -1043,10 +1034,6 @@ function setupGlobalEventListeners() {
         if (staffManager) {
             staffManager.render();
         }
-    });
-
-    document.addEventListener('nukiDoorsPageOpened', () => {
-        nukiDoorsManager?.init();
     });
 
     document.addEventListener('heatedPoolsPageOpened', () => {

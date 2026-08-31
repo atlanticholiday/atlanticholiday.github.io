@@ -216,8 +216,6 @@
         "operationalGuidelinesDesc": "Protocolos aprovados.",
         "heatedPools": "Piscinas Aquecidas",
         "heatedPoolsDesc": "Tarefas de aquecimento.",
-        "nukiDoors": "Portas Nuki",
-        "nukiDoorsDesc": "Fechaduras Nuki.",
         "allInfo": "Toda a Informação",
         "allInfoDesc": "Dados dos alojamentos.",
         "inventory": "Inventário",
@@ -2023,7 +2021,6 @@
                 "manager": "Gestão completa",
                 "standard": "Acesso normal à app",
                 "colleagueWorkflow": "Fluxo de colaborador",
-                "operatorOnly": "Acesso de operador",
                 "ownRecords": "Apenas registos próprios"
             },
             "guide": {
@@ -2062,7 +2059,7 @@
                         "apps": "Apenas as apps selecionadas, com as mesmas limitações de um colaborador."
                     }
                 },
-                "footnote": "A maioria das apps tem atualmente uma única vista operacional. Registo de Lavandaria, Inventário de Roupa, Portas Nuki, Reservas Semanais e RNAL alteram as ações disponíveis conforme o perfil."
+                "footnote": "A maioria das apps tem atualmente uma única vista operacional. Registo de Lavandaria, Inventário de Roupa, Reservas Semanais e RNAL alteram as ações disponíveis conforme o perfil."
             },
             "appDetails": {
                 "generic": {
@@ -2076,10 +2073,6 @@
                 "linenInventory": {
                     "manager": "Pode rever os envios da equipa e usar os controlos de gestão, incluindo eliminar.",
                     "colleague": "Pode enviar registos de inventário. Os controlos de revisão e eliminação de gestão ficam ocultos."
-                },
-                "nukiDoors": {
-                    "manager": "Pode usar as operações das portas e os controlos privilegiados de configuração ou gestão.",
-                    "operator": "Pode usar as operações disponíveis das portas. Os controlos de configuração e gestão ficam ocultos."
                 },
                 "reservations": {
                     "manager": "Pode ver e trabalhar com todos os registos de reservas.",
@@ -2167,7 +2160,6 @@
                 "reservations": "Reservas Semanais",
                 "buildPlanner": "Build Planner",
                 "inventory": "Inventory",
-                "nukiDoors": "Portas Nuki",
                 "cleaningAh": "Limpeza AH",
                 "vacationCenter": "Centro de Férias"
             }

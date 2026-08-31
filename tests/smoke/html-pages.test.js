@@ -1,4 +1,5 @@
 import { describe, test, assert } from "../test-harness.js";
+import { getAppAccessOption } from "../../js/shared/app-access.js";
 
 describe("HTML smoke", () => {
   test("hidden dashboard cards stay hidden after dashboard styles load", async () => {
@@ -63,7 +64,7 @@ describe("HTML smoke", () => {
 
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
-      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-tasks-btn", "tasks-page", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page", "go-to-nuki-doors-btn", "nuki-doors-page", "nuki-doors-root"] },
+      { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "vacation-board-container", "schedule-access-banner", "go-to-tasks-btn", "tasks-page", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page"] },
       { path: "../property-settings.html", markers: ["property-settings-form", "save-settings"] },
       { path: "../inventory.html", markers: ["inventory"] }
     ];
@@ -89,6 +90,69 @@ describe("HTML smoke", () => {
         assert.equal(documentRef.getElementById("staff-page")?.parentElement?.tagName, "BODY", "staff-page should be a top-level page");
         assert.equal(documentRef.getElementById("tasks-page")?.parentElement?.tagName, "BODY", "tasks-page should be a top-level page");
       }
+    }
+  });
+
+  test("archived tools live only inside Show More Tools and keep their pages", async () => {
+    const response = await fetch("../index.html");
+    assert.ok(response.ok);
+    const documentRef = new DOMParser().parseFromString(await response.text(), "text/html");
+    const section = documentRef.getElementById("more-tools-section");
+    assert.ok(section?.classList.contains("hidden"), "Other Tools should start collapsed");
+
+    for (const key of ["operationalGuidelines", "vehicles", "airbnbReservationInvoices", "reservations"]) {
+      const option = getAppAccessOption(key);
+      assert.equal(option.group, "more", key + " should be classified as More tools");
+      assert.equal(documentRef.querySelectorAll("#" + option.buttonId).length, 1);
+      const card = documentRef.getElementById(option.buttonId);
+      assert.equal(card.parentElement.id, "other-tools-grid");
+      assert.ok(section.contains(card));
+      assert.ok(documentRef.getElementById(option.buttonId.replace("go-to-", "").replace("-btn", "-page")));
+    }
+
+    assert.equal(documentRef.querySelector('[id*="nuki"]'), null, "Nuki UI must be removed");
+    assert.equal(documentRef.getElementById("finance-owners-grid"), null, "Do not leave an empty Finance category");
+    assert.ok(documentRef.getElementById("services-logistics-grid"), "Keep the container used by Laundry and Linen Inventory");
+
+    // Run only the landing toggle in an isolated document, without booting Firebase.
+    const toggleScript = Array.from(documentRef.querySelectorAll("#landing-page script"))
+      .find((script) => script.textContent.includes("updateMoreToolsToggleLabel"));
+    assert.ok(toggleScript);
+    const frame = document.createElement("iframe");
+    try {
+      const loaded = new Promise((resolve) => { frame.onload = resolve; });
+      frame.srcdoc = '<button id="toggle-more-tools-btn"></button><span id="more-tools-icon"></span>'
+        + section.outerHTML + '<script>' + toggleScript.textContent + '<\/script>';
+      document.body.appendChild(frame);
+      await loaded;
+      const frameDocument = frame.contentDocument;
+      const toggle = frameDocument.getElementById("toggle-more-tools-btn");
+      const toolsSection = frameDocument.getElementById("more-tools-section");
+      toggle.click();
+      assert.ok(!toolsSection.classList.contains("hidden"), "Show More Tools should expand");
+      toggle.click();
+      assert.ok(toolsSection.classList.contains("hidden"), "Show More Tools should collapse again");
+    } finally {
+      frame.remove();
+    }
+  });
+
+  test("retired door integration has no runtime wiring or backend handlers", async () => {
+    for (const path of [
+      "../js/app/main.js",
+      "../js/features/scheduling/navigation-manager.js",
+      "../js/features/scheduling/app-switcher.js",
+      "../js/features/search/quick-search-manager.js",
+      "../js/features/admin/access-preview.js",
+      "../js/features/admin/user-management-controller.js",
+      "../functions/index.js",
+      "../firestore.rules",
+      "../locales/en.json",
+      "../locales/pt.json"
+    ]) {
+      const response = await fetch(path);
+      assert.ok(response.ok);
+      assert.ok(!/nuki/i.test(await response.text()), path + " must not retain Nuki integration code");
     }
   });
 

@@ -56,6 +56,17 @@ describe("Quick search", () => {
     assert.equal(results[0].id, "page-wifi");
   });
 
+  test("keeps archived apps searchable as More tools without the retired app", () => {
+    const items = buildQuickSearchItems({ canOpenPage: () => true });
+    for (const pageName of ["operationalGuidelines", "vehicles", "airbnbReservationInvoices", "reservations"]) {
+      const item = items.find((entry) => entry.pageName === pageName && entry.id === "app-" + pageName);
+      assert.ok(item, pageName + " should remain searchable");
+      assert.equal(item.subtitle, "More tools");
+      assert.ok(item.eventName, pageName + " should retain its navigation event");
+    }
+    assert.ok(!items.some((item) => item.pageName === "nukiDoors"));
+  });
+
   test("creates Inventory as an external page result when granted", () => {
     const items = buildQuickSearchItems({
       canOpenPage: () => true,

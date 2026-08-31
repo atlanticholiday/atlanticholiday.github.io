@@ -48,4 +48,17 @@ describe("Access preview", () => {
     assert.equal(preview.accessLevel, "no-workspace");
     assert.deepEqual(preview.appKeys, []);
   });
+
+  test("ignores retired door access while preserving archived tools", () => {
+    const preview = buildEffectiveAccessPreview({
+      roles: [],
+      allowedApps: ["nukiDoors", "operationalGuidelines", "vehicles", "airbnbReservationInvoices", "reservations"]
+    });
+    assert.deepEqual(preview.appKeys, [
+      "operationalGuidelines", "vehicles", "airbnbReservationInvoices", "reservations", "heatedPools"
+    ]);
+    const admin = buildEffectiveAccessPreview({ roles: ["admin"] });
+    assert.ok(!admin.appKeys.includes("nukiDoors"));
+    assert.ok(!admin.appScopes.some((app) => app.key === "nukiDoors"));
+  });
 });

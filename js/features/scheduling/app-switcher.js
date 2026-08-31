@@ -18,7 +18,6 @@ const DESTINATIONS = Object.freeze([
     { pageName: 'linenInventory', buttonId: 'go-to-linen-inventory-btn', fallbackLabel: 'Linen Inventory', tone: 'violet', category: 'servicesLogistics' },
     { pageName: 'cleaningAh', buttonId: 'go-to-cleaning-ah-btn', fallbackLabel: 'Cleaning AH', tone: 'cyan', category: 'servicesLogistics' },
     { pageName: 'checklists', buttonId: 'go-to-checklists-btn', fallbackLabel: 'Checklists', tone: 'emerald', category: 'servicesLogistics' },
-    { pageName: 'nukiDoors', buttonId: 'go-to-nuki-doors-btn', fallbackLabel: 'Nuki Doors', tone: 'slate', category: 'servicesLogistics' },
     { pageName: 'airbnbReservationInvoices', buttonId: 'go-to-airbnb-reservation-invoices-btn', fallbackLabel: 'Airbnb VAT Invoices', tone: 'rose', category: 'financeOwners' },
     { pageName: 'cleaningBills', buttonId: 'go-to-cleaning-bills-btn', fallbackLabel: 'Cleaning Bills', tone: 'cyan', category: 'financeOwners' },
     { pageName: 'owners', buttonId: 'go-to-owners-btn', fallbackLabel: 'Owners', tone: 'orange', category: 'financeOwners' },

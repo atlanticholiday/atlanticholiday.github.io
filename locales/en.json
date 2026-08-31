@@ -216,8 +216,6 @@
     "operationalGuidelinesDesc": "Approved protocols.",
     "heatedPools": "Heated Pools",
     "heatedPoolsDesc": "Pool heating tasks.",
-    "nukiDoors": "Nuki Doors",
-    "nukiDoorsDesc": "Smart locks.",
     "allInfo": "All Info",
     "allInfoDesc": "Property data.",
     "inventory": "Inventory",
@@ -2018,7 +2016,6 @@
         "manager": "Full management",
         "standard": "Standard app access",
         "colleagueWorkflow": "Colleague workflow",
-        "operatorOnly": "Operator access",
         "ownRecords": "Own records only"
       },
       "guide": {
@@ -2057,7 +2054,7 @@
             "apps": "Only selected apps, using the same restricted scopes as an employee."
           }
         },
-        "footnote": "Most apps currently have one operational view. Laundry Log, Linen Inventory, Nuki Doors, Weekly Reservations, and RNAL change what users can do according to profile."
+        "footnote": "Most apps currently have one operational view. Laundry Log, Linen Inventory, Weekly Reservations, and RNAL change what users can do according to profile."
       },
       "appDetails": {
         "generic": {
@@ -2071,10 +2068,6 @@
         "linenInventory": {
           "manager": "Can review team submissions and use manager controls, including deletion.",
           "colleague": "Can submit inventory entries. Manager review and deletion controls are hidden."
-        },
-        "nukiDoors": {
-          "manager": "Can use door operations and privileged configuration or management controls.",
-          "operator": "Can use available door operations. Configuration and management controls are hidden."
         },
         "reservations": {
           "manager": "Can view and work with all reservation records.",
@@ -2162,7 +2155,6 @@
         "reservations": "Weekly Reservations",
         "buildPlanner": "Build Planner",
         "inventory": "Inventory",
-        "nukiDoors": "Nuki Doors",
         "cleaningAh": "Cleaning AH",
         "vacationCenter": "Vacation Center"
       }

@@ -11,7 +11,6 @@ export const QUICK_SEARCH_PAGE_EVENTS = Object.freeze({
     heatedPools: "heatedPoolsPageOpened",
     laundryLog: "laundryLogPageOpened",
     linenInventory: "linenInventoryPageOpened",
-    nukiDoors: "nukiDoorsPageOpened",
     operationalGuidelines: "operationalGuidelinesPageOpened",
     operations: "operationsPageOpened",
     owners: "ownersPageOpened",

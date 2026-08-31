@@ -5,14 +5,6 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         pageName: 'vehicles',
         labelKey: 'apps.vehicles',
         fallbackLabel: 'Vehicles',
-        group: 'main'
-    },
-    {
-        key: 'nukiDoors',
-        buttonId: 'go-to-nuki-doors-btn',
-        pageName: 'nukiDoors',
-        labelKey: 'userManagement.appAccess.options.nukiDoors',
-        fallbackLabel: 'Nuki Doors',
         group: 'more'
     },
     {
@@ -45,7 +37,7 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         pageName: 'airbnbReservationInvoices',
         labelKey: 'userManagement.appAccess.options.airbnbReservationInvoices',
         fallbackLabel: 'Airbnb VAT Invoices',
-        group: 'main'
+        group: 'more'
     },
     {
         key: 'welcomePacks',
@@ -77,7 +69,7 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         pageName: 'operationalGuidelines',
         labelKey: 'userManagement.appAccess.options.operationalGuidelines',
         fallbackLabel: 'Operational Guide',
-        group: 'main'
+        group: 'more'
     },
     {
         key: 'heatedPools',
@@ -133,7 +125,7 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         pageName: 'reservations',
         labelKey: 'userManagement.appAccess.options.reservations',
         fallbackLabel: 'Weekly Reservations',
-        group: 'main'
+        group: 'more'
     },
     {
         key: 'buildPlanner',

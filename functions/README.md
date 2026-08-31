@@ -1,24 +1,21 @@
 # Firebase Functions for Horario
 
-## Nuki setup
+## Deployment
 
-These functions let the website open Nuki doors without exposing the Nuki API token in browser code.
+These functions provide authenticated application access, administrator account and role management, password-reset links, and limited reservation and property-directory data.
 
-1. Generate a token in **Nuki Web > API > Generate API token**.
-2. Set the token as a Firebase Functions secret:
-
-```powershell
-firebase functions:secrets:set NUKI_API_TOKEN
-```
-
-3. Deploy:
+Deploy with an authorized Firebase administrator account:
 
 ```powershell
 firebase deploy --only functions
 ```
 
-4. In the website, open **Nuki Doors** with a privileged account, click **Find devices**, then add each door using the `smartlockId`.
+## Retired door integration
 
-Give users access by adding `nukiDoors` in User Management app access, or by assigning a privileged role.
+The Nuki Doors app and its backend handlers have been removed. Source changes alone do not remove previously deployed resources. When releasing this change:
 
-For opening most doors, `unlatch` is usually the action you want. `unlock` may only unlock the lock without pulling the latch.
+- Confirm deletion of the retired `nukiListDoors`, `nukiDoorAction`, `nukiListDevices`, `nukiSaveDoor`, and `nukiDeleteDoor` functions if Firebase reports them during deployment.
+- Deploy the updated Firestore rules, which deny access to the retired collections through the default deny rule.
+- Revoke the old Nuki API token and remove the unused `NUKI_API_TOKEN` secret and any `NUKI_DOORS_JSON` environment setting after the old functions are removed.
+
+Existing door configuration and audit records are not deleted by this code change; review retention requirements before removing stored records.

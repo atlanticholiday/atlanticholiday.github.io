@@ -1551,7 +1551,7 @@ export class UserManagementController {
                     </div>
                     ${rowMarkup}
                 </div>
-                <p class="user-access-preview__guide-footnote">${this.escapeHtml(this.translate('userManagement.preview.guide.footnote', 'Most apps currently have one operational view. Laundry Log, Linen Inventory, Nuki Doors, Weekly Reservations, and RNAL change what users can do according to profile.'))}</p>
+                <p class="user-access-preview__guide-footnote">${this.escapeHtml(this.translate('userManagement.preview.guide.footnote', 'Most apps currently have one operational view. Laundry Log, Linen Inventory, Weekly Reservations, and RNAL change what users can do according to profile.'))}</p>
             </section>
         `;
     }
@@ -1615,7 +1615,6 @@ export class UserManagementController {
             manager: ['userManagement.preview.scopes.manager', 'Full management'],
             standard: ['userManagement.preview.scopes.standard', 'Standard app access'],
             'colleague-workflow': ['userManagement.preview.scopes.colleagueWorkflow', 'Colleague workflow'],
-            'operator-only': ['userManagement.preview.scopes.operatorOnly', 'Operator access'],
             'own-records': ['userManagement.preview.scopes.ownRecords', 'Own records only']
         };
         const [key, fallback] = scopes[scope] || scopes.standard;
@@ -1631,10 +1630,6 @@ export class UserManagementController {
             linenInventory: {
                 manager: ['userManagement.preview.appDetails.linenInventory.manager', 'Can review team submissions and use manager controls, including deletion.'],
                 'colleague-workflow': ['userManagement.preview.appDetails.linenInventory.colleague', 'Can submit inventory entries. Manager review and deletion controls are hidden.']
-            },
-            nukiDoors: {
-                manager: ['userManagement.preview.appDetails.nukiDoors.manager', 'Can use door operations and privileged configuration or management controls.'],
-                'operator-only': ['userManagement.preview.appDetails.nukiDoors.operator', 'Can use available door operations. Configuration and management controls are hidden.']
             },
             reservations: {
                 manager: ['userManagement.preview.appDetails.reservations.manager', 'Can view and work with all reservation records.'],

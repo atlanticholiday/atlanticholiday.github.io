@@ -314,34 +314,52 @@ describe("NavigationManager", () => {
     assert.ok(document.getElementById("build-planner-page").classList.contains("hidden"));
   });
 
-  test("routes to Nuki doors and back to landing", () => {
-    resetDom(`
-      <button id="go-to-nuki-doors-btn">Nuki Doors</button>
-      <button id="back-to-landing-from-nuki-doors-btn">Back</button>
-      <div id="landing-page"></div>
-      <div id="nuki-doors-page" class="hidden"></div>
-    `);
+  test("retired doors are unavailable and are filtered out of recent apps", () => {
+    resetDom('<div id="landing-page"></div>');
+    const navigationManager = new NavigationManager({
+      getDataManager: () => ({ canAccessApp: () => true, hasPrivilegedRole: () => true }),
+      storage: createStorageMock({
+        "atlantic-holiday-recent-pages": JSON.stringify(["nukiDoors", "vehicles"])
+      })
+    });
 
-    const navigationManager = new NavigationManager();
-    navigationManager.setupNavigationListeners();
-
-    let pageEventCount = 0;
-    document.addEventListener("nukiDoorsPageOpened", () => {
-      pageEventCount += 1;
-    }, { once: true });
-
-    document.getElementById("go-to-nuki-doors-btn").click();
-
-    assert.equal(navigationManager.getCurrentPage(), "nukiDoors");
-    assert.ok(document.getElementById("landing-page").classList.contains("hidden"));
-    assert.ok(!document.getElementById("nuki-doors-page").classList.contains("hidden"));
-    assert.equal(pageEventCount, 1);
-
-    document.getElementById("back-to-landing-from-nuki-doors-btn").click();
-
+    assert.equal(navigationManager.pages.nukiDoors, undefined);
+    assert.equal(navigationManager.canOpenPage("nukiDoors"), false);
+    assert.deepEqual(navigationManager.getRecentPages(), ["vehicles"]);
+    navigationManager.showPage("nukiDoors");
     assert.equal(navigationManager.getCurrentPage(), "landing");
-    assert.ok(!document.getElementById("landing-page").classList.contains("hidden"));
-    assert.ok(document.getElementById("nuki-doors-page").classList.contains("hidden"));
+  });
+
+  test("archived tools still navigate from the collapsed launcher and app switcher", () => {
+    const tools = [
+      { page: "operationalGuidelines", slug: "operational-guidelines" },
+      { page: "vehicles", slug: "vehicles" },
+      { page: "airbnbReservationInvoices", slug: "airbnb-reservation-invoices" },
+      { page: "reservations", slug: "reservations" }
+    ];
+    for (const tool of tools) {
+      resetDom(`
+        <div id="landing-page">
+          <div id="more-tools-section" class="hidden">
+            <button id="go-to-${tool.slug}-btn">Open</button>
+          </div>
+        </div>
+        <div id="${tool.slug}-page" class="hidden">
+          <button id="back-to-landing-from-${tool.slug}-btn">Back</button>
+        </div>
+      `);
+      const navigationManager = new NavigationManager({ storage: createStorageMock() });
+      navigationManager.setupNavigationListeners();
+      let events = 0;
+      document.addEventListener(tool.page + "PageOpened", () => { events += 1; }, { once: true });
+
+      navigationManager.navigateFromSwitcher(tool.page, "go-to-" + tool.slug + "-btn");
+      assert.equal(navigationManager.getCurrentPage(), tool.page);
+      assert.equal(events, 1, tool.page + " should initialize after navigation");
+      assert.ok(!document.getElementById(tool.slug + "-page").classList.contains("hidden"));
+      document.getElementById("back-to-landing-from-" + tool.slug + "-btn").click();
+      assert.equal(navigationManager.getCurrentPage(), "landing");
+    }
   });
 
   test("routes to Vacation Center and back to landing", () => {

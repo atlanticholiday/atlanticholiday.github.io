@@ -9,7 +9,6 @@ import {
 const COLLEAGUE_APP_SCOPES = Object.freeze({
     laundryLog: 'colleague-workflow',
     linenInventory: 'colleague-workflow',
-    nukiDoors: 'operator-only',
     reservations: 'own-records',
     rnal: 'own-records'
 });
