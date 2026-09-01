@@ -33,17 +33,17 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     hero: {
         kicker: 'Welcome Packs',
         title: '',
-        body: 'Prepare o stock uma vez e, no dia a dia, acompanhe reservas, registe os packs entregues e confirme os resultados.'
+        body: 'Prepare o stock uma vez e, no dia a dia, registe os packs entregues e confirme os resultados.'
     },
     overview: {
         navLabel: 'Visão geral',
         navDescription: 'Perceba o que fazer agora e onde fica cada tarefa.',
         eyebrow: 'Ponto de partida',
         title: 'O seu fluxo de Welcome Packs',
-        description: 'Use a preparação quando comprar ou configurar materiais. No trabalho diário, comece pelas reservas e termine nos resultados.',
+        description: 'Use a preparação quando comprar ou configurar materiais. No trabalho diário, registe os packs entregues e termine nos resultados.',
         dailyLabel: 'Trabalho diário',
         dailyTitle: 'Para cada check-in',
-        dailyDescription: 'Três passos simples para preparar, registar e confirmar cada welcome pack.',
+        dailyDescription: 'Dois passos simples para registar e confirmar cada welcome pack.',
         setupLabel: 'Preparação',
         setupTitle: 'Quando compra ou altera um pack',
         setupDescription: 'Mantenha compras, stock e modelos atualizados para que os cálculos diários sejam automáticos.',
@@ -85,7 +85,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
     help: {
         eyebrow: 'Guia rápido',
         title: 'Como funcionam os Welcome Packs',
-        subtitle: 'Da reserva ao resultado, sem saltar nenhum passo.',
+        subtitle: 'Do registo ao resultado, sem saltar nenhum passo.',
         close: 'Fechar guia',
         intro: 'Há dois ritmos diferentes: a preparação do stock, feita quando compra materiais, e o trabalho diário de cada check-in.',
         startLabel: 'Percurso recomendado',
@@ -95,25 +95,20 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
             inventory: 'Stock e Presets'
         },
         walkthrough: {
-            reservations: { title: '1. Ver próximas reservas', body: 'Confirme que propriedades terão check-in e precisam de pack.' },
-            purchases: { title: '2. Importar a fatura completa', body: 'Use a mesma importação para fruta, bebidas e todos os restantes materiais da fatura.' },
-            inventory: { title: '3. Confirmar materiais e stock', body: 'Reveja quantidades, custo unitário e materiais com stock baixo.' },
-            presets: { title: '4. Preparar modelos de pack', body: 'Crie um modelo para carregar rapidamente os materiais usados com frequência.' },
-            log: { title: '5. Registar o pack entregue', body: 'Escolha a propriedade, indique os materiais usados e confirme o valor cobrado.' },
-            dashboard: { title: '6. Confirmar os resultados', body: 'Consulte custos, valor cobrado, lucro e margem por propriedade.' }
+            purchases: { title: '1. Importar a fatura completa', body: 'Use a mesma importação para fruta, bebidas e todos os restantes materiais da fatura.' },
+            inventory: { title: '2. Confirmar materiais e stock', body: 'Reveja quantidades, custo unitário e materiais com stock baixo.' },
+            presets: { title: '3. Preparar modelos de pack', body: 'Crie um modelo para carregar rapidamente os materiais usados com frequência.' },
+            log: { title: '4. Registar o pack entregue', body: 'Escolha a propriedade, indique os materiais usados e confirme o valor cobrado.' },
+            dashboard: { title: '5. Confirmar os resultados', body: 'Consulte custos, valor cobrado, lucro e margem por propriedade.' }
         },
         openSection: 'Abrir esta área',
         sections: {
             workflow: {
                 title: 'Fluxo Diário',
                 steps: {
-                    checkReservations: {
-                        title: 'Verificar Reservas',
-                        body: 'Abra <strong>Reservas</strong> para rever os próximos check-ins e ver que propriedades vão precisar de um welcome pack em breve.'
-                    },
                     logPack: {
                         title: 'Registar um Pack',
-                        body: 'Abra <strong>Cobranças por Propriedade</strong>, selecione a propriedade e a data, depois adicione os materiais usados ou carregue um preset como ponto de partida.'
+                        body: 'Abra <strong>Registar packs</strong>, selecione a propriedade e a data, depois adicione os materiais usados ou carregue um preset como ponto de partida.'
                     },
                     saveMonitor: {
                         title: 'Guardar e Acompanhar',
@@ -656,13 +651,6 @@ export class WelcomePackManager {
                 eyebrow: this.tr('overview.eyebrow'),
                 description: this.tr('overview.navDescription'),
                 icon: 'fa-compass'
-            },
-            {
-                id: 'reservations',
-                label: this.tr('support.reservations'),
-                eyebrow: this.tr('navigation.daily'),
-                description: this.tr('support.reservationsDescription'),
-                icon: 'fa-calendar-alt'
             },
             {
                 id: 'log',
@@ -1231,7 +1219,7 @@ export class WelcomePackManager {
         const inventorySummary = summarizeWelcomePackInventory(items);
         const allViews = [...this.getPrimaryViews(), ...this.getSupportViews()];
         const byId = (id) => allViews.find((view) => view.id === id);
-        const dailyViews = ['reservations', 'log', 'dashboard'].map(byId);
+        const dailyViews = ['log', 'dashboard'].map(byId);
         const setupViews = ['purchases', 'inventory', 'presets'].map(byId);
 
         container.innerHTML = `
@@ -1923,7 +1911,6 @@ export class WelcomePackManager {
         document.getElementById('wp-help-modal')?.remove();
 
         const steps = [
-            ['reservations', 'fa-calendar-alt'],
             ['purchases', 'fa-receipt'],
             ['inventory', 'fa-box-open'],
             ['presets', 'fa-layer-group'],
@@ -1952,7 +1939,7 @@ export class WelcomePackManager {
                     <header>
                         <div>
                             <span>${this.tr('help.startLabel')}</span>
-                            <strong>6 ${this.getLocale() === 'pt-PT' ? 'passos' : 'steps'}</strong>
+                            <strong>${steps.length} ${this.getLocale() === 'pt-PT' ? 'passos' : 'steps'}</strong>
                         </div>
                         <button type="button" id="wp-help-close" class="welcome-pack-guide-close" aria-label="${this.tr('help.close')}">
                             <i class="fas fa-times"></i>

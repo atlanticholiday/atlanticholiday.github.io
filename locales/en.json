@@ -847,17 +847,17 @@
     "hero": {
       "kicker": "Welcome Packs",
       "title": "",
-      "body": "Prepare stock once, then track reservations, record delivered packs, and check results in the daily workflow."
+      "body": "Prepare stock once, then record delivered packs and check results in the daily workflow."
     },
     "overview": {
       "navLabel": "Overview",
       "navDescription": "See what to do now and where every task lives.",
       "eyebrow": "Starting point",
       "title": "Your Welcome Pack workflow",
-      "description": "Use setup when buying or configuring materials. In daily work, start with reservations and finish with results.",
+      "description": "Use setup when buying or configuring materials. In daily work, record delivered packs and finish with results.",
       "dailyLabel": "Daily work",
       "dailyTitle": "For each check-in",
-      "dailyDescription": "Three simple steps to prepare, record, and check each welcome pack.",
+      "dailyDescription": "Two simple steps to record and check each welcome pack.",
       "setupLabel": "Setup",
       "setupTitle": "When you buy or change a pack",
       "setupDescription": "Keep purchases, stock, and templates current so daily calculations stay automatic.",
@@ -962,17 +962,16 @@
     "help": {
       "eyebrow": "Quick guide",
       "title": "How Welcome Packs work",
-      "subtitle": "From reservation to results, without missing a step.",
+      "subtitle": "From pack preparation to results, without missing a step.",
       "close": "Close guide",
       "intro": "There are two different rhythms: stock setup when you purchase materials and the daily work for each check-in.",
       "startLabel": "Recommended walkthrough",
       "walkthrough": {
-        "reservations": { "title": "1. Check upcoming reservations", "body": "Confirm which properties have a check-in and need a pack." },
-        "purchases": { "title": "2. Import the complete invoice", "body": "Use the same import for fruit, drinks, and every other material on the invoice." },
-        "inventory": { "title": "3. Check materials and stock", "body": "Review quantities, unit cost, and low-stock materials." },
-        "presets": { "title": "4. Prepare pack templates", "body": "Create a template to load frequently used materials quickly." },
-        "log": { "title": "5. Record the delivered pack", "body": "Choose the property, enter the materials used, and confirm the charge." },
-        "dashboard": { "title": "6. Check the results", "body": "Review costs, charge, profit, and margin by property." }
+        "purchases": { "title": "1. Import the complete invoice", "body": "Use the same import for fruit, drinks, and every other material on the invoice." },
+        "inventory": { "title": "2. Check materials and stock", "body": "Review quantities, unit cost, and low-stock materials." },
+        "presets": { "title": "3. Prepare pack templates", "body": "Create a template to load frequently used materials quickly." },
+        "log": { "title": "4. Record the delivered pack", "body": "Choose the property, enter the materials used, and confirm the charge." },
+        "dashboard": { "title": "5. Check the results", "body": "Review costs, charge, profit, and margin by property." }
       },
       "openSection": "Open this area",
       "nav": {
@@ -984,13 +983,9 @@
         "workflow": {
           "title": "Daily Workflow",
           "steps": {
-            "checkReservations": {
-              "title": "Check Reservations",
-              "body": "Open <strong>Reservations</strong> to review upcoming check-ins and see which properties will need a welcome pack soon."
-            },
             "logPack": {
               "title": "Log a Pack",
-              "body": "Open <strong>Property Charges</strong>, select the property and date, then add the materials used or load a preset as a starting point."
+              "body": "Open <strong>Record packs</strong>, select the property and date, then add the materials used or load a preset as a starting point."
             },
             "saveMonitor": {
               "title": "Save & Monitor",

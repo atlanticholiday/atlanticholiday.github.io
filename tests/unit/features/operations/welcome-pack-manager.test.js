@@ -273,7 +273,7 @@ describe("WelcomePackManager", () => {
     assert.equal(manager.currentView, "overview");
     assert.includes(document.getElementById("welcome-pack-content").textContent, "Operação diária");
     assert.includes(document.getElementById("welcome-pack-content").textContent, "Preparação e stock");
-    assert.equal(document.querySelectorAll(".welcome-pack-overview-step").length, 6);
+    assert.equal(document.querySelectorAll(".welcome-pack-overview-step").length, 5);
     assert.equal(document.querySelector('[data-wp-view="overview"]').getAttribute("aria-current"), "page");
   });
 
@@ -289,7 +289,7 @@ describe("WelcomePackManager", () => {
     await flushRender();
     document.querySelector("[data-wp-open-guide]").click();
 
-    assert.equal(document.querySelectorAll("[data-wp-guide-view]").length, 6);
+    assert.equal(document.querySelectorAll("[data-wp-guide-view]").length, 5);
     assert.includes(document.getElementById("wp-help-modal").textContent, "Como funcionam os Welcome Packs");
 
     document.querySelector('[data-wp-guide-view="dashboard"]').click();
