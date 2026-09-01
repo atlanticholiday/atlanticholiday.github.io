@@ -203,7 +203,7 @@
         "welcomePacksDesc": "Stock e entregas.",
         "laundryLog": "Registo de Lavandaria",
         "laundryLogDesc": "Roupa por alojamento.",
-        "linenInventory": "Inventario de Roupa",
+        "linenInventory": "Inventário de Roupa",
         "linenInventoryDesc": "Contagens de roupa por propriedade.",
         "staff": "Equipa",
         "staffDesc": "Dados da equipa.",
@@ -583,9 +583,9 @@
     },
     "linenInventory": {
         "header": {
-            "kicker": "Inventario de Roupa",
-            "title": "Inventario de Roupa",
-            "subtitle": "Contar roupa por propriedade e data."
+            "kicker": "Inventário de Roupa",
+            "title": "Inventário de Roupa",
+            "subtitle": "Contagens por propriedade e data."
         },
         "landing": {
             "description": "Contagens de roupa por propriedade."
@@ -594,11 +594,11 @@
             "formTitle": "Nova contagem de roupa",
             "editTitle": "Atualizar contagem de roupa",
             "recordsTitle": "Contagens guardadas",
-            "recordsTab": "Contagens e revisão",
+            "recordsTab": "Contagens e revisões",
             "newCountTab": "Nova contagem",
             "editTab": "Editar contagem",
-            "newCountHint": "Registar o inventário de uma propriedade",
-            "workspaceLabel": "Vistas de gestão do inventário",
+            "newCountHint": "Registar a contagem de uma propriedade",
+            "workspaceLabel": "Áreas de gestão do inventário",
             "pendingReview": {
                 "one": "{{count}} a aguardar revisão",
                 "other": "{{count}} a aguardar revisão"
@@ -606,7 +606,7 @@
         },
         "stats": {
             "records": "Contagens",
-            "countedUnits": "Contado",
+            "countedUnits": "Unidades contadas",
             "trackedItems": "Artigos contados",
             "pendingReview": "A aguardar revisão",
             "shortages": "Unidades em falta",
@@ -616,8 +616,8 @@
             "property": "Propriedade",
             "countedDate": "Data da contagem",
             "notes": "Notas",
-            "countShort": "Quantidade",
-            "countedOn": "Contado {{date}}",
+            "countShort": "Contado",
+            "countedOn": "Contagem de {{date}}",
             "noDate": "Sem data",
             "unnamedProperty": "Propriedade sem nome",
             "trackedItems": "Artigos contados",
@@ -630,31 +630,31 @@
             "bedroomDefaultName": "Quarto {{number}}",
             "bedType": "Tipo de cama",
             "bedSize": "Tamanho da cama",
-            "target": "Objetivo",
+            "target": "Esperado",
             "issue": "Problema",
             "issueNote": "Nota do problema",
             "issues": "Problemas",
             "shortage": "Em falta",
             "reviewNote": "Nota da revisão",
-            "unknownColleague": "Colega desconhecido"
+            "unknownColleague": "Colega não identificado"
         },
         "form": {
-            "helper": "Escolha a propriedade, defina a data e introduza as quantidades contadas.",
-            "propertyPlaceholder": "Comece a escrever a propriedade",
-            "notesPlaceholder": "Notas opcionais para housekeeping",
-            "customItemPlaceholder": "Escrever nome do artigo",
+            "helper": "Selecione a propriedade, confirme a data e introduza as quantidades contadas.",
+            "propertyPlaceholder": "Comece a escrever o nome da propriedade",
+            "notesPlaceholder": "Notas opcionais para a equipa de limpeza",
+            "customItemPlaceholder": "Nome do artigo",
             "bedroomPlaceholder": "Quarto {{number}}",
-            "bedTypePlaceholder": "Casal, solteiro, sofa cama...",
+            "bedTypePlaceholder": "Casal, solteiro, sofá-cama...",
             "bedSizePlaceholder": "160x200, 180x200..."
         },
         "bedrooms": {
-            "title": "Tamanhos dos quartos",
-            "emptyHelper": "Opcional. Adicione apenas quando precisar de registar tamanhos de camas.",
-            "helper": "Adicione cada quarto e cada tamanho de cama em separado."
+            "title": "Quartos e camas",
+            "emptyHelper": "Opcional. Adicione esta informação quando precisar de registar os tipos e tamanhos das camas.",
+            "helper": "Registe cada quarto e as respetivas camas em separado."
         },
         "sectionsPicker": {
-            "title": "Escolher seccoes",
-            "helper": "Adicione apenas as seccoes de roupa necessarias para esta contagem."
+            "title": "Adicionar secções",
+            "helper": "Selecione apenas as secções necessárias para esta contagem."
         },
         "filters": {
             "searchPlaceholder": "Pesquisar propriedade, colega, data ou artigo",
@@ -666,10 +666,10 @@
         "actions": {
             "save": "Guardar contagem",
             "update": "Atualizar contagem",
-            "reset": "Limpar formulario",
+            "reset": "Limpar formulário",
             "clearDate": "Limpar data",
             "clearCount": "Limpar",
-            "markCountedToday": "Contado hoje",
+            "markCountedToday": "Usar a data de hoje",
             "edit": "Abrir registo",
             "delete": "Eliminar",
             "clearFilters": "Limpar filtros",
@@ -701,13 +701,13 @@
         },
         "counts": {
             "records": {
-                "one": "{{count}} inventario de alojamento",
-                "other": "{{count}} inventarios de alojamento"
+                "one": "{{count}} contagem guardada",
+                "other": "{{count}} contagens guardadas"
             }
         },
         "empty": {
-            "records": "Nao existem inventarios de roupa com os filtros atuais.",
-            "customItems": "Nenhum artigo extra adicionado."
+            "records": "Nenhuma contagem corresponde aos filtros atuais.",
+            "customItems": "Ainda não foram adicionados artigos extra."
         },
         "messages": {
             "propertyRequired": "Escolha uma propriedade antes de guardar.",
@@ -717,10 +717,10 @@
             "recordLocked": "Esta contagem já foi enviada e já não pode ser alterada por um colega.",
             "saved": "Contagem de roupa guardada.",
             "draftSaved": "Rascunho guardado. Pode continuar mais tarde neste telemóvel.",
-            "submitted": "Contagem enviada para revisão dos administradores.",
+            "submitted": "Contagem enviada para revisão da equipa de gestão.",
             "updated": "Contagem de roupa atualizada.",
             "deleted": "Contagem de roupa eliminada.",
-            "deleteRestricted": "Apenas um administrador pode eliminar uma contagem.",
+            "deleteRestricted": "Apenas um gestor pode eliminar uma contagem.",
             "correctionNoteRequired": "Escreva o que precisa de ser corrigido antes de devolver a contagem.",
             "approved": "Contagem de roupa aprovada.",
             "correctionRequested": "A contagem foi devolvida ao colega para correção.",
@@ -732,9 +732,9 @@
             "photoInvalid": "Utilize uma imagem com menos de 5 MB.",
             "photoFailed": "Não foi possível enviar a fotografia agora.",
             "photoRemoveFailed": "Não foi possível remover a fotografia agora.",
-            "saveFailed": "Nao foi possivel guardar a contagem de roupa agora.",
-            "deleteFailed": "Nao foi possivel eliminar a contagem de roupa agora.",
-            "loadFailed": "Nao foi possivel carregar as contagens de roupa agora."
+            "saveFailed": "Não foi possível guardar a contagem agora.",
+            "deleteFailed": "Não foi possível eliminar a contagem agora.",
+            "loadFailed": "Não foi possível carregar as contagens agora."
         },
         "confirm": {
             "delete": "Eliminar esta contagem de roupa?",
@@ -750,7 +750,7 @@
         "issues": {
             "none": "Sem problema",
             "missing": "Em falta",
-            "damaged": "Danificado"
+            "damaged": "Com danos"
         },
         "photos": {
             "title": "Fotografias",
@@ -761,14 +761,14 @@
             "add": "Tirar ou adicionar fotografia"
         },
         "review": {
-            "kicker": "Revisão administrativa",
+            "kicker": "Revisão da gestão",
             "submittedBy": "Enviada por {{name}} · {{date}}",
             "notePlaceholder": "Explique uma correção ou deixe uma nota interna de revisão"
         },
         "cleaner": {
             "countTab": "Nova contagem",
             "historyTab": "As minhas contagens",
-            "workspaceLabel": "Vistas do Inventário de Roupa",
+            "workspaceLabel": "Áreas do Inventário de Roupa",
             "newCountKicker": "Nova contagem de roupa",
             "searchPropertyTitle": "Pesquisar a propriedade",
             "searchPropertyHint": "Escreva parte do nome da propriedade e selecione o resultado correto.",
@@ -776,8 +776,8 @@
             "loadingProperties": "A carregar a lista de propriedades...",
             "typeToSearch": "Comece a escrever para encontrar a propriedade.",
             "noProperties": "Nenhuma propriedade corresponde à pesquisa.",
-            "reportIssue": "Comunicar roupa em falta ou danificada",
-            "issueFor": "Problema em {{item}}",
+            "reportIssue": "Comunicar artigos em falta ou com danos",
+            "issueFor": "Problema com {{item}}",
             "issueNotePlaceholder": "Explicação breve",
             "checked": "Verificado",
             "notChecked": "Ainda não verificado",
@@ -789,11 +789,11 @@
             "markNotApplicable": "Não aplicável nesta propriedade",
             "sectionSkipped": "Esta secção ficará registada como não aplicável.",
             "bedDetails": "Detalhes opcionais das camas",
-            "editingCount": "A corrigir contagem",
+            "editingCount": "A corrigir a contagem",
             "countingAt": "Contagem em",
-            "correctionRequested": "Pedido de correção do administrador",
+            "correctionRequested": "Pedido de correção da gestão",
             "countItems": "Conte todos os artigos de roupa",
-            "countItemsHint": "Introduza zero quando verificou o artigo e não existe nenhum.",
+            "countItemsHint": "Introduza 0 quando verificou o artigo e não encontrou nenhuma unidade.",
             "changeProperty": "Alterar",
             "notesAndPhotos": "Notas, data e fotografias",
             "saveDraft": "Guardar rascunho",
@@ -801,18 +801,18 @@
             "itemsRemaining": "Faltam {{count}} artigos",
             "backToCount": "Voltar à contagem",
             "reviewKicker": "Pronta para enviar",
-            "reviewHint": "Confirme os totais e os problemas antes de enviar a contagem aos administradores.",
-            "submitCount": "Enviar contagem aos administradores",
+            "reviewHint": "Confirme os totais e os problemas antes de enviar a contagem para a equipa de gestão.",
+            "submitCount": "Enviar contagem para revisão",
             "historyKicker": "A sua atividade",
             "historyTitle": "As minhas contagens enviadas",
-            "historyHint": "Os rascunhos podem ser editados. As contagens enviadas ficam bloqueadas até um administrador pedir uma correção.",
+            "historyHint": "Os rascunhos podem ser editados. As contagens enviadas ficam bloqueadas até a equipa de gestão pedir uma correção.",
             "correctCount": "Corrigir contagem",
             "noHistoryTitle": "Ainda não existem contagens",
             "noHistoryBody": "Os rascunhos e as contagens enviadas aparecerão aqui."
         },
         "states": {
-            "restrictedTitle": "O Inventario de Roupa nao esta disponivel no modo tablet partilhado.",
-            "restrictedBody": "Abra esta pagina numa conta pessoal ou de gestor."
+            "restrictedTitle": "O Inventário de Roupa não está disponível no modo de tablet partilhado.",
+            "restrictedBody": "Abra esta página numa conta pessoal ou de gestor."
         },
         "sections": {
             "doubleBed": "Cama de casal",
@@ -822,22 +822,22 @@
             "other": "Outros"
         },
         "items": {
-            "doubleMattressProtector": "Resguardos de colchao",
-            "doubleFittedSheet": "Lencois de baixo",
-            "doubleTopSheet": "Lencois de cima",
-            "doubleDuvet": "Edredoes",
-            "doubleDuvetCover": "Capas de edredao",
-            "singleMattressProtector": "Resguardos de colchao solteiro",
-            "singleFittedSheet": "Lencois de baixo solteiro",
-            "singleTopSheet": "Lencois de cima solteiro",
-            "singleDuvet": "Edredoes solteiro",
-            "singleDuvetCover": "Capas de edredao solteiro",
+            "doubleMattressProtector": "Resguardos de colchão",
+            "doubleFittedSheet": "Lençóis de baixo",
+            "doubleTopSheet": "Lençóis de cima",
+            "doubleDuvet": "Edredões",
+            "doubleDuvetCover": "Capas de edredão",
+            "singleMattressProtector": "Resguardos de colchão de solteiro",
+            "singleFittedSheet": "Lençóis de baixo de solteiro",
+            "singleTopSheet": "Lençóis de cima de solteiro",
+            "singleDuvet": "Edredões de solteiro",
+            "singleDuvetCover": "Capas de edredão de solteiro",
             "bathTowel": "Toalhas de banho",
             "faceTowel": "Toalhas de rosto",
             "poolTowel": "Toalhas de piscina",
             "bathMat": "Tapetes de banho",
             "pillows": "Almofadas",
-            "pillowProtectors": "Resguardos de almofada",
+            "pillowProtectors": "Protetores de almofada",
             "pillowCases": "Fronhas",
             "kitchenTowels": "Toalhas de cozinha",
             "blankets": "Mantas"
@@ -879,13 +879,13 @@
         "purchases": {
             "navLabel": "Compras",
             "navEyebrow": "Começar aqui",
-            "navDescription": "Importe uma fatura ou registe uma compra em quantidade e atualize o stock automaticamente.",
+            "navDescription": "Importe a fatura completa — incluindo fruta — e atualize o stock automaticamente.",
             "kicker": "Registo de compras",
             "title": "Compras e importação de faturas",
-            "description": "Registe compras em quantidade, fruta diária, descontos, IVA, taxas e vasilhame retornável no mesmo local.",
+            "description": "Importe uma única fatura com fruta, bebidas e restantes materiais. Reveja todas as linhas antes de atualizar o stock.",
             "recordPurchase": "Registar compra",
             "importInvoice": "Importar fatura",
-            "dailyFruit": "Fruta diária",
+            "recordManually": "Registar manualmente",
             "reviewKicker": "Rever antes de guardar",
             "entryKicker": "Compra em quantidade",
             "reviewTitle": "Confirmar a fatura importada",
@@ -969,7 +969,7 @@
             "startLabel": "Percurso recomendado",
             "walkthrough": {
                 "reservations": { "title": "1. Ver próximas reservas", "body": "Confirme que propriedades terão check-in e precisam de pack." },
-                "purchases": { "title": "2. Registar compras", "body": "Importe a fatura ou introduza a compra para atualizar custos e stock." },
+                "purchases": { "title": "2. Importar a fatura completa", "body": "Use a mesma importação para fruta, bebidas e todos os restantes materiais da fatura." },
                 "inventory": { "title": "3. Confirmar materiais e stock", "body": "Reveja quantidades, custo unitário e materiais com stock baixo." },
                 "presets": { "title": "4. Preparar modelos de pack", "body": "Crie um modelo para carregar rapidamente os materiais usados com frequência." },
                 "log": { "title": "5. Registar o pack entregue", "body": "Escolha a propriedade, indique os materiais usados e confirme o valor cobrado." },

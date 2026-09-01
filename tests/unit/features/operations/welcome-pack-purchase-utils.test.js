@@ -78,6 +78,27 @@ describe("Welcome Pack purchase utilities", () => {
         assert.equal(purchase.lines[0].vatRate, 4);
     });
 
+    test("imports weighted fruit and unit items from the same Continente invoice", () => {
+        const purchase = parseWelcomePackInvoiceText(`
+            CONTINENTE
+            Nro:FS BGM208/145001 30/08/2026 11:20
+            (A) BANANA REGIONAL KG
+            2,135 X 1,99 4,25
+            (C) SACOS PRESENTE
+            2,000 X 0,50 1,00
+            TOTAL A PAGAR 5,25
+        `);
+
+        assert.equal(purchase.lines.length, 2);
+        assert.equal(purchase.lines[0].category, "fruit");
+        assert.equal(purchase.lines[0].stockUnit, "kg");
+        assert.equal(purchase.lines[0].vatRate, 4);
+        assert.equal(purchase.lines[1].category, "");
+        assert.equal(purchase.lines[1].stockUnit, "unit");
+        assert.equal(purchase.lines[1].stockQuantity, 2);
+        assert.equal(purchase.lines[1].vatRate, 22);
+    });
+
     test("parses a discounted Chabom bulk line", () => {
         const purchase = parseWelcomePackInvoiceText(`
             Chábom, Lda.

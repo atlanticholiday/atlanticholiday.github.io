@@ -383,7 +383,7 @@ export class LinenInventoryManager {
                                 <p id="linen-inventory-header-subtitle" class="mt-1 text-sm text-slate-600"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 self-start md:self-auto">
+                        <div id="linen-inventory-header-actions" class="flex items-center gap-3 self-start md:self-auto">
                             <div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-1 py-1 shadow-sm">
                                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
                                 <button type="button" class="lang-btn rounded px-2 py-1 text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Portugues">PT</button>
@@ -1553,6 +1553,8 @@ export class LinenInventoryManager {
         } else if (this.isCleanerView() && target?.matches?.("[data-linen-item-field], [data-linen-custom-field], [data-linen-section-field], #linen-inventory-counted-input, #linen-inventory-notes-input")) {
             this.draft = this.readDraftFromDom();
             this.persistCleanerDraft();
+        } else if (this.isManagerView() && target?.matches?.("[data-linen-item-field], [data-linen-custom-field], [data-linen-section-field], [data-linen-bedroom-field], [data-linen-bed-field], #linen-inventory-property-input, #linen-inventory-counted-input, #linen-inventory-notes-input")) {
+            this.updateManagerDraftSummary();
         }
     }
 
@@ -1574,7 +1576,27 @@ export class LinenInventoryManager {
         if (this.isCleanerView() && target?.matches?.("[data-linen-item-field], [data-linen-custom-field], [data-linen-section-field], #linen-inventory-counted-input, #linen-inventory-notes-input")) {
             this.draft = this.readDraftFromDom();
             this.persistCleanerDraft();
+        } else if (this.isManagerView() && target?.matches?.("[data-linen-item-field], [data-linen-custom-field], [data-linen-section-field], [data-linen-bedroom-field], [data-linen-bed-field], #linen-inventory-property-input, #linen-inventory-counted-input, #linen-inventory-notes-input")) {
+            this.updateManagerDraftSummary();
         }
+    }
+
+    updateManagerDraftSummary() {
+        if (!this.isManagerView() || !document.getElementById("linen-inventory-form-card")) {
+            return;
+        }
+        this.draft = this.readDraftFromDom();
+        const summary = summarizeLinenInventoryRecord(this.draft);
+        const values = {
+            countedUnits: summary.countedUnits,
+            trackedItems: summary.trackedItems,
+            shortageUnits: summary.shortageUnits,
+            issueCount: summary.issueCount
+        };
+        Object.entries(values).forEach(([key, value]) => {
+            const element = document.querySelector(`[data-linen-live-summary="${key}"]`);
+            if (element) element.textContent = String(value);
+        });
     }
 
     handleRootToggle(event) {
@@ -1996,20 +2018,20 @@ export class LinenInventoryManager {
 
     renderCustomItemRow(item, index) {
         return `
-            <div class="grid gap-3 rounded-xl border border-dashed border-rose-200 bg-rose-50/40 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(150px,1fr)_90px_90px_130px_minmax(150px,1fr)_auto] xl:items-end">
-                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                    ${escapeHtml(this.tr("labels.customItemName"))}
-                    <input type="text" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="name" value="${escapeHtml(item.name)}" placeholder="${escapeHtml(this.tr("form.customItemPlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+            <div class="group grid gap-3 border-t border-slate-100 px-4 py-3 transition-colors hover:bg-rose-50/40 lg:grid-cols-[minmax(180px,1.25fr)_88px_88px_150px_minmax(180px,1fr)_36px] lg:items-center">
+                <label class="block text-xs font-medium text-slate-500 lg:text-sm lg:text-slate-700">
+                    <span class="lg:sr-only">${escapeHtml(this.tr("labels.customItemName"))}</span>
+                    <input type="text" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="name" value="${escapeHtml(item.name)}" placeholder="${escapeHtml(this.tr("form.customItemPlaceholder"))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0">
                 </label>
-                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                    ${escapeHtml(this.tr("labels.countShort"))}
-                    <input type="number" min="0" inputmode="numeric" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="count" value="${escapeHtml(toCountInput(item))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                <label class="block text-xs font-medium text-slate-500">
+                    <span class="lg:sr-only">${escapeHtml(this.tr("labels.countShort"))}</span>
+                    <input type="number" min="0" inputmode="numeric" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="count" value="${escapeHtml(toCountInput(item))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0">
                 </label>
-                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("labels.target"))}<input type="number" min="0" inputmode="numeric" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="target" value="${escapeHtml(toInputNumber(item.target))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"></label>
-                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("labels.issue"))}<select data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="issue" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"><option value="">${escapeHtml(this.tr("issues.none"))}</option><option value="missing" ${item.issue === "missing" ? "selected" : ""}>${escapeHtml(this.tr("issues.missing"))}</option><option value="damaged" ${item.issue === "damaged" ? "selected" : ""}>${escapeHtml(this.tr("issues.damaged"))}</option></select></label>
-                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("labels.issueNote"))}<input type="text" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="note" value="${escapeHtml(item.note)}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"></label>
-                <button type="button" data-linen-action="remove-custom-item" data-custom-index="${escapeHtml(String(index))}" class="self-end rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">
-                    ${escapeHtml(this.tr("actions.removeCustomItem"))}
+                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.target"))}</span><input type="number" min="0" inputmode="numeric" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="target" value="${escapeHtml(toInputNumber(item.target))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"></label>
+                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.issue"))}</span><select data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="issue" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"><option value="">${escapeHtml(this.tr("issues.none"))}</option><option value="missing" ${item.issue === "missing" ? "selected" : ""}>${escapeHtml(this.tr("issues.missing"))}</option><option value="damaged" ${item.issue === "damaged" ? "selected" : ""}>${escapeHtml(this.tr("issues.damaged"))}</option></select></label>
+                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.issueNote"))}</span><input type="text" data-linen-custom-index="${escapeHtml(String(index))}" data-linen-custom-field="note" value="${escapeHtml(item.note)}" placeholder="${escapeHtml(this.tr("labels.issueNote"))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"></label>
+                <button type="button" data-linen-action="remove-custom-item" data-custom-index="${escapeHtml(String(index))}" aria-label="${escapeHtml(this.tr("actions.removeCustomItem"))}" class="flex h-9 w-9 items-center justify-center rounded-lg text-lg text-slate-400 transition hover:bg-rose-100 hover:text-rose-700">
+                    &times;
                 </button>
             </div>
         `;
@@ -2024,7 +2046,7 @@ export class LinenInventoryManager {
         }
 
         return `
-            <section class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+            <section class="border-b border-slate-200 px-5 py-4 sm:px-6 xl:px-8">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("sectionsPicker.title"))}</h3>
@@ -2032,7 +2054,7 @@ export class LinenInventoryManager {
                     </div>
                     <div class="flex flex-wrap gap-2">
                         ${availableSections.map((section) => `
-                            <button type="button" data-linen-action="add-section" data-section-key="${escapeHtml(section.key)}" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100">${escapeHtml(this.tr(section.labelKey))}</button>
+                            <button type="button" data-linen-action="add-section" data-section-key="${escapeHtml(section.key)}" class="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"><span aria-hidden="true">+</span>${escapeHtml(this.tr(section.labelKey))}</button>
                         `).join("")}
                     </div>
                 </div>
@@ -2046,14 +2068,14 @@ export class LinenInventoryManager {
         }
 
         return `
-            <div class="flex flex-wrap items-end gap-2">
-                <label class="block w-24 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+            <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-xs font-medium text-slate-500">
                     ${escapeHtml(this.tr("labels.bedroomCount"))}
-                    <input type="number" min="1" inputmode="numeric" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedroomCount" value="${escapeHtml(toInputNumber(sectionSummary.bedroomCount) || "1")}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    <input type="number" min="1" inputmode="numeric" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedroomCount" value="${escapeHtml(toInputNumber(sectionSummary.bedroomCount) || "1")}" class="h-9 w-16 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                 </label>
-                <label class="block w-40 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                <label class="flex items-center gap-2 text-xs font-medium text-slate-500">
                     ${escapeHtml(this.tr("labels.bedSize"))}
-                    <input type="text" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedSize" value="${escapeHtml(sectionSummary.bedSize)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                    <input type="text" data-linen-section-key="${escapeHtml(section.key)}" data-linen-section-field="bedSize" value="${escapeHtml(sectionSummary.bedSize)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="h-9 w-44 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                 </label>
             </div>
         `;
@@ -2061,46 +2083,48 @@ export class LinenInventoryManager {
 
     renderSection(section, sectionSummary, items, customItems) {
         return `
-            <section data-linen-section-key="${escapeHtml(section.key)}" class="rounded-xl border border-slate-200 bg-white p-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-end gap-4">
-                            <h3 class="pb-2 text-sm font-semibold text-slate-900">${escapeHtml(this.tr(section.labelKey))}</h3>
-                            ${this.renderSectionMeta(section, sectionSummary)}
+            <section data-linen-section-key="${escapeHtml(section.key)}" class="border-b border-slate-200 bg-white">
+                <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-6 xl:px-8">
+                    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-950">${escapeHtml(this.tr(section.labelKey))}</h3>
+                            <div class="mt-0.5 text-xs text-slate-500">${escapeHtml(this.tr("summary.counted", { count: sectionSummary.count }))} · ${escapeHtml(this.tr("summary.items", { count: sectionSummary.itemCount }))}</div>
                         </div>
-                        <div class="mt-1 text-xs text-slate-500">
-                            ${escapeHtml(this.tr("summary.counted", { count: sectionSummary.count }))}
-                        </div>
+                        ${this.renderSectionMeta(section, sectionSummary)}
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">${escapeHtml(this.tr("summary.items", { count: sectionSummary.itemCount }))}</span>
-                        <button type="button" data-linen-action="remove-section" data-section-key="${escapeHtml(section.key)}" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.removeSection"))}</button>
-                    </div>
+                    <button type="button" data-linen-action="remove-section" data-section-key="${escapeHtml(section.key)}" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700">${escapeHtml(this.tr("actions.removeSection"))}</button>
                 </div>
-                <div class="mt-2 divide-y divide-slate-100">
+                <div class="hidden grid-cols-[minmax(180px,1.25fr)_88px_88px_150px_minmax(180px,1fr)] gap-3 border-y border-slate-100 bg-slate-50/70 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 lg:grid sm:px-6 xl:px-8">
+                    <span>${escapeHtml(this.tr("labels.customItemName"))}</span>
+                    <span>${escapeHtml(this.tr("labels.countShort"))}</span>
+                    <span>${escapeHtml(this.tr("labels.target"))}</span>
+                    <span>${escapeHtml(this.tr("labels.issue"))}</span>
+                    <span>${escapeHtml(this.tr("labels.issueNote"))}</span>
+                </div>
+                <div>
                     ${section.items.map((item) => {
                         const counts = items[item.key] || { count: 0, checked: false, target: 0, issue: "", note: "" };
                         return `
-                            <div class="grid gap-2 py-3 sm:grid-cols-[minmax(180px,1fr)_90px_90px_130px] sm:items-end">
+                            <div class="group grid gap-3 border-b border-slate-100 px-5 py-3 transition-colors last:border-b-0 hover:bg-slate-50 lg:grid-cols-[minmax(180px,1.25fr)_88px_88px_150px_minmax(180px,1fr)] lg:items-center sm:px-6 xl:px-8">
                                 <div class="text-sm font-medium text-slate-800">${escapeHtml(this.tr(item.labelKey))}</div>
-                                <label class="block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                                    ${escapeHtml(this.tr("labels.countShort"))}
-                                    <input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="count" value="${escapeHtml(toCountInput(counts))}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                <label class="block text-xs font-medium text-slate-500">
+                                    <span class="lg:sr-only">${escapeHtml(this.tr("labels.countShort"))}</span>
+                                    <input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="count" value="${escapeHtml(toCountInput(counts))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0">
                                 </label>
-                                <label class="block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">${escapeHtml(this.tr("labels.target"))}<input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="target" value="${escapeHtml(toInputNumber(counts.target))}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"></label>
-                                <label class="block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">${escapeHtml(this.tr("labels.issue"))}<select data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="issue" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-slate-900"><option value="">${escapeHtml(this.tr("issues.none"))}</option><option value="missing" ${counts.issue === "missing" ? "selected" : ""}>${escapeHtml(this.tr("issues.missing"))}</option><option value="damaged" ${counts.issue === "damaged" ? "selected" : ""}>${escapeHtml(this.tr("issues.damaged"))}</option></select></label>
-                                <label class="block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500 sm:col-start-2 sm:col-span-3">${escapeHtml(this.tr("labels.issueNote"))}<input type="text" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="note" value="${escapeHtml(counts.note)}" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-slate-900"></label>
+                                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.target"))}</span><input type="number" min="0" inputmode="numeric" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="target" value="${escapeHtml(toInputNumber(counts.target))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"></label>
+                                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.issue"))}</span><select data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="issue" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"><option value="">${escapeHtml(this.tr("issues.none"))}</option><option value="missing" ${counts.issue === "missing" ? "selected" : ""}>${escapeHtml(this.tr("issues.missing"))}</option><option value="damaged" ${counts.issue === "damaged" ? "selected" : ""}>${escapeHtml(this.tr("issues.damaged"))}</option></select></label>
+                                <label class="block text-xs font-medium text-slate-500"><span class="lg:sr-only">${escapeHtml(this.tr("labels.issueNote"))}</span><input type="text" data-linen-item-key="${escapeHtml(item.key)}" data-linen-item-field="note" value="${escapeHtml(counts.note)}" placeholder="${escapeHtml(this.tr("labels.issueNote"))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 lg:mt-0"></label>
                             </div>
                         `;
                     }).join("")}
                 </div>
                 ${section.key === "other" ? `
-                    <div class="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                        <div class="flex items-center justify-between gap-3">
+                    <div class="border-t border-slate-200">
+                        <div class="flex items-center justify-between gap-3 px-5 py-3 sm:px-6 xl:px-8">
                             <div class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("labels.customItems"))}</div>
-                            <button type="button" data-linen-action="add-custom-item" class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">${escapeHtml(this.tr("actions.addCustomItem"))}</button>
+                            <button type="button" data-linen-action="add-custom-item" class="rounded-lg px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">+ ${escapeHtml(this.tr("actions.addCustomItem"))}</button>
                         </div>
-                        ${customItems.length ? customItems.map((item, index) => this.renderCustomItemRow(item, index)).join("") : `<p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">${escapeHtml(this.tr("empty.customItems"))}</p>`}
+                        ${customItems.length ? customItems.map((item, index) => this.renderCustomItemRow(item, index)).join("") : `<p class="border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:px-6 xl:px-8">${escapeHtml(this.tr("empty.customItems"))}</p>`}
                     </div>
                 ` : ""}
             </section>
@@ -2113,40 +2137,40 @@ export class LinenInventoryManager {
         }
 
         return `
-            <section class="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-                <div class="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <section class="border-b border-slate-200 px-5 py-5 sm:px-6 xl:px-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("bedrooms.title"))}</h3>
                         <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("bedrooms.helper"))}</p>
                     </div>
-                    <button type="button" data-linen-action="add-bedroom" class="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 sm:w-auto">${escapeHtml(this.tr("actions.addBedroom"))}</button>
+                    <button type="button" data-linen-action="add-bedroom" class="w-full rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 sm:w-auto">+ ${escapeHtml(this.tr("actions.addBedroom"))}</button>
                 </div>
-                <div class="mt-4 space-y-4">
+                <div class="mt-4 divide-y divide-slate-100 border-y border-slate-100">
                     ${bedrooms.map((bedroom, bedroomIndex) => `
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="py-4">
                             <div class="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_auto] sm:items-end">
-                                <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                <label class="block text-xs font-medium text-slate-500">
                                     ${escapeHtml(this.tr("labels.bedroomName"))}
-                                    <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bedroom-field="name" value="${escapeHtml(bedroom.name)}" placeholder="${escapeHtml(this.tr("form.bedroomPlaceholder", { number: bedroomIndex + 1 }))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                    <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bedroom-field="name" value="${escapeHtml(bedroom.name)}" placeholder="${escapeHtml(this.tr("form.bedroomPlaceholder", { number: bedroomIndex + 1 }))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                                 </label>
-                                <button type="button" data-linen-action="remove-bedroom" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">${escapeHtml(this.tr("actions.removeBedroom"))}</button>
+                                <button type="button" data-linen-action="remove-bedroom" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-700">${escapeHtml(this.tr("actions.removeBedroom"))}</button>
                             </div>
-                            <div class="mt-3 space-y-3">
+                            <div class="mt-3 divide-y divide-slate-100">
                                 ${(bedroom.beds || []).map((bed, bedIndex) => `
-                                    <div class="grid gap-3 sm:grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_auto] sm:items-end">
-                                        <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                    <div class="grid gap-3 py-3 sm:grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_auto] sm:items-end">
+                                        <label class="block text-xs font-medium text-slate-500">
                                             ${escapeHtml(this.tr("labels.bedType"))}
-                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="type" value="${escapeHtml(bed.type)}" placeholder="${escapeHtml(this.tr("form.bedTypePlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="type" value="${escapeHtml(bed.type)}" placeholder="${escapeHtml(this.tr("form.bedTypePlaceholder"))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                                         </label>
-                                        <label class="block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                                        <label class="block text-xs font-medium text-slate-500">
                                             ${escapeHtml(this.tr("labels.bedSize"))}
-                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="size" value="${escapeHtml(bed.size)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                                            <input type="text" data-linen-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-linen-bed-index="${escapeHtml(String(bedIndex))}" data-linen-bed-field="size" value="${escapeHtml(bed.size)}" placeholder="${escapeHtml(this.tr("form.bedSizePlaceholder"))}" class="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                                         </label>
-                                        <button type="button" data-linen-action="remove-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-bed-index="${escapeHtml(String(bedIndex))}" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.removeBed"))}</button>
+                                        <button type="button" data-linen-action="remove-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" data-bed-index="${escapeHtml(String(bedIndex))}" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">${escapeHtml(this.tr("actions.removeBed"))}</button>
                                     </div>
                                 `).join("")}
                             </div>
-                            <button type="button" data-linen-action="add-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="mt-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">${escapeHtml(this.tr("actions.addBed"))}</button>
+                            <button type="button" data-linen-action="add-bed" data-bedroom-index="${escapeHtml(String(bedroomIndex))}" class="mt-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100">+ ${escapeHtml(this.tr("actions.addBed"))}</button>
                         </div>
                     `).join("")}
                 </div>
@@ -2235,53 +2259,75 @@ export class LinenInventoryManager {
     }
 
     renderForm({ draftSummary, propertyOptions }) {
+        const saveLabel = this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save");
+        const activeSections = LINEN_INVENTORY_GROUPS.filter((section) => (this.draft.activeSections || []).includes(section.key));
         return `
-            <article id="linen-inventory-form-card" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("header.kicker"))}</div>
-                        <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.editingRecordId ? this.tr("views.editTitle") : this.tr("views.formTitle"))}</h2>
-                        <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("form.helper"))}</p>
+            <article id="linen-inventory-form-card" class="overflow-hidden border-y border-slate-200 bg-white shadow-sm">
+                <header class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 xl:px-8">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <h2 class="text-xl font-semibold tracking-tight text-slate-950">${escapeHtml(this.editingRecordId ? this.tr("views.editTitle") : this.tr("views.formTitle"))}</h2>
+                            ${this.renderStatusBadge(draftSummary.status)}
+                        </div>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("form.helper"))}</p>
                     </div>
-                    ${this.renderStatusBadge(draftSummary.status)}
-                </div>
-                <div class="mt-5 grid gap-4 md:grid-cols-2">
-                    <label class="block text-sm font-medium text-slate-700">
+                    <div class="flex shrink-0 flex-col gap-2 sm:flex-row">
+                        <button type="button" data-linen-action="reset" class="min-h-10 rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">${escapeHtml(this.tr("actions.reset"))}</button>
+                        <button type="button" data-linen-action="save" class="min-h-10 rounded-lg bg-rose-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-100">${escapeHtml(saveLabel)}</button>
+                    </div>
+                </header>
+                <section class="grid gap-4 border-b border-slate-200 bg-slate-50/50 px-5 py-4 sm:px-6 lg:grid-cols-[minmax(260px,1fr)_220px_auto] lg:items-end xl:px-8">
+                    <label class="block text-xs font-semibold text-slate-600">
                         ${escapeHtml(this.tr("labels.property"))}
-                        <input id="linen-inventory-property-input" type="text" list="linen-inventory-property-list" value="${escapeHtml(this.draft.propertyName)}" placeholder="${escapeHtml(this.tr("form.propertyPlaceholder"))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                        <input id="linen-inventory-property-input" type="text" list="linen-inventory-property-list" value="${escapeHtml(this.draft.propertyName)}" placeholder="${escapeHtml(this.tr("form.propertyPlaceholder"))}" class="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                     </label>
-                    <label class="block text-sm font-medium text-slate-700">
+                    <label class="block text-xs font-semibold text-slate-600">
                         ${escapeHtml(this.tr("labels.countedDate"))}
-                        <input id="linen-inventory-counted-input" type="date" value="${escapeHtml(this.draft.countedDate)}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
-                        <button type="button" data-linen-action="clear-date" class="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50">${escapeHtml(this.tr("actions.clearDate"))}</button>
+                        <input id="linen-inventory-counted-input" type="date" value="${escapeHtml(this.draft.countedDate)}" class="mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100">
                     </label>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" data-linen-action="counted-today" class="min-h-10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">${escapeHtml(this.tr("actions.markCountedToday"))}</button>
+                        <button type="button" data-linen-action="clear-date" class="min-h-10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-white hover:text-slate-800">${escapeHtml(this.tr("actions.clearDate"))}</button>
+                    </div>
+                </section>
+                <div class="grid xl:grid-cols-[minmax(0,1fr)_340px]">
+                    <main class="min-w-0 xl:border-r xl:border-slate-200">
+                        ${this.draft.bedrooms.length ? this.renderBedroomLayout(this.draft.bedrooms) : `
+                            <section class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 xl:px-8">
+                                <div><h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("bedrooms.title"))}</h3><p class="mt-1 text-sm text-slate-500">${escapeHtml(this.tr("bedrooms.emptyHelper"))}</p></div>
+                                <button type="button" data-linen-action="add-bedroom" class="rounded-lg px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">+ ${escapeHtml(this.tr("actions.addBedroom"))}</button>
+                            </section>
+                        `}
+                        ${this.renderSectionPicker(this.draft.activeSections)}
+                        <div>
+                            ${activeSections.map((section) => {
+                                const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { count: 0, itemCount: 0 };
+                                return this.renderSection(section, summary, this.draft.items, this.draft.customItems);
+                            }).join("")}
+                        </div>
+                    </main>
+                    <aside class="self-start bg-slate-50/60 px-5 py-5 sm:px-6 xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto xl:px-6">
+                        <section>
+                            <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(this.tr("summary.recordStatus"))}</h3>
+                            <div class="mt-3 grid grid-cols-2 border-y border-slate-200">
+                                <div class="border-b border-r border-slate-200 py-3 pr-3"><div class="text-xs text-slate-500">${escapeHtml(this.tr("stats.countedUnits"))}</div><div data-linen-live-summary="countedUnits" class="mt-1 text-xl font-semibold text-slate-950">${escapeHtml(String(draftSummary.countedUnits))}</div></div>
+                                <div class="border-b border-slate-200 py-3 pl-3"><div class="text-xs text-slate-500">${escapeHtml(this.tr("stats.trackedItems"))}</div><div data-linen-live-summary="trackedItems" class="mt-1 text-xl font-semibold text-slate-950">${escapeHtml(String(draftSummary.trackedItems))}</div></div>
+                                <div class="border-r border-slate-200 py-3 pr-3"><div class="text-xs text-slate-500">${escapeHtml(this.tr("labels.shortage"))}</div><div data-linen-live-summary="shortageUnits" class="mt-1 text-xl font-semibold ${draftSummary.shortageUnits ? "text-rose-700" : "text-slate-950"}">${escapeHtml(String(draftSummary.shortageUnits))}</div></div>
+                                <div class="py-3 pl-3"><div class="text-xs text-slate-500">${escapeHtml(this.tr("labels.issues"))}</div><div data-linen-live-summary="issueCount" class="mt-1 text-xl font-semibold ${draftSummary.issueCount ? "text-amber-700" : "text-slate-950"}">${escapeHtml(String(draftSummary.issueCount))}</div></div>
+                            </div>
+                        </section>
+                        <label class="mt-6 block text-sm font-semibold text-slate-800">
+                            ${escapeHtml(this.tr("labels.notes"))}
+                            <textarea id="linen-inventory-notes-input" rows="4" placeholder="${escapeHtml(this.tr("form.notesPlaceholder"))}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100">${escapeHtml(this.draft.notes)}</textarea>
+                        </label>
+                        <div class="mt-6 border-t border-slate-200 pt-5">${this.renderPhotoFields()}</div>
+                        <div class="mt-6 grid gap-2 border-t border-slate-200 pt-5 xl:hidden">
+                            <button type="button" data-linen-action="save" class="min-h-11 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white">${escapeHtml(saveLabel)}</button>
+                            <button type="button" data-linen-action="reset" class="min-h-11 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600">${escapeHtml(this.tr("actions.reset"))}</button>
+                        </div>
+                    </aside>
                 </div>
-                <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    <div class="font-semibold text-slate-900">${escapeHtml(this.tr("summary.recordStatus"))}</div>
-                    <div class="mt-2">${escapeHtml(this.tr("summary.counted", { count: draftSummary.countedUnits }))} · ${escapeHtml(this.tr("summary.items", { count: draftSummary.trackedItems }))} · ${escapeHtml(this.tr("summary.shortage", { count: draftSummary.shortageUnits }))} · ${escapeHtml(this.tr("summary.issues", { count: draftSummary.issueCount }))}</div>
-                </div>
-                <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <button type="button" data-linen-action="counted-today" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.markCountedToday"))}</button>
-                    <button type="button" data-linen-action="add-bedroom" class="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.addBedroom"))}</button>
-                </div>
-                ${this.renderBedroomLayout(this.draft.bedrooms)}
-                ${this.renderSectionPicker(this.draft.activeSections)}
-                <div class="mt-6 grid gap-4 2xl:grid-cols-2">
-                    ${LINEN_INVENTORY_GROUPS.filter((section) => (this.draft.activeSections || []).includes(section.key)).map((section) => {
-                        const summary = draftSummary.sectionSummaries.find((entry) => entry.key === section.key) || { count: 0, itemCount: 0 };
-                        return this.renderSection(section, summary, this.draft.items, this.draft.customItems);
-                    }).join("")}
-                </div>
-                <label class="mt-6 block text-sm font-medium text-slate-700">
-                    ${escapeHtml(this.tr("labels.notes"))}
-                    <textarea id="linen-inventory-notes-input" rows="4" placeholder="${escapeHtml(this.tr("form.notesPlaceholder"))}" class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">${escapeHtml(this.draft.notes)}</textarea>
-                </label>
-                <div class="mt-6">${this.renderPhotoFields()}</div>
                 <datalist id="linen-inventory-property-list">${propertyOptions.map((propertyName) => `<option value="${escapeHtml(propertyName)}"></option>`).join("")}</datalist>
-                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                    <button type="button" data-linen-action="save" class="w-full rounded-full bg-rose-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto">${escapeHtml(this.editingRecordId ? this.tr("actions.update") : this.tr("actions.save"))}</button>
-                    <button type="button" data-linen-action="reset" class="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto">${escapeHtml(this.tr("actions.reset"))}</button>
-                </div>
             </article>
         `;
     }
@@ -2365,7 +2411,7 @@ export class LinenInventoryManager {
                         ${this.renderRecords({ records })}
                     </div>
                 ` : `
-                    <div class="mx-auto max-w-6xl">
+                    <div class="w-full">
                         ${this.renderForm({ draftSummary, propertyOptions })}
                     </div>
                 `}

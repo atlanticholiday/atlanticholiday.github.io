@@ -209,7 +209,7 @@ describe("WelcomePackManager", () => {
     assert.equal(document.querySelectorAll("[data-wp-log-entry-id]").length, 2);
   });
 
-  test("opens the daily fruit purchase grid and calculates decimal stock", async () => {
+  test("uses one invoice import for every material and keeps manual decimal quantities", async () => {
     primeWelcomePackTranslations();
     resetDom(`<div id="welcome-pack-content"></div>`);
     const manager = new WelcomePackManager({
@@ -221,15 +221,20 @@ describe("WelcomePackManager", () => {
     manager.currentView = "purchases";
     await manager.render();
     await flushRender();
-    document.getElementById("wp-fruit-purchase-btn").click();
+    assert.equal(document.getElementById("wp-fruit-purchase-btn"), null);
+    assert.ok(document.getElementById("wp-import-invoice-btn"));
+
+    document.getElementById("wp-new-purchase-btn").click();
     await manager.renderCurrentView();
 
-    assert.equal(document.querySelectorAll("[data-purchase-line-id]").length, 4);
-    assert.equal(document.querySelector('[data-purchase-meta="supplier"]').value, "Continente");
+    assert.equal(document.querySelectorAll("[data-purchase-line-id]").length, 1);
 
     const quantityInput = document.querySelector('[data-purchase-line-field="purchaseQuantity"]');
     quantityInput.value = "2.135";
     quantityInput.dispatchEvent(new Event("input", { bubbles: true }));
+    const stockUnit = document.querySelector('[data-purchase-line-field="stockUnit"]');
+    stockUnit.value = "kg";
+    stockUnit.dispatchEvent(new Event("change", { bubbles: true }));
 
     assert.equal(manager.purchaseDraft.lines[0].stockQuantity, 2.135);
     assert.equal(manager.purchaseDraft.lines[0].stockUnit, "kg");
@@ -326,7 +331,7 @@ describe("WelcomePackManager", () => {
       manager.currentView = "purchases";
       await manager.render();
       await flushRender();
-      manager.startPurchaseDraft("bulk");
+      manager.startPurchaseDraft();
       await manager.renderCurrentView();
 
       const supplier = document.querySelector('[data-purchase-meta="supplier"]');

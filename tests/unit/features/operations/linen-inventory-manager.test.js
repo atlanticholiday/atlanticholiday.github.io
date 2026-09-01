@@ -24,6 +24,7 @@ describe("LinenInventoryManager", () => {
 
     assert.ok(document.getElementById("linen-inventory-page"));
     assert.ok(document.getElementById("linen-inventory-root"));
+    assert.ok(document.getElementById("linen-inventory-header-actions"));
     assert.ok(document.getElementById("go-to-linen-inventory-btn"));
     assert.equal(document.getElementById("linen-inventory-property-input"), null);
     assert.ok(document.querySelector("[data-linen-action='manager-workspace'][data-workspace='records'][aria-selected='true']"));
@@ -33,6 +34,14 @@ describe("LinenInventoryManager", () => {
     assert.ok(document.getElementById("linen-inventory-property-input"));
     assert.equal(document.querySelectorAll("[data-linen-section-key]").length, 0);
     assert.ok(document.querySelector("[data-linen-action='add-section'][data-section-key='doubleBed']"));
+    assert.ok(document.querySelector("[data-linen-live-summary='countedUnits']"));
+
+    document.querySelector("[data-linen-action='add-section'][data-section-key='doubleBed']").click();
+    const countInput = document.querySelector("[data-linen-item-key='doubleMattressProtector'][data-linen-item-field='count']");
+    countInput.value = "3";
+    countInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.equal(document.querySelector("[data-linen-live-summary='countedUnits']").textContent, "3");
   });
 
   test("reads property, count date, bed section settings, item counts, and custom rows from the form", () => {

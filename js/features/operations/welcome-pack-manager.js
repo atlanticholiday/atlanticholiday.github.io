@@ -96,7 +96,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         },
         walkthrough: {
             reservations: { title: '1. Ver próximas reservas', body: 'Confirme que propriedades terão check-in e precisam de pack.' },
-            purchases: { title: '2. Registar compras', body: 'Importe a fatura ou introduza a compra para atualizar custos e stock.' },
+            purchases: { title: '2. Importar a fatura completa', body: 'Use a mesma importação para fruta, bebidas e todos os restantes materiais da fatura.' },
             inventory: { title: '3. Confirmar materiais e stock', body: 'Reveja quantidades, custo unitário e materiais com stock baixo.' },
             presets: { title: '4. Preparar modelos de pack', body: 'Crie um modelo para carregar rapidamente os materiais usados com frequência.' },
             log: { title: '5. Registar o pack entregue', body: 'Escolha a propriedade, indique os materiais usados e confirme o valor cobrado.' },
@@ -1146,7 +1146,7 @@ export class WelcomePackManager {
         });
         document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
             this.currentView = 'purchases';
-            this.startPurchaseDraft('bulk');
+            this.startPurchaseDraft();
         });
     }
 
@@ -2512,40 +2512,22 @@ export class WelcomePackManager {
         }
     }
 
-    createPurchaseDraft({ mode = 'bulk' } = {}) {
-        const isFruit = mode === 'fruit';
-        const fruitLines = [
-            ['Banana Regional', 1.99],
-            ['Maçã Fuji', 2.29],
-            ['Laranja', 1.69],
-            ['Manga', 2.89]
-        ].map(([name, unitPrice]) => createPurchaseLine({
-            id: `wp-purchase-line-${++this.purchaseLineSequence}`,
-            name,
-            category: 'fruit',
-            purchaseQuantity: 0,
-            unitsPerPurchaseUnit: 1,
-            stockUnit: 'kg',
-            unitPrice,
-            priceMode: 'gross',
-            vatRate: 4
-        }));
-
+    createPurchaseDraft() {
         return summarizePurchase({
-            mode,
-            supplier: isFruit ? 'Continente' : '',
+            mode: 'bulk',
+            supplier: '',
             invoiceNumber: '',
             date: new Date().toISOString().split('T')[0],
             cardCredit: 0,
             cashPaid: '',
-            lines: isFruit ? fruitLines : [createPurchaseLine({
+            lines: [createPurchaseLine({
                 id: `wp-purchase-line-${++this.purchaseLineSequence}`
             })]
         });
     }
 
-    startPurchaseDraft(mode = 'bulk') {
-        this.purchaseDraft = this.createPurchaseDraft({ mode });
+    startPurchaseDraft() {
+        this.purchaseDraft = this.createPurchaseDraft();
         this.purchaseFile = null;
         this.purchaseImportStatus = null;
         void this.renderCurrentView();
@@ -2590,17 +2572,13 @@ export class WelcomePackManager {
                     </div>
                     <div class="welcome-pack-toolbar-actions">
                         <input id="wp-invoice-file-input" class="sr-only" type="file" accept="application/pdf,image/*">
-                        <button type="button" id="wp-import-invoice-btn" class="welcome-pack-secondary-button">
+                        <button type="button" id="wp-import-invoice-btn" class="welcome-pack-action-button">
                             <i class="fas fa-file-arrow-up"></i>
                             <span>${this.tr('purchases.importInvoice')}</span>
                         </button>
-                        <button type="button" id="wp-fruit-purchase-btn" class="welcome-pack-secondary-button">
-                            <i class="fas fa-apple-whole"></i>
-                            <span>${this.tr('purchases.dailyFruit')}</span>
-                        </button>
-                        <button type="button" id="wp-new-purchase-btn" class="welcome-pack-action-button">
+                        <button type="button" id="wp-new-purchase-btn" class="welcome-pack-secondary-button">
                             <i class="fas fa-plus"></i>
-                            <span>${this.tr('purchases.recordPurchase')}</span>
+                            <span>${this.tr('purchases.recordManually')}</span>
                         </button>
                     </div>
                 </div>
@@ -2667,8 +2645,7 @@ export class WelcomePackManager {
             </section>
         `;
 
-        document.getElementById('wp-new-purchase-btn')?.addEventListener('click', () => this.startPurchaseDraft('bulk'));
-        document.getElementById('wp-fruit-purchase-btn')?.addEventListener('click', () => this.startPurchaseDraft('fruit'));
+        document.getElementById('wp-new-purchase-btn')?.addEventListener('click', () => this.startPurchaseDraft());
         const fileInput = document.getElementById('wp-invoice-file-input');
         document.getElementById('wp-import-invoice-btn')?.addEventListener('click', () => fileInput?.click());
         fileInput?.addEventListener('change', (event) => {

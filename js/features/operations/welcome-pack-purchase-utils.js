@@ -189,15 +189,19 @@ function parseContinente(text) {
         const match = quantityLine.match(/(\d+[.,]\d+)\s+X\s+(\d+[.,]\d+)\s+(\d+[.,]\d{2})/i);
         if (!match) return;
         const description = line.replace(/^\([A-Z]\)\s+/i, '').trim();
+        const purchaseQuantity = toFiniteNumber(match[1], 0);
+        const taxCode = line.match(/^\(([A-Z])\)/i)?.[1]?.toUpperCase() || '';
+        const vatRate = { A: 4, B: 12, C: 22 }[taxCode] ?? 22;
+        const isWeighted = /\bKG\b/i.test(description) || !Number.isInteger(purchaseQuantity);
         items.push(createPurchaseLine({
             name: description.replace(/\s+KG$/i, '').trim(),
-            category: 'fruit',
-            purchaseQuantity: toFiniteNumber(match[1], 0),
+            category: isWeighted ? 'fruit' : '',
+            purchaseQuantity,
             unitsPerPurchaseUnit: 1,
-            stockUnit: 'kg',
+            stockUnit: isWeighted ? 'kg' : 'unit',
             unitPrice: toFiniteNumber(match[2], 0),
             priceMode: 'gross',
-            vatRate: 4,
+            vatRate,
             sourceDescription: description
         }));
     });
