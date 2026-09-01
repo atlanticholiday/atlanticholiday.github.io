@@ -41,7 +41,9 @@ const HEADER_ACTION_SELECTORS = [
     '.vacation-center-page-header__actions',
     '.build-planner-header-actions',
     '.staff-header-actions',
-    '.user-management-header-actions'
+    '.user-management-header-actions',
+    '#cleaning-ah-header-actions',
+    '#laundry-log-header-actions'
 ].join(',');
 
 function translate(key, fallback) {

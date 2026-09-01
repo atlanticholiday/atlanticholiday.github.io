@@ -513,7 +513,7 @@ export class CleaningAhManager {
                                 <p id="cleaning-ah-header-subtitle" class="text-xs text-slate-500 font-medium"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 self-start sm:self-auto">
+                        <div id="cleaning-ah-header-actions" class="flex items-center gap-3 self-start sm:self-auto">
                             <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
                                 <button type="button" class="lang-btn rounded-lg px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white hover:shadow-sm" data-lang-option="en" title="English">EN</button>
                                 <button type="button" class="lang-btn rounded-lg px-2.5 py-1 text-xs font-semibold transition-all hover:bg-white hover:shadow-sm" data-lang-option="pt" title="Português">PT</button>

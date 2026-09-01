@@ -131,6 +131,8 @@ describe("NavigationManager", () => {
           <button id="go-to-reservations-btn"><h3>Weekly Reservations</h3></button>
           <button id="go-to-heated-pools-btn"><h3>Heated Pools</h3></button>
         </div>
+        <div id="cleaning-ah-page" class="hidden"><div id="cleaning-ah-header-actions"></div></div>
+        <div id="laundry-log-page" class="hidden"><div id="laundry-log-header-actions"></div></div>
         <div id="time-clock-page" class="hidden"></div>
         <div id="app-content" class="hidden"></div>
         <div id="vacation-center-page" class="hidden"></div>
@@ -141,6 +143,9 @@ describe("NavigationManager", () => {
     `);
     const navigationManager = new NavigationManager({ storage: createStorageMock() });
     navigationManager.setupNavigationListeners();
+
+    assert.ok(document.querySelector("#cleaning-ah-header-actions > [data-app-switcher-trigger]"));
+    assert.ok(document.querySelector("#laundry-log-header-actions > [data-app-switcher-trigger]"));
 
     document.querySelector("[data-app-switcher-trigger]").click();
 
