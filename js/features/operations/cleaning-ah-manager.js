@@ -35,6 +35,7 @@ import {
 import { i18n, t } from "../../core/i18n.js";
 
 const DEFAULT_CLEANING_CATEGORY_KEY = CLEANING_AH_CATEGORY_KEYS.checkout;
+const SEARCH_RENDER_DEBOUNCE_MS = 120;
 
 function escapeHtml(value) {
     return String(value || "")
@@ -171,6 +172,7 @@ export class CleaningAhManager {
         this.statusTone = "info";
         this.focusAfterRender = "";
         this.selectionAfterRender = null;
+        this.searchRenderTimer = null;
 
         if (typeof window !== "undefined") {
             window.setTimeout(() => this.ensureDomScaffold(), 50);
@@ -1354,6 +1356,12 @@ export class CleaningAhManager {
     }
 
     render() {
+        if (this.searchRenderTimer !== null) {
+            window.clearTimeout(this.searchRenderTimer);
+            this.searchRenderTimer = null;
+            this.selectionAfterRender = null;
+        }
+
         const root = document.getElementById("cleaning-ah-root");
         if (!root) return;
         const propertyDialogScrollTop = document.getElementById("cleaning-ah-property-stats-body")?.scrollTop || 0;
@@ -1430,7 +1438,7 @@ export class CleaningAhManager {
         this.updateLaundryBatchPreview();
         if (this.focusAfterRender) {
             const focusedElement = document.getElementById(this.focusAfterRender);
-            focusedElement?.focus();
+            focusedElement?.focus({ preventScroll: true });
             if (focusedElement && this.selectionAfterRender && typeof focusedElement.setSelectionRange === "function") {
                 const { start, end, direction } = this.selectionAfterRender;
                 focusedElement.setSelectionRange(start, end, direction);
@@ -4575,13 +4583,24 @@ export class CleaningAhManager {
 
         document.getElementById("cleaning-ah-search")?.addEventListener("input", (event) => {
             this.searchQuery = event.target.value || "";
-            this.focusAfterRender = "cleaning-ah-search";
+            const searchInput = event.target;
             this.selectionAfterRender = {
-                start: event.target.selectionStart ?? this.searchQuery.length,
-                end: event.target.selectionEnd ?? this.searchQuery.length,
-                direction: event.target.selectionDirection || "none"
+                start: searchInput.selectionStart ?? this.searchQuery.length,
+                end: searchInput.selectionEnd ?? this.searchQuery.length,
+                direction: searchInput.selectionDirection || "none"
             };
-            this.render();
+            if (this.searchRenderTimer !== null) {
+                window.clearTimeout(this.searchRenderTimer);
+            }
+            this.searchRenderTimer = window.setTimeout(() => {
+                this.searchRenderTimer = null;
+                if (!searchInput.isConnected) {
+                    this.selectionAfterRender = null;
+                    return;
+                }
+                this.focusAfterRender = "cleaning-ah-search";
+                this.render();
+            }, SEARCH_RENDER_DEBOUNCE_MS);
         });
         document.getElementById("cleaning-ah-month-filter")?.addEventListener("change", (event) => {
             this.selectedMonthKey = event.target.value || "";

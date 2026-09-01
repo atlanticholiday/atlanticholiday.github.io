@@ -175,30 +175,43 @@ describe("CleaningAhManager", () => {
     }
   });
 
-  test("keeps the search caret position after filtering rerenders the page", () => {
-    resetDom('<div id="cleaning-ah-root"></div>');
+  test("debounces filtering and keeps the search caret position after rerendering", () => {
+    resetDom('<div id="cleaning-ah-page"><div id="cleaning-ah-root"></div></div>');
     const manager = new CleaningAhManager(null);
+    const nativeSetTimeout = window.setTimeout;
+    let pendingSearchRender = null;
 
     try {
       manager.render();
+      window.setTimeout = (callback) => {
+        pendingSearchRender = callback;
+        return -1;
+      };
 
       let search = document.getElementById("cleaning-ah-search");
+      search.focus();
       search.value = "A";
       search.setSelectionRange(1, 1);
       search.dispatchEvent(new Event("input", { bubbles: true }));
 
-      search = document.getElementById("cleaning-ah-search");
+      assert.equal(document.getElementById("cleaning-ah-search"), search);
       assert.equal(search.selectionStart, 1);
       assert.equal(search.selectionEnd, 1);
 
-      search.setRangeText("c", search.selectionStart, search.selectionEnd, "end");
+      search.value = "Ac";
+      search.setSelectionRange(2, 2);
       search.dispatchEvent(new Event("input", { bubbles: true }));
+
+      assert.equal(document.getElementById("cleaning-ah-search"), search);
+      assert.ok(pendingSearchRender);
+      pendingSearchRender();
 
       search = document.getElementById("cleaning-ah-search");
       assert.equal(search.value, "Ac");
       assert.equal(search.selectionStart, 2);
       assert.equal(search.selectionEnd, 2);
     } finally {
+      window.setTimeout = nativeSetTimeout;
       resetDom();
     }
   });
