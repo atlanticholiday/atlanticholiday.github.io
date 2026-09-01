@@ -589,7 +589,16 @@
     "views": {
       "formTitle": "New linen count",
       "editTitle": "Update linen count",
-      "recordsTitle": "Saved counts"
+      "recordsTitle": "Saved counts",
+      "recordsTab": "Counts & review",
+      "newCountTab": "New count",
+      "editTab": "Edit count",
+      "newCountHint": "Record a property inventory",
+      "workspaceLabel": "Manager inventory views",
+      "pendingReview": {
+        "one": "{{count}} waiting for review",
+        "other": "{{count}} waiting for review"
+      }
     },
     "stats": {
       "records": "Counts",
@@ -833,12 +842,35 @@
   "welcomePack": {
     "header": {
       "title": "Welcome Packs",
-      "subtitle": "Track material cost, property charges, and profit"
+      "subtitle": "Purchases, stock, packs, and results in one workflow"
     },
     "hero": {
       "kicker": "Welcome Packs",
       "title": "",
-      "body": "Record purchases first; stock, pack costs, property charges, and margin then stay connected automatically."
+      "body": "Prepare stock once, then track reservations, record delivered packs, and check results in the daily workflow."
+    },
+    "overview": {
+      "navLabel": "Overview",
+      "navDescription": "See what to do now and where every task lives.",
+      "eyebrow": "Starting point",
+      "title": "Your Welcome Pack workflow",
+      "description": "Use setup when buying or configuring materials. In daily work, start with reservations and finish with results.",
+      "dailyLabel": "Daily work",
+      "dailyTitle": "For each check-in",
+      "dailyDescription": "Three simple steps to prepare, record, and check each welcome pack.",
+      "setupLabel": "Setup",
+      "setupTitle": "When you buy or change a pack",
+      "setupDescription": "Keep purchases, stock, and templates current so daily calculations stay automatic.",
+      "statusLabel": "Current summary",
+      "emptyHint": "There is no data yet. Start by recording a purchase or adding materials to stock.",
+      "open": "Open"
+    },
+    "navigation": {
+      "daily": "Daily operation",
+      "setup": "Setup and stock",
+      "help": "Help",
+      "guide": "How it works",
+      "guideHint": "See the complete walkthrough"
     },
     "purchases": {
       "navLabel": "Purchases",
@@ -905,29 +937,44 @@
     },
     "workflow": {
       "materialCosts": {
-        "label": "Material Costs",
+        "label": "Materials and stock",
         "step": "Step 1",
         "description": "Add every material you buy and fill in stock, cost, and the usual charge per unit."
       },
       "propertyCharges": {
-        "label": "Property Charges",
+        "label": "Record packs",
         "step": "Step 2",
         "description": "Choose the property, add the materials used in that pack, and confirm what you actually charged."
       },
       "calculations": {
-        "label": "Calculations",
+        "label": "Results",
         "step": "Step 3",
         "description": "Open the calculations view to check totals, profit, and property performance automatically."
       }
     },
     "support": {
       "label": "Support tools",
-      "reservations": "Reservations",
-      "presets": "Presets"
+      "reservations": "Upcoming reservations",
+      "reservationsDescription": "See which check-ins need a welcome pack.",
+      "presets": "Pack templates",
+      "presetsDescription": "Save material combinations you use frequently."
     },
     "help": {
-      "title": "Welcome Pack Manager Guide",
-      "subtitle": "Learn how to manage packs, reservations, and inventory.",
+      "eyebrow": "Quick guide",
+      "title": "How Welcome Packs work",
+      "subtitle": "From reservation to results, without missing a step.",
+      "close": "Close guide",
+      "intro": "There are two different rhythms: stock setup when you purchase materials and the daily work for each check-in.",
+      "startLabel": "Recommended walkthrough",
+      "walkthrough": {
+        "reservations": { "title": "1. Check upcoming reservations", "body": "Confirm which properties have a check-in and need a pack." },
+        "purchases": { "title": "2. Record purchases", "body": "Import the invoice or enter the purchase to update costs and stock." },
+        "inventory": { "title": "3. Check materials and stock", "body": "Review quantities, unit cost, and low-stock materials." },
+        "presets": { "title": "4. Prepare pack templates", "body": "Create a template to load frequently used materials quickly." },
+        "log": { "title": "5. Record the delivered pack", "body": "Choose the property, enter the materials used, and confirm the charge." },
+        "dashboard": { "title": "6. Check the results", "body": "Review costs, charge, profit, and margin by property." }
+      },
+      "openSection": "Open this area",
       "nav": {
         "workflow": "Typical Workflow",
         "stats": "Understanding Stats",
@@ -979,7 +1026,7 @@
           }
         }
       },
-      "done": "Got it, thanks!"
+      "done": "Close and get started"
     },
     "reservations": {
       "tabs": {

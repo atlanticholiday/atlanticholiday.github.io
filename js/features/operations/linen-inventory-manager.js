@@ -139,6 +139,7 @@ export class LinenInventoryManager {
         this.selectedDateTo = "";
         this.cleanerPropertyQuery = "";
         this.cleanerWorkspace = "count";
+        this.managerWorkspace = "records";
         this.cleanerExpandedSections = new Set(["doubleBed"]);
         this.cleanerDraftRestored = false;
         this.cleanerDraftStorageKey = "";
@@ -474,6 +475,7 @@ export class LinenInventoryManager {
         this.editingRecordId = null;
         this.editingRecordBase = null;
         this.reviewingRecordId = null;
+        this.managerWorkspace = "records";
         this.cleanerDraftRestored = false;
         this.cleanerDraftStorageKey = "";
         this.draft = this.createDefaultDraft();
@@ -876,6 +878,8 @@ export class LinenInventoryManager {
                 this.clearCleanerDraft();
                 if (this.isCleanerView()) {
                     this.cleanerWorkspace = "history";
+                } else {
+                    this.managerWorkspace = "records";
                 }
                 this.setStatus(submit ? this.tr("messages.submitted") : this.tr("messages.saved"), "success");
             } else {
@@ -960,6 +964,23 @@ export class LinenInventoryManager {
         this.render();
     }
 
+    switchManagerWorkspace(workspace) {
+        if (!this.isManagerView() || (workspace !== "records" && workspace !== "count")) {
+            return;
+        }
+        if (this.managerWorkspace === "count") {
+            this.syncDraftFromDomIfPresent();
+        }
+        this.managerWorkspace = workspace;
+        if (workspace === "count") {
+            this.reviewingRecordId = null;
+        }
+        this.render();
+        window.requestAnimationFrame?.(() => {
+            document.getElementById("linen-manager-workspace-panel")?.focus?.({ preventScroll: true });
+        });
+    }
+
     startEditing(recordId) {
         const target = this.records.find((record) => record.id === recordId);
         if (!target || !this.canEditRecord(target)) {
@@ -974,6 +995,8 @@ export class LinenInventoryManager {
             this.draft.activeSections = LINEN_INVENTORY_GROUPS.map((section) => section.key);
             this.cleanerWorkspace = "count";
             this.persistCleanerDraft();
+        } else {
+            this.managerWorkspace = "count";
         }
         this.submitReviewOpen = false;
         this.setStatus("", "info");
@@ -1021,6 +1044,7 @@ export class LinenInventoryManager {
         if (!this.isManagerView() || !this.records.some((record) => record.id === recordId)) {
             return;
         }
+        this.managerWorkspace = "records";
         this.reviewingRecordId = recordId;
         this.render();
         window.requestAnimationFrame(() => {
@@ -1479,6 +1503,7 @@ export class LinenInventoryManager {
         if (action === "close-submit-review") return void this.closeSubmitReview();
         if (action === "confirm-submit") return void this.saveDraft({ submit: true });
         if (action === "cleaner-workspace" && workspace) return void this.switchCleanerWorkspace(workspace);
+        if (action === "manager-workspace" && workspace) return void this.switchManagerWorkspace(workspace);
         if (action === "select-property" && propertyId && propertyName) return void this.selectCleanerProperty(propertyId, propertyName);
         if (action === "change-property") return void this.changeCleanerProperty();
         if (action === "adjust-count" && itemKey && Number.isFinite(delta)) return void this.adjustCleanerItemCount(itemKey, delta);
@@ -1595,6 +1620,46 @@ export class LinenInventoryManager {
                         <button type="button" data-linen-action="cleaner-workspace" data-workspace="${escapeHtml(tab.key)}" class="flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-900"}">
                             <span>${escapeHtml(tab.label)}</span>
                             ${Number.isFinite(tab.count) ? `<span class="inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs ${active ? "bg-rose-600 text-white" : "bg-white/80 text-slate-700"}">${escapeHtml(String(tab.count))}</span>` : ""}
+                        </button>
+                    `;
+                }).join("")}
+            </nav>
+        `;
+    }
+
+    renderManagerWorkspaceTabs() {
+        const pendingReview = this.records.filter((record) => getLinenInventoryWorkflowStatus(record) === "submitted").length;
+        const tabs = [
+            {
+                key: "records",
+                label: this.tr("views.recordsTab"),
+                detail: pendingReview
+                    ? this.trCount("views.pendingReview", pendingReview)
+                    : this.trCount("counts.records", this.records.length)
+            },
+            {
+                key: "count",
+                label: this.editingRecordId ? this.tr("views.editTab") : this.tr("views.newCountTab"),
+                detail: this.editingRecordId ? this.draft.propertyName : this.tr("views.newCountHint")
+            }
+        ];
+
+        return `
+            <nav class="grid gap-2 border-b border-slate-200 sm:grid-cols-2" role="tablist" aria-label="${escapeHtml(this.tr("views.workspaceLabel"))}">
+                ${tabs.map((tab) => {
+                    const active = this.managerWorkspace === tab.key;
+                    return `
+                        <button type="button" role="tab" aria-selected="${active ? "true" : "false"}" aria-controls="linen-manager-workspace-panel" data-linen-action="manager-workspace" data-workspace="${escapeHtml(tab.key)}" class="group relative flex min-h-20 items-center justify-between gap-4 px-4 py-4 text-left transition-colors sm:px-5 ${active ? "text-slate-950" : "text-slate-500 hover:text-slate-900"}">
+                            <span>
+                                <span class="block text-base font-semibold">${escapeHtml(tab.label)}</span>
+                                <span class="mt-1 block text-xs ${active ? "text-slate-600" : "text-slate-400"}">${escapeHtml(tab.detail)}</span>
+                            </span>
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${active ? "bg-rose-600 text-white shadow-sm" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-700"}" aria-hidden="true">
+                                ${tab.key === "records"
+                                    ? '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l5 5v11a2 2 0 0 1-2 2Z"/></svg>'
+                                    : '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>'}
+                            </span>
+                            <span class="absolute inset-x-4 bottom-[-1px] h-0.5 origin-left rounded-full bg-rose-600 transition-transform duration-200 sm:inset-x-5 ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-50"}"></span>
                         </button>
                     `;
                 }).join("")}
@@ -2287,14 +2352,23 @@ export class LinenInventoryManager {
         const propertyOptions = this.getKnownPropertyNames();
         const draftSummary = summarizeLinenInventoryRecord(this.draft);
         const reviewRecord = this.records.find((record) => record.id === this.reviewingRecordId) || null;
+        const recordsWorkspace = this.managerWorkspace === "records";
 
         root.innerHTML = `
             ${this.statusMessage ? `<section class="rounded-xl border px-4 py-3 text-sm font-medium ${toneClass(this.statusTone)}">${escapeHtml(this.statusMessage)}</section>` : ""}
-            ${this.renderAdminReviewPanel(reviewRecord)}
-            ${this.renderMetricsSection(totals)}
-            <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(400px,0.48fr)] xl:items-start">
-                ${this.renderRecords({ records })}
-                ${this.renderForm({ draftSummary, propertyOptions })}
+            ${this.renderManagerWorkspaceTabs()}
+            <section id="linen-manager-workspace-panel" role="tabpanel" tabindex="-1" class="scroll-mt-6 outline-none">
+                ${recordsWorkspace ? `
+                    <div class="space-y-6">
+                        ${this.renderAdminReviewPanel(reviewRecord)}
+                        ${this.renderMetricsSection(totals)}
+                        ${this.renderRecords({ records })}
+                    </div>
+                ` : `
+                    <div class="mx-auto max-w-6xl">
+                        ${this.renderForm({ draftSummary, propertyOptions })}
+                    </div>
+                `}
             </section>
         `;
     }

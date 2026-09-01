@@ -25,6 +25,11 @@ describe("LinenInventoryManager", () => {
     assert.ok(document.getElementById("linen-inventory-page"));
     assert.ok(document.getElementById("linen-inventory-root"));
     assert.ok(document.getElementById("go-to-linen-inventory-btn"));
+    assert.equal(document.getElementById("linen-inventory-property-input"), null);
+    assert.ok(document.querySelector("[data-linen-action='manager-workspace'][data-workspace='records'][aria-selected='true']"));
+
+    document.querySelector("[data-linen-action='manager-workspace'][data-workspace='count']").click();
+
     assert.ok(document.getElementById("linen-inventory-property-input"));
     assert.equal(document.querySelectorAll("[data-linen-section-key]").length, 0);
     assert.ok(document.querySelector("[data-linen-action='add-section'][data-section-key='doubleBed']"));
@@ -42,6 +47,7 @@ describe("LinenInventoryManager", () => {
 
     manager.ensureDomScaffold();
     manager.render();
+    manager.switchManagerWorkspace("count");
 
     document.getElementById("linen-inventory-property-input").value = "Atlantic View";
     document.getElementById("linen-inventory-counted-input").value = "2026-04-12";
@@ -124,6 +130,9 @@ describe("LinenInventoryManager", () => {
 
     manager.startEditing("atlantic");
 
+    assert.equal(manager.managerWorkspace, "count");
+    assert.ok(document.getElementById("linen-inventory-form-card"));
+    assert.equal(document.querySelector("[data-linen-admin-only]"), null);
     assert.equal(manager.draft.propertyName, "Atlantic View");
     assert.equal(manager.draft.countedDate, "2026-04-12");
     assert.equal(manager.draft.sections.doubleBed.bedroomCount, 2);

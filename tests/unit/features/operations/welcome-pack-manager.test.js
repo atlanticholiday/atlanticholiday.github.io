@@ -23,6 +23,16 @@ function primeWelcomePackTranslations() {
   };
 }
 
+function primePortugueseWelcomePackTranslations() {
+  i18n.currentLang = "pt";
+  i18n.translations.pt = {
+    ...(i18n.translations.pt || {}),
+    welcomePack: {
+      ...((i18n.translations.pt || {}).welcomePack || {})
+    }
+  };
+}
+
 async function flushRender() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -242,6 +252,46 @@ describe("WelcomePackManager", () => {
     assert.equal(manager.currentView, "purchases");
     assert.ok(manager.purchaseDraft);
     assert.ok(document.querySelector(".welcome-pack-purchase-editor"));
+  });
+
+  test("opens with a Portuguese overview split into daily work and setup", async () => {
+    primePortugueseWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() { return []; }
+    });
+
+    await manager.render();
+    await flushRender();
+
+    assert.equal(manager.currentView, "overview");
+    assert.includes(document.getElementById("welcome-pack-content").textContent, "Operação diária");
+    assert.includes(document.getElementById("welcome-pack-content").textContent, "Preparação e stock");
+    assert.equal(document.querySelectorAll(".welcome-pack-overview-step").length, 6);
+    assert.equal(document.querySelector('[data-wp-view="overview"]').getAttribute("aria-current"), "page");
+  });
+
+  test("opens the walkthrough and routes directly to the selected area", async () => {
+    primePortugueseWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() { return []; }
+    });
+
+    await manager.render();
+    await flushRender();
+    document.querySelector("[data-wp-open-guide]").click();
+
+    assert.equal(document.querySelectorAll("[data-wp-guide-view]").length, 6);
+    assert.includes(document.getElementById("wp-help-modal").textContent, "Como funcionam os Welcome Packs");
+
+    document.querySelector('[data-wp-guide-view="dashboard"]').click();
+    await flushRender();
+
+    assert.equal(manager.currentView, "dashboard");
+    assert.ok(document.querySelector('[data-wp-view="dashboard"].is-active'));
   });
 
   test("explains missing server rules when an administrator is denied", () => {

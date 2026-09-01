@@ -593,7 +593,16 @@
         "views": {
             "formTitle": "Nova contagem de roupa",
             "editTitle": "Atualizar contagem de roupa",
-            "recordsTitle": "Contagens guardadas"
+            "recordsTitle": "Contagens guardadas",
+            "recordsTab": "Contagens e revisão",
+            "newCountTab": "Nova contagem",
+            "editTab": "Editar contagem",
+            "newCountHint": "Registar o inventário de uma propriedade",
+            "workspaceLabel": "Vistas de gestão do inventário",
+            "pendingReview": {
+                "one": "{{count}} a aguardar revisão",
+                "other": "{{count}} a aguardar revisão"
+            }
         },
         "stats": {
             "records": "Contagens",
@@ -837,12 +846,35 @@
     "welcomePack": {
         "header": {
             "title": "Welcome Packs",
-            "subtitle": "Acompanhar custo de materiais, cobranças por propriedade e lucro"
+            "subtitle": "Compras, stock, packs e resultados num só fluxo"
         },
         "hero": {
             "kicker": "Welcome Packs",
             "title": "",
-            "body": "Registe primeiro as compras; o stock, o custo dos packs, as cobranças e a margem ficam depois ligados automaticamente."
+            "body": "Prepare o stock uma vez e, no dia a dia, acompanhe reservas, registe os packs entregues e confirme os resultados."
+        },
+        "overview": {
+            "navLabel": "Visão geral",
+            "navDescription": "Perceba o que fazer agora e onde fica cada tarefa.",
+            "eyebrow": "Ponto de partida",
+            "title": "O seu fluxo de Welcome Packs",
+            "description": "Use a preparação quando comprar ou configurar materiais. No trabalho diário, comece pelas reservas e termine nos resultados.",
+            "dailyLabel": "Trabalho diário",
+            "dailyTitle": "Para cada check-in",
+            "dailyDescription": "Três passos simples para preparar, registar e confirmar cada welcome pack.",
+            "setupLabel": "Preparação",
+            "setupTitle": "Quando compra ou altera um pack",
+            "setupDescription": "Mantenha compras, stock e modelos atualizados para que os cálculos diários sejam automáticos.",
+            "statusLabel": "Resumo atual",
+            "emptyHint": "Ainda não há dados. Comece por registar uma compra ou adicionar materiais ao stock.",
+            "open": "Abrir"
+        },
+        "navigation": {
+            "daily": "Operação diária",
+            "setup": "Preparação e stock",
+            "help": "Ajuda",
+            "guide": "Como funciona",
+            "guideHint": "Ver o percurso completo"
         },
         "purchases": {
             "navLabel": "Compras",
@@ -906,29 +938,44 @@
         },
         "workflow": {
             "materialCosts": {
-                "label": "Custos dos Materiais",
+                "label": "Materiais e stock",
                 "step": "Passo 1",
                 "description": "Adicione todos os materiais que compra e preencha stock, custo e cobrança habitual por unidade."
             },
             "propertyCharges": {
-                "label": "Cobranças por Propriedade",
+                "label": "Registar packs",
                 "step": "Passo 2",
                 "description": "Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor realmente cobrado."
             },
             "calculations": {
-                "label": "Cálculos",
+                "label": "Resultados",
                 "step": "Passo 3",
                 "description": "Abra a vista de cálculos para confirmar automaticamente totais, lucro e desempenho por propriedade."
             }
         },
         "support": {
             "label": "Ferramentas de apoio",
-            "reservations": "Reservas",
-            "presets": "Presets"
+            "reservations": "Próximas reservas",
+            "reservationsDescription": "Veja os check-ins que precisam de welcome pack.",
+            "presets": "Modelos de pack",
+            "presetsDescription": "Guarde combinações de materiais que usa com frequência."
         },
         "help": {
-            "title": "Guia do Welcome Packs",
-            "subtitle": "Saiba como gerir packs, reservas e inventário.",
+            "eyebrow": "Guia rápido",
+            "title": "Como funcionam os Welcome Packs",
+            "subtitle": "Da reserva ao resultado, sem saltar nenhum passo.",
+            "close": "Fechar guia",
+            "intro": "Há dois ritmos diferentes: a preparação do stock, feita quando compra materiais, e o trabalho diário de cada check-in.",
+            "startLabel": "Percurso recomendado",
+            "walkthrough": {
+                "reservations": { "title": "1. Ver próximas reservas", "body": "Confirme que propriedades terão check-in e precisam de pack." },
+                "purchases": { "title": "2. Registar compras", "body": "Importe a fatura ou introduza a compra para atualizar custos e stock." },
+                "inventory": { "title": "3. Confirmar materiais e stock", "body": "Reveja quantidades, custo unitário e materiais com stock baixo." },
+                "presets": { "title": "4. Preparar modelos de pack", "body": "Crie um modelo para carregar rapidamente os materiais usados com frequência." },
+                "log": { "title": "5. Registar o pack entregue", "body": "Escolha a propriedade, indique os materiais usados e confirme o valor cobrado." },
+                "dashboard": { "title": "6. Confirmar os resultados", "body": "Consulte custos, valor cobrado, lucro e margem por propriedade." }
+            },
+            "openSection": "Abrir esta área",
             "nav": {
                 "workflow": "Fluxo habitual",
                 "stats": "Perceber os cálculos",
@@ -980,7 +1027,7 @@
                     }
                 }
             },
-            "done": "Perfeito, obrigado!"
+            "done": "Fechar e começar"
         },
         "reservations": {
             "tabs": {

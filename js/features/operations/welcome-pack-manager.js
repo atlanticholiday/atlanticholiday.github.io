@@ -28,43 +28,81 @@ function escapeHtml(value) {
 const PT_WELCOME_PACK_TRANSLATIONS = {
     header: {
         title: 'Welcome Packs',
-        subtitle: 'Acompanhar custos, cobranças por propriedade e lucro'
+        subtitle: 'Compras, stock, packs e resultados num só fluxo'
     },
     hero: {
         kicker: 'Welcome Packs',
         title: '',
-        body: 'Registe primeiro as compras; o stock, o custo dos packs, as cobranças e a margem ficam depois ligados automaticamente.'
+        body: 'Prepare o stock uma vez e, no dia a dia, acompanhe reservas, registe os packs entregues e confirme os resultados.'
+    },
+    overview: {
+        navLabel: 'Visão geral',
+        navDescription: 'Perceba o que fazer agora e onde fica cada tarefa.',
+        eyebrow: 'Ponto de partida',
+        title: 'O seu fluxo de Welcome Packs',
+        description: 'Use a preparação quando comprar ou configurar materiais. No trabalho diário, comece pelas reservas e termine nos resultados.',
+        dailyLabel: 'Trabalho diário',
+        dailyTitle: 'Para cada check-in',
+        dailyDescription: 'Três passos simples para preparar, registar e confirmar cada welcome pack.',
+        setupLabel: 'Preparação',
+        setupTitle: 'Quando compra ou altera um pack',
+        setupDescription: 'Mantenha compras, stock e modelos atualizados para que os cálculos diários sejam automáticos.',
+        statusLabel: 'Resumo atual',
+        emptyHint: 'Ainda não há dados. Comece por registar uma compra ou adicionar materiais ao stock.',
+        open: 'Abrir'
+    },
+    navigation: {
+        daily: 'Operação diária',
+        setup: 'Preparação e stock',
+        help: 'Ajuda',
+        guide: 'Como funciona',
+        guideHint: 'Ver o percurso completo'
     },
     workflow: {
         materialCosts: {
-            label: 'Custos dos Materiais',
+            label: 'Materiais e stock',
             step: 'Passo 1',
             description: 'Adicione todos os materiais que compra e preencha stock, custo e referência de cobrança.'
         },
         propertyCharges: {
-            label: 'Cobranças por Propriedade',
+            label: 'Registar packs',
             step: 'Passo 2',
             description: 'Escolha a propriedade, adicione os materiais usados nesse pack e confirme o valor líquido realmente cobrado.'
         },
         calculations: {
-            label: 'Cálculos',
+            label: 'Resultados',
             step: 'Passo 3',
             description: 'Abra a vista de cálculos para confirmar automaticamente totais, IVA, lucro e desempenho por propriedade.'
         }
     },
     support: {
         label: 'Ferramentas de apoio',
-        reservations: 'Reservas',
-        presets: 'Presets'
+        reservations: 'Próximas reservas',
+        reservationsDescription: 'Veja os check-ins que precisam de welcome pack.',
+        presets: 'Modelos de pack',
+        presetsDescription: 'Guarde combinações de materiais que usa com frequência.'
     },
     help: {
-        title: 'Guia do Gestor de Welcome Packs',
-        subtitle: 'Aprenda a gerir packs, reservas e stock.',
+        eyebrow: 'Guia rápido',
+        title: 'Como funcionam os Welcome Packs',
+        subtitle: 'Da reserva ao resultado, sem saltar nenhum passo.',
+        close: 'Fechar guia',
+        intro: 'Há dois ritmos diferentes: a preparação do stock, feita quando compra materiais, e o trabalho diário de cada check-in.',
+        startLabel: 'Percurso recomendado',
         nav: {
             workflow: 'Fluxo Normal',
             stats: 'Como Ler os Cálculos',
             inventory: 'Stock e Presets'
         },
+        walkthrough: {
+            reservations: { title: '1. Ver próximas reservas', body: 'Confirme que propriedades terão check-in e precisam de pack.' },
+            purchases: { title: '2. Registar compras', body: 'Importe a fatura ou introduza a compra para atualizar custos e stock.' },
+            inventory: { title: '3. Confirmar materiais e stock', body: 'Reveja quantidades, custo unitário e materiais com stock baixo.' },
+            presets: { title: '4. Preparar modelos de pack', body: 'Crie um modelo para carregar rapidamente os materiais usados com frequência.' },
+            log: { title: '5. Registar o pack entregue', body: 'Escolha a propriedade, indique os materiais usados e confirme o valor cobrado.' },
+            dashboard: { title: '6. Confirmar os resultados', body: 'Consulte custos, valor cobrado, lucro e margem por propriedade.' }
+        },
+        openSection: 'Abrir esta área',
         sections: {
             workflow: {
                 title: 'Fluxo Diário',
@@ -111,7 +149,7 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
                 }
             }
         },
-        done: 'Percebi, obrigado!'
+        done: 'Fechar e começar'
     },
     reservations: {
         tabs: {
@@ -476,7 +514,7 @@ export class WelcomePackManager {
         this.getUpcomingReservations = getUpcomingReservations;
         this.uploadInvoice = uploadInvoice;
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
-        this.currentView = 'purchases'; // purchases, inventory, log, dashboard, reservations, presets
+        this.currentView = 'overview'; // overview, purchases, inventory, log, dashboard, reservations, presets
         this.cart = [];
         this.dashboardFilters = {
             startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], // Last 30 days default
@@ -613,25 +651,25 @@ export class WelcomePackManager {
     getPrimaryViews() {
         return [
             {
-                id: 'purchases',
-                label: this.tr('purchases.navLabel'),
-                eyebrow: this.tr('purchases.navEyebrow'),
-                description: this.tr('purchases.navDescription'),
-                icon: 'fa-receipt'
+                id: 'overview',
+                label: this.tr('overview.navLabel'),
+                eyebrow: this.tr('overview.eyebrow'),
+                description: this.tr('overview.navDescription'),
+                icon: 'fa-compass'
             },
             {
-                id: 'inventory',
-                label: this.tr('workflow.materialCosts.label'),
-                eyebrow: this.tr('workflow.materialCosts.step'),
-                description: this.tr('workflow.materialCosts.description'),
-                icon: 'fa-box-open'
+                id: 'reservations',
+                label: this.tr('support.reservations'),
+                eyebrow: this.tr('navigation.daily'),
+                description: this.tr('support.reservationsDescription'),
+                icon: 'fa-calendar-alt'
             },
             {
                 id: 'log',
                 label: this.tr('workflow.propertyCharges.label'),
                 eyebrow: this.tr('workflow.propertyCharges.step'),
                 description: this.tr('workflow.propertyCharges.description'),
-                icon: 'fa-house-circle-check'
+                icon: 'fa-home'
             },
             {
                 id: 'dashboard',
@@ -646,16 +684,32 @@ export class WelcomePackManager {
     getSupportViews() {
         return [
             {
-                id: 'reservations',
-                label: this.tr('support.reservations'),
-                icon: 'fa-calendar-alt'
+                id: 'purchases',
+                label: this.tr('purchases.navLabel'),
+                eyebrow: this.tr('purchases.navEyebrow'),
+                description: this.tr('purchases.navDescription'),
+                icon: 'fa-receipt'
+            },
+            {
+                id: 'inventory',
+                label: this.tr('workflow.materialCosts.label'),
+                eyebrow: this.tr('workflow.materialCosts.step'),
+                description: this.tr('workflow.materialCosts.description'),
+                icon: 'fa-box-open'
             },
             {
                 id: 'presets',
                 label: this.tr('support.presets'),
+                eyebrow: this.tr('navigation.setup'),
+                description: this.tr('support.presetsDescription'),
                 icon: 'fa-layer-group'
             }
         ];
+    }
+
+    getCurrentViewMeta() {
+        return [...this.getPrimaryViews(), ...this.getSupportViews()]
+            .find((view) => view.id === this.currentView) || this.getPrimaryViews()[0];
     }
 
     setCurrentView(view, { resetEdit = false } = {}) {
@@ -1007,58 +1061,72 @@ export class WelcomePackManager {
 
         const primaryViews = this.getPrimaryViews();
         const supportViews = this.getSupportViews();
-        let inventorySummary = summarizeWelcomePackInventory([]);
-        let logSummary = summarizeWelcomePackLogs([]);
-
-        try {
-            const [logs, items] = await Promise.all([
-                this._fetchData('logs'),
-                this._fetchData('items')
-            ]);
-            inventorySummary = summarizeWelcomePackInventory(items);
-            logSummary = summarizeWelcomePackLogs(logs);
-        } catch (error) {
-            console.warn('[WelcomePack] Failed to load workspace summary:', error);
-        }
+        const currentView = this.getCurrentViewMeta();
 
         container.innerHTML = `
             <div class="welcome-pack-shell">
-                <section class="welcome-pack-workspace-bar">
+                <aside class="welcome-pack-workspace-bar" aria-label="Welcome Packs">
                     <div class="welcome-pack-workspace-title">
-                        <div>
-                            <div class="welcome-pack-section-kicker">${this.tr('hero.kicker')}</div>
-                            <h2>${this.tr('hero.title') || this.tr('header.title')}</h2>
-                            <p>${this.tr('hero.body')}</p>
+                        <div class="welcome-pack-sidebar-heading">
+                            <span class="welcome-pack-sidebar-mark" aria-hidden="true"><i class="fas fa-gift"></i></span>
+                            <div>
+                                <div class="welcome-pack-section-kicker">${this.tr('hero.kicker')}</div>
+                                <h2>${this.tr('header.title')}</h2>
+                            </div>
                         </div>
-                        <button type="button" class="welcome-pack-action-button" data-wp-start-purchase>
-                            <i class="fas fa-plus"></i><span>${this.tr('purchases.recordPurchase')}</span>
-                        </button>
+                        <p>${this.tr('hero.body')}</p>
                     </div>
-                    <div class="welcome-pack-workspace-navigation">
-                        <nav class="flex flex-wrap gap-2" aria-label="Welcome Pack views">
+
+                    <button type="button" class="welcome-pack-action-button welcome-pack-sidebar-action" data-wp-start-purchase>
+                        <i class="fas fa-plus"></i><span>${this.tr('purchases.recordPurchase')}</span>
+                    </button>
+
+                    <div class="welcome-pack-sidebar-group">
+                        <span class="welcome-pack-sidebar-label">${this.tr('navigation.daily')}</span>
+                        <nav class="welcome-pack-side-nav" aria-label="${this.tr('navigation.daily')}">
                             ${primaryViews.map((view) => `
-                                <button type="button" id="wp-${view.id}-btn" class="view-btn ${this.currentView === view.id ? 'active' : ''}" data-wp-view="${view.id}">
-                                    <i class="fas ${view.icon}"></i><span>${view.label}</span>
+                                <button type="button" id="wp-${view.id}-btn" class="welcome-pack-side-nav-item ${this.currentView === view.id ? 'is-active' : ''}" data-wp-view="${view.id}" ${this.currentView === view.id ? 'aria-current="page"' : ''}>
+                                    <span class="welcome-pack-side-nav-icon"><i class="fas ${view.icon}"></i></span>
+                                    <span>${view.label}</span>
                                 </button>
                             `).join('')}
                         </nav>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${this.tr('support.label')}</span>
+                    </div>
+
+                    <div class="welcome-pack-sidebar-group">
+                        <span class="welcome-pack-sidebar-label">${this.tr('navigation.setup')}</span>
+                        <nav class="welcome-pack-side-nav" aria-label="${this.tr('navigation.setup')}">
                             ${supportViews.map((view) => `
-                                <button type="button" id="wp-${view.id}-btn" class="view-btn ${this.currentView === view.id ? 'active' : ''}" data-wp-view="${view.id}">
-                                    <i class="fas ${view.icon}"></i><span>${view.label}</span>
+                                <button type="button" id="wp-${view.id}-btn" class="welcome-pack-side-nav-item ${this.currentView === view.id ? 'is-active' : ''}" data-wp-view="${view.id}" ${this.currentView === view.id ? 'aria-current="page"' : ''}>
+                                    <span class="welcome-pack-side-nav-icon"><i class="fas ${view.icon}"></i></span>
+                                    <span>${view.label}</span>
                                 </button>
                             `).join('')}
+                        </nav>
+                    </div>
+
+                    <div class="welcome-pack-sidebar-help">
+                        <span class="welcome-pack-sidebar-label">${this.tr('navigation.help')}</span>
+                        <button type="button" class="welcome-pack-guide-button" data-wp-open-guide>
+                            <span class="welcome-pack-side-nav-icon"><i class="fas fa-circle-question"></i></span>
+                            <span><strong>${this.tr('navigation.guide')}</strong><small>${this.tr('navigation.guideHint')}</small></span>
+                        </button>
+                    </div>
+                </aside>
+
+                <main class="welcome-pack-main">
+                    <header class="welcome-pack-view-header">
+                        <div>
+                            <div class="welcome-pack-section-kicker">${currentView.eyebrow}</div>
+                            <h1>${currentView.label}</h1>
+                            <p>${currentView.description}</p>
                         </div>
-                    </div>
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        ${this.renderWorkspaceMetric(this.tr('inventory.metrics.tracked'), String(inventorySummary.totals.materialCount))}
-                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.loggedCharges'), String(logSummary.totals.count))}
-                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.amountCharged'), this.formatCurrency(logSummary.totals.revenue))}
-                        ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.netProfit'), this.formatCurrency(logSummary.totals.profit))}
-                    </div>
-                </section>
-                <div id="wp-view-container" class="space-y-6"></div>
+                        <button type="button" class="welcome-pack-secondary-button" data-wp-open-guide>
+                            <i class="fas fa-circle-question"></i><span>${this.tr('navigation.guide')}</span>
+                        </button>
+                    </header>
+                    <div id="wp-view-container"></div>
+                </main>
             </div>
         `;
 
@@ -1073,6 +1141,9 @@ export class WelcomePackManager {
                 this.setCurrentView(wpView, { resetEdit: wpView === 'log' });
             };
         });
+        document.querySelectorAll('[data-wp-open-guide]').forEach((button) => {
+            button.addEventListener('click', () => this.showHelpModal());
+        });
         document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
             this.currentView = 'purchases';
             this.startPurchaseDraft('bulk');
@@ -1082,8 +1153,8 @@ export class WelcomePackManager {
     renderLoadingState(container) {
         if (!container) return;
         container.innerHTML = `
-            <div class="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
-                ${this.tr('states.loading')}
+            <div class="welcome-pack-loading-state">
+                <span class="welcome-pack-loading-dot" aria-hidden="true"></span>${this.tr('states.loading')}
             </div>
         `;
     }
@@ -1109,9 +1180,10 @@ export class WelcomePackManager {
     renderErrorState(container, error) {
         if (!container) return;
         container.innerHTML = `
-            <div class="rounded-3xl border border-rose-200 bg-white p-6 text-center shadow-sm">
-                <h3 class="text-lg font-semibold text-rose-800">${this.tr('states.unavailableTitle')}</h3>
-                <p class="mt-2 text-sm text-rose-700">${this.describeLoadError(error)}</p>
+            <div class="welcome-pack-empty-state welcome-pack-error-state">
+                <span class="welcome-pack-empty-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                <h3>${this.tr('states.unavailableTitle')}</h3>
+                <p>${this.describeLoadError(error)}</p>
             </div>
         `;
     }
@@ -1123,7 +1195,8 @@ export class WelcomePackManager {
         this.renderLoadingState(container);
 
         try {
-            if (this.currentView === 'purchases') await this.renderPurchases(container);
+            if (this.currentView === 'overview') await this.renderOverview(container);
+            else if (this.currentView === 'purchases') await this.renderPurchases(container);
             else if (this.currentView === 'dashboard') await this.renderDashboard(container);
             else if (this.currentView === 'reservations') await this.renderReservations(container);
             else if (this.currentView === 'inventory') await this.renderInventory(container);
@@ -1133,6 +1206,88 @@ export class WelcomePackManager {
             console.error('Failed to render Welcome Packs view:', error);
             this.renderErrorState(container, error);
         }
+    }
+
+    renderOverviewStep(view, number) {
+        return `
+            <button type="button" class="welcome-pack-overview-step" data-wp-overview-view="${view.id}">
+                <span class="welcome-pack-overview-number">${number}</span>
+                <span class="welcome-pack-overview-icon"><i class="fas ${view.icon}"></i></span>
+                <span class="welcome-pack-overview-copy">
+                    <strong>${view.label}</strong>
+                    <small>${view.description}</small>
+                </span>
+                <span class="welcome-pack-overview-open">${this.tr('overview.open')} <i class="fas fa-arrow-right"></i></span>
+            </button>
+        `;
+    }
+
+    async renderOverview(container) {
+        const [logs, items] = await Promise.all([
+            this._fetchData('logs'),
+            this._fetchData('items')
+        ]);
+        const logSummary = summarizeWelcomePackLogs(logs);
+        const inventorySummary = summarizeWelcomePackInventory(items);
+        const allViews = [...this.getPrimaryViews(), ...this.getSupportViews()];
+        const byId = (id) => allViews.find((view) => view.id === id);
+        const dailyViews = ['reservations', 'log', 'dashboard'].map(byId);
+        const setupViews = ['purchases', 'inventory', 'presets'].map(byId);
+
+        container.innerHTML = `
+            <section class="welcome-pack-overview-intro">
+                <div>
+                    <p class="welcome-pack-section-kicker">${this.tr('overview.eyebrow')}</p>
+                    <h2>${this.tr('overview.title')}</h2>
+                    <p>${this.tr('overview.description')}</p>
+                </div>
+                <button type="button" class="welcome-pack-action-button" data-wp-overview-guide>
+                    <i class="fas fa-play"></i><span>${this.tr('navigation.guide')}</span>
+                </button>
+            </section>
+
+            <section class="welcome-pack-overview-status" aria-label="${this.tr('overview.statusLabel')}">
+                ${this.renderWorkspaceMetric(this.tr('inventory.metrics.tracked'), String(inventorySummary.totals.materialCount))}
+                ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.loggedCharges'), String(logSummary.totals.count))}
+                ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.amountCharged'), this.formatCurrency(logSummary.totals.revenue))}
+                ${this.renderWorkspaceMetric(this.tr('dashboard.metrics.netProfit'), this.formatCurrency(logSummary.totals.profit))}
+            </section>
+
+            ${inventorySummary.totals.materialCount === 0 && logSummary.totals.count === 0 ? `
+                <p class="welcome-pack-overview-empty-hint"><i class="fas fa-lightbulb"></i>${this.tr('overview.emptyHint')}</p>
+            ` : ''}
+
+            <div class="welcome-pack-overview-columns">
+                <section class="welcome-pack-overview-flow">
+                    <div class="welcome-pack-overview-section-heading">
+                        <span>${this.tr('overview.dailyLabel')}</span>
+                        <h3>${this.tr('overview.dailyTitle')}</h3>
+                        <p>${this.tr('overview.dailyDescription')}</p>
+                    </div>
+                    <div class="welcome-pack-overview-steps">
+                        ${dailyViews.map((view, index) => this.renderOverviewStep(view, index + 1)).join('')}
+                    </div>
+                </section>
+
+                <section class="welcome-pack-overview-flow">
+                    <div class="welcome-pack-overview-section-heading">
+                        <span>${this.tr('overview.setupLabel')}</span>
+                        <h3>${this.tr('overview.setupTitle')}</h3>
+                        <p>${this.tr('overview.setupDescription')}</p>
+                    </div>
+                    <div class="welcome-pack-overview-steps">
+                        ${setupViews.map((view, index) => this.renderOverviewStep(view, index + 1)).join('')}
+                    </div>
+                </section>
+            </div>
+        `;
+
+        container.querySelectorAll('[data-wp-overview-view]').forEach((button) => {
+            button.addEventListener('click', () => this.setCurrentView(button.dataset.wpOverviewView, {
+                resetEdit: button.dataset.wpOverviewView === 'log'
+            }));
+        });
+        container.querySelector('[data-wp-overview-guide]')?.addEventListener('click', () => this.showHelpModal());
     }
 
 
@@ -1765,6 +1920,92 @@ export class WelcomePackManager {
      * Show the Help/Guide Modal
      */
     showHelpModal() {
+        document.getElementById('wp-help-modal')?.remove();
+
+        const steps = [
+            ['reservations', 'fa-calendar-alt'],
+            ['purchases', 'fa-receipt'],
+            ['inventory', 'fa-box-open'],
+            ['presets', 'fa-layer-group'],
+            ['log', 'fa-home'],
+            ['dashboard', 'fa-chart-line']
+        ];
+        const modal = document.createElement('div');
+        modal.id = 'wp-help-modal';
+        modal.className = 'welcome-pack-guide-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'wp-help-title');
+        modal.innerHTML = `
+            <div class="welcome-pack-guide-dialog">
+                <aside class="welcome-pack-guide-aside">
+                    <span class="welcome-pack-guide-badge"><i class="fas fa-gift"></i></span>
+                    <p class="welcome-pack-section-kicker">${this.tr('help.eyebrow')}</p>
+                    <h2 id="wp-help-title">${this.tr('help.title')}</h2>
+                    <p>${this.tr('help.subtitle')}</p>
+                    <div class="welcome-pack-guide-note">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>${this.tr('help.intro')}</span>
+                    </div>
+                </aside>
+                <section class="welcome-pack-guide-content">
+                    <header>
+                        <div>
+                            <span>${this.tr('help.startLabel')}</span>
+                            <strong>6 ${this.getLocale() === 'pt-PT' ? 'passos' : 'steps'}</strong>
+                        </div>
+                        <button type="button" id="wp-help-close" class="welcome-pack-guide-close" aria-label="${this.tr('help.close')}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </header>
+                    <div class="welcome-pack-guide-steps">
+                        ${steps.map(([view, icon]) => `
+                            <button type="button" class="welcome-pack-guide-step" data-wp-guide-view="${view}">
+                                <span class="welcome-pack-guide-step-icon"><i class="fas ${icon}"></i></span>
+                                <span>
+                                    <strong>${this.tr(`help.walkthrough.${view}.title`)}</strong>
+                                    <small>${this.tr(`help.walkthrough.${view}.body`)}</small>
+                                </span>
+                                <span class="welcome-pack-guide-step-action">${this.tr('help.openSection')} <i class="fas fa-arrow-right"></i></span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <footer>
+                        <button type="button" id="wp-help-done-btn" class="welcome-pack-action-button">${this.tr('help.done')}</button>
+                    </footer>
+                </section>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('is-visible'));
+
+        const close = () => {
+            modal.classList.remove('is-visible');
+            document.removeEventListener('keydown', handleKeydown);
+            setTimeout(() => modal.remove(), 180);
+        };
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape') close();
+        };
+
+        modal.querySelector('#wp-help-close')?.addEventListener('click', close);
+        modal.querySelector('#wp-help-done-btn')?.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+        modal.querySelectorAll('[data-wp-guide-view]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const view = button.dataset.wpGuideView;
+                close();
+                this.setCurrentView(view, { resetEdit: view === 'log' });
+            });
+        });
+        document.addEventListener('keydown', handleKeydown);
+        modal.querySelector('#wp-help-close')?.focus();
+    }
+
+    showLegacyHelpModal() {
         // Remove existing modal if any
         const existingModal = document.getElementById('wp-help-modal');
         if (existingModal) existingModal.remove();
