@@ -417,6 +417,21 @@ const PT_WELCOME_PACK_TRANSLATIONS = {
         title: 'Registar uma cobrança por propriedade',
         editTitle: 'Editar cobrança por propriedade',
         description: 'Selecione a propriedade, escolha os materiais usados no pack e confirme o valor líquido realmente cobrado.',
+        packSelectionTitle: '1. Tipo de Pack',
+        packSelectionDesc: 'Escolha um modelo standard ou crie um pack personalizado.',
+        destinationTitle: '2. Propriedade e Cobrança',
+        destinationDesc: 'Indique a propriedade de destino, data e valor cobrado.',
+        packContentsTitle: '3. Conteúdo do Pack',
+        packContentsDesc: 'Materiais e quantidades incluídos neste pack.',
+        customPack: 'Pack Personalizado',
+        customPackDesc: 'Escolher materiais livres',
+        addExtraMaterials: 'Adicionar Materiais',
+        searchMaterials: 'Procurar materiais em stock...',
+        noMaterialsInPack: 'Ainda não foram adicionados materiais a este pack.',
+        allMaterials: 'Todos os Materiais',
+        noPropertySelectedYet: 'Nenhuma propriedade selecionada',
+        receiptSummary: 'Resumo',
+        marginBadge: '{{margin}}% margem',
         entriesTitle: 'Registos de cobrança',
         entriesDescription: 'Adicione uma ou mais linhas com propriedade e data. Todas usam os mesmos materiais selecionados, mas cada linha pode ter a sua propriedade, data e valor cobrado.',
         entryLabel: 'Registo {{count}}',
@@ -655,14 +670,14 @@ export class WelcomePackManager {
             {
                 id: 'log',
                 label: this.tr('workflow.propertyCharges.label'),
-                eyebrow: this.tr('workflow.propertyCharges.step'),
+                eyebrow: this.tr('navigation.daily'),
                 description: this.tr('workflow.propertyCharges.description'),
                 icon: 'fa-home'
             },
             {
                 id: 'dashboard',
                 label: this.tr('workflow.calculations.label'),
-                eyebrow: this.tr('workflow.calculations.step'),
+                eyebrow: this.tr('navigation.daily'),
                 description: this.tr('workflow.calculations.description'),
                 icon: 'fa-chart-line'
             }
@@ -835,48 +850,55 @@ export class WelcomePackManager {
             <div class="space-y-3">
                 ${this.logEntries.map((entry, index) => {
                     const entrySummary = this.getLogEntrySummary(entry);
-                    const rowClasses = this.activeLogEntryId === entry.id
-                        ? 'border-sky-300 bg-sky-50/60 shadow-sm'
-                        : 'border-slate-200 bg-white';
+                    const isActive = this.activeLogEntryId === entry.id;
                     return `
-                        <article class="rounded-2xl border p-4 transition ${rowClasses}" data-wp-log-entry-id="${entry.id}">
-                            <div class="mb-3 flex items-center justify-between gap-3">
-                                <div>
-                                    <div class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">${this.tr('log.entryLabel', { count: index + 1 })}</div>
-                                    <div class="text-sm text-slate-600" data-wp-entry-summary="${entry.id}">${this.tr('log.entrySummary', {
+                        <article class="welcome-pack-entry-card ${isActive ? 'is-active' : ''}" data-wp-log-entry-id="${entry.id}">
+                            <div class="welcome-pack-entry-top">
+                                <div class="welcome-pack-entry-tag">
+                                    <i class="fas fa-location-dot text-rose-500"></i>
+                                    <span>${this.logEntries.length > 1 ? this.tr('log.entryLabel', { count: index + 1 }) : this.tr('log.fields.property')}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-xs text-slate-500" data-wp-entry-summary="${entry.id}">${this.tr('log.entrySummary', {
                                         cost: this.formatCurrency(entrySummary.totals.totalCost),
                                         profit: this.formatCurrency(entrySummary.totals.profit)
                                     })}</div>
+                                    ${!isEditing && this.logEntries.length > 1 ? `
+                                    <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" data-wp-entry-remove="${entry.id}" title="${this.tr('log.removeEntry')}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    ` : ''}
                                 </div>
-                                ${!isEditing ? `
-                                <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" data-wp-entry-remove="${entry.id}" title="${this.tr('log.removeEntry')}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                ` : ''}
                             </div>
-                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(140px,1fr)_minmax(80px,0.5fr)_minmax(170px,1fr)]">
-                                <label class="welcome-pack-field">
+                            <div class="welcome-pack-entry-grid">
+                                <div class="welcome-pack-input-group">
                                     <span>${this.tr('log.fields.property')}</span>
-                                    <input type="text" data-wp-entry-property="${entry.id}" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${entry.property}">
-                                </label>
-                                <label class="welcome-pack-field">
+                                    <div class="welcome-pack-input-with-icon">
+                                        <i class="fas fa-building welcome-pack-input-icon"></i>
+                                        <input type="text" data-wp-entry-property="${entry.id}" list="wp-properties-list" placeholder="${this.tr('log.fields.propertyPlaceholder')}" value="${escapeHtml(entry.property)}">
+                                    </div>
+                                </div>
+                                <div class="welcome-pack-input-group">
                                     <span>${this.tr('log.fields.date')}</span>
                                     <input type="date" data-wp-entry-date="${entry.id}" value="${entry.date}">
-                                </label>
-                                <label class="welcome-pack-field">
+                                </div>
+                                <div class="welcome-pack-input-group">
                                     <span>${this.tr('log.fields.quantity')}</span>
                                     <input type="number" data-wp-entry-quantity="${entry.id}" min="1" step="1" value="${entry.quantity || 1}">
-                                </label>
-                                <label class="welcome-pack-field">
+                                </div>
+                                <div class="welcome-pack-input-group">
                                     <span>${this.tr('log.fields.chargedAmount')}</span>
-                                    <input type="number" data-wp-entry-charge="${entry.id}" step="0.01" min="0" value="${entry.chargedAmount}">
-                                </label>
+                                    <div class="welcome-pack-input-with-icon">
+                                        <i class="fas fa-euro-sign welcome-pack-input-icon"></i>
+                                        <input type="number" data-wp-entry-charge="${entry.id}" step="0.01" min="0" placeholder="0.00" value="${entry.chargedAmount}">
+                                    </div>
+                                </div>
                             </div>
                         </article>
                     `;
                 }).join('')}
                 ${!isEditing ? `
-                <button type="button" id="wp-add-log-entry-btn" class="welcome-pack-secondary-button">
+                <button type="button" id="wp-add-log-entry-btn" class="welcome-pack-secondary-button mt-1">
                     <i class="fas fa-plus"></i>
                     <span>${this.tr('log.addEntry')}</span>
                 </button>
@@ -929,11 +951,7 @@ export class WelcomePackManager {
             }
 
             const isActive = this.activeLogEntryId === entry.id;
-            card.classList.toggle('border-sky-300', isActive);
-            card.classList.toggle('bg-sky-50/60', isActive);
-            card.classList.toggle('shadow-sm', isActive);
-            card.classList.toggle('border-slate-200', !isActive);
-            card.classList.toggle('bg-white', !isActive);
+            card.classList.toggle('is-active', isActive);
 
             const summaryNode = card.querySelector(`[data-wp-entry-summary="${entry.id}"]`);
             if (summaryNode) {
@@ -946,9 +964,7 @@ export class WelcomePackManager {
 
             const removeButton = card.querySelector(`[data-wp-entry-remove="${entry.id}"]`);
             if (removeButton) {
-                removeButton.disabled = this.logEntries.length <= 1;
-                removeButton.classList.toggle('opacity-50', this.logEntries.length <= 1);
-                removeButton.classList.toggle('cursor-not-allowed', this.logEntries.length <= 1);
+                removeButton.style.display = this.logEntries.length > 1 ? '' : 'none';
             }
         });
     }
@@ -1508,23 +1524,29 @@ export class WelcomePackManager {
                 </section>
             </div>
         `;
-
         document.getElementById('wp-go-manage-stock-btn')?.addEventListener('click', () => {
             this.setCurrentView('inventory');
         });
         document.getElementById('wp-open-log-from-empty-btn')?.addEventListener('click', () => {
             this.setCurrentView('log', { resetEdit: true });
         });
-        document.getElementById('wp-apply-filters').onclick = () => {
-            const start = document.getElementById('wp-stats-start').value;
-            const end = document.getElementById('wp-stats-end').value;
-            if (start && end) {
-                this.dashboardFilters = { startDate: start, endDate: end };
-                this.renderCurrentView();
-            }
-        };
 
-        document.getElementById('wp-export-csv').onclick = () => this.exportToCSV(filteredLogs);
+        const applyFiltersBtn = document.getElementById('wp-apply-filters');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.onclick = () => {
+                const start = document.getElementById('wp-stats-start')?.value;
+                const end = document.getElementById('wp-stats-end')?.value;
+                if (start && end) {
+                    this.dashboardFilters = { startDate: start, endDate: end };
+                    this.renderCurrentView();
+                }
+            };
+        }
+
+        const exportCsvBtn = document.getElementById('wp-export-csv');
+        if (exportCsvBtn) {
+            exportCsvBtn.onclick = () => this.exportToCSV(filteredLogs);
+        }
     }
 
     /*
@@ -3596,8 +3618,7 @@ export class WelcomePackManager {
                 updateTotals();
             });
         });
-
-        document.querySelectorAll('.wp-preset-item-qty').forEach(input => {
+        document.querySelectorAll('.wp-preset-item-qty').forEach(input => {
             input.addEventListener('input', updateTotals);
             input.addEventListener('change', updateTotals);
         });
@@ -3643,10 +3664,11 @@ export class WelcomePackManager {
         };
     }
 
-
     async renderLogForm(container) {
         const items = (await this._fetchData('items')).map((item) => normalizeWelcomePackItem(item));
         const presets = await this._fetchData('presets');
+        this.presets = presets;
+        this.catalogItems = items;
         const allLogs = (await this._fetchData('logs')).map((log) => normalizeWelcomePackLog(log));
         let properties = [];
         try {
@@ -3683,132 +3705,187 @@ export class WelcomePackManager {
 
         container.innerHTML = `
             <div class="welcome-pack-log-layout">
-                <section class="welcome-pack-panel">
-                    <div class="welcome-pack-panel-heading welcome-pack-panel-heading--row">
-                        <div>
-                            <p class="welcome-pack-section-kicker">${this.tr('workflow.propertyCharges.label')}</p>
-                            <h3>${isEditing ? this.tr('log.editTitle') : this.tr('log.title')}</h3>
-                            <p>${this.tr('log.description')}</p>
+                <div class="welcome-pack-form-column">
+                    <!-- Step 1: Pack Selection -->
+                    <section class="welcome-pack-section-card">
+                        <div class="welcome-pack-section-header welcome-pack-section-header--between">
+                            <div class="flex items-center gap-3">
+                                <div class="welcome-pack-step-badge">1</div>
+                                <div>
+                                    <h3 class="welcome-pack-section-title">${this.tr('log.packSelectionTitle')}</h3>
+                                    <p class="welcome-pack-section-desc">${this.tr('log.packSelectionDesc')}</p>
+                                </div>
+                            </div>
+                            ${isEditing ? `
+                            <button type="button" class="welcome-pack-secondary-button" onclick="welcomePackManager.cancelEdit()" title="${this.tr('actions.cancelEdit')}">
+                                <i class="fas fa-rotate-left"></i>
+                                <span>${this.tr('actions.cancelEdit')}</span>
+                            </button>
+                            ` : ''}
                         </div>
-                        ${isEditing ? `
-                        <button type="button" class="welcome-pack-secondary-button" onclick="welcomePackManager.cancelEdit()" title="${this.tr('actions.cancelEdit')}">
-                            <i class="fas fa-rotate-left"></i>
-                            <span>${this.tr('actions.cancelEdit')}</span>
-                        </button>
-                        ` : ''}
-                    </div>
 
-                    <div class="welcome-pack-panel-heading">
-                        <h3>${this.tr('log.entriesTitle')}</h3>
-                        <p>${this.tr('log.entriesDescription')}</p>
-                    </div>
-
-                    <datalist id="wp-properties-list">
-                        ${propertyOptions.map((property) => `<option value="${property.label}"></option>`).join('')}
-                    </datalist>
-                    <div id="wp-log-entries" class="mb-6"></div>
-
-                    ${!isEditing ? `
-                    <div class="welcome-pack-support-card">
-                        <label class="welcome-pack-field">
-                            <span>${this.tr('log.loadPreset')}</span>
-                            <select id="wp-preset-select">
-                                <option value="">${this.tr('log.loadPresetPlaceholder')}</option>
-                                ${presets.map((preset) => `<option value='${JSON.stringify(preset.items)}'>${preset.name} (${preset.items.length} items)</option>`).join('')}
-                            </select>
-                        </label>
-                        <p>${this.tr('log.loadPresetHelp')}</p>
-                    </div>
-                    ` : ''}
-
-                    <div class="welcome-pack-panel-heading">
-                        <h3>${this.tr('log.materialsTitle')}</h3>
-                        <p>${this.tr('log.materialsDescription')}</p>
-                    </div>
-
-                    ${items.length > 0 ? `
-                    <div class="welcome-pack-catalog-list">
-                        ${items.map((item) => {
-            const safeName = String(item.name || '').replace(/"/g, '&quot;');
-            return `
-                            <article class="welcome-pack-catalog-item ${item.quantity <= (item.reorderPoint ?? 5) ? 'is-low-stock' : ''}">
-                                <div>
-                                    <strong>${item.name}</strong>
-                                    <span>${this.tr('log.materialInStock', { count: this.formatQuantity(item.quantity || 0, item.stockUnit || 'unit') })}</span>
-                                </div>
-                                <div>
-                                    <span>${this.tr('log.materialCost', { amount: this.formatCurrency(item.costPrice) })}</span>
-                                </div>
-                                <button type="button"
-                                    class="welcome-pack-secondary-button wp-item-select-btn"
-                                    data-id="${item.id}"
-                                    data-name="${safeName}"
-                                    data-cost="${item.costPrice}"
-                                    data-unit="${escapeHtml(item.stockUnit || 'unit')}"
-                                    data-cost-vat="${item.costVatRate || 22}"
-                                    data-sell="0"
-                                    data-sell-vat="22">
-                                    <i class="fas fa-plus"></i>
-                                    <span>${this.tr('actions.add')}</span>
+                        <div class="welcome-pack-preset-grid" id="wp-preset-cards">
+                            ${presets.map((preset) => {
+                                const totalUnits = (preset.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
+                                const isActive = this.selectedPresetId === preset.id;
+                                return `
+                                <button type="button" class="welcome-pack-preset-card ${isActive ? 'is-active' : ''}" data-wp-preset-card-id="${preset.id}">
+                                    <div class="welcome-pack-preset-card-header">
+                                        <span class="welcome-pack-preset-card-icon"><i class="fas fa-gift"></i></span>
+                                        <strong class="welcome-pack-preset-card-name">${escapeHtml(preset.name)}</strong>
+                                    </div>
+                                    <div class="welcome-pack-preset-card-details">
+                                        <span>${preset.items.length} ${this.tr('log.materialsCount', { count: preset.items.length })}</span>
+                                        <span>•</span>
+                                        <span>${totalUnits} ${this.tr('log.unitsCount', { count: totalUnits })}</span>
+                                    </div>
+                                    <div class="welcome-pack-preset-card-items">
+                                        ${(preset.items || []).slice(0, 3).map((i) => `${i.quantity || 1}× ${i.name}`).join(', ')}${(preset.items || []).length > 3 ? '...' : ''}
+                                    </div>
                                 </button>
-                            </article>
-                            `;
-        }).join('')}
-                    </div>
-                    ` : `
-                    <div class="welcome-pack-empty-state">
-                        <h4>${this.tr('log.noMaterialsTitle')}</h4>
-                        <p>${this.tr('log.noMaterialsDescription')}</p>
-                        <button type="button" id="wp-open-inventory-from-log-btn" class="welcome-pack-nav-button is-active">
-                            <i class="fas fa-box-open"></i>
-                            <span>${this.tr('dashboard.openMaterialCosts')}</span>
+                                `;
+                            }).join('')}
+                            <button type="button" class="welcome-pack-preset-card ${this.selectedPresetId === 'custom' || (!this.selectedPresetId && this.cart.length > 0) ? 'is-active' : ''}" data-wp-preset-card-id="custom">
+                                <div class="welcome-pack-preset-card-header">
+                                    <span class="welcome-pack-preset-card-icon"><i class="fas fa-sliders"></i></span>
+                                    <strong class="welcome-pack-preset-card-name">${this.tr('log.customPack')}</strong>
+                                </div>
+                                <div class="welcome-pack-preset-card-details">
+                                    <span>${this.tr('log.customPackDesc')}</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <select id="wp-preset-select" class="hidden">
+                            <option value="">${this.tr('log.loadPresetPlaceholder')}</option>
+                            ${presets.map((preset) => `<option value='${JSON.stringify(preset.items)}'>${preset.name}</option>`).join('')}
+                        </select>
+                    </section>
+
+                    <!-- Step 2: Destination & Billing -->
+                    <section class="welcome-pack-section-card">
+                        <div class="welcome-pack-section-header">
+                            <div class="welcome-pack-step-badge">2</div>
+                            <div>
+                                <h3 class="welcome-pack-section-title">${this.tr('log.destinationTitle')}</h3>
+                                <p class="welcome-pack-section-desc">${this.tr('log.destinationDesc')}</p>
+                            </div>
+                        </div>
+
+                        <datalist id="wp-properties-list">
+                            ${propertyOptions.map((property) => `<option value="${escapeHtml(property.label)}"></option>`).join('')}
+                        </datalist>
+                        <div id="wp-log-entries"></div>
+                        <div id="wp-property-charge-history"></div>
+                    </section>
+
+                    <!-- Step 3: Pack Contents -->
+                    <section class="welcome-pack-section-card">
+                        <div class="welcome-pack-section-header welcome-pack-section-header--between">
+                            <div class="flex items-center gap-3">
+                                <div class="welcome-pack-step-badge">3</div>
+                                <div>
+                                    <h3 class="welcome-pack-section-title">${this.tr('log.packContentsTitle')}</h3>
+                                    <p class="welcome-pack-section-desc">${this.tr('log.packContentsDesc')}</p>
+                                </div>
+                            </div>
+                            <button type="button" class="welcome-pack-secondary-button" id="wp-toggle-catalog-btn">
+                                <i class="fas fa-plus"></i>
+                                <span>${this.tr('log.addExtraMaterials')}</span>
+                            </button>
+                        </div>
+
+                        <div id="wp-pack-items-editor" class="welcome-pack-items-editor"></div>
+
+                        <div id="wp-catalog-drawer" class="welcome-pack-catalog-drawer hidden">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">${this.tr('log.allMaterials')}</span>
+                                <input type="search" id="wp-catalog-search-input" class="welcome-pack-catalog-search" placeholder="${this.tr('log.searchMaterials')}">
+                            </div>
+                            ${items.length > 0 ? `
+                            <div class="welcome-pack-catalog-grid" id="wp-catalog-items-grid">
+                                ${items.map((item) => {
+                                    const safeName = String(item.name || '').replace(/"/g, '&quot;');
+                                    return `
+                                    <div class="welcome-pack-catalog-card" data-catalog-item-name="${safeName.toLowerCase()}">
+                                        <div class="min-w-0 pr-2">
+                                            <strong class="block text-xs font-semibold text-slate-800 truncate">${escapeHtml(item.name)}</strong>
+                                            <span class="text-[11px] text-slate-500">${this.formatCurrency(item.costPrice)} • ${this.formatQuantity(item.quantity || 0, item.stockUnit || 'unit')}</span>
+                                        </div>
+                                        <button type="button"
+                                            class="welcome-pack-secondary-button wp-item-select-btn !py-1 !px-2.5 !text-xs shrink-0"
+                                            data-id="${item.id}"
+                                            data-name="${safeName}"
+                                            data-cost="${item.costPrice}"
+                                            data-unit="${escapeHtml(item.stockUnit || 'unit')}"
+                                            data-cost-vat="${item.costVatRate || 22}"
+                                            data-sell="0"
+                                            data-sell-vat="22">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ` : `
+                            <div class="welcome-pack-empty-state !py-4">
+                                <p class="text-xs text-slate-500 mb-2">${this.tr('log.noMaterialsDescription')}</p>
+                                <button type="button" id="wp-open-inventory-from-log-btn" class="welcome-pack-secondary-button text-xs">
+                                    <i class="fas fa-box-open mr-1"></i>${this.tr('dashboard.openMaterialCosts')}
+                                </button>
+                            </div>
+                            `}
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Sidebar / Receipt Card -->
+                <aside class="welcome-pack-receipt-panel">
+                    <div class="welcome-pack-receipt-card">
+                        <div class="welcome-pack-receipt-header">
+                            <div class="welcome-pack-receipt-badge">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4>${this.tr('log.receiptSummary')}</h4>
+                                <span class="text-xs text-slate-500 truncate block" id="wp-receipt-destination-preview">${this.tr('log.noPropertySelectedYet')}</span>
+                            </div>
+                        </div>
+
+                        <div id="wp-cart-list" class="welcome-pack-receipt-items"></div>
+                        <div id="wp-cart-meta" class="welcome-pack-chip-row mb-3"></div>
+
+                        <div class="welcome-pack-receipt-divider"></div>
+
+                        <div class="welcome-pack-receipt-totals">
+                            <div class="welcome-pack-receipt-row">
+                                <span>${this.tr('log.summary.materialCost')}</span>
+                                <strong id="wp-total-cost">€0.00</strong>
+                            </div>
+                            <div class="welcome-pack-receipt-row">
+                                <span>${this.tr('log.summary.actualCharge')}</span>
+                                <strong id="wp-total-sell">€0.00</strong>
+                            </div>
+                            <div class="welcome-pack-receipt-row welcome-pack-receipt-row--profit">
+                                <span>${this.tr('log.summary.profit')}</span>
+                                <div class="text-right">
+                                    <strong id="wp-total-profit">€0.00</strong>
+                                    <div><span id="wp-profit-margin-badge" class="welcome-pack-profit-chip" style="display: none;"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="wp-save-log-btn" class="welcome-pack-save-button">
+                            <i class="fas ${isEditing ? 'fa-floppy-disk' : 'fa-check'}"></i>
+                            <span>${isEditing ? this.tr('log.updateCharge') : this.tr('log.saveCharge')}</span>
                         </button>
+
+                        ${isEditing ? `
+                        <p class="text-xs text-center text-amber-600 mt-3">${this.tr('log.editHint')}</p>
+                        ` : `
+                        <p class="text-xs text-center text-slate-400 mt-3" id="wp-log-save-hint">${this.tr('log.saveHint', { count: this.logEntries.length || 1 })}</p>
+                        `}
                     </div>
-                    `}
-                </section>
-
-                <aside class="welcome-pack-panel">
-                    <div class="welcome-pack-panel-heading">
-                        <h3>${this.tr('log.summaryTitle')}</h3>
-                        <p>${this.tr('log.summaryDescription')}</p>
-                    </div>
-
-                    <div id="wp-property-charge-history" class="welcome-pack-support-card">
-                        <strong>${this.tr('log.history.noPropertyTitle')}</strong>
-                        <p>${this.tr('log.history.noPropertyDescription')}</p>
-                    </div>
-
-                    <div id="wp-cart-list" class="welcome-pack-cart-list">
-                        <p class="text-sm text-gray-500">${this.tr('log.noMaterialsSelected')}</p>
-                    </div>
-
-                    <div id="wp-cart-meta" class="welcome-pack-chip-row"></div>
-
-                    <div class="welcome-pack-summary-stack">
-                        <div class="welcome-pack-summary-row">
-                            <span>${this.tr('log.summary.materialCost')}</span>
-                            <strong id="wp-total-cost">€0.00</strong>
-                        </div>
-                        <div class="welcome-pack-summary-row">
-                            <span>${this.tr('log.summary.actualCharge')}</span>
-                            <strong id="wp-total-sell">€0.00</strong>
-                        </div>
-                        <div class="welcome-pack-summary-row">
-                            <span>${this.tr('log.summary.profit')}</span>
-                            <strong id="wp-total-profit">€0.00</strong>
-                        </div>
-                    </div>
-
-                    <button id="wp-save-log-btn" class="welcome-pack-nav-button is-active welcome-pack-nav-button--full">
-                        <i class="fas ${isEditing ? 'fa-floppy-disk' : 'fa-check'}"></i>
-                        <span>${isEditing ? this.tr('log.updateCharge') : this.tr('log.saveCharge')}</span>
-                    </button>
-
-                    ${isEditing ? `
-                    <p class="text-xs text-amber-600">${this.tr('log.editHint')}</p>
-                    ` : `
-                    <p class="text-xs text-gray-500" id="wp-log-save-hint">${this.tr('log.saveHint', { count: this.logEntries.length || 1 })}</p>
-                    `}
                 </aside>
             </div>
         `;
@@ -3819,14 +3896,30 @@ export class WelcomePackManager {
         if (isEditing && editingLog) {
             this.cart = editingLog.items.map((item) => normalizeWelcomePackItem(item));
             this.editingOriginalItems = editingLog.items.map((item) => normalizeWelcomePackItem(item));
-        } else {
+        } else if (!this.cart || this.cart.length === 0) {
             this.cart = [];
             this.editingOriginalItems = null;
+            if (presets.length > 0 && !this.selectedPresetId) {
+                this.selectedPresetId = presets[0].id;
+                this.cart = (presets[0].items || []).map((item) => normalizeWelcomePackItem(item));
+            }
         }
 
         this.renderLogEntryRows();
         this.updateCartUI();
         this.refreshPropertyChargeHistory();
+
+        container.querySelectorAll('[data-wp-preset-card-id]').forEach((btn) => {
+            btn.onclick = () => this.selectPreset(btn.dataset.wpPresetCardId);
+        });
+
+        document.getElementById('wp-toggle-catalog-btn')?.addEventListener('click', () => {
+            this.toggleCatalogDrawer();
+        });
+
+        document.getElementById('wp-catalog-search-input')?.addEventListener('input', (e) => {
+            this.filterCatalog(e.target.value);
+        });
 
         document.getElementById('wp-open-inventory-from-log-btn')?.addEventListener('click', () => {
             this.setCurrentView('inventory');
@@ -3861,6 +3954,61 @@ export class WelcomePackManager {
         if (saveButton) {
             saveButton.onclick = () => this.saveLog();
         }
+    }
+
+    selectPreset(presetId) {
+        this.selectedPresetId = presetId;
+        if (presetId === 'custom') {
+            this.updateCartUI();
+            this.updatePresetButtonsUI();
+            return;
+        }
+        const preset = (this.presets || []).find((p) => String(p.id) === String(presetId));
+        if (preset && Array.isArray(preset.items)) {
+            this.cart = preset.items.map((item) => normalizeWelcomePackItem(item));
+        }
+        this.updateCartUI();
+        this.updatePresetButtonsUI();
+    }
+
+    updatePresetButtonsUI() {
+        document.querySelectorAll('[data-wp-preset-card-id]').forEach((card) => {
+            const id = card.dataset.wpPresetCardId;
+            const isActive = this.selectedPresetId === id || (!this.selectedPresetId && id === 'custom' && this.cart.length > 0);
+            card.classList.toggle('is-active', Boolean(isActive));
+        });
+    }
+
+    stepCartItemQuantity(index, delta) {
+        if (!this.cart[index]) return;
+        const current = Number.parseFloat(this.cart[index].quantity) || 1;
+        const next = Math.max(0, current + delta);
+        if (next === 0) {
+            this.removeCartItem(index);
+        } else {
+            this.updateCartItemQuantity(index, next);
+        }
+    }
+
+    toggleCatalogDrawer() {
+        const drawer = document.getElementById('wp-catalog-drawer');
+        const btn = document.getElementById('wp-toggle-catalog-btn');
+        if (!drawer) return;
+        const isHidden = drawer.classList.toggle('hidden');
+        if (btn) {
+            const span = btn.querySelector('span');
+            const icon = btn.querySelector('i');
+            if (span) span.textContent = isHidden ? this.tr('log.addExtraMaterials') : this.tr('actions.cancel');
+            if (icon) icon.className = isHidden ? 'fas fa-plus' : 'fas fa-xmark';
+        }
+    }
+
+    filterCatalog(query) {
+        const term = String(query || '').trim().toLowerCase();
+        document.querySelectorAll('#wp-catalog-items-grid .welcome-pack-catalog-card').forEach((card) => {
+            const name = card.dataset.catalogItemName || '';
+            card.style.display = !term || name.includes(term) ? '' : 'none';
+        });
     }
 
     addItemToCart(item) {
@@ -3926,8 +4074,10 @@ export class WelcomePackManager {
 
         if (!property) {
             historyContainer.innerHTML = `
-                <strong>${this.tr('log.history.noPropertyTitle')}</strong>
-                <p>${this.tr('log.history.noPropertyDescription')}</p>
+                <div class="welcome-pack-history-pill">
+                    <i class="fas fa-info-circle text-slate-400"></i>
+                    <span>${this.tr('log.history.noPropertyDescription')}</span>
+                </div>
             `;
             return;
         }
@@ -3942,54 +4092,85 @@ export class WelcomePackManager {
 
         if (matchingLogs.length === 0) {
             historyContainer.innerHTML = `
-                <strong>${property}</strong>
-                <p>${this.tr('log.history.noPreviousCharge')}</p>
+                <div class="welcome-pack-history-pill">
+                    <i class="fas fa-info-circle text-slate-400"></i>
+                    <span>${this.tr('log.history.noPreviousCharge')}</span>
+                </div>
             `;
             return;
         }
 
         const latest = matchingLogs[0];
         historyContainer.innerHTML = `
-            <strong>${property}</strong>
-            <p>${this.tr('log.history.lastCharge', {
-                amount: this.formatCurrency(latest.chargedAmountNet),
-                date: this.formatDisplayDate(latest.date)
-            })}</p>
-            <p>${this.tr('log.history.costProfit', {
-                cost: this.formatCurrency(latest.totalCost),
-                profit: this.formatCurrency(latest.profit)
-            })}</p>
+            <div class="welcome-pack-history-pill">
+                <i class="fas fa-clock-rotate-left text-amber-500"></i>
+                <span><strong>${property}</strong>: ${this.tr('log.history.lastCharge', {
+                    amount: this.formatCurrency(latest.chargedAmountNet),
+                    date: this.formatDisplayDate(latest.date)
+                })} (${this.tr('log.history.costProfit', {
+                    cost: this.formatCurrency(latest.totalCost),
+                    profit: this.formatCurrency(latest.profit)
+                })})</span>
+            </div>
         `;
     }
 
     updateCartUI() {
-        const list = document.getElementById('wp-cart-list');
         const summary = this.getLogEntrySummary(this.getActiveLogEntry());
 
-        if (list) {
+        // 1. Pack Items Editor (Step 3)
+        const editor = document.getElementById('wp-pack-items-editor');
+        if (editor) {
             if (summary.items.length === 0) {
-                list.innerHTML = `<p class="text-sm text-gray-500">${this.tr('log.noMaterialsSelected')}</p>`;
+                editor.innerHTML = `
+                    <div class="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <i class="fas fa-box-open text-slate-300 text-2xl mb-2 block"></i>
+                        <p class="text-xs text-slate-500">${this.tr('log.noMaterialsInPack')}</p>
+                    </div>
+                `;
             } else {
-                list.innerHTML = summary.items.map((item, index) => `
-                    <article class="welcome-pack-cart-item">
-                        <div>
-                            <strong>${item.name}</strong>
-                            <span>${this.tr('log.cart.costCharge', {
-                                cost: this.formatCurrency(item.costPrice),
-                                charge: this.formatCurrency(item.sellPrice)
-                            })}</span>
-                        </div>
-                        <div class="welcome-pack-cart-controls">
-                            <label>
-                                <span>${this.tr('log.cart.qty')}</span>
-                                <input type="number" min="0.001" step="0.001" value="${item.quantity || 1}" onchange="welcomePackManager.updateCartItemQuantity(${index}, this.value)" title="${this.tr('log.cart.qty')}">
-                            </label>
+                editor.innerHTML = summary.items.map((item, index) => {
+                    const lineCost = (Number(item.costPrice) || 0) * (Number(item.quantity) || 1);
+                    return `
+                        <div class="welcome-pack-item-row">
+                            <div class="min-w-0">
+                                <div class="welcome-pack-item-name truncate">${escapeHtml(item.name)}</div>
+                                <div class="welcome-pack-item-cost">${this.formatCurrency(item.costPrice)} / ${escapeHtml(item.stockUnit || 'unit')}</div>
+                            </div>
+                            <div class="welcome-pack-item-qty-stepper">
+                                <button type="button" onclick="welcomePackManager.stepCartItemQuantity(${index}, -1)" title="Decrease">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" min="0.001" step="any" value="${item.quantity || 1}" onchange="welcomePackManager.updateCartItemQuantity(${index}, this.value)">
+                                <button type="button" onclick="welcomePackManager.stepCartItemQuantity(${index}, 1)" title="Increase">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <strong class="text-xs font-semibold text-slate-700">${this.formatCurrency(lineCost)}</strong>
                             <button type="button" class="welcome-pack-icon-button welcome-pack-icon-button--danger" onclick="welcomePackManager.removeCartItem(${index})" title="${this.tr('actions.removeMaterial')}">
                                 <i class="fas fa-xmark"></i>
                             </button>
                         </div>
-                    </article>
-                `).join('');
+                    `;
+                }).join('');
+            }
+        }
+
+        // 2. Receipt Items (Sidebar)
+        const receiptList = document.getElementById('wp-cart-list');
+        if (receiptList) {
+            if (summary.items.length === 0) {
+                receiptList.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center">${this.tr('log.noMaterialsSelected')}</p>`;
+            } else {
+                receiptList.innerHTML = summary.items.map((item) => {
+                    const lineCost = (Number(item.costPrice) || 0) * (Number(item.quantity) || 1);
+                    return `
+                        <div class="welcome-pack-receipt-item">
+                            <span class="truncate pr-2">${item.quantity || 1}× ${escapeHtml(item.name)}</span>
+                            <strong class="shrink-0">${this.formatCurrency(lineCost)}</strong>
+                        </div>
+                    `;
+                }).join('');
             }
         }
 
@@ -4007,13 +4188,38 @@ export class WelcomePackManager {
         if (totalCost) totalCost.textContent = this.formatCurrency(summary.totals.totalCost);
         if (totalSell) totalSell.textContent = this.formatCurrency(summary.totals.chargedAmountNet);
         if (totalProfit) totalProfit.textContent = this.formatCurrency(summary.totals.profit);
+
+        const marginBadge = document.getElementById('wp-profit-margin-badge');
+        if (marginBadge) {
+            const margin = summary.totals.margin || 0;
+            if (summary.totals.chargedAmountNet > 0) {
+                marginBadge.textContent = this.tr('log.marginBadge', { margin });
+                marginBadge.style.display = 'inline-flex';
+            } else {
+                marginBadge.style.display = 'none';
+            }
+        }
+
+        const destinationPreview = document.getElementById('wp-receipt-destination-preview');
+        if (destinationPreview) {
+            const activeEntry = this.getActiveLogEntry();
+            const prop = activeEntry?.property || '';
+            if (prop) {
+                destinationPreview.textContent = `${prop} • ${activeEntry.date || ''}`;
+            } else {
+                destinationPreview.textContent = this.tr('log.noPropertySelectedYet');
+            }
+        }
+
         const saveHint = document.getElementById('wp-log-save-hint');
         if (saveHint) {
             const totalQuantity = this.logEntries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
             saveHint.textContent = this.tr('log.saveHint', { count: totalQuantity });
         }
+
         this.refreshLogEntryCards();
         this.refreshPropertyChargeHistory();
+        this.updatePresetButtonsUI();
     }
 
     async saveLog() {

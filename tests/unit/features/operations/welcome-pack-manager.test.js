@@ -435,4 +435,64 @@ describe("WelcomePackManager", () => {
       restoreAlert();
     }
   });
+
+  test("renders organized record packs workflow with preset cards and receipt summary", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() {
+        return [
+          { id: "item-1", name: "Red Wine", quantity: 10, costPrice: 3.5, sellPrice: 5 },
+          { id: "item-2", name: "Biscuits", quantity: 20, costPrice: 1.5, sellPrice: 2.5 }
+        ];
+      },
+      async getWelcomePackPresets() {
+        return [
+          {
+            id: "preset-standard",
+            name: "Standard Pack",
+            items: [
+              { id: "item-1", name: "Red Wine", quantity: 1, costPrice: 3.5, sellPrice: 5 },
+              { id: "item-2", name: "Biscuits", quantity: 1, costPrice: 1.5, sellPrice: 2.5 }
+            ]
+          }
+        ];
+      },
+      async getAllProperties() {
+        return [{ id: "p1", name: "Villa Sol", welcomePackEnabled: true }];
+      }
+    });
+
+    manager.currentView = "log";
+    await manager.render();
+    await flushRender();
+
+    // Verify step badges 1, 2, 3 exist
+    const badges = document.querySelectorAll(".welcome-pack-step-badge");
+    assert.equal(badges.length, 3);
+
+    // Verify preset card is rendered
+    const presetCard = document.querySelector('[data-wp-preset-card-id="preset-standard"]');
+    assert.ok(presetCard);
+    assert.includes(presetCard.textContent, "Standard Pack");
+
+    // Standard pack was auto-selected, verify items in pack editor
+    assert.equal(manager.cart.length, 2);
+    const itemRows = document.querySelectorAll(".welcome-pack-item-row");
+    assert.equal(itemRows.length, 2);
+
+    // Verify receipt sidebar has the correct calculations
+    assert.equal(document.getElementById("wp-total-cost").textContent, "€5.00");
+
+    // Enter a charged amount on the first entry
+    const chargeInput = document.querySelector("[data-wp-entry-charge]");
+    chargeInput.value = "20";
+    chargeInput.dispatchEvent(new Event("input"));
+    await flushRender();
+
+    assert.equal(document.getElementById("wp-total-sell").textContent, "€20.00");
+    assert.equal(document.getElementById("wp-total-profit").textContent, "€15.00");
+  });
 });
