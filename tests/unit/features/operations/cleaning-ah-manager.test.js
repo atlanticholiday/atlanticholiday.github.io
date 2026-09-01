@@ -175,6 +175,34 @@ describe("CleaningAhManager", () => {
     }
   });
 
+  test("keeps the search caret position after filtering rerenders the page", () => {
+    resetDom('<div id="cleaning-ah-root"></div>');
+    const manager = new CleaningAhManager(null);
+
+    try {
+      manager.render();
+
+      let search = document.getElementById("cleaning-ah-search");
+      search.value = "A";
+      search.setSelectionRange(1, 1);
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+
+      search = document.getElementById("cleaning-ah-search");
+      assert.equal(search.selectionStart, 1);
+      assert.equal(search.selectionEnd, 1);
+
+      search.setRangeText("c", search.selectionStart, search.selectionEnd, "end");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+
+      search = document.getElementById("cleaning-ah-search");
+      assert.equal(search.value, "Ac");
+      assert.equal(search.selectionStart, 2);
+      assert.equal(search.selectionEnd, 2);
+    } finally {
+      resetDom();
+    }
+  });
+
   test("limits property filter options to names that have entries", () => {
     resetDom();
 

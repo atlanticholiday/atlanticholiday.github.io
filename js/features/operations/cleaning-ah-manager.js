@@ -170,6 +170,7 @@ export class CleaningAhManager {
         this.statusMessage = "";
         this.statusTone = "info";
         this.focusAfterRender = "";
+        this.selectionAfterRender = null;
 
         if (typeof window !== "undefined") {
             window.setTimeout(() => this.ensureDomScaffold(), 50);
@@ -1428,8 +1429,14 @@ export class CleaningAhManager {
         this.updateLaundryPreview();
         this.updateLaundryBatchPreview();
         if (this.focusAfterRender) {
-            document.getElementById(this.focusAfterRender)?.focus();
+            const focusedElement = document.getElementById(this.focusAfterRender);
+            focusedElement?.focus();
+            if (focusedElement && this.selectionAfterRender && typeof focusedElement.setSelectionRange === "function") {
+                const { start, end, direction } = this.selectionAfterRender;
+                focusedElement.setSelectionRange(start, end, direction);
+            }
             this.focusAfterRender = "";
+            this.selectionAfterRender = null;
         }
     }
 
@@ -4569,6 +4576,11 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-search")?.addEventListener("input", (event) => {
             this.searchQuery = event.target.value || "";
             this.focusAfterRender = "cleaning-ah-search";
+            this.selectionAfterRender = {
+                start: event.target.selectionStart ?? this.searchQuery.length,
+                end: event.target.selectionEnd ?? this.searchQuery.length,
+                direction: event.target.selectionDirection || "none"
+            };
             this.render();
         });
         document.getElementById("cleaning-ah-month-filter")?.addEventListener("change", (event) => {
