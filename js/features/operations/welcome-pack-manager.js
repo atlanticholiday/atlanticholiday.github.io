@@ -545,6 +545,13 @@ export class WelcomePackManager {
             properties: null,
             purchases: null
         };
+        this._fetchPromises = {};
+
+        if (this.dataManager?.subscribeToDataChanges) {
+            this.dataManager.subscribeToDataChanges(() => {
+                this._invalidateCache(['items', 'purchases', 'logs', 'presets']);
+            });
+        }
 
         if (typeof window !== 'undefined') {
             window.addEventListener('languageChanged', this.handleLanguageChange);
@@ -618,38 +625,56 @@ export class WelcomePackManager {
 
     async _fetchData(type) {
         if (this.cache[type]) return this.cache[type];
+        if (this._fetchPromises?.[type]) return this._fetchPromises[type];
 
-        switch (type) {
-            case 'logs':
-                this.cache.logs = await this.dataManager.getWelcomePackLogs();
-                break;
-            case 'items':
-                this.cache.items = await this.dataManager.getWelcomePackItems();
-                break;
-            case 'presets':
-                this.cache.presets = await this.dataManager.getWelcomePackPresets();
-                break;
-            case 'properties':
-                this.cache.properties = this.dataManager.getAllProperties ? await this.dataManager.getAllProperties() : [];
-                break;
-            case 'purchases':
-                this.cache.purchases = this.dataManager.getWelcomePackPurchases
-                    ? await this.dataManager.getWelcomePackPurchases()
-                    : [];
-                break;
-        }
-        return this.cache[type];
+        this._fetchPromises = this._fetchPromises || {};
+        this._fetchPromises[type] = (async () => {
+            try {
+                switch (type) {
+                    case 'logs':
+                        this.cache.logs = await this.dataManager.getWelcomePackLogs();
+                        break;
+                    case 'items':
+                        this.cache.items = await this.dataManager.getWelcomePackItems();
+                        break;
+                    case 'presets':
+                        this.cache.presets = await this.dataManager.getWelcomePackPresets();
+                        break;
+                    case 'properties':
+                        this.cache.properties = this.dataManager.getAllProperties ? await this.dataManager.getAllProperties() : [];
+                        break;
+                    case 'purchases':
+                        this.cache.purchases = this.dataManager.getWelcomePackPurchases
+                            ? await this.dataManager.getWelcomePackPurchases()
+                            : [];
+                        break;
+                }
+                return this.cache[type];
+            } finally {
+                if (this._fetchPromises) {
+                    delete this._fetchPromises[type];
+                }
+            }
+        })();
+
+        return this._fetchPromises[type];
     }
 
     _invalidateCache(types) {
+        this._fetchPromises = this._fetchPromises || {};
         if (Array.isArray(types)) {
-            types.forEach(t => this.cache[t] = null);
+            types.forEach(t => {
+                this.cache[t] = null;
+                delete this._fetchPromises[t];
+            });
         } else {
             this.cache[types] = null;
+            delete this._fetchPromises[types];
         }
     }
 
     init() {
+        this._invalidateCache(['items', 'purchases', 'logs', 'presets']);
         this.render();
         this.setupEventListeners();
     }
@@ -715,12 +740,13 @@ export class WelcomePackManager {
             .find((view) => view.id === this.currentView) || this.getPrimaryViews()[0];
     }
 
-    setCurrentView(view, { resetEdit = false } = {}) {
+    async setCurrentView(view, { resetEdit = false } = {}) {
         if (resetEdit) {
             this.editingLogId = null;
         }
+        this._invalidateCache(['items', 'purchases', 'logs', 'presets']);
         this.currentView = view;
-        this.render();
+        return await this.render();
     }
 
     formatCurrency(value) {
@@ -1135,7 +1161,7 @@ export class WelcomePackManager {
         `;
 
         this.attachNavListeners();
-        void this.renderCurrentView();
+        return await this.renderCurrentView();
     }
 
     attachNavListeners() {
@@ -1149,6 +1175,7 @@ export class WelcomePackManager {
             button.addEventListener('click', () => this.showHelpModal());
         });
         document.querySelector('[data-wp-start-purchase]')?.addEventListener('click', () => {
+            this._invalidateCache(['items', 'purchases']);
             this.currentView = 'purchases';
             this.startPurchaseDraft();
         });
@@ -1595,7 +1622,7 @@ export class WelcomePackManager {
                         `).join('')}
                     </div>
                 </div>
-                <button onclick="welcomePackManager.currentView='inventory'; welcomePackManager.render();" 
+                <button onclick="welcomePackManager.setCurrentView('inventory');" 
                     class="text-amber-700 hover:text-amber-900 font-medium text-sm whitespace-nowrap">
                     Manage Stock â†’
                 </button>
@@ -2935,7 +2962,7 @@ export class WelcomePackManager {
                 }
             }
 
-            this._invalidateCache(['items', 'purchases']);
+            this._invalidateCache(['items', 'purchases', 'logs', 'presets']);
             this.purchaseDraft = null;
             this.purchaseFile = null;
             alert(this.tr('purchases.saved'));
@@ -4061,8 +4088,7 @@ export class WelcomePackManager {
 
     cancelEdit() {
         this.editingLogId = null;
-        this.currentView = 'dashboard';
-        this.render();
+        void this.setCurrentView('dashboard');
     }
 
     refreshPropertyChargeHistory() {
@@ -4321,7 +4347,7 @@ export class WelcomePackManager {
             if (log) {
                 await this.dataManager.deleteWelcomePackLog(id, log.items);
                 this._invalidateCache(['logs', 'items']);
-                this.render();
+                await this.render();
             }
         }
     }

@@ -1,5 +1,13 @@
-import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, getDocsFromServer, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { t } from '../../core/i18n.js';
+
+async function getDocsFresh(ref) {
+    try {
+        return await getDocsFromServer(ref);
+    } catch {
+        return await getDocs(ref);
+    }
+}
 import { ChangeNotifier } from '../../shared/change-notifier.js';
 import {
     buildEmployeeUpdatePayload,
@@ -1368,24 +1376,27 @@ export class DataManager {
 
     // Welcome Pack Methods
     async getWelcomePackItems() {
-        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_items"));
+        const querySnapshot = await getDocsFresh(collection(this.db, "welcome_pack_items"));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     async saveWelcomePackItem(item) {
         await addDoc(collection(this.db, "welcome_pack_items"), { ...item, quantity: Number.parseFloat(item.quantity) || 0 });
+        this.notifyDataChange();
     }
 
     async updateWelcomePackItem(id, data) {
         await updateDoc(doc(this.db, "welcome_pack_items", id), data);
+        this.notifyDataChange();
     }
 
     async deleteWelcomePackItem(id) {
         await deleteDoc(doc(this.db, "welcome_pack_items", id));
+        this.notifyDataChange();
     }
 
     async getWelcomePackPurchases() {
-        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_purchases"));
+        const querySnapshot = await getDocsFresh(collection(this.db, "welcome_pack_purchases"));
         return querySnapshot.docs
             .map(purchaseDoc => ({ id: purchaseDoc.id, ...purchaseDoc.data() }))
             .sort((left, right) => {
@@ -1485,6 +1496,7 @@ export class DataManager {
             });
         });
 
+        this.notifyDataChange();
         return { id: purchaseId, lines: savedLines };
     }
 
@@ -1493,10 +1505,11 @@ export class DataManager {
             ...data,
             updatedAt: new Date().toISOString()
         });
+        this.notifyDataChange();
     }
 
     async getWelcomePackLogs() {
-        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_logs"));
+        const querySnapshot = await getDocsFresh(collection(this.db, "welcome_pack_logs"));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
@@ -1514,6 +1527,7 @@ export class DataManager {
                 }
             }
         });
+        this.notifyDataChange();
     }
 
     async logWelcomePackBatch(logs) {
@@ -1544,6 +1558,7 @@ export class DataManager {
                 transaction.update(itemRef, { quantity: increment(quantityDelta) });
             });
         });
+        this.notifyDataChange();
     }
 
     async deleteWelcomePackLog(logId, items) {
@@ -1560,6 +1575,7 @@ export class DataManager {
                 }
             }
         });
+        this.notifyDataChange();
     }
 
     async updateWelcomePackLog(logId, oldItems, newLog) {
@@ -1585,20 +1601,23 @@ export class DataManager {
                 }
             }
         });
+        this.notifyDataChange();
     }
 
 
     async getWelcomePackPresets() {
-        const querySnapshot = await getDocs(collection(this.db, "welcome_pack_presets"));
+        const querySnapshot = await getDocsFresh(collection(this.db, "welcome_pack_presets"));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     async saveWelcomePackPreset(preset) {
         await addDoc(collection(this.db, "welcome_pack_presets"), preset);
+        this.notifyDataChange();
     }
 
     async deleteWelcomePackPreset(id) {
         await deleteDoc(doc(this.db, "welcome_pack_presets", id));
+        this.notifyDataChange();
     }
 
     // ==================== Properties Methods ====================

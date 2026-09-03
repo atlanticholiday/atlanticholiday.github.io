@@ -495,4 +495,59 @@ describe("WelcomePackManager", () => {
     assert.equal(document.getElementById("wp-total-sell").textContent, "€20.00");
     assert.equal(document.getElementById("wp-total-profit").textContent, "€15.00");
   });
+
+  test("refreshes items when switching to inventory view after new items are added", async () => {
+    primeWelcomePackTranslations();
+    resetDom(`<div id="welcome-pack-content"></div>`);
+
+    let currentItems = [];
+    const manager = new WelcomePackManager({
+      async getWelcomePackLogs() { return []; },
+      async getWelcomePackItems() { return currentItems; },
+      async getWelcomePackPurchases() { return []; }
+    });
+
+    // First, user views overview or purchases where items is fetched as empty
+    manager.currentView = "overview";
+    await manager.render();
+    assert.equal(manager.cache.items?.length, 0);
+
+    // Later, an invoice is saved and items are added to database
+    currentItems = [{ id: "banana-1", name: "BANANA REGIONAL", quantity: 6.86, costPrice: 1.91, stockUnit: "kg" }];
+
+    // Switching to inventory view must invalidate cache and show the new items without page refresh
+    await manager.setCurrentView("inventory");
+
+    const inventoryList = document.getElementById("wp-inventory-list");
+    assert.ok(inventoryList, "Inventory list should be rendered");
+    assert.includes(inventoryList.textContent, "BANANA REGIONAL");
+    assert.includes(inventoryList.textContent, "6.86 kg");
+  });
+
+  test("subscribes to dataManager data changes and invalidates cache", async () => {
+    let changeListener = null;
+    const mockDataManager = {
+      subscribeToDataChanges(callback) {
+        changeListener = callback;
+        return () => { changeListener = null; };
+      }
+    };
+
+    const manager = new WelcomePackManager(mockDataManager);
+    manager.cache.items = [{ id: "item-1", name: "Item 1" }];
+    manager.cache.purchases = [{ id: "purchase-1" }];
+    manager.cache.logs = [{ id: "log-1" }];
+    manager.cache.presets = [{ id: "preset-1" }];
+
+    assert.ok(typeof changeListener === "function", "Should subscribe to data changes");
+
+    // Trigger data change
+    changeListener();
+
+    assert.equal(manager.cache.items, null);
+    assert.equal(manager.cache.purchases, null);
+    assert.equal(manager.cache.logs, null);
+    assert.equal(manager.cache.presets, null);
+  });
 });
+
