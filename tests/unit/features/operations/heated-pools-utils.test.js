@@ -4,6 +4,7 @@ import {
   buildHeatedPoolPropertyDirectory,
   buildHeatedPoolPlan,
   HEATED_POOL_PROPERTY_NAMES,
+  inferRemoteControlAvailable,
   parseHeatedPoolsCsv
 } from "../../../../js/features/operations/heated-pools-utils.js";
 
@@ -31,12 +32,14 @@ describe("Heated pools utils", () => {
     assert.equal(villaA.ownerCostAmount, 35);
     assert.equal(villaA.poolState, "off");
     assert.equal(villaA.lastChangeDate, "2026-05-10");
+    assert.equal(villaA.remoteControlAvailable, true);
     assert.equal(villaA.reservations[0].dateRange, "16/5 - 20/5");
     assert.equal(villaA.reservations[0].paymentStatus, "no");
     assert.equal(villaA.reservations[0].avantioStatus, "waiting");
 
     const villaB = result.properties[1];
     assert.equal(villaB.poolState, "always_on");
+    assert.equal(villaB.remoteControlAvailable, false);
     assert.includes(villaB.notes[0], "2 dias");
   });
 
@@ -47,9 +50,16 @@ describe("Heated pools utils", () => {
     assert.equal(plan.todayTasks.length, 1);
     assert.equal(plan.todayTasks[0].type, "turn_on");
     assert.equal(plan.todayTasks[0].propertyName, "Villa A");
+    assert.equal(plan.todayTasks[0].remoteControlAvailable, true);
     assert.equal(plan.upcoming.length, 3);
     assert.deepEqual(plan.upcoming.map((task) => task.type), ["payment_check", "avantio_check", "turn_off"]);
     assert.equal(plan.tasks.some((task) => task.propertyName === "Villa B" && task.type === "turn_on"), false);
+  });
+
+  test("recognizes remote-control notes in English and Portuguese", () => {
+    assert.equal(inferRemoteControlAvailable("Remote control available"), true);
+    assert.equal(inferRemoteControlAvailable("", ["Liga remotamente"]), true);
+    assert.equal(inferRemoteControlAvailable("Chave no escritório"), false);
   });
 
   test("does not flag a switch-on task when the pool is already on", () => {

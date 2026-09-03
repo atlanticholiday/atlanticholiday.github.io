@@ -12,6 +12,7 @@ import {
     buildHeatedPoolPropertyDirectory,
     buildHeatedPoolPlan,
     HEATED_POOL_PROPERTY_NAMES,
+    inferRemoteControlAvailable,
     summarizePoolProperties
 } from './heated-pools-utils.js';
 
@@ -268,6 +269,7 @@ export class HeatedPoolsManager {
             chargeAmount: parseMoney(formData.get('chargeAmount')),
             ownerCostAmount: parseMoney(formData.get('ownerCostAmount')),
             heatUpDays: parsePositiveInteger(formData.get('heatUpDays'), 1),
+            remoteControlAvailable: formData.get('remoteControlAvailable') === 'yes',
             notes: operationalNotes,
             reservations: [],
             statusHistory,
@@ -511,6 +513,9 @@ export class HeatedPoolsManager {
             chargeAmount: property.chargeAmount ?? null,
             ownerCostAmount: property.ownerCostAmount ?? null,
             heatUpDays: parsePositiveInteger(property.heatUpDays, 1),
+            remoteControlAvailable: typeof property.remoteControlAvailable === 'boolean'
+                ? property.remoteControlAvailable
+                : inferRemoteControlAvailable(property.poolNote, property.notes),
             notes: Array.isArray(property.notes) ? property.notes.map(cleanText).filter(Boolean) : splitNotes(property.notes),
             statusHistory: normalizeStatusHistory(property.statusHistory),
             reservations: Array.isArray(property.reservations)
@@ -682,7 +687,13 @@ export class HeatedPoolsManager {
                 return `
                     <article class="heated-pools-status-row" data-property-id="${escapeHtml(property.id)}">
                         <div class="heated-pools-status-row__property">
-                            <h4>${escapeHtml(property.propertyName)}</h4>
+                            <div class="heated-pools-status-row__identity">
+                                <h4>${escapeHtml(property.propertyName)}</h4>
+                                <span class="heated-pools-remote-capability ${property.remoteControlAvailable ? 'is-available' : ''}">
+                                    <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
+                                    ${property.remoteControlAvailable ? 'Remote on/off' : 'On-site only'}
+                                </span>
+                            </div>
                             <span class="heated-pools-live-state heated-pools-live-state--${escapeHtml(property.poolState)}">
                                 <i aria-hidden="true"></i>${escapeHtml(poolStateLabel(property.poolState))}
                             </span>
@@ -823,6 +834,7 @@ export class HeatedPoolsManager {
                 <label><span>Heat-up days</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
                 <label><span>Guest charge EUR</span><input data-setting-field="chargeAmount" type="number" step="0.01" value="${escapeHtml(property.chargeAmount ?? '')}"></label>
                 <label><span>Owner cost EUR</span><input data-setting-field="ownerCostAmount" type="number" step="0.01" value="${escapeHtml(property.ownerCostAmount ?? '')}"></label>
+                <label><span>Remote on/off</span><select data-setting-field="remoteControlAvailable">${remoteControlOptions(property.remoteControlAvailable)}</select></label>
                 <label class="heated-pools-setting-row__note"><span>Task instructions</span><input data-setting-field="poolNote" value="${escapeHtml(property.poolNote || property.notes.join('; '))}" placeholder="Remote control, access steps, owner contact..."></label>
                 <button type="button" data-action="delete-property" class="heated-pools-danger-link">Remove</button>
             </article>
@@ -832,7 +844,9 @@ export class HeatedPoolsManager {
             input.addEventListener('change', () => {
                 const propertyId = input.closest('[data-property-id]')?.dataset.propertyId;
                 const field = input.dataset.settingField;
-                const value = field === 'heatUpDays'
+                const value = field === 'remoteControlAvailable'
+                    ? input.value === 'yes'
+                    : field === 'heatUpDays'
                     ? parsePositiveInteger(input.value, 1)
                     : ['chargeAmount', 'ownerCostAmount'].includes(field)
                         ? parseMoney(input.value)
@@ -932,7 +946,10 @@ function taskActionLabel(task) {
 }
 
 function taskInstructions(task) {
-    return [...new Set([task.poolNote, ...(Array.isArray(task.notes) ? task.notes : [])]
+    const remoteInstruction = ['turn_on', 'turn_off'].includes(task.type) && task.remoteControlAvailable
+        ? 'Remote on/off available — no property visit needed'
+        : '';
+    return [...new Set([remoteInstruction, task.poolNote, ...(Array.isArray(task.notes) ? task.notes : [])]
         .map(cleanText)
         .filter(Boolean))]
         .join(' · ');
@@ -1107,6 +1124,13 @@ function booleanOptions(current) {
                 : current === null;
         return `<option value="${value}" ${selected ? 'selected' : ''}>${label}</option>`;
     }).join('');
+}
+
+function remoteControlOptions(current) {
+    return [
+        ['no', 'No — on-site only'],
+        ['yes', 'Yes — available remotely']
+    ].map(([value, label]) => `<option value="${value}" ${Boolean(current) === (value === 'yes') ? 'selected' : ''}>${label}</option>`).join('');
 }
 
 function statusOptions(current) {

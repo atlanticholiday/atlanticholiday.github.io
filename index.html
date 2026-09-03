@@ -2744,7 +2744,7 @@ Mountain Villa, Sintra Hills, V4"
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
-                        <span>Back</span>
+                        <span data-i18n="common.back">Back</span>
                     </button>
                     <span class="heated-pools-topbar__divider" aria-hidden="true"></span>
                     <span class="heated-pools-project-icon" aria-hidden="true"><i class="fas fa-water"></i></span>
@@ -2754,10 +2754,16 @@ Mountain Villa, Sintra Hills, V4"
                         <span data-i18n="heatedPools.header.subtitle">Manage pool heating requests and daily actions inside the app</span>
                     </div>
                 </div>
-                <button id="heated-pools-sign-out-btn" class="heated-pools-sign-out-btn">
-                    <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>
-                    <span>Sign out</span>
-                </button>
+                <div id="heated-pools-header-actions" class="heated-pools-header-actions">
+                    <div class="language-switcher heated-pools-language-switcher" aria-label="Language">
+                        <button type="button" class="lang-btn" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn" data-lang-option="pt" title="Português">PT</button>
+                    </div>
+                    <button id="heated-pools-sign-out-btn" class="heated-pools-sign-out-btn">
+                        <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                        <span data-i18n="common.signOut">Sign out</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -2860,6 +2866,7 @@ Mountain Villa, Sintra Hills, V4"
                         <label><span>Heat-up days</span><input name="heatUpDays" type="number" min="1" max="5" value="1"></label>
                         <label><span>Guest charge EUR</span><input name="chargeAmount" type="number" step="0.01" placeholder="45"></label>
                         <label><span>Owner cost EUR</span><input name="ownerCostAmount" type="number" step="0.01" placeholder="35"></label>
+                        <label><span>Remote on/off</span><select name="remoteControlAvailable"><option value="no">No — on-site only</option><option value="yes">Yes — available remotely</option></select></label>
                         <label class="heated-pools-form-wide"><span>Operational notes</span><textarea name="notes" rows="3" placeholder="Remote control, owner contact, heating delay..."></textarea></label>
                     </div>
                     <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog>Cancel</button><button type="submit" class="heated-pools-primary-action">Add property</button></div>

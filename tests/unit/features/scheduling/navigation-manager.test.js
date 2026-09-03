@@ -134,12 +134,12 @@ describe("NavigationManager", () => {
         <div id="cleaning-ah-page" class="hidden"><div id="cleaning-ah-header-actions"></div></div>
         <div id="laundry-log-page" class="hidden"><div id="laundry-log-header-actions"></div></div>
         <div id="linen-inventory-page" class="hidden"><div id="linen-inventory-header-actions"></div></div>
+        <div id="heated-pools-page" class="hidden"><div id="heated-pools-header-actions"></div></div>
         <div id="time-clock-page" class="hidden"></div>
         <div id="app-content" class="hidden"></div>
         <div id="vacation-center-page" class="hidden"></div>
         <div id="staff-page" class="hidden"></div>
         <div id="reservations-page" class="hidden"></div>
-        <div id="heated-pools-page" class="hidden"></div>
       </div>
     `);
     const navigationManager = new NavigationManager({ storage: createStorageMock() });
@@ -148,6 +148,7 @@ describe("NavigationManager", () => {
     assert.ok(document.querySelector("#cleaning-ah-header-actions > [data-app-switcher-trigger]"));
     assert.ok(document.querySelector("#laundry-log-header-actions > [data-app-switcher-trigger]"));
     assert.ok(document.querySelector("#linen-inventory-header-actions > [data-app-switcher-trigger]"));
+    assert.ok(document.querySelector("#heated-pools-header-actions > [data-app-switcher-trigger]"));
 
     document.querySelector("[data-app-switcher-trigger]").click();
 

@@ -44,7 +44,8 @@ const HEADER_ACTION_SELECTORS = [
     '.user-management-header-actions',
     '#cleaning-ah-header-actions',
     '#laundry-log-header-actions',
-    '#linen-inventory-header-actions'
+    '#linen-inventory-header-actions',
+    '#heated-pools-header-actions'
 ].join(',');
 
 function translate(key, fallback) {

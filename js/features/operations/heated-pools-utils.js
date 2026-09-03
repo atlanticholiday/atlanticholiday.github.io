@@ -307,6 +307,7 @@ function mergeDuplicateProperties(properties = []) {
 
         existing.chargeAmount = existing.chargeAmount ?? property.chargeAmount;
         existing.ownerCostAmount = existing.ownerCostAmount ?? property.ownerCostAmount;
+        existing.remoteControlAvailable = existing.remoteControlAvailable || property.remoteControlAvailable;
         existing.poolNote = existing.poolNote || property.poolNote;
         existing.lastChangeDate = existing.lastChangeDate || property.lastChangeDate;
         if (existing.poolState === 'unknown' && property.poolState !== 'unknown') {
@@ -364,6 +365,7 @@ function parsePropertyBlock({ propertyName, startColumn, endColumn, pricingRow, 
         poolState: state.poolState,
         lastChangeDate: state.lastChangeDate,
         notes: uniqueValues(notes),
+        remoteControlAvailable: inferRemoteControlAvailable(poolNote, notes),
         reservations
     };
 }
@@ -474,6 +476,7 @@ function createPoolTask({ type, actionDate, today, property, reservation, leadDa
         poolState: property.poolState,
         poolNote: property.poolNote,
         notes: property.notes,
+        remoteControlAvailable: property.remoteControlAvailable === true,
         claim: normalizeTaskActivity(reservation.taskClaims?.[type]),
         completion
     };
@@ -721,6 +724,11 @@ function normalizeForCompare(value = '') {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .trim();
+}
+
+export function inferRemoteControlAvailable(poolNote = '', notes = []) {
+    const text = normalizeForCompare([poolNote, ...(Array.isArray(notes) ? notes : [notes])].join(' '));
+    return /\bremot(?:e|ely|o|a|amente)\b/.test(text);
 }
 
 function slugify(value = '') {
