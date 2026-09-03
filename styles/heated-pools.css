@@ -1,0 +1,1561 @@
+/* ========================================================================== 
+   Heated Pools - Asana-inspired operations workspace
+   ========================================================================== */
+
+#heated-pools-page {
+    --pool-accent: #ef5b6c;
+    --pool-accent-hover: #dd4c5f;
+    --pool-accent-soft: rgba(239, 91, 108, 0.1);
+    --pool-ink: #1f2328;
+    --pool-muted: #656d76;
+    --pool-subtle: #8c959f;
+    --pool-line: #e1e4e8;
+    --pool-surface: #ffffff;
+    --pool-surface-subtle: #fafafa;
+    --pool-surface-hover: #f6f8fa;
+    --pool-input: #f6f8fa;
+    --pool-green: #1a7f37;
+    --pool-green-soft: #dafbe1;
+    --pool-amber: #9a6700;
+    --pool-amber-soft: #fff8c5;
+    min-height: 100vh;
+    color: var(--pool-ink);
+    background: var(--pool-surface);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#heated-pools-page.hidden {
+    display: none !important;
+}
+
+#heated-pools-page button,
+#heated-pools-page input,
+#heated-pools-page select,
+#heated-pools-page textarea {
+    font: inherit;
+}
+
+#heated-pools-page button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Project header */
+.heated-pools-topbar {
+    border-bottom: 1px solid var(--pool-line);
+    background: var(--pool-surface);
+}
+
+.heated-pools-topbar__inner {
+    display: flex;
+    width: min(100%, 2400px);
+    min-height: 76px;
+    margin: 0 auto;
+    padding: 14px 28px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.heated-pools-topbar__project,
+.heated-pools-topbar__copy,
+.heated-pools-back-btn,
+.heated-pools-sign-out-btn {
+    display: flex;
+    align-items: center;
+}
+
+.heated-pools-topbar__project {
+    min-width: 0;
+    gap: 12px;
+}
+
+.heated-pools-back-btn {
+    gap: 6px;
+    min-height: 32px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 8px;
+    color: var(--pool-muted);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    transition: color 140ms ease, background-color 140ms ease;
+}
+
+.heated-pools-back-btn:hover {
+    color: var(--pool-ink);
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-back-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.heated-pools-topbar__divider {
+    width: 1px;
+    height: 24px;
+    background: var(--pool-line);
+}
+
+.heated-pools-project-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    color: #ffffff;
+    background: var(--pool-accent);
+    box-shadow: 0 2px 5px rgba(239, 91, 108, 0.24);
+}
+
+.heated-pools-project-icon i {
+    font-size: 15px;
+}
+
+.heated-pools-topbar__copy {
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+}
+
+.heated-pools-topbar__copy p,
+.heated-pools-topbar__copy h1,
+.heated-pools-topbar__copy span {
+    margin: 0;
+}
+
+.heated-pools-topbar__copy p {
+    margin-bottom: 2px;
+    color: var(--pool-accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.heated-pools-topbar__copy h1 {
+    color: var(--pool-ink);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.heated-pools-topbar__copy span {
+    overflow: hidden;
+    max-width: min(54vw, 620px);
+    margin-top: 3px;
+    color: var(--pool-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.heated-pools-sign-out-btn {
+    flex: 0 0 auto;
+    gap: 7px;
+    min-height: 34px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 10px;
+    color: var(--pool-muted);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    transition: color 140ms ease, background-color 140ms ease;
+}
+
+.heated-pools-sign-out-btn:hover {
+    color: var(--pool-accent-hover);
+    background: var(--pool-accent-soft);
+}
+
+/* Workspace navigation and toolbar */
+.heated-pools-page > main.heated-pools-app {
+    display: block;
+    width: min(100%, 2400px);
+    margin: 0 auto;
+    padding: 0 28px 48px;
+}
+
+.heated-pools-appbar {
+    display: block;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.heated-pools-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    border: 0;
+    border-bottom: 1px solid var(--pool-line);
+    background: var(--pool-surface);
+    scrollbar-width: none;
+}
+
+.heated-pools-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.heated-pools-tabs button {
+    position: relative;
+    display: inline-flex;
+    min-height: 47px;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 12px 16px 11px;
+    color: var(--pool-muted);
+    background: transparent;
+    box-shadow: none;
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 140ms ease, border-color 140ms ease;
+}
+
+.heated-pools-tabs button::after {
+    display: none;
+}
+
+.heated-pools-tabs button:hover {
+    border-bottom-color: #d0d7de;
+    color: var(--pool-ink);
+}
+
+.heated-pools-tabs button.is-active {
+    border-bottom-color: var(--pool-accent);
+    color: var(--pool-ink);
+    font-weight: 700;
+}
+
+.heated-pools-tabs button span {
+    display: inline-flex;
+    min-width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 6px;
+    color: #ffffff;
+    background: var(--pool-accent);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.heated-pools-toolbar {
+    display: flex;
+    min-height: 62px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--pool-line);
+}
+
+.heated-pools-appbar__search {
+    position: relative;
+    display: block;
+    width: min(100%, 340px);
+    color: var(--pool-muted);
+}
+
+.heated-pools-appbar__search > i {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    z-index: 1;
+    font-size: 12px;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.heated-pools-appbar__search input,
+.heated-pools-history-filter select,
+.heated-pools-date input,
+.heated-pools-setting-row input,
+.heated-pools-dialog__panel input,
+.heated-pools-dialog__panel select,
+.heated-pools-dialog__panel textarea {
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--pool-ink);
+    background: var(--pool-input);
+    box-shadow: none;
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.heated-pools-appbar__search input {
+    padding-left: 34px;
+}
+
+.heated-pools-appbar__search input:hover,
+.heated-pools-history-filter select:hover,
+.heated-pools-date input:hover,
+.heated-pools-setting-row input:hover,
+.heated-pools-dialog__panel input:hover,
+.heated-pools-dialog__panel select:hover,
+.heated-pools-dialog__panel textarea:hover {
+    border-color: #b7bec6;
+    background: #ffffff;
+}
+
+.heated-pools-appbar__search input:focus,
+.heated-pools-history-filter select:focus,
+.heated-pools-date input:focus,
+.heated-pools-setting-row input:focus,
+.heated-pools-dialog__panel input:focus,
+.heated-pools-dialog__panel select:focus,
+.heated-pools-dialog__panel textarea:focus {
+    border-color: var(--pool-accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px var(--pool-accent-soft);
+}
+
+.heated-pools-status {
+    display: inline-flex;
+    min-height: auto;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    color: var(--pool-muted);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.heated-pools-status > i {
+    color: var(--pool-subtle);
+}
+
+.heated-pools-status[data-status="success"] {
+    color: var(--pool-green);
+    background: transparent;
+}
+
+.heated-pools-status[data-status="error"] {
+    color: #cf222e;
+    background: transparent;
+}
+
+/* Active work surface */
+.heated-pools-view {
+    min-height: 320px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: var(--pool-surface);
+}
+
+.heated-pools-view.hidden,
+.heated-pools-empty.hidden {
+    display: none !important;
+}
+
+.heated-pools-view.is-active {
+    animation: heated-pool-view-in 180ms ease-out both;
+}
+
+.heated-pools-view__heading {
+    display: flex;
+    min-height: 92px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px 0 18px;
+    border-bottom: 1px solid var(--pool-line);
+}
+
+.heated-pools-view__heading h3 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.heated-pools-eyebrow,
+.heated-pools-view__heading .heated-pools-eyebrow {
+    margin: 0 0 4px;
+    color: var(--pool-accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.heated-pools-view__heading div > p:last-child {
+    margin: 5px 0 0;
+    color: var(--pool-muted);
+    font-size: 13px;
+}
+
+.heated-pools-primary-action {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--pool-accent);
+    border-radius: 6px;
+    padding: 7px 13px;
+    color: #ffffff;
+    background: var(--pool-accent);
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, transform 100ms ease;
+}
+
+.heated-pools-primary-action:hover {
+    border-color: var(--pool-accent-hover);
+    background: var(--pool-accent-hover);
+    box-shadow: none;
+    transform: none;
+}
+
+.heated-pools-primary-action:active {
+    transform: scale(0.98);
+}
+
+/* Status list */
+.heated-pools-property-list,
+.heated-pools-history-list,
+.heated-pools-settings-list {
+    display: grid;
+}
+
+.heated-pools-status-row {
+    display: grid;
+    grid-template-columns: minmax(210px, 1.2fr) minmax(170px, 0.9fr) minmax(220px, 1.1fr) minmax(138px, auto);
+    min-height: 76px;
+    align-items: center;
+    gap: 22px;
+    padding: 12px 10px;
+    border-top: 1px solid var(--pool-line);
+    background: #ffffff;
+    transition: background-color 120ms ease;
+}
+
+.heated-pools-status-row:first-child {
+    border-top: 0;
+}
+
+.heated-pools-status-row:hover {
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-status-row__property {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.heated-pools-status-row h4 {
+    overflow: hidden;
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 14px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.heated-pools-live-state {
+    display: inline-flex;
+    min-height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 999px;
+    padding: 3px 9px;
+    color: var(--pool-muted);
+    background: #eaeef2;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.heated-pools-live-state i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.heated-pools-live-state--on,
+.heated-pools-live-state--always_on {
+    color: var(--pool-green);
+    background: var(--pool-green-soft);
+}
+
+.heated-pools-live-state--off {
+    color: #57606a;
+    background: #eaeef2;
+}
+
+.heated-pools-live-state--unavailable {
+    color: #cf222e;
+    background: #ffebe9;
+}
+
+.heated-pools-status-row__last span,
+.heated-pools-status-row__last small,
+.heated-pools-status-row__reservation span,
+.heated-pools-status-row__reservation small {
+    display: block;
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-status-row__last strong,
+.heated-pools-status-row__reservation strong {
+    display: block;
+    overflow: hidden;
+    margin: 3px 0;
+    color: var(--pool-ink);
+    font-size: 12px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.heated-pools-status-row__actions.heated-pools-power-actions {
+    display: flex;
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 0;
+}
+
+.heated-pools-status-row__actions.heated-pools-power-actions button {
+    min-width: 108px;
+    min-height: 32px;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--pool-ink);
+    background: #ffffff;
+    box-shadow: none;
+    font-size: 11px;
+    font-weight: 650;
+    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.heated-pools-status-row__actions.heated-pools-power-actions button:hover {
+    border-color: #b7bec6;
+    color: var(--pool-ink);
+    background: #ffffff;
+    box-shadow: none;
+    transform: none;
+}
+
+.heated-pools-status-row__actions.heated-pools-power-actions button[data-pool-state="on"] {
+    border-color: var(--pool-accent);
+    color: #ffffff;
+    background: var(--pool-accent);
+}
+
+.heated-pools-status-row__actions.heated-pools-power-actions button[data-pool-state="on"]:hover {
+    border-color: var(--pool-accent-hover);
+    color: #ffffff;
+    background: var(--pool-accent-hover);
+}
+
+/* Reservations table */
+.heated-pools-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 0;
+    border-bottom: 1px solid var(--pool-line);
+}
+
+.heated-pools-table {
+    width: 100%;
+    min-width: 1040px;
+    border-collapse: collapse;
+    background: #ffffff;
+}
+
+.heated-pools-table th,
+.heated-pools-table td {
+    border: 0;
+    border-bottom: 1px solid var(--pool-line);
+    padding: 9px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.heated-pools-table th {
+    color: var(--pool-muted);
+    background: var(--pool-surface-subtle);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.heated-pools-table td {
+    color: var(--pool-ink);
+    font-size: 12px;
+}
+
+.heated-pools-table tbody tr {
+    transition: background-color 120ms ease;
+}
+
+.heated-pools-table tbody tr:hover {
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.heated-pools-inline-input {
+    width: 100%;
+    min-width: 112px;
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 5px 7px;
+    color: var(--pool-ink);
+    background: transparent;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.heated-pools-inline-input:hover {
+    border-color: var(--pool-line);
+    background: #ffffff;
+}
+
+.heated-pools-inline-input:focus {
+    border-color: var(--pool-accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px var(--pool-accent-soft);
+}
+
+.heated-pools-danger-link {
+    border: 0;
+    border-radius: 5px;
+    padding: 5px 7px;
+    color: var(--pool-muted);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    transition: color 120ms ease, background-color 120ms ease;
+}
+
+.heated-pools-danger-link:hover {
+    color: #cf222e;
+    background: #ffebe9;
+}
+
+/* Task sections */
+.heated-pools-date,
+.heated-pools-history-filter,
+.heated-pools-setting-row label,
+.heated-pools-dialog__panel label {
+    display: grid;
+    gap: 5px;
+    color: var(--pool-muted);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.heated-pools-date,
+.heated-pools-history-filter {
+    min-width: 188px;
+}
+
+.heated-pools-task-lanes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 0;
+    padding: 22px 0 0;
+}
+
+.heated-pools-lane {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--pool-line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.heated-pools-lane__header {
+    display: flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    border: 0;
+    border-bottom: 1px solid var(--pool-line);
+    padding: 7px 12px;
+    color: var(--pool-ink);
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-lane__header::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pool-subtle);
+    content: '';
+}
+
+.heated-pools-lane--danger .heated-pools-lane__header::before {
+    background: #cf222e;
+}
+
+.heated-pools-lane--warning .heated-pools-lane__header::before {
+    background: #d29922;
+}
+
+.heated-pools-lane--info .heated-pools-lane__header::before {
+    background: #0969da;
+}
+
+.heated-pools-lane--success .heated-pools-lane__header::before {
+    background: var(--pool-green);
+}
+
+.heated-pools-lane__header h3 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.heated-pools-lane__header span {
+    display: inline-flex;
+    min-width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
+    border-radius: 999px;
+    padding: 0 5px;
+    color: var(--pool-muted);
+    background: #eaeef2;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.heated-pools-lane__body {
+    display: grid;
+    gap: 0;
+    padding: 0;
+}
+
+.heated-pools-task {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(230px, auto);
+    min-height: 66px;
+    align-items: center;
+    gap: 18px;
+    border: 0;
+    border-top: 1px solid var(--pool-line);
+    border-radius: 0;
+    padding: 10px 12px 10px 38px;
+    background: #ffffff;
+    box-shadow: none;
+    transition: background-color 120ms ease;
+}
+
+.heated-pools-task:first-child {
+    border-top: 0;
+}
+
+.heated-pools-task:hover {
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-task__content {
+    min-width: 0;
+}
+
+.heated-pools-task--complete {
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-task--complete h4 {
+    color: var(--pool-muted);
+}
+
+.heated-pools-task__date {
+    margin: 0 0 3px;
+    color: var(--pool-muted);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.heated-pools-task h4 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.heated-pools-task p,
+.heated-pools-task small,
+.heated-pools-muted {
+    margin: 3px 0 0;
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-task .heated-pools-task__instructions {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 7px;
+    color: var(--pool-ink);
+    line-height: 1.4;
+}
+
+.heated-pools-task__instructions i {
+    margin-top: 2px;
+    color: var(--pool-accent);
+    font-size: 10px;
+}
+
+.heated-pools-muted {
+    padding: 16px 38px;
+}
+
+.heated-pools-task__meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.heated-pools-task__meta > span {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: var(--pool-muted);
+    background: #eaeef2;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.heated-pools-task--complete .heated-pools-task__meta > span {
+    color: var(--pool-green);
+    background: var(--pool-green-soft);
+}
+
+.heated-pools-task .heated-pools-task__activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    color: var(--pool-muted);
+    line-height: 1.35;
+}
+
+.heated-pools-task__activity--complete i {
+    color: var(--pool-green);
+}
+
+.heated-pools-claim-action {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 5px;
+    padding: 4px 7px;
+    color: var(--pool-accent-hover);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 650;
+    transition: color 120ms ease, background-color 120ms ease;
+}
+
+.heated-pools-claim-action:hover {
+    color: var(--pool-accent-hover);
+    background: var(--pool-accent-soft);
+}
+
+.heated-pools-small-action {
+    min-height: 30px;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--pool-ink);
+    background: #ffffff;
+    font-size: 11px;
+    font-weight: 650;
+    transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.heated-pools-small-action:hover {
+    border-color: #b7bec6;
+    color: var(--pool-ink);
+    background: var(--pool-surface-hover);
+    transform: none;
+}
+
+/* History and settings */
+.heated-pools-history-row {
+    display: grid;
+    grid-template-columns: 8px minmax(180px, 0.8fr) minmax(210px, 0.9fr) minmax(300px, 1.4fr);
+    min-height: 66px;
+    align-items: start;
+    gap: 16px;
+    padding: 12px 10px;
+    border-top: 1px solid var(--pool-line);
+    background: #ffffff;
+    transition: background-color 120ms ease;
+}
+
+.heated-pools-history-row:first-child {
+    border-top: 0;
+}
+
+.heated-pools-history-row:hover {
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-history__dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--pool-subtle);
+}
+
+.heated-pools-history__dot--on,
+.heated-pools-history__dot--always_on {
+    background: var(--pool-green);
+}
+
+.heated-pools-history__dot--off {
+    background: #57606a;
+}
+
+.heated-pools-history-row strong,
+.heated-pools-history-row span {
+    display: block;
+}
+
+.heated-pools-history-row strong {
+    color: var(--pool-ink);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.heated-pools-history-row span {
+    margin-top: 3px;
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-setting-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.05fr) repeat(3, minmax(110px, 0.6fr)) minmax(230px, 1.4fr) auto;
+    min-height: 82px;
+    align-items: end;
+    gap: 12px;
+    padding: 12px 10px;
+    border-top: 1px solid var(--pool-line);
+    background: #ffffff;
+}
+
+.heated-pools-setting-row:first-child {
+    border-top: 0;
+}
+
+.heated-pools-setting-row > div {
+    align-self: center;
+}
+
+.heated-pools-setting-row > div strong,
+.heated-pools-setting-row > div span {
+    display: block;
+}
+
+.heated-pools-setting-row > div strong {
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.heated-pools-setting-row > div span {
+    margin-top: 3px;
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-approved-directory {
+    margin-top: 24px;
+    border: 1px solid var(--pool-line);
+    border-radius: 8px;
+    padding: 18px;
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-approved-directory h4 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.heated-pools-approved-directory > p {
+    margin: 4px 0 12px;
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-approved-directory > div {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 20px;
+}
+
+.heated-pools-approved-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-height: 38px;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--pool-line);
+    color: var(--pool-ink);
+    font-size: 12px;
+}
+
+.heated-pools-approved-row small {
+    color: var(--pool-muted);
+    font-size: 10px;
+}
+
+.heated-pools-approved-row small[data-state="configured"] {
+    color: var(--pool-green);
+}
+
+.heated-pools-approved-row small[data-state="missing"] {
+    color: var(--pool-subtle);
+}
+
+.heated-pools-approved-row button {
+    border: 0;
+    border-radius: 5px;
+    padding: 4px 6px;
+    color: var(--pool-accent-hover);
+    background: transparent;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.heated-pools-approved-row button:hover {
+    background: var(--pool-accent-soft);
+}
+
+.heated-pools-empty,
+.heated-pools-empty-row {
+    margin: 0;
+    padding: 48px 24px;
+    color: var(--pool-muted);
+    background: #ffffff;
+    text-align: center;
+}
+
+.heated-pools-empty {
+    border-bottom: 1px solid var(--pool-line);
+}
+
+.heated-pools-empty i {
+    margin-bottom: 12px;
+    color: var(--pool-accent);
+    font-size: 24px;
+}
+
+.heated-pools-empty h3 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.heated-pools-empty p {
+    margin: 5px 0 0;
+    color: var(--pool-muted);
+    font-size: 12px;
+}
+
+/* Slide-over forms */
+body.heated-pools-dialog-open {
+    overflow: hidden;
+}
+
+.heated-pools-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0;
+}
+
+.heated-pools-dialog.hidden {
+    display: none !important;
+}
+
+.heated-pools-dialog__backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgba(31, 35, 40, 0.34);
+    backdrop-filter: none;
+    animation: heated-pool-backdrop-in 160ms ease-out both;
+}
+
+.heated-pools-dialog__panel,
+.heated-pools-dialog__panel.heated-pools-form {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: min(460px, 100vw);
+    height: 100%;
+    max-height: none;
+    flex-direction: column;
+    gap: 18px;
+    overflow-y: auto;
+    border: 0;
+    border-left: 1px solid var(--pool-line);
+    border-radius: 0;
+    padding: 22px 24px;
+    background: #ffffff;
+    box-shadow: -14px 0 38px rgba(31, 35, 40, 0.16);
+    animation: heated-pool-drawer-in 190ms ease-out both;
+}
+
+.heated-pools-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: -2px 0 0;
+    border-bottom: 1px solid var(--pool-line);
+    padding: 0 0 16px;
+}
+
+.heated-pools-dialog__header h3 {
+    margin: 0;
+    color: var(--pool-ink);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.heated-pools-dialog__header > button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    color: var(--pool-muted);
+    background: transparent;
+    transition: color 120ms ease, background-color 120ms ease;
+}
+
+.heated-pools-dialog__header > button:hover {
+    color: var(--pool-ink);
+    background: var(--pool-surface-hover);
+}
+
+.heated-pools-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.heated-pools-form-wide {
+    grid-column: 1 / -1;
+}
+
+.heated-pools-dialog__panel textarea {
+    resize: vertical;
+}
+
+.heated-pools-state-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid var(--pool-line);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-state-summary strong {
+    color: var(--pool-ink);
+    font-size: 13px;
+}
+
+.heated-pools-state-summary span {
+    color: var(--pool-muted);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.heated-pools-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: auto;
+    border-top: 1px solid var(--pool-line);
+    padding-top: 16px;
+}
+
+.heated-pools-dialog__actions > button:not(.heated-pools-primary-action) {
+    min-height: 36px;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 7px 13px;
+    color: var(--pool-ink);
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.heated-pools-dialog__actions > button:not(.heated-pools-primary-action):hover {
+    border-color: #b7bec6;
+    background: var(--pool-surface-hover);
+}
+
+@keyframes heated-pool-view-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes heated-pool-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes heated-pool-drawer-in {
+    from { opacity: 0.6; transform: translateX(18px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 1100px) {
+    .heated-pools-status-row {
+        grid-template-columns: minmax(200px, 1fr) minmax(170px, 0.8fr) minmax(200px, 1fr);
+    }
+
+    .heated-pools-status-row__actions,
+    .heated-pools-status-row__actions.heated-pools-power-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .heated-pools-setting-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .heated-pools-setting-row > div,
+    .heated-pools-setting-row__note {
+        grid-column: 1 / -1;
+    }
+
+    .heated-pools-approved-directory > div {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .heated-pools-topbar__inner {
+        min-height: 68px;
+        padding: 10px 16px;
+    }
+
+    .heated-pools-back-btn span,
+    .heated-pools-topbar__divider,
+    .heated-pools-topbar__copy > span,
+    .heated-pools-sign-out-btn span {
+        display: none;
+    }
+
+    .heated-pools-back-btn,
+    .heated-pools-sign-out-btn {
+        width: 34px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .heated-pools-project-icon {
+        width: 34px;
+        height: 34px;
+    }
+
+    .heated-pools-topbar__copy h1 {
+        font-size: 17px;
+    }
+
+    .heated-pools-page > main.heated-pools-app {
+        padding: 0 16px 36px;
+    }
+
+    .heated-pools-tabs {
+        margin: 0 -16px;
+        padding: 0 8px;
+    }
+
+    .heated-pools-tabs button {
+        min-height: 44px;
+        padding: 10px 11px 9px;
+        font-size: 12px;
+    }
+
+    .heated-pools-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 9px;
+        padding: 12px 0;
+    }
+
+    .heated-pools-appbar__search {
+        width: 100%;
+    }
+
+    .heated-pools-view__heading {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px 0;
+    }
+
+    .heated-pools-primary-action,
+    .heated-pools-date,
+    .heated-pools-history-filter {
+        width: 100%;
+    }
+
+    .heated-pools-status-row,
+    .heated-pools-history-row,
+    .heated-pools-setting-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 14px 4px;
+    }
+
+    .heated-pools-status-row__last,
+    .heated-pools-status-row__reservation {
+        padding-top: 9px;
+        border-top: 1px solid var(--pool-line);
+    }
+
+    .heated-pools-status-row__actions,
+    .heated-pools-status-row__actions.heated-pools-power-actions,
+    .heated-pools-setting-row > div,
+    .heated-pools-setting-row__note {
+        grid-column: auto;
+    }
+
+    .heated-pools-status-row__actions.heated-pools-power-actions,
+    .heated-pools-status-row__actions.heated-pools-power-actions button {
+        width: 100%;
+    }
+
+    .heated-pools-task-lanes {
+        gap: 16px;
+    }
+
+    .heated-pools-task {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .heated-pools-task__meta {
+        align-items: flex-start;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .heated-pools-approved-directory {
+        padding: 14px;
+    }
+
+    .heated-pools-approved-directory > div,
+    .heated-pools-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .heated-pools-form-wide {
+        grid-column: auto;
+    }
+
+    .heated-pools-dialog__panel,
+    .heated-pools-dialog__panel.heated-pools-form {
+        width: 100vw;
+        padding: 18px 16px;
+    }
+
+    .heated-pools-dialog__actions {
+        flex-direction: column-reverse;
+    }
+
+    .heated-pools-dialog__actions button {
+        width: 100%;
+    }
+}
+
+/* Keep the workspace coherent when the shared app theme is dark. */
+html[data-theme="dark"] #heated-pools-page {
+    --pool-ink: #f4f4f5;
+    --pool-muted: #a1a1aa;
+    --pool-subtle: #71717a;
+    --pool-line: #323238;
+    --pool-surface: #18181b;
+    --pool-surface-subtle: #202024;
+    --pool-surface-hover: #25252a;
+    --pool-input: #111114;
+    --pool-green: #56d364;
+    --pool-green-soft: rgba(46, 160, 67, 0.18);
+    color: var(--pool-ink);
+    background: #111114;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-topbar,
+    .heated-pools-tabs,
+    .heated-pools-view,
+    .heated-pools-status-row,
+    .heated-pools-table,
+    .heated-pools-task,
+    .heated-pools-lane,
+    .heated-pools-history-row,
+    .heated-pools-setting-row,
+    .heated-pools-empty,
+    .heated-pools-empty-row,
+    .heated-pools-dialog__panel
+) {
+    border-color: var(--pool-line) !important;
+    color: var(--pool-ink);
+    background: var(--pool-surface) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-task--complete {
+    background: var(--pool-surface-subtle) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-toolbar,
+    .heated-pools-view__heading,
+    .heated-pools-table th,
+    .heated-pools-lane__header,
+    .heated-pools-approved-directory,
+    .heated-pools-state-summary
+) {
+    border-color: var(--pool-line) !important;
+    background: var(--pool-surface-subtle) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-appbar__search input,
+    .heated-pools-history-filter select,
+    .heated-pools-date input,
+    .heated-pools-setting-row input,
+    .heated-pools-dialog__panel input,
+    .heated-pools-dialog__panel select,
+    .heated-pools-dialog__panel textarea,
+    .heated-pools-inline-input
+) {
+    border-color: var(--pool-line) !important;
+    color: var(--pool-ink) !important;
+    background-color: var(--pool-input) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-status-row,
+    .heated-pools-table tbody tr,
+    .heated-pools-task,
+    .heated-pools-history-row
+):hover {
+    background: var(--pool-surface-hover) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-small-action,
+    .heated-pools-dialog__actions > button:not(.heated-pools-primary-action),
+    .heated-pools-status-row__actions.heated-pools-power-actions button
+) {
+    border-color: var(--pool-line);
+    color: var(--pool-ink);
+    background: var(--pool-surface-subtle);
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-live-state--off,
+html[data-theme="dark"] #heated-pools-page .heated-pools-task__meta > span,
+html[data-theme="dark"] #heated-pools-page .heated-pools-lane__header span {
+    color: #c9d1d9;
+    background: #303036;
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-live-state--unavailable {
+    color: #ff7b72;
+    background: rgba(248, 81, 73, 0.17);
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-dialog__backdrop {
+    background: rgba(0, 0, 0, 0.58);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .heated-pools-view.is-active,
+    .heated-pools-dialog__backdrop,
+    .heated-pools-dialog__panel,
+    .heated-pools-dialog__panel.heated-pools-form {
+        animation: none;
+    }
+
+    #heated-pools-page *,
+    #heated-pools-page *::before,
+    #heated-pools-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -28,6 +28,8 @@ export class HeatedPoolsManager {
         this.plan = null;
         this.searchTerm = '';
         this.activeView = 'status';
+        this.initialViewResolved = false;
+        this.hasReceivedSnapshot = false;
         this.historyPropertyId = '';
         this.today = formatLocalDate(new Date());
         this.unsubscribe = null;
@@ -69,6 +71,7 @@ export class HeatedPoolsManager {
         }
 
         this.unsubscribe = onSnapshot(ref, (snapshot) => {
+            this.hasReceivedSnapshot = true;
             this.properties = snapshot.docs
                 .map((entry) => this.normalizeProperty({ id: entry.id, ...entry.data() }))
                 .sort((a, b) => a.propertyName.localeCompare(b.propertyName));
@@ -157,7 +160,10 @@ export class HeatedPoolsManager {
         }
 
         document.querySelectorAll('[data-pool-view]').forEach((button) => {
-            button.addEventListener('click', () => this.switchView(button.dataset.poolView));
+            button.addEventListener('click', () => {
+                this.initialViewResolved = true;
+                this.switchView(button.dataset.poolView);
+            });
         });
 
         document.querySelectorAll('[data-open-pool-dialog]').forEach((button) => {
@@ -242,13 +248,14 @@ export class HeatedPoolsManager {
 
         const poolState = formData.get('poolState') || 'unknown';
         const now = new Date().toISOString();
+        const operationalNotes = splitNotes(formData.get('notes'));
         const statusHistory = appendPoolStatusHistory([], {
             previousState: 'unknown',
             state: poolState,
             at: now,
             planningDate: this.today,
             source: 'property_created',
-            note: cleanText(formData.get('poolNote')),
+            note: operationalNotes.join('; '),
             actor: this.getCurrentActor()
         });
 
@@ -256,12 +263,12 @@ export class HeatedPoolsManager {
             propertyName,
             propertyDirectoryId: directoryEntry.id || null,
             poolState,
-            poolNote: cleanText(formData.get('poolNote')),
+            poolNote: operationalNotes.join('; '),
             lastChangeDate: poolState === 'unknown' ? null : this.today,
             chargeAmount: parseMoney(formData.get('chargeAmount')),
             ownerCostAmount: parseMoney(formData.get('ownerCostAmount')),
             heatUpDays: parsePositiveInteger(formData.get('heatUpDays'), 1),
-            notes: splitNotes(formData.get('notes')),
+            notes: operationalNotes,
             reservations: [],
             statusHistory,
             createdAt: serverTimestamp(),
@@ -301,12 +308,30 @@ export class HeatedPoolsManager {
     async setPoolState(propertyId, state, { reservationId = '', source = 'manual', note = '' } = {}) {
         const property = this.properties.find((entry) => entry.id === propertyId);
         if (!property || !['on', 'off'].includes(state)) return false;
+        const reservation = property.reservations.find((entry) => entry.id === reservationId) || null;
+        const plannedTaskType = source === 'planned_task' && reservation
+            ? state === 'on' ? 'turn_on' : 'turn_off'
+            : '';
+        const completedReservations = plannedTaskType
+            ? updateReservationTaskActivity(
+                property.reservations,
+                reservation.id,
+                'taskCompletions',
+                plannedTaskType,
+                this.createTaskActivity()
+            )
+            : property.reservations;
+
         if (property.poolState === state) {
+            if (plannedTaskType) {
+                await this.updateProperty(propertyId, { reservations: completedReservations });
+                this.showMessage(`${property.propertyName} ${poolStateLabel(state)} task completed for ${reservation.dateRange}.`, 'success');
+                return true;
+            }
             this.showMessage(`${property.propertyName} is already ${state.toUpperCase()}.`, 'info');
             return false;
         }
 
-        const reservation = property.reservations.find((entry) => entry.id === reservationId) || null;
         const actionLabel = state === 'on' ? 'switched on' : 'switched off';
         const reservationSuffix = reservation ? ` for ${reservation.dateRange}` : '';
         const defaultNote = `Pool ${actionLabel} ${formatShortDate(this.today)}${reservationSuffix}`;
@@ -325,11 +350,19 @@ export class HeatedPoolsManager {
         await this.updateProperty(propertyId, {
             poolState: state,
             lastChangeDate: this.today,
-            poolNote,
-            statusHistory
+            statusHistory,
+            ...(plannedTaskType ? { reservations: completedReservations } : {})
         });
         this.showMessage(`${property.propertyName} marked ${state.toUpperCase()}${reservationSuffix}.`, 'success');
         return true;
+    }
+
+    createTaskActivity() {
+        return {
+            at: new Date().toISOString(),
+            planningDate: this.today,
+            actor: this.getCurrentActor()
+        };
     }
 
     async addReservation(formData) {
@@ -402,7 +435,8 @@ export class HeatedPoolsManager {
     }
 
     async completeTask(task) {
-        const property = this.properties.find((entry) => entry.propertyName === task.propertyName);
+        const property = this.properties.find((entry) => entry.id === task.propertyId)
+            || this.properties.find((entry) => entry.propertyName === task.propertyName);
         if (!property) return;
 
         if (task.type === 'turn_on') {
@@ -423,9 +457,47 @@ export class HeatedPoolsManager {
 
         if (task.type === 'payment_check') {
             await this.updateReservation(property.id, task.reservation.id, {
-                paymentStatus: 'yes'
+                paymentStatus: 'yes',
+                taskCompletions: {
+                    ...task.reservation.taskCompletions,
+                    payment_check: this.createTaskActivity()
+                }
             });
+            this.showMessage(`${property.propertyName} payment confirmed.`, 'success');
+            return;
         }
+
+        if (task.type === 'avantio_check') {
+            await this.updateReservation(property.id, task.reservation.id, {
+                avantioStatus: 'yes',
+                taskCompletions: {
+                    ...task.reservation.taskCompletions,
+                    avantio_check: this.createTaskActivity()
+                }
+            });
+            this.showMessage(`${property.propertyName} Avantio update confirmed.`, 'success');
+        }
+    }
+
+    async claimTask(task) {
+        const property = this.properties.find((entry) => entry.id === task.propertyId)
+            || this.properties.find((entry) => entry.propertyName === task.propertyName);
+        const reservation = property?.reservations.find((entry) => entry.id === task.reservation.id);
+        if (!property || !reservation) return;
+
+        const existingClaim = reservation.taskClaims?.[task.type];
+        if (existingClaim?.actor?.uid || existingClaim?.actor?.email || existingClaim?.actor?.name) {
+            this.showMessage(`${taskLabel(task)} is already claimed by ${actorLabel(existingClaim.actor)}.`, 'info');
+            return;
+        }
+
+        await this.updateReservation(property.id, reservation.id, {
+            taskClaims: {
+                ...reservation.taskClaims,
+                [task.type]: this.createTaskActivity()
+            }
+        });
+        this.showMessage(`${taskLabel(task)} claimed for ${property.propertyName}.`, 'success');
     }
 
     normalizeProperty(property) {
@@ -456,7 +528,9 @@ export class HeatedPoolsManager {
                     requestStatus: reservation.requestStatus || statusFromBoolean(reservation.heatingRequested),
                     paymentStatus: reservation.paymentStatus || 'blank',
                     avantioStatus: reservation.avantioStatus || 'blank',
-                    notes: cleanText(reservation.notes)
+                    notes: cleanText(reservation.notes),
+                    taskClaims: normalizeTaskActivityMap(reservation.taskClaims),
+                    taskCompletions: normalizeTaskActivityMap(reservation.taskCompletions)
                 })).filter((reservation) => reservation.startDate && reservation.endDate)
                 : []
         };
@@ -487,6 +561,11 @@ export class HeatedPoolsManager {
         }
 
         emptyState?.classList.toggle('hidden', Boolean(this.properties.length));
+        if (!this.initialViewResolved && this.hasReceivedSnapshot) {
+            const dueCount = (this.plan?.overdue?.length || 0) + (this.plan?.todayTasks?.length || 0);
+            this.activeView = dueCount > 0 ? 'tasks' : 'status';
+            this.initialViewResolved = true;
+        }
         this.renderNavigationCounts();
         this.renderTaskLanes();
         this.renderPropertyTable();
@@ -520,6 +599,10 @@ export class HeatedPoolsManager {
             { title: 'Today', tasks: this.filterTasks(this.plan.todayTasks), tone: 'warning' },
             { title: 'Next 14 days', tasks: this.filterTasks(this.plan.upcoming), tone: 'info' }
         ];
+        const completedTasks = this.filterTasks(this.plan.completed);
+        if (completedTasks.length) {
+            lanes.push({ title: 'Completed', tasks: completedTasks, tone: 'success' });
+        }
 
         lanesEl.innerHTML = lanes.map((lane) => `
             <section class="heated-pools-lane heated-pools-lane--${lane.tone}">
@@ -537,33 +620,51 @@ export class HeatedPoolsManager {
             button.addEventListener('click', () => {
                 const task = this.plan.tasks.find((entry) => entry.id === button.dataset.taskId);
                 if (!task) return;
-                if (task.type === 'payment_check') {
+                if (['payment_check', 'avantio_check'].includes(task.type)) {
                     this.completeTask(task).catch((error) => {
                         console.error('[HeatedPools] complete task failed:', error);
                         this.showMessage('Could not complete task.', 'error');
                     });
                     return;
                 }
-                const property = this.properties.find((entry) => entry.propertyName === task.propertyName);
+                const property = this.properties.find((entry) => entry.id === task.propertyId)
+                    || this.properties.find((entry) => entry.propertyName === task.propertyName);
                 if (property) this.openStateDialog(property.id, task.type === 'turn_on' ? 'on' : 'off', task.reservation.id, 'planned_task');
+            });
+        });
+
+        lanesEl.querySelectorAll('[data-claim-task-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const task = this.plan.tasks.find((entry) => entry.id === button.dataset.claimTaskId);
+                if (!task) return;
+                this.claimTask(task).catch((error) => {
+                    console.error('[HeatedPools] claim task failed:', error);
+                    this.showMessage('Could not claim task.', 'error');
+                });
             });
         });
     }
 
     renderTask(task) {
+        const instructions = taskInstructions(task);
+        const completed = task.status === 'done';
+        const activity = completed
+            ? `<small class="heated-pools-task__activity heated-pools-task__activity--complete"><i class="fas fa-check" aria-hidden="true"></i>${escapeHtml(taskCompletionLabel(task.completion))}</small>`
+            : task.claim
+                ? `<small class="heated-pools-task__activity"><i class="fas fa-user" aria-hidden="true"></i>Claimed by ${escapeHtml(actorLabel(task.claim.actor))}</small>`
+                : `<button type="button" data-claim-task-id="${escapeHtml(task.id)}" class="heated-pools-claim-action"><i class="far fa-circle-user" aria-hidden="true"></i> Claim</button>`;
         return `
-            <article class="heated-pools-task">
-                <div>
+            <article class="heated-pools-task ${completed ? 'heated-pools-task--complete' : ''}">
+                <div class="heated-pools-task__content">
                     <p class="heated-pools-task__date">${formatDisplayDate(task.actionDate)}</p>
                     <h4>${escapeHtml(taskLabel(task))}</h4>
                     <p>${escapeHtml(task.propertyName)} - ${escapeHtml(task.reservation.dateRange)}</p>
+                    ${instructions ? `<p class="heated-pools-task__instructions"><i class="fas fa-circle-info" aria-hidden="true"></i>${escapeHtml(instructions)}</p>` : ''}
                 </div>
                 <div class="heated-pools-task__meta">
                     <span>${escapeHtml(statusLabel(task.status))}</span>
-                    ${task.poolNote ? `<small>${escapeHtml(task.poolNote)}</small>` : ''}
-                    <button type="button" data-task-id="${escapeHtml(task.id)}" class="heated-pools-small-action">
-                        ${task.type === 'payment_check' ? 'Mark paid' : 'Mark done'}
-                    </button>
+                    ${activity}
+                    ${completed ? '' : `<button type="button" data-task-id="${escapeHtml(task.id)}" class="heated-pools-small-action">${escapeHtml(taskActionLabel(task))}</button>`}
                 </div>
             </article>
         `;
@@ -722,7 +823,7 @@ export class HeatedPoolsManager {
                 <label><span>Heat-up days</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
                 <label><span>Guest charge EUR</span><input data-setting-field="chargeAmount" type="number" step="0.01" value="${escapeHtml(property.chargeAmount ?? '')}"></label>
                 <label><span>Owner cost EUR</span><input data-setting-field="ownerCostAmount" type="number" step="0.01" value="${escapeHtml(property.ownerCostAmount ?? '')}"></label>
-                <label class="heated-pools-setting-row__note"><span>Operational notes</span><input data-setting-field="poolNote" value="${escapeHtml(property.poolNote || '')}"></label>
+                <label class="heated-pools-setting-row__note"><span>Task instructions</span><input data-setting-field="poolNote" value="${escapeHtml(property.poolNote || property.notes.join('; '))}" placeholder="Remote control, access steps, owner contact..."></label>
                 <button type="button" data-action="delete-property" class="heated-pools-danger-link">Remove</button>
             </article>
         `).join('') : '<p class="heated-pools-empty-row">No heated-pool properties configured yet.</p>';
@@ -736,7 +837,10 @@ export class HeatedPoolsManager {
                     : ['chargeAmount', 'ownerCostAmount'].includes(field)
                         ? parseMoney(input.value)
                         : cleanText(input.value);
-                this.updateProperty(propertyId, { [field]: value ?? null }).catch((error) => {
+                const updates = field === 'poolNote'
+                    ? { poolNote: value, notes: splitNotes(value) }
+                    : { [field]: value ?? null };
+                this.updateProperty(propertyId, updates).catch((error) => {
                     console.error('[HeatedPools] settings update failed:', error);
                     this.showMessage('Could not update property settings.', 'error');
                 });
@@ -815,14 +919,39 @@ function taskLabel(task) {
     if (task.type === 'turn_off') {
         return 'Switch pool off';
     }
+    if (task.type === 'avantio_check') {
+        return 'Confirm Avantio update';
+    }
     return 'Check heated pool payment';
+}
+
+function taskActionLabel(task) {
+    if (task.type === 'payment_check') return 'Confirm paid';
+    if (task.type === 'avantio_check') return 'Confirm Avantio';
+    return 'Mark done';
+}
+
+function taskInstructions(task) {
+    return [...new Set([task.poolNote, ...(Array.isArray(task.notes) ? task.notes : [])]
+        .map(cleanText)
+        .filter(Boolean))]
+        .join(' · ');
+}
+
+function taskCompletionLabel(activity) {
+    const who = actorLabel(activity?.actor);
+    const normalizedTime = normalizeDateTime(activity?.at);
+    if (normalizedTime) {
+        return `Completed by ${who} · ${formatHistoryTime(normalizedTime)}`;
+    }
+    return activity?.legacy ? 'Previously completed' : `Completed by ${who}`;
 }
 
 function statusLabel(status) {
     if (status === 'overdue') return 'Overdue';
     if (status === 'today') return 'Due today';
     if (status === 'upcoming') return 'Upcoming';
-    if (status === 'done') return 'Already done';
+    if (status === 'done') return 'Completed';
     return 'Later';
 }
 
@@ -869,6 +998,43 @@ function normalizeStatusHistory(history) {
             label: cleanText(entry?.reservation?.label)
         }
     })).filter((entry) => entry.at && entry.state);
+}
+
+function normalizeTaskActivityMap(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return Object.entries(value).reduce((activities, [taskType, activity]) => {
+        const normalized = normalizeTaskActivity(activity);
+        if (normalized) activities[taskType] = normalized;
+        return activities;
+    }, {});
+}
+
+function normalizeTaskActivity(activity) {
+    if (!activity || typeof activity !== 'object') return null;
+    const normalized = {
+        at: normalizeDateTime(activity.at) || cleanText(activity.at),
+        planningDate: cleanText(activity.planningDate),
+        actor: {
+            uid: cleanText(activity.actor?.uid),
+            email: cleanText(activity.actor?.email),
+            name: cleanText(activity.actor?.name || activity.actor?.email)
+        }
+    };
+    return normalized.at || normalized.planningDate || normalized.actor.uid || normalized.actor.email || normalized.actor.name
+        ? normalized
+        : null;
+}
+
+function updateReservationTaskActivity(reservations, reservationId, bucket, taskType, activity) {
+    return reservations.map((reservation) => reservation.id === reservationId
+        ? {
+            ...reservation,
+            [bucket]: {
+                ...(reservation[bucket] || {}),
+                [taskType]: activity
+            }
+        }
+        : reservation);
 }
 
 function renderStatusHistory(history = []) {

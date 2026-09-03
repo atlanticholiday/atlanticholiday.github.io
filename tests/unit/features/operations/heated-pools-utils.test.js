@@ -47,8 +47,8 @@ describe("Heated pools utils", () => {
     assert.equal(plan.todayTasks.length, 1);
     assert.equal(plan.todayTasks[0].type, "turn_on");
     assert.equal(plan.todayTasks[0].propertyName, "Villa A");
-    assert.equal(plan.upcoming.length, 2);
-    assert.deepEqual(plan.upcoming.map((task) => task.type), ["payment_check", "turn_off"]);
+    assert.equal(plan.upcoming.length, 3);
+    assert.deepEqual(plan.upcoming.map((task) => task.type), ["payment_check", "avantio_check", "turn_off"]);
     assert.equal(plan.tasks.some((task) => task.propertyName === "Villa B" && task.type === "turn_on"), false);
   });
 
@@ -65,6 +65,91 @@ describe("Heated pools utils", () => {
 
     assert.equal(plan.overdue.length, 0);
     assert.equal(plan.completed.some((task) => task.type === "turn_on"), true);
+  });
+
+  test("keeps payment and Avantio work as separate actions", () => {
+    const property = {
+      id: "villa-finance",
+      propertyName: "Villa Finance",
+      poolState: "always_on",
+      reservations: [{
+        id: "res-finance",
+        startDate: "2026-06-10",
+        endDate: "2026-06-15",
+        heatingRequested: true,
+        paymentStatus: "no",
+        avantioStatus: "waiting",
+        taskClaims: {
+          avantio_check: {
+            at: "2026-06-09T09:00:00.000Z",
+            planningDate: "2026-06-09",
+            actor: { uid: "user-1", name: "Ana" }
+          }
+        }
+      }]
+    };
+
+    const plan = buildHeatedPoolPlan([property], { today: "2026-06-09", horizonDays: 14 });
+
+    assert.deepEqual(plan.upcoming.map((task) => task.type), ["payment_check", "avantio_check"]);
+    assert.equal(plan.upcoming.find((task) => task.type === "avantio_check").claim.actor.name, "Ana");
+
+    property.reservations[0].paymentStatus = "yes";
+    property.reservations[0].taskCompletions = {
+      payment_check: {
+        at: "2026-06-09T10:00:00.000Z",
+        planningDate: "2026-06-09",
+        actor: { uid: "user-2", name: "Joao" }
+      }
+    };
+    const afterPayment = buildHeatedPoolPlan([property], { today: "2026-06-09", horizonDays: 14 });
+    assert.equal(afterPayment.completed.some((task) => task.type === "payment_check"), true);
+    assert.equal(afterPayment.upcoming.some((task) => task.type === "avantio_check"), true);
+  });
+
+  test("uses reservation-specific completion when several bookings share one pool state", () => {
+    const reservations = [
+      {
+        id: "res-a",
+        startDate: "2026-06-10",
+        endDate: "2026-06-12",
+        heatingRequested: true,
+        paymentStatus: "yes",
+        avantioStatus: "yes",
+        taskCompletions: {}
+      },
+      {
+        id: "res-b",
+        startDate: "2026-06-14",
+        endDate: "2026-06-16",
+        heatingRequested: true,
+        paymentStatus: "yes",
+        avantioStatus: "yes",
+        taskCompletions: {}
+      }
+    ];
+    const property = {
+      id: "villa-shared-state",
+      propertyName: "Villa Shared State",
+      poolState: "on",
+      lastChangeDate: "2026-06-09",
+      statusHistory: [],
+      reservations
+    };
+
+    const before = buildHeatedPoolPlan([property], { today: "2026-06-09", horizonDays: 14 });
+    assert.equal(before.upcoming.some((task) => task.type === "turn_on" && task.reservation.id === "res-a"), false);
+    assert.equal(before.todayTasks.some((task) => task.type === "turn_on" && task.reservation.id === "res-a"), true);
+
+    reservations[0].taskCompletions.turn_on = {
+      at: "2026-06-09T10:00:00.000Z",
+      planningDate: "2026-06-09",
+      actor: { uid: "user-2", name: "Joao" }
+    };
+    const after = buildHeatedPoolPlan([property], { today: "2026-06-09", horizonDays: 14 });
+    const completed = after.completed.find((task) => task.type === "turn_on" && task.reservation.id === "res-a");
+    assert.equal(completed.completion.actor.name, "Joao");
+    assert.equal(after.upcoming.some((task) => task.type === "turn_on" && task.reservation.id === "res-b"), true);
   });
 
   test("recovers property names that appear in the pricing row after merged-sheet export", () => {

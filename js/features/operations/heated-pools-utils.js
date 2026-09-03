@@ -180,22 +180,29 @@ export function buildHeatedPoolPlan(properties = [], options = {}) {
                 }));
             }
 
-            if (reservation.paymentStatus !== 'yes' || reservation.avantioStatus === 'waiting') {
-                tasks.push(createPoolTask({
-                    type: 'payment_check',
-                    actionDate: parseIsoDate(reservation.startDate),
-                    today,
-                    property,
-                    reservation,
-                    leadDays: 0,
-                    horizonDays
-                }));
-            }
+            tasks.push(createPoolTask({
+                type: 'payment_check',
+                actionDate: parseIsoDate(reservation.startDate),
+                today,
+                property,
+                reservation,
+                leadDays: 0,
+                horizonDays
+            }));
+            tasks.push(createPoolTask({
+                type: 'avantio_check',
+                actionDate: parseIsoDate(reservation.startDate),
+                today,
+                property,
+                reservation,
+                leadDays: 0,
+                horizonDays
+            }));
         });
     });
 
     const sortedTasks = tasks
-        .filter((task) => task.visibility !== 'past-done')
+        .filter((task) => task.visibility === 'visible')
         .sort((a, b) => {
             if (a.actionDate !== b.actionDate) {
                 return a.actionDate.localeCompare(b.actionDate);
@@ -430,14 +437,21 @@ function parseReservationRow({ cells, dateCellIndex, year, propertyName, rowNumb
 }
 
 function createPoolTask({ type, actionDate, today, property, reservation, leadDays, horizonDays }) {
-    const completed = isTaskComplete(type, property, actionDate);
+    const completion = getTaskCompletion(type, property, reservation, actionDate);
+    const completed = Boolean(completion);
     const daysUntil = differenceInDays(actionDate, today);
     let status = 'later';
     let visibility = 'visible';
 
     if (completed) {
         status = 'done';
-        visibility = daysUntil < 0 ? 'past-done' : 'visible';
+        const completedOn = getActivityDate(completion);
+        const completedDaysUntil = completedOn ? differenceInDays(completedOn, today) : 0;
+        if (completedDaysUntil < 0) {
+            visibility = 'past-done';
+        } else if (completedDaysUntil > horizonDays) {
+            visibility = 'later-done';
+        }
     } else if (daysUntil < 0) {
         status = 'overdue';
     } else if (daysUntil === 0) {
@@ -453,30 +467,98 @@ function createPoolTask({ type, actionDate, today, property, reservation, leadDa
         visibility,
         actionDate: formatDate(actionDate),
         daysUntil,
+        propertyId: property.id,
         propertyName: property.propertyName,
         reservation,
         leadDays,
         poolState: property.poolState,
         poolNote: property.poolNote,
-        notes: property.notes
+        notes: property.notes,
+        claim: normalizeTaskActivity(reservation.taskClaims?.[type]),
+        completion
     };
 }
 
-function isTaskComplete(type, property, actionDate) {
-    if (type === 'turn_on') {
-        return property.poolState === 'on' || property.poolState === 'always_on';
+function getTaskCompletion(type, property, reservation, actionDate) {
+    const recordedCompletion = normalizeTaskActivity(reservation.taskCompletions?.[type]);
+    if (recordedCompletion) {
+        return recordedCompletion;
+    }
+
+    if (type === 'payment_check' && reservation.paymentStatus === 'yes') {
+        return createLegacyCompletion(reservation.startDate);
+    }
+
+    if (type === 'avantio_check' && reservation.avantioStatus === 'yes') {
+        return createLegacyCompletion(reservation.startDate);
+    }
+
+    const expectedState = type === 'turn_on' ? 'on' : type === 'turn_off' ? 'off' : '';
+    if (!expectedState) return null;
+
+    const historyMatch = (Array.isArray(property.statusHistory) ? property.statusHistory : [])
+        .slice()
+        .reverse()
+        .find((entry) => entry?.state === expectedState && entry?.reservation?.id === reservation.id);
+    if (historyMatch) {
+        return normalizeTaskActivity({
+            at: historyMatch.at,
+            planningDate: historyMatch.planningDate,
+            actor: historyMatch.actor
+        });
+    }
+
+    // Older records did not store reservation-specific task completion. Keep a
+    // narrow fallback only when there is one possible heated-pool reservation.
+    const requestedReservations = (Array.isArray(property.reservations) ? property.reservations : [])
+        .filter((entry) => entry.heatingRequested === true);
+    if (requestedReservations.length !== 1 || requestedReservations[0].id !== reservation.id) {
+        return null;
+    }
+
+    if (type === 'turn_on' && ['on', 'always_on'].includes(property.poolState)) {
+        return createLegacyCompletion(actionDate);
     }
 
     const lastChangeDate = parseIsoDate(property.lastChangeDate);
-    if (!lastChangeDate) {
-        return false;
+    if (type === 'turn_off' && property.poolState === 'off' && lastChangeDate && lastChangeDate >= actionDate) {
+        return createLegacyCompletion(property.lastChangeDate);
     }
 
-    if (type === 'turn_off') {
-        return property.poolState === 'off' && lastChangeDate >= actionDate;
-    }
+    return null;
+}
 
-    return false;
+function normalizeTaskActivity(activity) {
+    if (!activity || typeof activity !== 'object') return null;
+    const at = normalizeText(activity.at);
+    const planningDate = normalizeText(activity.planningDate);
+    const actor = activity.actor && typeof activity.actor === 'object'
+        ? {
+            uid: normalizeText(activity.actor.uid),
+            email: normalizeText(activity.actor.email),
+            name: normalizeText(activity.actor.name || activity.actor.email)
+        }
+        : {};
+    if (!at && !planningDate && !actor.uid && !actor.email && !actor.name) return null;
+    return { at, planningDate, actor };
+}
+
+function createLegacyCompletion(planningDate) {
+    return {
+        at: '',
+        planningDate: planningDate instanceof Date ? formatDate(planningDate) : normalizeText(planningDate),
+        actor: {},
+        legacy: true
+    };
+}
+
+function getActivityDate(activity) {
+    const planningDate = parseIsoDate(activity?.planningDate);
+    if (planningDate) return planningDate;
+    if (activity?.at && !Number.isNaN(Date.parse(activity.at))) {
+        return startOfDay(new Date(activity.at));
+    }
+    return null;
 }
 
 function parsePoolState(note = '', year) {
@@ -536,7 +618,7 @@ function resolveLeadDays(property) {
         return configuredLeadDays;
     }
 
-    const noteText = [property.poolNote, ...property.notes].join(' ').toLowerCase();
+    const noteText = [property.poolNote, ...(Array.isArray(property.notes) ? property.notes : [])].join(' ').toLowerCase();
     if (/\b2\s*(dias|days)\b|dois\s+dias|two\s+days/.test(noteText)) {
         return 2;
     }

@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="styles/app-switcher.css">
     <link rel="stylesheet" href="styles/tasks.css">
     <link rel="stylesheet" href="styles/cleaning-ah.css">
+    <link rel="stylesheet" href="styles/heated-pools.css?v=20260903-asana-workspace">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
 </head>
 
@@ -2735,50 +2736,33 @@ Mountain Villa, Sintra Hills, V4"
         </div>
     </div>
 
-    <div id="heated-pools-page" class="heated-pools-page hidden min-h-screen bg-slate-50">
-        <header class="dashboard-header">
-            <div class="container mx-auto px-4 py-4 flex justify-between items-center max-w-7xl">
-                <div class="header-left">
-                    <button id="back-to-landing-from-heated-pools-btn"
-                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div id="heated-pools-page" class="heated-pools-page hidden min-h-screen">
+        <header class="heated-pools-topbar">
+            <div class="heated-pools-topbar__inner">
+                <div class="heated-pools-topbar__project">
+                    <button id="back-to-landing-from-heated-pools-btn" class="heated-pools-back-btn" aria-label="Back to apps">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
+                        <span>Back</span>
                     </button>
-                </div>
-                <div class="header-brand">
-                    <img src="assets/atlantic-holiday-logo.png"
-                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
-                        class="dashboard-logo dashboard-logo--xl" />
-                    <div class="leading-tight">
-                        <div class="header-title brand-red" data-i18n="heatedPools.header.title">Heated Pools</div>
-                        <div class="header-sub" data-i18n="heatedPools.header.subtitle">Manage pool heating requests and daily actions inside the app</div>
+                    <span class="heated-pools-topbar__divider" aria-hidden="true"></span>
+                    <span class="heated-pools-project-icon" aria-hidden="true"><i class="fas fa-water"></i></span>
+                    <div class="heated-pools-topbar__copy">
+                        <p>Operations workspace</p>
+                        <h1 data-i18n="heatedPools.header.title">Heated Pools</h1>
+                        <span data-i18n="heatedPools.header.subtitle">Manage pool heating requests and daily actions inside the app</span>
                     </div>
                 </div>
-                <div class="header-right items-center gap-4">
-                    <button id="heated-pools-sign-out-btn"
-                        class="text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
-                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
-                        </svg>
-                        Sign Out
-                    </button>
-                </div>
+                <button id="heated-pools-sign-out-btn" class="heated-pools-sign-out-btn">
+                    <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                    <span>Sign out</span>
+                </button>
             </div>
         </header>
 
-        <main class="heated-pools-app container mx-auto px-4 py-8 max-w-7xl">
+        <main class="heated-pools-app">
             <section class="heated-pools-appbar">
-                <div class="heated-pools-appbar__title">
-                    <p class="heated-pools-eyebrow">Pool operations</p>
-                    <h2>Heated pools</h2>
-                    <p>Current equipment state, guest requests, and team actions.</p>
-                </div>
-                <label class="heated-pools-appbar__search">
-                    <span>Search property</span>
-                    <input id="heated-pools-search" type="search" placeholder="Search properties...">
-                </label>
                 <nav class="heated-pools-tabs" aria-label="Heated pool sections" role="tablist">
                     <button type="button" class="is-active" data-pool-view="status" role="tab" aria-selected="true" aria-controls="heated-pools-status-view">Status <span data-pool-count="status">0</span></button>
                     <button type="button" data-pool-view="reservations" role="tab" aria-selected="false" aria-controls="heated-pools-reservations-view">Reservations <span data-pool-count="reservations">0</span></button>
@@ -2786,7 +2770,14 @@ Mountain Villa, Sintra Hills, V4"
                     <button type="button" data-pool-view="history" role="tab" aria-selected="false" aria-controls="heated-pools-history-view">History</button>
                     <button type="button" data-pool-view="settings" role="tab" aria-selected="false" aria-controls="heated-pools-settings-view">Settings</button>
                 </nav>
-                <div id="heated-pools-status" class="heated-pools-status" data-status="info">Records save automatically.</div>
+                <div class="heated-pools-toolbar">
+                    <label class="heated-pools-appbar__search">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span class="sr-only">Search property</span>
+                        <input id="heated-pools-search" type="search" placeholder="Search properties...">
+                    </label>
+                    <div id="heated-pools-status" class="heated-pools-status" data-status="info"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Records save automatically.</span></div>
+                </div>
             </section>
 
             <section id="heated-pools-status-view" class="heated-pools-view is-active" data-pool-panel="status" role="tabpanel">
