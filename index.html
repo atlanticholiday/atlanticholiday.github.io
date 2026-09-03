@@ -2740,7 +2740,7 @@ Mountain Villa, Sintra Hills, V4"
         <header class="heated-pools-topbar">
             <div class="heated-pools-topbar__inner">
                 <div class="heated-pools-topbar__project">
-                    <button id="back-to-landing-from-heated-pools-btn" class="heated-pools-back-btn" aria-label="Back to apps">
+                    <button id="back-to-landing-from-heated-pools-btn" class="heated-pools-back-btn" aria-label="Back to apps" data-i18n-aria-label="heatedPools.header.backToApps">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -2749,15 +2749,15 @@ Mountain Villa, Sintra Hills, V4"
                     <span class="heated-pools-topbar__divider" aria-hidden="true"></span>
                     <span class="heated-pools-project-icon" aria-hidden="true"><i class="fas fa-water"></i></span>
                     <div class="heated-pools-topbar__copy">
-                        <p>Operations workspace</p>
+                        <p data-i18n="heatedPools.header.workspace">Operations workspace</p>
                         <h1 data-i18n="heatedPools.header.title">Heated Pools</h1>
                         <span data-i18n="heatedPools.header.subtitle">Manage pool heating requests and daily actions inside the app</span>
                     </div>
                 </div>
                 <div id="heated-pools-header-actions" class="heated-pools-header-actions">
-                    <div class="language-switcher heated-pools-language-switcher" aria-label="Language">
-                        <button type="button" class="lang-btn" data-lang-option="en" title="English">EN</button>
-                        <button type="button" class="lang-btn" data-lang-option="pt" title="Português">PT</button>
+                    <div class="language-switcher heated-pools-language-switcher" aria-label="Language" data-i18n-aria-label="heatedPools.header.language">
+                        <button type="button" class="lang-btn" data-lang-option="en" title="English" data-i18n-title="heatedPools.header.english">EN</button>
+                        <button type="button" class="lang-btn" data-lang-option="pt" title="Português" data-i18n-title="heatedPools.header.portuguese">PT</button>
                     </div>
                     <button id="heated-pools-sign-out-btn" class="heated-pools-sign-out-btn">
                         <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>
@@ -2769,107 +2769,107 @@ Mountain Villa, Sintra Hills, V4"
 
         <main class="heated-pools-app">
             <section class="heated-pools-appbar">
-                <nav class="heated-pools-tabs" aria-label="Heated pool sections" role="tablist">
-                    <button type="button" class="is-active" data-pool-view="status" role="tab" aria-selected="true" aria-controls="heated-pools-status-view">Status <span data-pool-count="status">0</span></button>
-                    <button type="button" data-pool-view="reservations" role="tab" aria-selected="false" aria-controls="heated-pools-reservations-view">Reservations <span data-pool-count="reservations">0</span></button>
-                    <button type="button" data-pool-view="tasks" role="tab" aria-selected="false" aria-controls="heated-pools-tasks-view">Tasks <span data-pool-count="tasks">0</span></button>
-                    <button type="button" data-pool-view="history" role="tab" aria-selected="false" aria-controls="heated-pools-history-view">History</button>
-                    <button type="button" data-pool-view="settings" role="tab" aria-selected="false" aria-controls="heated-pools-settings-view">Settings</button>
+                <nav class="heated-pools-tabs" aria-label="Heated pool sections" data-i18n-aria-label="heatedPools.nav.sectionsLabel" role="tablist">
+                    <button type="button" class="is-active" data-pool-view="status" role="tab" aria-selected="true" aria-controls="heated-pools-status-view"><span class="heated-pools-tab-label" data-i18n="heatedPools.nav.status">Status</span> <span data-pool-count="status">0</span></button>
+                    <button type="button" data-pool-view="reservations" role="tab" aria-selected="false" aria-controls="heated-pools-reservations-view"><span class="heated-pools-tab-label" data-i18n="heatedPools.nav.reservations">Reservations</span> <span data-pool-count="reservations">0</span></button>
+                    <button type="button" data-pool-view="tasks" role="tab" aria-selected="false" aria-controls="heated-pools-tasks-view"><span class="heated-pools-tab-label" data-i18n="heatedPools.nav.tasks">Tasks</span> <span data-pool-count="tasks">0</span></button>
+                    <button type="button" data-pool-view="history" role="tab" aria-selected="false" aria-controls="heated-pools-history-view"><span class="heated-pools-tab-label" data-i18n="heatedPools.nav.history">History</span></button>
+                    <button type="button" data-pool-view="settings" role="tab" aria-selected="false" aria-controls="heated-pools-settings-view"><span class="heated-pools-tab-label" data-i18n="heatedPools.nav.settings">Settings</span></button>
                 </nav>
                 <div class="heated-pools-toolbar">
                     <label class="heated-pools-appbar__search">
                         <i class="fas fa-search" aria-hidden="true"></i>
-                        <span class="sr-only">Search property</span>
-                        <input id="heated-pools-search" type="search" placeholder="Search properties...">
+                        <span class="sr-only" data-i18n="heatedPools.search.label">Search property</span>
+                        <input id="heated-pools-search" type="search" placeholder="Search properties..." data-i18n="heatedPools.search.placeholder">
                     </label>
-                    <div id="heated-pools-status" class="heated-pools-status" data-status="info"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Records save automatically.</span></div>
+                    <div id="heated-pools-status" class="heated-pools-status" data-status="info"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span data-i18n="heatedPools.autosave">Records save automatically.</span></div>
                 </div>
             </section>
 
             <section id="heated-pools-status-view" class="heated-pools-view is-active" data-pool-panel="status" role="tabpanel">
                 <div class="heated-pools-view__heading">
-                    <div><p class="heated-pools-eyebrow">Live equipment state</p><h3>Pool status</h3><p>What each pool is physically doing right now.</p></div>
+                    <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.status.eyebrow">Live equipment state</p><h3 data-i18n="heatedPools.views.status.title">Pool status</h3><p data-i18n="heatedPools.views.status.description">What each pool is physically doing right now.</p></div>
                 </div>
-                <div id="heated-pools-empty" class="heated-pools-empty hidden"><i class="fas fa-water"></i><h3>No pools configured</h3><p>Open Settings to add a heated-pool property.</p></div>
+                <div id="heated-pools-empty" class="heated-pools-empty hidden"><i class="fas fa-water"></i><h3 data-i18n="heatedPools.views.status.emptyTitle">No pools configured</h3><p data-i18n="heatedPools.views.status.emptyDescription">Open Settings to add a heated-pool property.</p></div>
                 <div id="heated-pools-property-status-list" class="heated-pools-property-list"></div>
             </section>
 
             <section id="heated-pools-reservations-view" class="heated-pools-view hidden" data-pool-panel="reservations" role="tabpanel">
                 <div class="heated-pools-view__heading">
-                    <div><p class="heated-pools-eyebrow">Guest requests</p><h3>Reservations</h3><p>Heating request, payment, and Avantio status.</p></div>
-                    <button type="button" class="heated-pools-primary-action" data-open-pool-dialog="reservation"><i class="fas fa-plus"></i> Add reservation</button>
+                    <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.reservations.eyebrow">Guest requests</p><h3 data-i18n="heatedPools.views.reservations.title">Reservations</h3><p data-i18n="heatedPools.views.reservations.description">Heating request, payment, and Avantio status.</p></div>
+                    <button type="button" class="heated-pools-primary-action" data-open-pool-dialog="reservation"><i class="fas fa-plus"></i> <span data-i18n="heatedPools.views.reservations.add">Add reservation</span></button>
                 </div>
                 <div class="overflow-x-auto heated-pools-table-wrap">
-                    <table class="heated-pools-table"><thead><tr><th>Property</th><th>Check-in</th><th>Check-out</th><th>Heating</th><th>Payment</th><th>Avantio</th><th>Notes</th><th></th></tr></thead><tbody id="heated-pools-reservations-body"></tbody></table>
+                    <table class="heated-pools-table"><thead><tr><th data-i18n="heatedPools.columns.property">Property</th><th data-i18n="heatedPools.columns.checkIn">Check-in</th><th data-i18n="heatedPools.columns.checkOut">Check-out</th><th data-i18n="heatedPools.columns.heating">Heating</th><th data-i18n="heatedPools.columns.payment">Payment</th><th data-i18n="heatedPools.columns.avantio">Avantio</th><th data-i18n="heatedPools.columns.notes">Notes</th><th></th></tr></thead><tbody id="heated-pools-reservations-body"></tbody></table>
                 </div>
             </section>
 
             <section id="heated-pools-tasks-view" class="heated-pools-view hidden" data-pool-panel="tasks" role="tabpanel">
                 <div class="heated-pools-view__heading">
-                    <div><p class="heated-pools-eyebrow">Team action list</p><h3>Tasks</h3><p>Only work that needs attention.</p></div>
-                    <label class="heated-pools-date"><span>Planning date</span><input type="date" id="heated-pools-today"></label>
+                    <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.tasks.eyebrow">Team action list</p><h3 data-i18n="heatedPools.views.tasks.title">Tasks</h3><p data-i18n="heatedPools.views.tasks.description">Only work that needs attention.</p></div>
+                    <label class="heated-pools-date"><span data-i18n="heatedPools.views.tasks.planningDate">Planning date</span><input type="date" id="heated-pools-today"></label>
                 </div>
                 <div id="heated-pools-task-lanes" class="heated-pools-task-lanes"></div>
             </section>
 
             <section id="heated-pools-history-view" class="heated-pools-view hidden" data-pool-panel="history" role="tabpanel">
                 <div class="heated-pools-view__heading">
-                    <div><p class="heated-pools-eyebrow">Audit trail</p><h3>History</h3><p>Who changed each pool, when, and for which reservation.</p></div>
-                    <label class="heated-pools-history-filter"><span>Property</span><select id="heated-pools-history-property"><option value="">All properties</option></select></label>
+                    <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.history.eyebrow">Audit trail</p><h3 data-i18n="heatedPools.views.history.title">History</h3><p data-i18n="heatedPools.views.history.description">Who changed each pool, when, and for which reservation.</p></div>
+                    <label class="heated-pools-history-filter"><span data-i18n="heatedPools.views.history.property">Property</span><select id="heated-pools-history-property"><option value="" data-i18n="heatedPools.views.history.allProperties">All properties</option></select></label>
                 </div>
                 <div id="heated-pools-history-list" class="heated-pools-history-list"></div>
             </section>
 
             <section id="heated-pools-settings-view" class="heated-pools-view hidden" data-pool-panel="settings" role="tabpanel">
                 <div class="heated-pools-view__heading">
-                    <div><p class="heated-pools-eyebrow">Configuration</p><h3>Settings</h3><p>Heated-pool properties, costs, lead times, and operational notes.</p></div>
-                    <button type="button" class="heated-pools-primary-action" data-open-pool-dialog="property"><i class="fas fa-plus"></i> Add property</button>
+                    <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.settings.eyebrow">Configuration</p><h3 data-i18n="heatedPools.views.settings.title">Settings</h3><p data-i18n="heatedPools.views.settings.description">Heated-pool properties, costs, lead times, and operational notes.</p></div>
+                    <button type="button" class="heated-pools-primary-action" data-open-pool-dialog="property"><i class="fas fa-plus"></i> <span data-i18n="heatedPools.views.settings.add">Add property</span></button>
                 </div>
                 <div id="heated-pools-settings-list" class="heated-pools-settings-list"></div>
-                <div class="heated-pools-approved-directory"><h4>Approved heated-pool properties</h4><p>Only approved property names from the protected directory can be added.</p><div id="heated-pools-approved-list"></div></div>
+                <div class="heated-pools-approved-directory"><h4 data-i18n="heatedPools.directory.title">Approved heated-pool properties</h4><p data-i18n="heatedPools.directory.description">Only approved property names from the protected directory can be added.</p><div id="heated-pools-approved-list"></div></div>
             </section>
 
             <div id="heated-pools-state-dialog" class="heated-pools-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="heated-pools-state-dialog-title">
-                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close"></button>
+                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"></button>
                 <form id="heated-pools-state-form" class="heated-pools-dialog__panel">
-                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow">Confirm physical change</p><h3 id="heated-pools-state-dialog-title">Change pool state</h3></div><button type="button" data-close-pool-dialog aria-label="Close"><i class="fas fa-times"></i></button></div>
+                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow" data-i18n="heatedPools.dialogs.stateEyebrow">Confirm physical change</p><h3 id="heated-pools-state-dialog-title" data-i18n="heatedPools.dialogs.stateTitle">Change pool state</h3></div><button type="button" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"><i class="fas fa-times"></i></button></div>
                     <input type="hidden" name="propertyId"><input type="hidden" name="state"><input type="hidden" name="source">
                     <div id="heated-pools-state-summary" class="heated-pools-state-summary"></div>
-                    <label><span>Associate with reservation</span><select name="reservationId" id="heated-pools-state-reservation"></select></label>
-                    <label><span>Optional note</span><textarea name="stateNote" rows="3" placeholder="Remote switched on, colleague confirmed onsite..."></textarea></label>
-                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog>Cancel</button><button type="submit" class="heated-pools-primary-action">Confirm change</button></div>
+                    <label><span data-i18n="heatedPools.dialogs.associateReservation">Associate with reservation</span><select name="reservationId" id="heated-pools-state-reservation"></select></label>
+                    <label><span data-i18n="heatedPools.dialogs.optionalNote">Optional note</span><textarea name="stateNote" rows="3" placeholder="Remote switched on, colleague confirmed onsite..." data-i18n="heatedPools.dialogs.stateNotePlaceholder" data-i18n-attr="placeholder"></textarea></label>
+                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog data-i18n="common.cancel">Cancel</button><button type="submit" class="heated-pools-primary-action" data-i18n="heatedPools.dialogs.confirmChange">Confirm change</button></div>
                 </form>
             </div>
 
             <div id="heated-pools-reservation-dialog" class="heated-pools-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="heated-pools-reservation-dialog-title">
-                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close"></button>
+                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"></button>
                 <form id="heated-pools-reservation-form" class="heated-pools-dialog__panel heated-pools-form">
-                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow">Guest request</p><h3 id="heated-pools-reservation-dialog-title">Add reservation</h3></div><button type="button" data-close-pool-dialog aria-label="Close"><i class="fas fa-times"></i></button></div>
+                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow" data-i18n="heatedPools.dialogs.reservationEyebrow">Guest request</p><h3 id="heated-pools-reservation-dialog-title" data-i18n="heatedPools.dialogs.reservationTitle">Add reservation</h3></div><button type="button" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"><i class="fas fa-times"></i></button></div>
                     <div class="heated-pools-form-grid">
-                        <label class="heated-pools-form-wide"><span>Property</span><select name="propertyId" id="heated-pools-reservation-property" required><option value="">Choose property</option></select></label>
-                        <label><span>Check-in</span><input name="startDate" type="date" required></label><label><span>Check-out</span><input name="endDate" type="date" required></label>
-                        <label><span>Heating requested</span><select name="heatingRequested"><option value="blank">Not filled</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-                        <label><span>Payment</span><select name="paymentStatus"><option value="blank">Not filled</option><option value="yes">Yes</option><option value="no">No</option><option value="waiting">Waiting</option></select></label>
-                        <label><span>Avantio</span><select name="avantioStatus"><option value="blank">Not filled</option><option value="yes">Yes</option><option value="no">No</option><option value="waiting">Waiting</option></select></label>
-                        <label class="heated-pools-form-wide"><span>Reservation notes</span><input name="reservationNotes" placeholder="Guest confirmation or special instructions..."></label>
+                        <label class="heated-pools-form-wide"><span data-i18n="heatedPools.columns.property">Property</span><select name="propertyId" id="heated-pools-reservation-property" required><option value="" data-i18n="heatedPools.fields.chooseProperty">Choose property</option></select></label>
+                        <label><span data-i18n="heatedPools.columns.checkIn">Check-in</span><input name="startDate" type="date" required></label><label><span data-i18n="heatedPools.columns.checkOut">Check-out</span><input name="endDate" type="date" required></label>
+                        <label><span data-i18n="heatedPools.fields.heatingRequested">Heating requested</span><select name="heatingRequested"><option value="blank" data-i18n="heatedPools.options.notFilled">Not filled</option><option value="yes" data-i18n="heatedPools.options.yes">Yes</option><option value="no" data-i18n="heatedPools.options.no">No</option></select></label>
+                        <label><span data-i18n="heatedPools.columns.payment">Payment</span><select name="paymentStatus"><option value="blank" data-i18n="heatedPools.options.notFilled">Not filled</option><option value="yes" data-i18n="heatedPools.options.yes">Yes</option><option value="no" data-i18n="heatedPools.options.no">No</option><option value="waiting" data-i18n="heatedPools.options.waiting">Waiting</option></select></label>
+                        <label><span data-i18n="heatedPools.columns.avantio">Avantio</span><select name="avantioStatus"><option value="blank" data-i18n="heatedPools.options.notFilled">Not filled</option><option value="yes" data-i18n="heatedPools.options.yes">Yes</option><option value="no" data-i18n="heatedPools.options.no">No</option><option value="waiting" data-i18n="heatedPools.options.waiting">Waiting</option></select></label>
+                        <label class="heated-pools-form-wide"><span data-i18n="heatedPools.fields.reservationNotes">Reservation notes</span><input name="reservationNotes" placeholder="Guest confirmation or special instructions..." data-i18n="heatedPools.fields.reservationNotesPlaceholder"></label>
                     </div>
-                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog>Cancel</button><button type="submit" class="heated-pools-primary-action">Add reservation</button></div>
+                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog data-i18n="common.cancel">Cancel</button><button type="submit" class="heated-pools-primary-action" data-i18n="heatedPools.views.reservations.add">Add reservation</button></div>
                 </form>
             </div>
 
             <div id="heated-pools-property-dialog" class="heated-pools-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="heated-pools-property-dialog-title">
-                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close"></button>
+                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"></button>
                 <form id="heated-pools-property-form" class="heated-pools-dialog__panel heated-pools-form">
-                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow">Configuration</p><h3 id="heated-pools-property-dialog-title">Add heated-pool property</h3></div><button type="button" data-close-pool-dialog aria-label="Close"><i class="fas fa-times"></i></button></div>
+                    <div class="heated-pools-dialog__header"><div><p class="heated-pools-eyebrow" data-i18n="heatedPools.dialogs.propertyEyebrow">Configuration</p><h3 id="heated-pools-property-dialog-title" data-i18n="heatedPools.dialogs.propertyTitle">Add heated-pool property</h3></div><button type="button" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"><i class="fas fa-times"></i></button></div>
                     <div class="heated-pools-form-grid">
-                        <label class="heated-pools-form-wide"><span>Approved property</span><select name="propertyName" id="heated-pools-property-name" required><option value="">Choose property</option></select></label>
-                        <label><span>Heat-up days</span><input name="heatUpDays" type="number" min="1" max="5" value="1"></label>
-                        <label><span>Guest charge EUR</span><input name="chargeAmount" type="number" step="0.01" placeholder="45"></label>
-                        <label><span>Owner cost EUR</span><input name="ownerCostAmount" type="number" step="0.01" placeholder="35"></label>
-                        <label><span>Remote on/off</span><select name="remoteControlAvailable"><option value="no">No — on-site only</option><option value="yes">Yes — available remotely</option></select></label>
-                        <label class="heated-pools-form-wide"><span>Operational notes</span><textarea name="notes" rows="3" placeholder="Remote control, owner contact, heating delay..."></textarea></label>
+                        <label class="heated-pools-form-wide"><span data-i18n="heatedPools.fields.approvedProperty">Approved property</span><select name="propertyName" id="heated-pools-property-name" required><option value="" data-i18n="heatedPools.fields.chooseProperty">Choose property</option></select></label>
+                        <label><span data-i18n="heatedPools.fields.heatUpDays">Heat-up days</span><input name="heatUpDays" type="number" min="1" max="5" value="1"></label>
+                        <label><span data-i18n="heatedPools.fields.guestCharge">Guest charge EUR</span><input name="chargeAmount" type="number" step="0.01" placeholder="45"></label>
+                        <label><span data-i18n="heatedPools.fields.ownerCost">Owner cost EUR</span><input name="ownerCostAmount" type="number" step="0.01" placeholder="35"></label>
+                        <label><span data-i18n="heatedPools.fields.remoteControl">Remote on/off</span><select name="remoteControlAvailable"><option value="no" data-i18n="heatedPools.fields.remoteNo">No — on-site only</option><option value="yes" data-i18n="heatedPools.fields.remoteYes">Yes — available remotely</option></select></label>
+                        <label class="heated-pools-form-wide"><span data-i18n="heatedPools.fields.operationalNotes">Operational notes</span><textarea name="notes" rows="3" placeholder="Remote control, owner contact, heating delay..." data-i18n="heatedPools.fields.operationalNotesPlaceholder" data-i18n-attr="placeholder"></textarea></label>
                     </div>
-                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog>Cancel</button><button type="submit" class="heated-pools-primary-action">Add property</button></div>
+                    <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog data-i18n="common.cancel">Cancel</button><button type="submit" class="heated-pools-primary-action" data-i18n="heatedPools.views.settings.add">Add property</button></div>
                 </form>
             </div>
         </main>

@@ -250,8 +250,230 @@
   },
   "heatedPools": {
     "header": {
+      "workspace": "Operations workspace",
       "title": "Heated Pools",
-      "subtitle": "Manage pool heating requests and daily actions inside the app"
+      "subtitle": "Manage pool heating requests and daily actions inside the app",
+      "backToApps": "Back to apps",
+      "language": "Language",
+      "english": "English",
+      "portuguese": "Portuguese"
+    },
+    "nav": {
+      "sectionsLabel": "Heated pool sections",
+      "status": "Status",
+      "reservations": "Reservations",
+      "tasks": "Tasks",
+      "history": "History",
+      "settings": "Settings"
+    },
+    "search": {
+      "label": "Search property",
+      "placeholder": "Search properties..."
+    },
+    "autosave": "Records save automatically.",
+    "views": {
+      "status": {
+        "eyebrow": "Live equipment state",
+        "title": "Pool status",
+        "description": "What each pool is physically doing right now.",
+        "emptyTitle": "No pools configured",
+        "emptyDescription": "Open Settings to add a heated-pool property."
+      },
+      "reservations": {
+        "eyebrow": "Guest requests",
+        "title": "Reservations",
+        "description": "Heating request, payment, and Avantio status.",
+        "add": "Add reservation"
+      },
+      "tasks": {
+        "eyebrow": "Team action list",
+        "title": "Tasks",
+        "description": "Only work that needs attention.",
+        "planningDate": "Planning date"
+      },
+      "history": {
+        "eyebrow": "Audit trail",
+        "title": "History",
+        "description": "Who changed each pool, when, and for which reservation.",
+        "property": "Property",
+        "allProperties": "All properties"
+      },
+      "settings": {
+        "eyebrow": "Configuration",
+        "title": "Settings",
+        "description": "Heated-pool properties, costs, lead times, and operational notes.",
+        "add": "Add property"
+      }
+    },
+    "columns": {
+      "property": "Property",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "heating": "Heating",
+      "payment": "Payment",
+      "avantio": "Avantio",
+      "notes": "Notes"
+    },
+    "fields": {
+      "chooseProperty": "Choose property",
+      "heatingRequested": "Heating requested",
+      "reservationNotes": "Reservation notes",
+      "reservationNotesPlaceholder": "Guest confirmation or special instructions...",
+      "approvedProperty": "Approved property",
+      "heatUpDays": "Heat-up days",
+      "guestCharge": "Guest charge EUR",
+      "ownerCost": "Owner cost EUR",
+      "remoteControl": "Remote on/off",
+      "remoteNo": "No — on-site only",
+      "remoteYes": "Yes — available remotely",
+      "operationalNotes": "Operational notes",
+      "operationalNotesPlaceholder": "Remote control, owner contact, heating delay...",
+      "taskInstructions": "Task instructions",
+      "taskInstructionsPlaceholder": "Remote control, access steps, owner contact..."
+    },
+    "dialogs": {
+      "stateEyebrow": "Confirm physical change",
+      "stateTitle": "Change pool state",
+      "associateReservation": "Associate with reservation",
+      "optionalNote": "Optional note",
+      "stateNotePlaceholder": "Remote switched on, colleague confirmed onsite...",
+      "confirmChange": "Confirm change",
+      "reservationEyebrow": "Guest request",
+      "reservationTitle": "Add reservation",
+      "propertyEyebrow": "Configuration",
+      "propertyTitle": "Add heated-pool property"
+    },
+    "status": {
+      "remote": "Remote on/off",
+      "onsite": "On-site only",
+      "lastChange": "Last change",
+      "notRecorded": "Not recorded",
+      "by": "by {{name}}",
+      "noColleague": "No colleague recorded",
+      "nextReservation": "Next reservation",
+      "noneScheduled": "None scheduled",
+      "noGuestRequest": "No guest request",
+      "setStateLabel": "Set {{property}} pool state",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "noMatches": "No properties match the search."
+    },
+    "states": {
+      "on": "ON",
+      "off": "OFF",
+      "always_on": "ALWAYS ON",
+      "unavailable": "UNAVAILABLE",
+      "unknown": "UNKNOWN"
+    },
+    "options": {
+      "notFilled": "Not filled",
+      "yes": "Yes",
+      "no": "No",
+      "waiting": "Waiting"
+    },
+    "tasks": {
+      "lanes": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "next14": "Next 14 days",
+        "completed": "Completed",
+        "empty": "No actions in this lane."
+      },
+      "labels": {
+        "switchOn": "Switch pool on",
+        "switchOnAhead": "Switch pool on ({{days}} days before)",
+        "switchOff": "Switch pool off",
+        "confirmAvantio": "Confirm Avantio update",
+        "checkPayment": "Check heated pool payment"
+      },
+      "actions": {
+        "confirmPaid": "Confirm paid",
+        "confirmAvantio": "Confirm Avantio",
+        "markDone": "Mark done",
+        "claim": "Claim"
+      },
+      "claimedBy": "Claimed by {{name}}",
+      "remoteInstruction": "Remote on/off available — no property visit needed",
+      "heatDays": "{{days}} days to heat",
+      "completedBy": "Completed by {{name}} · {{date}}",
+      "completedByNoDate": "Completed by {{name}}",
+      "previouslyCompleted": "Previously completed",
+      "status": {
+        "overdue": "Overdue",
+        "today": "Due today",
+        "upcoming": "Upcoming",
+        "done": "Completed",
+        "later": "Later"
+      }
+    },
+    "reservations": {
+      "delete": "Delete",
+      "empty": "No active reservations yet.",
+      "requestedPaid": "Requested and paid",
+      "requestedPending": "Requested, payment pending",
+      "notRequested": "No heating requested",
+      "notFilled": "Heating status not filled"
+    },
+    "history": {
+      "reservation": "Reservation {{label}}",
+      "generalChange": "General property change",
+      "noNote": "No note",
+      "empty": "No state changes match these filters.",
+      "noChanges": "No changes yet. The first On/Off action will appear here.",
+      "unknownTime": "Unknown time"
+    },
+    "settings": {
+      "remove": "Remove",
+      "empty": "No heated-pool properties configured yet."
+    },
+    "directory": {
+      "title": "Approved heated-pool properties",
+      "description": "Only approved property names from the protected directory can be added.",
+      "loading": "Protected property directory is loading",
+      "configured": "Configured",
+      "available": "Available",
+      "missing": "Not in property directory",
+      "add": "Add"
+    },
+    "association": {
+      "general": "General change — no reservation",
+      "heatingRequested": "heating requested"
+    },
+    "messages": {
+      "loadError": "Could not load heated pool records.",
+      "propertyAdded": "Property added.",
+      "propertyAddError": "Could not add property.",
+      "reservationAdded": "Reservation added.",
+      "reservationAddError": "Could not add reservation.",
+      "stateSaveError": "Could not save the pool state.",
+      "completeTaskError": "Could not complete task.",
+      "claimTaskError": "Could not claim task.",
+      "reservationUpdateError": "Could not update reservation.",
+      "reservationDeleteError": "Could not delete reservation.",
+      "settingsUpdateError": "Could not update property settings.",
+      "propertyRemoveError": "Could not remove property.",
+      "confirmDeleteProperty": "Delete this heated pool property and its reservations?",
+      "confirmDeleteReservation": "Delete this reservation?",
+      "propertyNameRequired": "Property name is required.",
+      "chooseApprovedProperty": "Choose a property from the approved directory.",
+      "propertyAlreadyConfigured": "This property is already configured.",
+      "databaseNotReady": "Database is not ready.",
+      "choosePropertyFirst": "Choose a property first.",
+      "datesRequired": "Start and end dates are required.",
+      "endDateInvalid": "End date must be after the start date.",
+      "taskCompleted": "{{property}} {{state}} task completed for {{reservation}}.",
+      "alreadyState": "{{property}} is already {{state}}.",
+      "markedState": "{{property}} marked {{state}}{{reservation}}.",
+      "forReservation": " for {{reservation}}",
+      "defaultOnNote": "Pool switched on {{date}}{{reservation}}",
+      "defaultOffNote": "Pool switched off {{date}}{{reservation}}",
+      "paymentConfirmed": "{{property}} payment confirmed.",
+      "avantioConfirmed": "{{property}} Avantio update confirmed.",
+      "alreadyClaimed": "{{task}} is already claimed by {{name}}.",
+      "taskClaimed": "{{task}} claimed for {{property}}."
+    },
+    "common": {
+      "colleague": "Colleague"
     }
   },
   "vehicles": {

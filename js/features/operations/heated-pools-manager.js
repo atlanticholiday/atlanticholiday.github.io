@@ -15,6 +15,7 @@ import {
     inferRemoteControlAvailable,
     summarizePoolProperties
 } from './heated-pools-utils.js';
+import { i18n, t } from '../../core/i18n.js';
 
 export class HeatedPoolsManager {
     constructor(db, options = {}) {
@@ -80,7 +81,7 @@ export class HeatedPoolsManager {
             this.render();
         }, (error) => {
             console.error('[HeatedPools] listener failed:', error);
-            this.showMessage('Could not load heated pool records.', 'error');
+            this.showMessage(hp('messages.loadError', 'Could not load heated pool records.'), 'error');
         });
     }
 
@@ -114,10 +115,10 @@ export class HeatedPoolsManager {
                 this.addProperty(new FormData(propertyForm)).then(() => {
                     propertyForm.reset();
                     this.closeDialogs();
-                    this.showMessage('Property added.', 'success');
+                    this.showMessage(hp('messages.propertyAdded', 'Property added.'), 'success');
                 }).catch((error) => {
                     console.error('[HeatedPools] add property failed:', error);
-                    this.showMessage(error.message || 'Could not add property.', 'error');
+                    this.showMessage(error.message || hp('messages.propertyAddError', 'Could not add property.'), 'error');
                 });
             });
         }
@@ -128,10 +129,10 @@ export class HeatedPoolsManager {
                 this.addReservation(new FormData(reservationForm)).then(() => {
                     reservationForm.reset();
                     this.closeDialogs();
-                    this.showMessage('Reservation added.', 'success');
+                    this.showMessage(hp('messages.reservationAdded', 'Reservation added.'), 'success');
                 }).catch((error) => {
                     console.error('[HeatedPools] add reservation failed:', error);
-                    this.showMessage(error.message || 'Could not add reservation.', 'error');
+                    this.showMessage(error.message || hp('messages.reservationAddError', 'Could not add reservation.'), 'error');
                 });
             });
         }
@@ -148,7 +149,7 @@ export class HeatedPoolsManager {
                     if (changed) this.closeDialogs();
                 }).catch((error) => {
                     console.error('[HeatedPools] state change failed:', error);
-                    this.showMessage('Could not save the pool state.', 'error');
+                    this.showMessage(hp('messages.stateSaveError', 'Could not save the pool state.'), 'error');
                 });
             });
         }
@@ -180,6 +181,10 @@ export class HeatedPoolsManager {
         });
 
         document.addEventListener('propertiesDataUpdated', () => this.render());
+        window.addEventListener('languageChanged', () => {
+            this.render();
+            this.showMessage(hp('autosave', 'Records save automatically.'), 'info');
+        });
     }
 
     switchView(view) {
@@ -231,20 +236,20 @@ export class HeatedPoolsManager {
     async addProperty(formData) {
         const propertyName = cleanText(formData.get('propertyName'));
         if (!propertyName) {
-            throw new Error('Property name is required.');
+            throw new Error(hp('messages.propertyNameRequired', 'Property name is required.'));
         }
         const directoryEntry = this.getApprovedPropertyDirectory()
             .find((entry) => entry.name.toLowerCase() === propertyName.toLowerCase());
         if (!directoryEntry) {
-            throw new Error('Choose a property from the approved directory.');
+            throw new Error(hp('messages.chooseApprovedProperty', 'Choose a property from the approved directory.'));
         }
         if (this.properties.some((entry) => entry.propertyName.toLowerCase() === propertyName.toLowerCase())) {
-            throw new Error('This property is already configured.');
+            throw new Error(hp('messages.propertyAlreadyConfigured', 'This property is already configured.'));
         }
 
         const ref = this.getCollectionRef();
         if (!ref) {
-            throw new Error('Database is not ready.');
+            throw new Error(hp('messages.databaseNotReady', 'Database is not ready.'));
         }
 
         const poolState = formData.get('poolState') || 'unknown';
@@ -288,7 +293,7 @@ export class HeatedPoolsManager {
 
     async deleteProperty(propertyId) {
         if (!this.db || !propertyId) return;
-        if (!confirm('Delete this heated pool property and its reservations?')) return;
+        if (!confirm(hp('messages.confirmDeleteProperty', 'Delete this heated pool property and its reservations?'))) return;
         await deleteDoc(doc(this.db, 'heatedPools', propertyId));
     }
 
@@ -299,7 +304,7 @@ export class HeatedPoolsManager {
         return {
             uid: cleanText(context.uid),
             email: cleanText(context.email),
-            name: cleanText(employee.name || context.email) || 'Colleague'
+            name: cleanText(employee.name || context.email) || hp('common.colleague', 'Colleague')
         };
     }
 
@@ -327,16 +332,28 @@ export class HeatedPoolsManager {
         if (property.poolState === state) {
             if (plannedTaskType) {
                 await this.updateProperty(propertyId, { reservations: completedReservations });
-                this.showMessage(`${property.propertyName} ${poolStateLabel(state)} task completed for ${reservation.dateRange}.`, 'success');
+                this.showMessage(hp('messages.taskCompleted', '{{property}} {{state}} task completed for {{reservation}}.', {
+                    property: property.propertyName,
+                    state: poolStateLabel(state),
+                    reservation: reservation.dateRange
+                }), 'success');
                 return true;
             }
-            this.showMessage(`${property.propertyName} is already ${state.toUpperCase()}.`, 'info');
+            this.showMessage(hp('messages.alreadyState', '{{property}} is already {{state}}.', {
+                property: property.propertyName,
+                state: poolStateLabel(state)
+            }), 'info');
             return false;
         }
 
-        const actionLabel = state === 'on' ? 'switched on' : 'switched off';
-        const reservationSuffix = reservation ? ` for ${reservation.dateRange}` : '';
-        const defaultNote = `Pool ${actionLabel} ${formatShortDate(this.today)}${reservationSuffix}`;
+        const reservationSuffix = reservation
+            ? hp('messages.forReservation', ' for {{reservation}}', { reservation: reservation.dateRange })
+            : '';
+        const defaultNote = hp(
+            state === 'on' ? 'messages.defaultOnNote' : 'messages.defaultOffNote',
+            state === 'on' ? 'Pool switched on {{date}}{{reservation}}' : 'Pool switched off {{date}}{{reservation}}',
+            { date: formatShortDate(this.today), reservation: reservationSuffix }
+        );
         const poolNote = cleanText(note) || defaultNote;
         const statusHistory = appendPoolStatusHistory(property.statusHistory, {
             previousState: property.poolState,
@@ -355,7 +372,11 @@ export class HeatedPoolsManager {
             statusHistory,
             ...(plannedTaskType ? { reservations: completedReservations } : {})
         });
-        this.showMessage(`${property.propertyName} marked ${state.toUpperCase()}${reservationSuffix}.`, 'success');
+        this.showMessage(hp('messages.markedState', '{{property}} marked {{state}}{{reservation}}.', {
+            property: property.propertyName,
+            state: poolStateLabel(state),
+            reservation: reservationSuffix
+        }), 'success');
         return true;
     }
 
@@ -371,16 +392,16 @@ export class HeatedPoolsManager {
         const propertyId = formData.get('propertyId');
         const property = this.properties.find((entry) => entry.id === propertyId);
         if (!property) {
-            throw new Error('Choose a property first.');
+            throw new Error(hp('messages.choosePropertyFirst', 'Choose a property first.'));
         }
 
         const startDate = formData.get('startDate');
         const endDate = formData.get('endDate');
         if (!startDate || !endDate) {
-            throw new Error('Start and end dates are required.');
+            throw new Error(hp('messages.datesRequired', 'Start and end dates are required.'));
         }
         if (endDate < startDate) {
-            throw new Error('End date must be after the start date.');
+            throw new Error(hp('messages.endDateInvalid', 'End date must be after the start date.'));
         }
 
         const reservation = {
@@ -429,7 +450,7 @@ export class HeatedPoolsManager {
     async deleteReservation(propertyId, reservationId) {
         const property = this.properties.find((entry) => entry.id === propertyId);
         if (!property) return;
-        if (!confirm('Delete this reservation?')) return;
+        if (!confirm(hp('messages.confirmDeleteReservation', 'Delete this reservation?'))) return;
 
         await this.updateProperty(propertyId, {
             reservations: property.reservations.filter((reservation) => reservation.id !== reservationId)
@@ -465,7 +486,7 @@ export class HeatedPoolsManager {
                     payment_check: this.createTaskActivity()
                 }
             });
-            this.showMessage(`${property.propertyName} payment confirmed.`, 'success');
+            this.showMessage(hp('messages.paymentConfirmed', '{{property}} payment confirmed.', { property: property.propertyName }), 'success');
             return;
         }
 
@@ -477,7 +498,7 @@ export class HeatedPoolsManager {
                     avantio_check: this.createTaskActivity()
                 }
             });
-            this.showMessage(`${property.propertyName} Avantio update confirmed.`, 'success');
+            this.showMessage(hp('messages.avantioConfirmed', '{{property}} Avantio update confirmed.', { property: property.propertyName }), 'success');
         }
     }
 
@@ -489,7 +510,10 @@ export class HeatedPoolsManager {
 
         const existingClaim = reservation.taskClaims?.[task.type];
         if (existingClaim?.actor?.uid || existingClaim?.actor?.email || existingClaim?.actor?.name) {
-            this.showMessage(`${taskLabel(task)} is already claimed by ${actorLabel(existingClaim.actor)}.`, 'info');
+            this.showMessage(hp('messages.alreadyClaimed', '{{task}} is already claimed by {{name}}.', {
+                task: taskLabel(task),
+                name: actorLabel(existingClaim.actor)
+            }), 'info');
             return;
         }
 
@@ -499,7 +523,10 @@ export class HeatedPoolsManager {
                 [task.type]: this.createTaskActivity()
             }
         });
-        this.showMessage(`${taskLabel(task)} claimed for ${property.propertyName}.`, 'success');
+        this.showMessage(hp('messages.taskClaimed', '{{task}} claimed for {{property}}.', {
+            task: taskLabel(task),
+            property: property.propertyName
+        }), 'success');
     }
 
     normalizeProperty(property) {
@@ -544,9 +571,7 @@ export class HeatedPoolsManager {
     rebuildPlan() {
         const planningProperties = this.properties.map((property) => ({
             ...property,
-            notes: property.heatUpDays > 1
-                ? [...property.notes, `${property.heatUpDays} days to heat`]
-                : property.notes
+            notes: property.notes
         }));
         this.plan = buildHeatedPoolPlan(planningProperties, {
             today: this.today,
@@ -560,7 +585,7 @@ export class HeatedPoolsManager {
 
         if (propertySelect) {
             propertySelect.innerHTML = [
-                '<option value="">Choose property</option>',
+                `<option value="">${escapeHtml(hp('fields.chooseProperty', 'Choose property'))}</option>`,
                 ...this.properties.map((property) => `<option value="${escapeHtml(property.id)}">${escapeHtml(property.propertyName)}</option>`)
             ].join('');
         }
@@ -600,13 +625,13 @@ export class HeatedPoolsManager {
         if (!lanesEl) return;
 
         const lanes = [
-            { title: 'Overdue', tasks: this.filterTasks(this.plan.overdue), tone: 'danger' },
-            { title: 'Today', tasks: this.filterTasks(this.plan.todayTasks), tone: 'warning' },
-            { title: 'Next 14 days', tasks: this.filterTasks(this.plan.upcoming), tone: 'info' }
+            { title: hp('tasks.lanes.overdue', 'Overdue'), tasks: this.filterTasks(this.plan.overdue), tone: 'danger' },
+            { title: hp('tasks.lanes.today', 'Today'), tasks: this.filterTasks(this.plan.todayTasks), tone: 'warning' },
+            { title: hp('tasks.lanes.next14', 'Next 14 days'), tasks: this.filterTasks(this.plan.upcoming), tone: 'info' }
         ];
         const completedTasks = this.filterTasks(this.plan.completed);
         if (completedTasks.length) {
-            lanes.push({ title: 'Completed', tasks: completedTasks, tone: 'success' });
+            lanes.push({ title: hp('tasks.lanes.completed', 'Completed'), tasks: completedTasks, tone: 'success' });
         }
 
         lanesEl.innerHTML = lanes.map((lane) => `
@@ -616,7 +641,7 @@ export class HeatedPoolsManager {
                     <span>${lane.tasks.length}</span>
                 </div>
                 <div class="heated-pools-lane__body">
-                    ${lane.tasks.length ? lane.tasks.map((task) => this.renderTask(task)).join('') : '<p class="heated-pools-muted">No actions in this lane.</p>'}
+                    ${lane.tasks.length ? lane.tasks.map((task) => this.renderTask(task)).join('') : `<p class="heated-pools-muted">${escapeHtml(hp('tasks.lanes.empty', 'No actions in this lane.'))}</p>`}
                 </div>
             </section>
         `).join('');
@@ -628,7 +653,7 @@ export class HeatedPoolsManager {
                 if (['payment_check', 'avantio_check'].includes(task.type)) {
                     this.completeTask(task).catch((error) => {
                         console.error('[HeatedPools] complete task failed:', error);
-                        this.showMessage('Could not complete task.', 'error');
+                        this.showMessage(hp('messages.completeTaskError', 'Could not complete task.'), 'error');
                     });
                     return;
                 }
@@ -644,7 +669,7 @@ export class HeatedPoolsManager {
                 if (!task) return;
                 this.claimTask(task).catch((error) => {
                     console.error('[HeatedPools] claim task failed:', error);
-                    this.showMessage('Could not claim task.', 'error');
+                    this.showMessage(hp('messages.claimTaskError', 'Could not claim task.'), 'error');
                 });
             });
         });
@@ -656,8 +681,8 @@ export class HeatedPoolsManager {
         const activity = completed
             ? `<small class="heated-pools-task__activity heated-pools-task__activity--complete"><i class="fas fa-check" aria-hidden="true"></i>${escapeHtml(taskCompletionLabel(task.completion))}</small>`
             : task.claim
-                ? `<small class="heated-pools-task__activity"><i class="fas fa-user" aria-hidden="true"></i>Claimed by ${escapeHtml(actorLabel(task.claim.actor))}</small>`
-                : `<button type="button" data-claim-task-id="${escapeHtml(task.id)}" class="heated-pools-claim-action"><i class="far fa-circle-user" aria-hidden="true"></i> Claim</button>`;
+                ? `<small class="heated-pools-task__activity"><i class="fas fa-user" aria-hidden="true"></i>${escapeHtml(hp('tasks.claimedBy', 'Claimed by {{name}}', { name: actorLabel(task.claim.actor) }))}</small>`
+                : `<button type="button" data-claim-task-id="${escapeHtml(task.id)}" class="heated-pools-claim-action"><i class="far fa-circle-user" aria-hidden="true"></i> ${escapeHtml(hp('tasks.actions.claim', 'Claim'))}</button>`;
         return `
             <article class="heated-pools-task ${completed ? 'heated-pools-task--complete' : ''}">
                 <div class="heated-pools-task__content">
@@ -691,7 +716,7 @@ export class HeatedPoolsManager {
                                 <h4>${escapeHtml(property.propertyName)}</h4>
                                 <span class="heated-pools-remote-capability ${property.remoteControlAvailable ? 'is-available' : ''}">
                                     <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
-                                    ${property.remoteControlAvailable ? 'Remote on/off' : 'On-site only'}
+                                    ${escapeHtml(property.remoteControlAvailable ? hp('status.remote', 'Remote on/off') : hp('status.onsite', 'On-site only'))}
                                 </span>
                             </div>
                             <span class="heated-pools-live-state heated-pools-live-state--${escapeHtml(property.poolState)}">
@@ -699,18 +724,18 @@ export class HeatedPoolsManager {
                             </span>
                         </div>
                         <div class="heated-pools-status-row__last">
-                            <span>Last change</span>
-                            <strong>${latestChange ? escapeHtml(formatHistoryTime(latestChange.at)) : property.lastChangeDate ? escapeHtml(formatDisplayDate(property.lastChangeDate)) : 'Not recorded'}</strong>
-                            <small>${latestChange ? `by ${escapeHtml(actorLabel(latestChange.actor))}` : 'No colleague recorded'}</small>
+                            <span>${escapeHtml(hp('status.lastChange', 'Last change'))}</span>
+                            <strong>${latestChange ? escapeHtml(formatHistoryTime(latestChange.at)) : property.lastChangeDate ? escapeHtml(formatDisplayDate(property.lastChangeDate)) : escapeHtml(hp('status.notRecorded', 'Not recorded'))}</strong>
+                            <small>${latestChange ? escapeHtml(hp('status.by', 'by {{name}}', { name: actorLabel(latestChange.actor) })) : escapeHtml(hp('status.noColleague', 'No colleague recorded'))}</small>
                         </div>
                         <div class="heated-pools-status-row__reservation">
-                            <span>Next reservation</span>
-                            <strong>${nextReservation ? escapeHtml(nextReservation.dateRange) : 'None scheduled'}</strong>
-                            <small>${nextReservation ? escapeHtml(requestLabel(nextReservation)) : 'No guest request'}</small>
+                            <span>${escapeHtml(hp('status.nextReservation', 'Next reservation'))}</span>
+                            <strong>${nextReservation ? escapeHtml(nextReservation.dateRange) : escapeHtml(hp('status.noneScheduled', 'None scheduled'))}</strong>
+                            <small>${nextReservation ? escapeHtml(requestLabel(nextReservation)) : escapeHtml(hp('status.noGuestRequest', 'No guest request'))}</small>
                         </div>
-                        <div class="heated-pools-status-row__actions heated-pools-power-actions" role="group" aria-label="Set ${escapeHtml(property.propertyName)} pool state">
-                            ${property.poolState !== 'on' ? '<button type="button" data-pool-state="on"><i class="fas fa-power-off" aria-hidden="true"></i> Turn on</button>' : ''}
-                            ${property.poolState !== 'off' ? '<button type="button" data-pool-state="off">Turn off</button>' : ''}
+                        <div class="heated-pools-status-row__actions heated-pools-power-actions" role="group" aria-label="${escapeHtml(hp('status.setStateLabel', 'Set {{property}} pool state', { property: property.propertyName }))}">
+                            ${property.poolState !== 'on' ? `<button type="button" data-pool-state="on"><i class="fas fa-power-off" aria-hidden="true"></i> ${escapeHtml(hp('status.turnOn', 'Turn on'))}</button>` : ''}
+                            ${property.poolState !== 'off' ? `<button type="button" data-pool-state="off">${escapeHtml(hp('status.turnOff', 'Turn off'))}</button>` : ''}
                         </div>
                     </article>
                 `;
@@ -718,7 +743,7 @@ export class HeatedPoolsManager {
 
         list.innerHTML = properties.length
             ? properties.join('')
-            : '<p class="heated-pools-empty-row">No properties match the search.</p>';
+            : `<p class="heated-pools-empty-row">${escapeHtml(hp('status.noMatches', 'No properties match the search.'))}</p>`;
 
         list.querySelectorAll('[data-pool-state]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -759,13 +784,13 @@ export class HeatedPoolsManager {
                         </select>
                     </td>
                     <td><input data-res-field="notes" value="${escapeHtml(reservation.notes || '')}" class="heated-pools-inline-input"></td>
-                    <td><button type="button" data-action="delete-reservation" class="heated-pools-danger-link">Delete</button></td>
+                    <td><button type="button" data-action="delete-reservation" class="heated-pools-danger-link">${escapeHtml(hp('reservations.delete', 'Delete'))}</button></td>
                 </tr>
             `);
 
         body.innerHTML = rows.length
             ? rows.join('')
-            : '<tr><td colspan="8" class="heated-pools-empty-row">No active reservations yet.</td></tr>';
+            : `<tr><td colspan="8" class="heated-pools-empty-row">${escapeHtml(hp('reservations.empty', 'No active reservations yet.'))}</td></tr>`;
 
         body.querySelectorAll('[data-res-field]').forEach((input) => {
             input.addEventListener('change', () => {
@@ -781,7 +806,7 @@ export class HeatedPoolsManager {
 
                 this.updateReservation(propertyId, reservationId, { [field]: value }).catch((error) => {
                     console.error('[HeatedPools] update reservation failed:', error);
-                    this.showMessage('Could not update reservation.', 'error');
+                    this.showMessage(hp('messages.reservationUpdateError', 'Could not update reservation.'), 'error');
                 });
             });
         });
@@ -791,7 +816,7 @@ export class HeatedPoolsManager {
                 const row = button.closest('[data-property-id]');
                 this.deleteReservation(row?.dataset.propertyId, row?.dataset.reservationId).catch((error) => {
                     console.error('[HeatedPools] delete reservation failed:', error);
-                    this.showMessage('Could not delete reservation.', 'error');
+                    this.showMessage(hp('messages.reservationDeleteError', 'Could not delete reservation.'), 'error');
                 });
             });
         });
@@ -804,7 +829,7 @@ export class HeatedPoolsManager {
 
         if (propertyFilter) {
             propertyFilter.innerHTML = [
-                '<option value="">All properties</option>',
+                `<option value="">${escapeHtml(hp('views.history.allProperties', 'All properties'))}</option>`,
                 ...this.properties.map((property) => `<option value="${escapeHtml(property.id)}" ${property.id === this.historyPropertyId ? 'selected' : ''}>${escapeHtml(property.propertyName)}</option>`)
             ].join('');
         }
@@ -820,9 +845,11 @@ export class HeatedPoolsManager {
                 <i class="heated-pools-history__dot heated-pools-history__dot--${escapeHtml(entry.state)}" aria-hidden="true"></i>
                 <div><strong>${escapeHtml(property.propertyName)}</strong><span>${escapeHtml(poolStateLabel(entry.previousState))} → ${escapeHtml(poolStateLabel(entry.state))}</span></div>
                 <div><strong>${escapeHtml(formatHistoryTime(entry.at))}</strong><span>${escapeHtml(actorLabel(entry.actor))}</span></div>
-                <div><strong>${entry.reservation?.label ? `Reservation ${escapeHtml(entry.reservation.label)}` : 'General property change'}</strong><span>${escapeHtml(entry.note || 'No note')}</span></div>
+                <div><strong>${escapeHtml(entry.reservation?.label
+                    ? hp('history.reservation', 'Reservation {{label}}', { label: entry.reservation.label })
+                    : hp('history.generalChange', 'General property change'))}</strong><span>${escapeHtml(localizeSystemNote(entry.note) || hp('history.noNote', 'No note'))}</span></div>
             </article>
-        `).join('') : '<p class="heated-pools-empty-row">No state changes match these filters.</p>';
+        `).join('') : `<p class="heated-pools-empty-row">${escapeHtml(hp('history.empty', 'No state changes match these filters.'))}</p>`;
     }
 
     renderSettings() {
@@ -831,14 +858,14 @@ export class HeatedPoolsManager {
         list.innerHTML = this.properties.length ? this.properties.map((property) => `
             <article class="heated-pools-setting-row" data-property-id="${escapeHtml(property.id)}">
                 <div><strong>${escapeHtml(property.propertyName)}</strong><span>${escapeHtml(poolStateLabel(property.poolState))}</span></div>
-                <label><span>Heat-up days</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
-                <label><span>Guest charge EUR</span><input data-setting-field="chargeAmount" type="number" step="0.01" value="${escapeHtml(property.chargeAmount ?? '')}"></label>
-                <label><span>Owner cost EUR</span><input data-setting-field="ownerCostAmount" type="number" step="0.01" value="${escapeHtml(property.ownerCostAmount ?? '')}"></label>
-                <label><span>Remote on/off</span><select data-setting-field="remoteControlAvailable">${remoteControlOptions(property.remoteControlAvailable)}</select></label>
-                <label class="heated-pools-setting-row__note"><span>Task instructions</span><input data-setting-field="poolNote" value="${escapeHtml(property.poolNote || property.notes.join('; '))}" placeholder="Remote control, access steps, owner contact..."></label>
-                <button type="button" data-action="delete-property" class="heated-pools-danger-link">Remove</button>
+                <label><span>${escapeHtml(hp('fields.heatUpDays', 'Heat-up days'))}</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
+                <label><span>${escapeHtml(hp('fields.guestCharge', 'Guest charge EUR'))}</span><input data-setting-field="chargeAmount" type="number" step="0.01" value="${escapeHtml(property.chargeAmount ?? '')}"></label>
+                <label><span>${escapeHtml(hp('fields.ownerCost', 'Owner cost EUR'))}</span><input data-setting-field="ownerCostAmount" type="number" step="0.01" value="${escapeHtml(property.ownerCostAmount ?? '')}"></label>
+                <label><span>${escapeHtml(hp('fields.remoteControl', 'Remote on/off'))}</span><select data-setting-field="remoteControlAvailable">${remoteControlOptions(property.remoteControlAvailable)}</select></label>
+                <label class="heated-pools-setting-row__note"><span>${escapeHtml(hp('fields.taskInstructions', 'Task instructions'))}</span><input data-setting-field="poolNote" value="${escapeHtml(localizeSystemNote(property.poolNote || property.notes.join('; ')))}" placeholder="${escapeHtml(hp('fields.taskInstructionsPlaceholder', 'Remote control, access steps, owner contact...'))}"></label>
+                <button type="button" data-action="delete-property" class="heated-pools-danger-link">${escapeHtml(hp('settings.remove', 'Remove'))}</button>
             </article>
-        `).join('') : '<p class="heated-pools-empty-row">No heated-pool properties configured yet.</p>';
+        `).join('') : `<p class="heated-pools-empty-row">${escapeHtml(hp('settings.empty', 'No heated-pool properties configured yet.'))}</p>`;
 
         list.querySelectorAll('[data-setting-field]').forEach((input) => {
             input.addEventListener('change', () => {
@@ -856,7 +883,7 @@ export class HeatedPoolsManager {
                     : { [field]: value ?? null };
                 this.updateProperty(propertyId, updates).catch((error) => {
                     console.error('[HeatedPools] settings update failed:', error);
-                    this.showMessage('Could not update property settings.', 'error');
+                    this.showMessage(hp('messages.settingsUpdateError', 'Could not update property settings.'), 'error');
                 });
             });
         });
@@ -866,7 +893,7 @@ export class HeatedPoolsManager {
                 const propertyId = button.closest('[data-property-id]')?.dataset.propertyId;
                 this.deleteProperty(propertyId).catch((error) => {
                     console.error('[HeatedPools] delete property failed:', error);
-                    this.showMessage('Could not remove property.', 'error');
+                    this.showMessage(hp('messages.propertyRemoveError', 'Could not remove property.'), 'error');
                 });
             });
         });
@@ -881,7 +908,9 @@ export class HeatedPoolsManager {
 
         if (select) {
             select.innerHTML = [
-                `<option value="">${directory.length ? 'Choose property' : 'Protected property directory is loading'}</option>`,
+                `<option value="">${escapeHtml(directory.length
+                    ? hp('fields.chooseProperty', 'Choose property')
+                    : hp('directory.loading', 'Protected property directory is loading'))}</option>`,
                 ...available.map((entry) => `<option value="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</option>`)
             ].join('');
             select.disabled = !available.length;
@@ -892,8 +921,12 @@ export class HeatedPoolsManager {
         list.innerHTML = HEATED_POOL_PROPERTY_NAMES.map((name) => {
             const isConfigured = configured.has(name.toLowerCase());
             const isAvailable = directoryNames.has(name.toLowerCase());
-            const label = isConfigured ? 'Configured' : isAvailable ? 'Available' : 'Not in property directory';
-            return `<div class="heated-pools-approved-row"><span>${escapeHtml(name)}</span><small data-state="${isConfigured ? 'configured' : isAvailable ? 'available' : 'missing'}">${label}</small>${isAvailable && !isConfigured ? `<button type="button" data-add-approved-property="${escapeHtml(name)}">Add</button>` : ''}</div>`;
+            const label = isConfigured
+                ? hp('directory.configured', 'Configured')
+                : isAvailable
+                    ? hp('directory.available', 'Available')
+                    : hp('directory.missing', 'Not in property directory');
+            return `<div class="heated-pools-approved-row"><span>${escapeHtml(name)}</span><small data-state="${isConfigured ? 'configured' : isAvailable ? 'available' : 'missing'}">${escapeHtml(label)}</small>${isAvailable && !isConfigured ? `<button type="button" data-add-approved-property="${escapeHtml(name)}">${escapeHtml(hp('directory.add', 'Add'))}</button>` : ''}</div>`;
         }).join('');
 
         list.querySelectorAll('[data-add-approved-property]').forEach((button) => {
@@ -928,29 +961,32 @@ function findNextReservation(property, today) {
 
 function taskLabel(task) {
     if (task.type === 'turn_on') {
-        return task.leadDays > 1 ? `Switch pool on (${task.leadDays} days before)` : 'Switch pool on';
+        return task.leadDays > 1
+            ? hp('tasks.labels.switchOnAhead', 'Switch pool on ({{days}} days before)', { days: task.leadDays })
+            : hp('tasks.labels.switchOn', 'Switch pool on');
     }
     if (task.type === 'turn_off') {
-        return 'Switch pool off';
+        return hp('tasks.labels.switchOff', 'Switch pool off');
     }
     if (task.type === 'avantio_check') {
-        return 'Confirm Avantio update';
+        return hp('tasks.labels.confirmAvantio', 'Confirm Avantio update');
     }
-    return 'Check heated pool payment';
+    return hp('tasks.labels.checkPayment', 'Check heated pool payment');
 }
 
 function taskActionLabel(task) {
-    if (task.type === 'payment_check') return 'Confirm paid';
-    if (task.type === 'avantio_check') return 'Confirm Avantio';
-    return 'Mark done';
+    if (task.type === 'payment_check') return hp('tasks.actions.confirmPaid', 'Confirm paid');
+    if (task.type === 'avantio_check') return hp('tasks.actions.confirmAvantio', 'Confirm Avantio');
+    return hp('tasks.actions.markDone', 'Mark done');
 }
 
 function taskInstructions(task) {
     const remoteInstruction = ['turn_on', 'turn_off'].includes(task.type) && task.remoteControlAvailable
-        ? 'Remote on/off available — no property visit needed'
+        ? hp('tasks.remoteInstruction', 'Remote on/off available — no property visit needed')
         : '';
     return [...new Set([remoteInstruction, task.poolNote, ...(Array.isArray(task.notes) ? task.notes : [])]
         .map(cleanText)
+        .map(localizeSystemNote)
         .filter(Boolean))]
         .join(' · ');
 }
@@ -959,37 +995,45 @@ function taskCompletionLabel(activity) {
     const who = actorLabel(activity?.actor);
     const normalizedTime = normalizeDateTime(activity?.at);
     if (normalizedTime) {
-        return `Completed by ${who} · ${formatHistoryTime(normalizedTime)}`;
+        return hp('tasks.completedBy', 'Completed by {{name}} · {{date}}', {
+            name: who,
+            date: formatHistoryTime(normalizedTime)
+        });
     }
-    return activity?.legacy ? 'Previously completed' : `Completed by ${who}`;
+    return activity?.legacy
+        ? hp('tasks.previouslyCompleted', 'Previously completed')
+        : hp('tasks.completedByNoDate', 'Completed by {{name}}', { name: who });
 }
 
 function statusLabel(status) {
-    if (status === 'overdue') return 'Overdue';
-    if (status === 'today') return 'Due today';
-    if (status === 'upcoming') return 'Upcoming';
-    if (status === 'done') return 'Completed';
-    return 'Later';
+    if (status === 'overdue') return hp('tasks.status.overdue', 'Overdue');
+    if (status === 'today') return hp('tasks.status.today', 'Due today');
+    if (status === 'upcoming') return hp('tasks.status.upcoming', 'Upcoming');
+    if (status === 'done') return hp('tasks.status.done', 'Completed');
+    return hp('tasks.status.later', 'Later');
 }
 
 function poolStateLabel(state) {
-    return {
+    const fallback = {
         on: 'ON',
         off: 'OFF',
         always_on: 'ALWAYS ON',
         unavailable: 'UNAVAILABLE',
         unknown: 'UNKNOWN'
     }[state] || 'UNKNOWN';
+    return hp(`states.${state || 'unknown'}`, fallback);
 }
 
 function reservationAssociationOptions(property, selectedReservation = null) {
     return [
-        '<option value="">General change — no reservation</option>',
+        `<option value="">${escapeHtml(hp('association.general', 'General change — no reservation'))}</option>`,
         ...property.reservations
             .slice()
             .sort((a, b) => b.startDate.localeCompare(a.startDate))
             .map((reservation) => {
-                const requested = reservation.heatingRequested === true ? ' · heating requested' : '';
+                const requested = reservation.heatingRequested === true
+                    ? ` · ${hp('association.heatingRequested', 'heating requested')}`
+                    : '';
                 return `<option value="${escapeHtml(reservation.id)}" ${reservation.id === selectedReservation?.id ? 'selected' : ''}>${escapeHtml(reservation.dateRange)}${requested}</option>`;
             })
     ].join('');
@@ -1056,7 +1100,7 @@ function updateReservationTaskActivity(reservations, reservationId, bucket, task
 
 function renderStatusHistory(history = []) {
     if (!history.length) {
-        return '<p class="heated-pools-history__empty">No changes yet. The first On/Off action will appear here.</p>';
+        return `<p class="heated-pools-history__empty">${escapeHtml(hp('history.noChanges', 'No changes yet. The first On/Off action will appear here.'))}</p>`;
     }
     return `
         <ol>
@@ -1066,8 +1110,10 @@ function renderStatusHistory(history = []) {
                     <div>
                         <strong>${escapeHtml(poolStateLabel(entry.previousState))} → ${escapeHtml(poolStateLabel(entry.state))}</strong>
                         <span>${escapeHtml(formatHistoryTime(entry.at))} · ${escapeHtml(actorLabel(entry.actor))}</span>
-                        ${entry.reservation?.label ? `<small>Reservation ${escapeHtml(entry.reservation.label)}</small>` : '<small>General property change</small>'}
-                        ${entry.note ? `<p>${escapeHtml(entry.note)}</p>` : ''}
+                        ${entry.reservation?.label
+                            ? `<small>${escapeHtml(hp('history.reservation', 'Reservation {{label}}', { label: entry.reservation.label }))}</small>`
+                            : `<small>${escapeHtml(hp('history.generalChange', 'General property change'))}</small>`}
+                        ${entry.note ? `<p>${escapeHtml(localizeSystemNote(entry.note))}</p>` : ''}
                     </div>
                 </li>
             `).join('')}
@@ -1087,8 +1133,8 @@ function normalizeDateTime(value) {
 
 function formatHistoryTime(value) {
     const normalized = normalizeDateTime(value);
-    if (!normalized) return 'Unknown time';
-    return new Date(normalized).toLocaleString('en-GB', {
+    if (!normalized) return hp('history.unknownTime', 'Unknown time');
+    return new Date(normalized).toLocaleString(i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -1098,24 +1144,24 @@ function formatHistoryTime(value) {
 }
 
 function actorLabel(actor = {}) {
-    return cleanText(actor.name || actor.email) || 'Colleague';
+    return cleanText(actor.name || actor.email) || hp('common.colleague', 'Colleague');
 }
 
 function poolStateOptions(current) {
     return [
-        ['unknown', 'Unknown'],
-        ['off', 'Off'],
-        ['on', 'On'],
-        ['always_on', 'Always on'],
-        ['unavailable', 'Unavailable']
+        ['unknown', poolStateLabel('unknown')],
+        ['off', poolStateLabel('off')],
+        ['on', poolStateLabel('on')],
+        ['always_on', poolStateLabel('always_on')],
+        ['unavailable', poolStateLabel('unavailable')]
     ].map(([value, label]) => `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`).join('');
 }
 
 function booleanOptions(current) {
     return [
-        ['blank', 'Not filled'],
-        ['yes', 'Yes'],
-        ['no', 'No']
+        ['blank', hp('options.notFilled', 'Not filled')],
+        ['yes', hp('options.yes', 'Yes')],
+        ['no', hp('options.no', 'No')]
     ].map(([value, label]) => {
         const selected = value === 'yes'
             ? current === true
@@ -1128,28 +1174,30 @@ function booleanOptions(current) {
 
 function remoteControlOptions(current) {
     return [
-        ['no', 'No — on-site only'],
-        ['yes', 'Yes — available remotely']
+        ['no', hp('fields.remoteNo', 'No — on-site only')],
+        ['yes', hp('fields.remoteYes', 'Yes — available remotely')]
     ].map(([value, label]) => `<option value="${value}" ${Boolean(current) === (value === 'yes') ? 'selected' : ''}>${label}</option>`).join('');
 }
 
 function statusOptions(current) {
     return [
-        ['blank', 'Not filled'],
-        ['yes', 'Yes'],
-        ['no', 'No'],
-        ['waiting', 'Waiting']
+        ['blank', hp('options.notFilled', 'Not filled')],
+        ['yes', hp('options.yes', 'Yes')],
+        ['no', hp('options.no', 'No')],
+        ['waiting', hp('options.waiting', 'Waiting')]
     ].map(([value, label]) => `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`).join('');
 }
 
 function requestLabel(reservation) {
     if (reservation.heatingRequested === true) {
-        return reservation.paymentStatus === 'yes' ? 'Requested and paid' : 'Requested, payment pending';
+        return reservation.paymentStatus === 'yes'
+            ? hp('reservations.requestedPaid', 'Requested and paid')
+            : hp('reservations.requestedPending', 'Requested, payment pending');
     }
     if (reservation.heatingRequested === false) {
-        return 'No heating requested';
+        return hp('reservations.notRequested', 'No heating requested');
     }
-    return 'Heating status not filled';
+    return hp('reservations.notFilled', 'Heating status not filled');
 }
 
 function statusFromBoolean(value) {
@@ -1205,6 +1253,46 @@ function formatDisplayDate(value) {
     if (!value) return '-';
     const [year, month, day] = value.split('-');
     return `${day}/${month}/${year}`;
+}
+
+function localizeSystemNote(value = '') {
+    const note = cleanText(value);
+    if (!note) return '';
+
+    const englishState = note.match(/^Pool switched (on|off) (\d{1,2}\/\d{1,2})(?: for (.+))?$/i);
+    const portugueseState = note.match(/^Piscina (ligada|desligada) em (\d{1,2}\/\d{1,2})(?: para a reserva (.+))?$/i);
+    const match = englishState || portugueseState;
+    if (match) {
+        const state = englishState
+            ? match[1].toLowerCase()
+            : match[1].toLowerCase() === 'ligada' ? 'on' : 'off';
+        const reservation = match[3]
+            ? hp('messages.forReservation', ' for {{reservation}}', { reservation: match[3] })
+            : '';
+        return hp(
+            state === 'on' ? 'messages.defaultOnNote' : 'messages.defaultOffNote',
+            state === 'on' ? 'Pool switched on {{date}}{{reservation}}' : 'Pool switched off {{date}}{{reservation}}',
+            { date: match[2], reservation }
+        );
+    }
+
+    const heatDays = note.match(/^(\d+) days? to heat$/i) || note.match(/^(\d+) dias? para aquecer$/i);
+    if (heatDays) {
+        return hp('tasks.heatDays', '{{days}} days to heat', { days: heatDays[1] });
+    }
+
+    return note;
+}
+
+function hp(key, fallback, replacements = {}) {
+    const translationKey = `heatedPools.${key}`;
+    const translated = t(translationKey, replacements);
+    if (translated !== translationKey) return translated;
+
+    return Object.entries(replacements).reduce(
+        (value, [placeholder, replacement]) => value.replaceAll(`{{${placeholder}}}`, String(replacement)),
+        fallback
+    );
 }
 
 function escapeHtml(value = '') {

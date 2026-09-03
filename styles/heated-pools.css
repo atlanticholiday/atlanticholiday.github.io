@@ -272,7 +272,7 @@
     font-weight: 700;
 }
 
-.heated-pools-tabs button span {
+.heated-pools-tabs button [data-pool-count] {
     display: inline-flex;
     min-width: 18px;
     height: 18px;

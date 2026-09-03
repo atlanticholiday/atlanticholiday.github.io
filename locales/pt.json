@@ -250,8 +250,230 @@
     },
     "heatedPools": {
         "header": {
+            "workspace": "Área de operações",
             "title": "Piscinas Aquecidas",
-            "subtitle": "Gerir pedidos de aquecimento e tarefas diarias dentro da app"
+            "subtitle": "Gerir pedidos de aquecimento e tarefas diárias na aplicação",
+            "backToApps": "Voltar às aplicações",
+            "language": "Idioma",
+            "english": "Inglês",
+            "portuguese": "Português"
+        },
+        "nav": {
+            "sectionsLabel": "Secções das piscinas aquecidas",
+            "status": "Estado",
+            "reservations": "Reservas",
+            "tasks": "Tarefas",
+            "history": "Histórico",
+            "settings": "Definições"
+        },
+        "search": {
+            "label": "Pesquisar alojamento",
+            "placeholder": "Pesquisar alojamentos..."
+        },
+        "autosave": "Os registos são guardados automaticamente.",
+        "views": {
+            "status": {
+                "eyebrow": "Estado atual do equipamento",
+                "title": "Estado das piscinas",
+                "description": "O que cada piscina está fisicamente a fazer neste momento.",
+                "emptyTitle": "Nenhuma piscina configurada",
+                "emptyDescription": "Abra as Definições para adicionar um alojamento com piscina aquecida."
+            },
+            "reservations": {
+                "eyebrow": "Pedidos dos hóspedes",
+                "title": "Reservas",
+                "description": "Pedido de aquecimento, pagamento e estado no Avantio.",
+                "add": "Adicionar reserva"
+            },
+            "tasks": {
+                "eyebrow": "Lista de tarefas da equipa",
+                "title": "Tarefas",
+                "description": "Apenas o trabalho que requer atenção.",
+                "planningDate": "Data de planeamento"
+            },
+            "history": {
+                "eyebrow": "Registo de atividade",
+                "title": "Histórico",
+                "description": "Quem alterou cada piscina, quando e para que reserva.",
+                "property": "Alojamento",
+                "allProperties": "Todos os alojamentos"
+            },
+            "settings": {
+                "eyebrow": "Configuração",
+                "title": "Definições",
+                "description": "Alojamentos com piscina aquecida, custos, antecedência e notas operacionais.",
+                "add": "Adicionar alojamento"
+            }
+        },
+        "columns": {
+            "property": "Alojamento",
+            "checkIn": "Entrada",
+            "checkOut": "Saída",
+            "heating": "Aquecimento",
+            "payment": "Pagamento",
+            "avantio": "Avantio",
+            "notes": "Notas"
+        },
+        "fields": {
+            "chooseProperty": "Escolher alojamento",
+            "heatingRequested": "Aquecimento solicitado",
+            "reservationNotes": "Notas da reserva",
+            "reservationNotesPlaceholder": "Confirmação do hóspede ou instruções especiais...",
+            "approvedProperty": "Alojamento aprovado",
+            "heatUpDays": "Dias de antecedência para aquecer",
+            "guestCharge": "Valor cobrado ao hóspede (EUR)",
+            "ownerCost": "Custo do proprietário (EUR)",
+            "remoteControl": "Ligar/desligar remotamente",
+            "remoteNo": "Não — apenas no local",
+            "remoteYes": "Sim — disponível remotamente",
+            "operationalNotes": "Notas operacionais",
+            "operationalNotesPlaceholder": "Controlo remoto, contacto do proprietário, tempo de aquecimento...",
+            "taskInstructions": "Instruções da tarefa",
+            "taskInstructionsPlaceholder": "Controlo remoto, acesso, contacto do proprietário..."
+        },
+        "dialogs": {
+            "stateEyebrow": "Confirmar alteração física",
+            "stateTitle": "Alterar estado da piscina",
+            "associateReservation": "Associar à reserva",
+            "optionalNote": "Nota opcional",
+            "stateNotePlaceholder": "Ligada remotamente, confirmação do colega no local...",
+            "confirmChange": "Confirmar alteração",
+            "reservationEyebrow": "Pedido do hóspede",
+            "reservationTitle": "Adicionar reserva",
+            "propertyEyebrow": "Configuração",
+            "propertyTitle": "Adicionar alojamento com piscina aquecida"
+        },
+        "status": {
+            "remote": "Controlo remoto",
+            "onsite": "Apenas no local",
+            "lastChange": "Última alteração",
+            "notRecorded": "Sem registo",
+            "by": "por {{name}}",
+            "noColleague": "Nenhum colega registado",
+            "nextReservation": "Próxima reserva",
+            "noneScheduled": "Nenhuma agendada",
+            "noGuestRequest": "Sem pedido de aquecimento",
+            "setStateLabel": "Alterar o estado da piscina de {{property}}",
+            "turnOn": "Ligar",
+            "turnOff": "Desligar",
+            "noMatches": "Nenhum alojamento corresponde à pesquisa."
+        },
+        "states": {
+            "on": "LIGADA",
+            "off": "DESLIGADA",
+            "always_on": "SEMPRE LIGADA",
+            "unavailable": "INDISPONÍVEL",
+            "unknown": "DESCONHECIDA"
+        },
+        "options": {
+            "notFilled": "Não preenchido",
+            "yes": "Sim",
+            "no": "Não",
+            "waiting": "A aguardar"
+        },
+        "tasks": {
+            "lanes": {
+                "overdue": "Em atraso",
+                "today": "Hoje",
+                "next14": "Próximos 14 dias",
+                "completed": "Concluídas",
+                "empty": "Nenhuma ação nesta coluna."
+            },
+            "labels": {
+                "switchOn": "Ligar piscina",
+                "switchOnAhead": "Ligar piscina ({{days}} dias antes)",
+                "switchOff": "Desligar piscina",
+                "confirmAvantio": "Confirmar atualização no Avantio",
+                "checkPayment": "Verificar pagamento da piscina aquecida"
+            },
+            "actions": {
+                "confirmPaid": "Confirmar pagamento",
+                "confirmAvantio": "Confirmar Avantio",
+                "markDone": "Marcar como concluída",
+                "claim": "Assumir tarefa"
+            },
+            "claimedBy": "Assumida por {{name}}",
+            "remoteInstruction": "Controlo remoto disponível — não é necessário ir ao alojamento",
+            "heatDays": "{{days}} dias para aquecer",
+            "completedBy": "Concluída por {{name}} · {{date}}",
+            "completedByNoDate": "Concluída por {{name}}",
+            "previouslyCompleted": "Concluída anteriormente",
+            "status": {
+                "overdue": "Em atraso",
+                "today": "Para hoje",
+                "upcoming": "Próxima",
+                "done": "Concluída",
+                "later": "Mais tarde"
+            }
+        },
+        "reservations": {
+            "delete": "Eliminar",
+            "empty": "Ainda não existem reservas ativas.",
+            "requestedPaid": "Solicitado e pago",
+            "requestedPending": "Solicitado, pagamento pendente",
+            "notRequested": "Aquecimento não solicitado",
+            "notFilled": "Estado do aquecimento não preenchido"
+        },
+        "history": {
+            "reservation": "Reserva {{label}}",
+            "generalChange": "Alteração geral do alojamento",
+            "noNote": "Sem nota",
+            "empty": "Nenhuma alteração de estado corresponde aos filtros.",
+            "noChanges": "Ainda não existem alterações. A primeira ação de ligar/desligar aparecerá aqui.",
+            "unknownTime": "Hora desconhecida"
+        },
+        "settings": {
+            "remove": "Remover",
+            "empty": "Ainda não existem alojamentos com piscina aquecida configurados."
+        },
+        "directory": {
+            "title": "Alojamentos aprovados com piscina aquecida",
+            "description": "Só podem ser adicionados alojamentos aprovados do diretório protegido.",
+            "loading": "O diretório protegido de alojamentos está a carregar",
+            "configured": "Configurado",
+            "available": "Disponível",
+            "missing": "Não consta do diretório de alojamentos",
+            "add": "Adicionar"
+        },
+        "association": {
+            "general": "Alteração geral — sem reserva",
+            "heatingRequested": "aquecimento solicitado"
+        },
+        "messages": {
+            "loadError": "Não foi possível carregar os registos das piscinas aquecidas.",
+            "propertyAdded": "Alojamento adicionado.",
+            "propertyAddError": "Não foi possível adicionar o alojamento.",
+            "reservationAdded": "Reserva adicionada.",
+            "reservationAddError": "Não foi possível adicionar a reserva.",
+            "stateSaveError": "Não foi possível guardar o estado da piscina.",
+            "completeTaskError": "Não foi possível concluir a tarefa.",
+            "claimTaskError": "Não foi possível assumir a tarefa.",
+            "reservationUpdateError": "Não foi possível atualizar a reserva.",
+            "reservationDeleteError": "Não foi possível eliminar a reserva.",
+            "settingsUpdateError": "Não foi possível atualizar as definições do alojamento.",
+            "propertyRemoveError": "Não foi possível remover o alojamento.",
+            "confirmDeleteProperty": "Eliminar este alojamento com piscina aquecida e as respetivas reservas?",
+            "confirmDeleteReservation": "Eliminar esta reserva?",
+            "propertyNameRequired": "O nome do alojamento é obrigatório.",
+            "chooseApprovedProperty": "Escolha um alojamento do diretório aprovado.",
+            "propertyAlreadyConfigured": "Este alojamento já está configurado.",
+            "databaseNotReady": "A base de dados ainda não está disponível.",
+            "choosePropertyFirst": "Escolha primeiro um alojamento.",
+            "datesRequired": "As datas de entrada e saída são obrigatórias.",
+            "endDateInvalid": "A data de saída tem de ser posterior à data de entrada.",
+            "taskCompleted": "Tarefa de {{property}} concluída para a reserva {{reservation}} — {{state}}.",
+            "alreadyState": "A piscina de {{property}} já está {{state}}.",
+            "markedState": "Piscina de {{property}} marcada como {{state}}{{reservation}}.",
+            "forReservation": " para a reserva {{reservation}}",
+            "defaultOnNote": "Piscina ligada em {{date}}{{reservation}}",
+            "defaultOffNote": "Piscina desligada em {{date}}{{reservation}}",
+            "paymentConfirmed": "Pagamento de {{property}} confirmado.",
+            "avantioConfirmed": "Atualização de {{property}} no Avantio confirmada.",
+            "alreadyClaimed": "A tarefa «{{task}}» já foi assumida por {{name}}.",
+            "taskClaimed": "Tarefa «{{task}}» assumida para {{property}}."
+        },
+        "common": {
+            "colleague": "Colega"
         }
     },
     "vehicles": {
