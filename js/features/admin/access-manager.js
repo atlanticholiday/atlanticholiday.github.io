@@ -20,6 +20,13 @@ import {
 import { normalizeAllowedApps } from "../../shared/app-access.js";
 import { isCallableUnavailableError } from "./firebase-function-utils.js";
 
+function isRecoverableAccessMutationError(error) {
+    const code = String(error?.code || '').trim().toLowerCase();
+    return isCallableUnavailableError(error)
+        || code === 'functions/internal'
+        || code === 'internal';
+}
+
 export class AccessManager {
     constructor(db, functionsInstance = null) {
         this.db = db;
@@ -109,11 +116,7 @@ export class AccessManager {
         try {
             await this.callProtectedFunction('adminRemoveAccess', { email: normalizedEmail });
         } catch (error) {
-            const code = String(error?.code || '').trim().toLowerCase();
-            const recoverableCallableFailure = isCallableUnavailableError(error)
-                || code === 'functions/internal'
-                || code === 'internal';
-            if (!recoverableCallableFailure) throw error;
+            if (!isRecoverableAccessMutationError(error)) throw error;
 
             // Firestore rules still require the signed-in user to be an admin.
             // Keeping this fallback makes deletion work on Spark projects where
@@ -163,11 +166,8 @@ export class AccessManager {
                 roles: normalizedRoles
             });
         } catch (error) {
-            if (!isCallableUnavailableError(error)) throw error;
-            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
-                displayEmail: normalizedEmail,
-                roles: normalizedRoles
-            }, { merge: true });
+            if (!isRecoverableAccessMutationError(error)) throw error;
+            await this.setAccessFieldsDirectly(normalizedEmail, { roles: normalizedRoles });
         }
     }
 
@@ -180,12 +180,29 @@ export class AccessManager {
                 allowedApps: normalizedAllowedApps
             });
         } catch (error) {
-            if (!isCallableUnavailableError(error)) throw error;
-            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
-                displayEmail: normalizedEmail,
-                allowedApps: normalizedAllowedApps
-            }, { merge: true });
+            if (!isRecoverableAccessMutationError(error)) throw error;
+            await this.setAccessFieldsDirectly(normalizedEmail, { allowedApps: normalizedAllowedApps });
         }
+    }
+
+    async setAccessFieldsDirectly(email, patch) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const materializedAccess = await getDocs(query(
+            collection(this.db, 'userAccess'),
+            where('emailCanonical', '==', canonicalizeEmail(normalizedEmail))
+        ));
+        const batch = writeBatch(this.db);
+        batch.set(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+            displayEmail: normalizedEmail,
+            ...patch
+        }, { merge: true });
+        materializedAccess.docs.forEach((documentSnapshot) => {
+            batch.set(documentSnapshot.ref, {
+                ...patch,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        });
+        await batch.commit();
     }
 
     async isEmailAllowed(email) {

@@ -11,6 +11,7 @@ const PRIVILEGED_ROLE_KEYS = new Set(["admin", "manager", "supervisor"]);
 const APP_ACCESS_KEYS = new Set([
   "vehicles",
   "staff",
+  "vacationCenter",
   "properties",
   "airbnbReservationInvoices",
   "welcomePacks",
