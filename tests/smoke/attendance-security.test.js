@@ -39,6 +39,15 @@ describe('Attendance register security', () => {
         assert.includes(mainSource, "httpsCallable(functionsInstance, 'setAttendancePin')");
     });
 
+    test('shows an actionable message when the protected Firebase service is not deployed', async () => {
+        const response = await fetch('../js/features/scheduling/data-manager.js');
+        assert.ok(response.ok, 'Failed to fetch scheduling data manager');
+        const source = await response.text();
+
+        assert.includes(source, "['internal', 'not-found', 'unavailable', 'unimplemented']");
+        assert.includes(source, "timeClock.errors.secureServiceNotDeployed");
+    });
+
     test('separates daily, history, overtime, management, and configuration workspaces', async () => {
         const response = await fetch('../js/features/scheduling/ui-manager.js');
         assert.ok(response.ok, 'Failed to fetch scheduling UI manager');

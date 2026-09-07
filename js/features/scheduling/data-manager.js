@@ -1464,47 +1464,43 @@ export class DataManager {
         throw new Error('Direct attendance writes are disabled. Use the protected attendance service.');
     }
 
-    async recordAttendanceForEmployee(employeeId, eventType, { source = 'web', pin = null } = {}) {
-        const employee = this.resolveAttendanceEmployee(employeeId);
-        if (!employee) {
-            throw new Error(t('timeClock.errors.employeeNotFound'));
-        }
-        if (typeof this.attendanceApi.recordPunch !== 'function') {
+    async invokeAttendanceApi(method, payload) {
+        const callable = this.attendanceApi?.[method];
+        if (typeof callable !== 'function') {
             throw new Error(t('timeClock.errors.secureServiceUnavailable'));
         }
+
         try {
-            const result = await this.attendanceApi.recordPunch({ employeeId: employee.id, eventType, source, pin });
+            const result = await callable(payload);
             return result?.data || result;
         } catch (error) {
             const reason = error?.details?.reason;
             if (reason === 'pin-locked') throw new Error(t('timeClock.errors.pinLocked'));
             if (reason === 'invalid-pin-format') throw new Error(t('timeClock.errors.pinFormat'));
             if (reason === 'invalid-pin') throw new Error(t('timeClock.errors.pinInvalid'));
-            throw error;
-        }
-    }
 
-    async setAttendancePin(employeeId, pin) {
-        if (typeof this.attendanceApi.setPin !== 'function') {
-            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
-        }
-        try {
-            const result = await this.attendanceApi.setPin({ employeeId, pin });
-            return result?.data || result;
-        } catch (error) {
-            if (error?.details?.reason === 'invalid-pin-format') {
-                throw new Error(t('timeClock.errors.pinFormat'));
+            const code = String(error?.code || '').replace(/^functions\//, '');
+            if (['internal', 'not-found', 'unavailable', 'unimplemented'].includes(code)) {
+                throw new Error(t('timeClock.errors.secureServiceNotDeployed'));
             }
             throw error;
         }
     }
 
-    async removeAttendancePin(employeeId) {
-        if (typeof this.attendanceApi.removePin !== 'function') {
-            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+    async recordAttendanceForEmployee(employeeId, eventType, { source = 'web', pin = null } = {}) {
+        const employee = this.resolveAttendanceEmployee(employeeId);
+        if (!employee) {
+            throw new Error(t('timeClock.errors.employeeNotFound'));
         }
-        const result = await this.attendanceApi.removePin({ employeeId });
-        return result?.data || result;
+        return this.invokeAttendanceApi('recordPunch', { employeeId: employee.id, eventType, source, pin });
+    }
+
+    async setAttendancePin(employeeId, pin) {
+        return this.invokeAttendanceApi('setPin', { employeeId, pin });
+    }
+
+    async removeAttendancePin(employeeId) {
+        return this.invokeAttendanceApi('removePin', { employeeId });
     }
 
     async recordCurrentUserAttendance(eventType) {
