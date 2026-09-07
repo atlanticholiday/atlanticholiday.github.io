@@ -19,6 +19,21 @@ describe("Vacation records", () => {
     assert.equal(record.status, "approved");
     assert.equal(record.type, "vacation");
     assert.equal(record.visibility, "team");
+    assert.equal(record.dayCountMode, "workdays");
+  });
+
+  test("preserves calendar-day counting for imported vacation records", () => {
+    const [entry] = buildSharedVacationEntries([
+      {
+        id: "calendar-leave",
+        employeeId: "emp-1",
+        startDate: "2026-08-15",
+        endDate: "2026-08-16",
+        dayCountMode: "calendar"
+      }
+    ], [{ id: "emp-1", name: "Ana" }]);
+
+    assert.equal(entry.dayCountMode, "calendar");
   });
 
   test("normalizes supported absence types and preserves them in shared entries", () => {

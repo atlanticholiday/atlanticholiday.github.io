@@ -1,5 +1,7 @@
 const DEFAULT_VACATION_STATUS = 'approved';
 const DEFAULT_VACATION_VISIBILITY = 'team';
+export const DEFAULT_VACATION_DAY_COUNT_MODE = 'workdays';
+export const VACATION_DAY_COUNT_MODES = Object.freeze(['workdays', 'calendar']);
 export const DEFAULT_LEAVE_TYPE = 'vacation';
 export const LEAVE_TYPES = Object.freeze([
     'vacation',
@@ -13,6 +15,11 @@ export const LEAVE_TYPES = Object.freeze([
 export function normalizeLeaveType(value) {
     const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
     return LEAVE_TYPES.includes(normalized) ? normalized : DEFAULT_LEAVE_TYPE;
+}
+
+export function normalizeVacationDayCountMode(value) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    return VACATION_DAY_COUNT_MODES.includes(normalized) ? normalized : DEFAULT_VACATION_DAY_COUNT_MODE;
 }
 
 export function leaveTypeDeductsFromVacation(value) {
@@ -81,7 +88,8 @@ export function normalizeVacationEntry(vacation = {}, { employeeId = null, id = 
         status: normalizeOptionalText(vacation.status) || DEFAULT_VACATION_STATUS,
         note: normalizeOptionalText(vacation.note),
         visibility: normalizeOptionalText(vacation.visibility) || DEFAULT_VACATION_VISIBILITY,
-        source: normalizeOptionalText(vacation.source)
+        source: normalizeOptionalText(vacation.source),
+        dayCountMode: normalizeVacationDayCountMode(vacation.dayCountMode)
     };
 }
 
@@ -112,7 +120,9 @@ export function toEmployeeVacationEntry(vacation = {}, employeeId = null) {
         type: normalizedEntry.type,
         status: normalizedEntry.status,
         note: normalizedEntry.note,
-        visibility: normalizedEntry.visibility
+        visibility: normalizedEntry.visibility,
+        source: normalizedEntry.source,
+        dayCountMode: normalizedEntry.dayCountMode
     };
 }
 
@@ -176,7 +186,8 @@ export function buildSharedVacationEntries(records = [], employees = []) {
                 type: normalizedRecord.type,
                 status: normalizedRecord.status,
                 note: normalizedRecord.note,
-                visibility: normalizedRecord.visibility
+                visibility: normalizedRecord.visibility,
+                dayCountMode: normalizedRecord.dayCountMode
             };
         })
         .filter(Boolean)

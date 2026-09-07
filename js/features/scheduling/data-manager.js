@@ -51,6 +51,12 @@ import {
 import { normalizeAllowedApps } from '../../shared/app-access.js';
 import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
+import {
+    buildVacation2026UpdatePlan,
+    VACATION_2026_SOURCE_ROWS,
+    VACATION_2026_UPDATE_ID,
+    VACATION_2026_UPDATE_YEAR
+} from './vacation-2026-update.js';
 
 export class DataManager {
     constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
@@ -75,6 +81,11 @@ export class DataManager {
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
         this.vacationYearPolicies = {};
+        this.vacationDataUpdates = {};
+        this.hasLoadedGlobalSettings = false;
+        this.isApplyingVacation2026Update = false;
+        this.vacation2026UpdateAwaitingEmployeeRefresh = false;
+        this.vacation2026UpdateError = null;
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
@@ -124,6 +135,7 @@ export class DataManager {
             } : null
         };
         this.notifyDataChange();
+        this.ensureVacation2026UpdateApplied().catch((error) => console.error("Failed to apply the 2026 vacation update", error));
     }
 
     clearCurrentUserContext() {
@@ -143,6 +155,11 @@ export class DataManager {
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
         this.vacationYearPolicies = {};
+        this.vacationDataUpdates = {};
+        this.hasLoadedGlobalSettings = false;
+        this.isApplyingVacation2026Update = false;
+        this.vacation2026UpdateAwaitingEmployeeRefresh = false;
+        this.vacation2026UpdateError = null;
         this.selectedDateKey = null;
         this.hasLoadedVacationRecords = false;
         this.attendanceSyncState = {
@@ -264,8 +281,17 @@ export class DataManager {
             const { activeEmployees, archivedEmployees } = partitionEmployeesByArchiveStatus(allEmployees);
             this.rawActiveEmployees = activeEmployees;
             this.rawArchivedEmployees = archivedEmployees;
+            if (this.vacation2026UpdateAwaitingEmployeeRefresh) {
+                const updatedEmployeeCount = allEmployees.filter((employee) => (
+                    employee?.vacationLifetimeBaseline?.source === VACATION_2026_UPDATE_ID
+                )).length;
+                if (updatedEmployeeCount >= VACATION_2026_SOURCE_ROWS.length) {
+                    this.vacation2026UpdateAwaitingEmployeeRefresh = false;
+                }
+            }
             this.rebuildEmployeesFromSources();
             this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
+            this.ensureVacation2026UpdateApplied().catch((error) => console.error("Failed to apply the 2026 vacation update", error));
         }, (error) => {
             this.hasLoadedEmployees = false;
             this.employeeLoadError = error;
@@ -286,6 +312,7 @@ export class DataManager {
             this.hasLoadedVacationRecords = true;
             this.rebuildEmployeesFromSources();
             this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
+            this.ensureVacation2026UpdateApplied().catch((error) => console.error("Failed to apply the 2026 vacation update", error));
         }, (error) => console.error("Error listening for vacation records:", error));
     }
 
@@ -337,11 +364,15 @@ export class DataManager {
                 const data = docSnap.data();
                 this.minStaffThreshold = data.minStaffThreshold || 0;
                 this.vacationYearPolicies = data.vacationYearPolicies || {};
+                this.vacationDataUpdates = data.vacationDataUpdates || {};
             } else {
                 this.minStaffThreshold = 0;
                 this.vacationYearPolicies = {};
+                this.vacationDataUpdates = {};
             }
+            this.hasLoadedGlobalSettings = true;
             this.notifyDataChange();
+            this.ensureVacation2026UpdateApplied().catch((error) => console.error("Failed to apply the 2026 vacation update", error));
         }, (error) => console.error("Error listening for settings:", error));
     }
 
@@ -598,7 +629,9 @@ export class DataManager {
                 type: vacation.type,
                 status: vacation.status,
                 note: vacation.note,
-                visibility: vacation.visibility
+                visibility: vacation.visibility,
+                source: vacation.source,
+                dayCountMode: vacation.dayCountMode
             }));
     }
 
@@ -635,12 +668,191 @@ export class DataManager {
             status: vacationRecord.status,
             visibility: vacationRecord.visibility,
             note: vacationRecord.note,
-            source
+            source,
+            dayCountMode: vacationRecord.dayCountMode
         };
     }
 
+    splitVacationRecordOutsideYear(vacation, employeeId, year) {
+        const normalized = normalizeVacationEntry(vacation, { employeeId });
+        if (!normalized) return [];
+
+        const yearStart = `${year}-01-01`;
+        const yearEnd = `${year}-12-31`;
+        if (normalized.type !== 'vacation' || normalized.endDate < yearStart || normalized.startDate > yearEnd) {
+            return [normalized];
+        }
+
+        const segments = [];
+        if (normalized.startDate < yearStart) {
+            segments.push(createVacationRecord({
+                employeeId: normalized.employeeId,
+                startDate: normalized.startDate,
+                endDate: `${year - 1}-12-31`,
+                type: normalized.type,
+                status: normalized.status,
+                note: normalized.note,
+                visibility: normalized.visibility,
+                dayCountMode: normalized.dayCountMode
+            }, { source: normalized.source || 'planner', visibility: normalized.visibility }));
+        }
+        if (normalized.endDate > yearEnd) {
+            segments.push(createVacationRecord({
+                employeeId: normalized.employeeId,
+                startDate: `${year + 1}-01-01`,
+                endDate: normalized.endDate,
+                type: normalized.type,
+                status: normalized.status,
+                note: normalized.note,
+                visibility: normalized.visibility,
+                dayCountMode: normalized.dayCountMode
+            }, { source: normalized.source || 'planner', visibility: normalized.visibility }));
+        }
+        return segments.filter(Boolean);
+    }
+
+    async ensureVacation2026UpdateApplied() {
+        if (
+            !this.hasPrivilegedRole()
+            || !this.hasLoadedEmployees
+            || !this.hasLoadedVacationRecords
+            || !this.hasLoadedGlobalSettings
+            || this.isApplyingVacation2026Update
+            || this.vacationDataUpdates?.[VACATION_2026_UPDATE_ID]?.applied
+        ) {
+            return null;
+        }
+
+        const employees = [...this.rawActiveEmployees, ...this.rawArchivedEmployees];
+        const plan = buildVacation2026UpdatePlan(employees);
+        if (plan.unmatched.length || plan.ambiguous.length) {
+            const error = new Error([
+                plan.unmatched.length ? `Unmatched employees: ${plan.unmatched.join(', ')}` : '',
+                plan.ambiguous.length ? `Ambiguous employees: ${plan.ambiguous.join(', ')}` : ''
+            ].filter(Boolean).join('. '));
+            error.code = 'vacation-2026-employee-match-failed';
+            this.vacation2026UpdateError = error;
+            throw error;
+        }
+
+        this.isApplyingVacation2026Update = true;
+        this.vacation2026UpdateError = null;
+
+        try {
+            const matchedEmployeeIds = new Set(plan.items.map((item) => item.employee.id));
+            const recordsToReplace = this.vacationRecords.filter((record) => (
+                matchedEmployeeIds.has(record.employeeId)
+                && record.type === 'vacation'
+                && record.startDate <= `${VACATION_2026_UPDATE_YEAR}-12-31`
+                && record.endDate >= `${VACATION_2026_UPDATE_YEAR}-01-01`
+            ));
+            const replacementRecords = new Map();
+            const importedRecordsByEmployee = new Map();
+
+            recordsToReplace.forEach((record) => {
+                this.splitVacationRecordOutsideYear(record, record.employeeId, VACATION_2026_UPDATE_YEAR)
+                    .forEach((segment) => replacementRecords.set(segment.id, segment));
+            });
+
+            plan.items.forEach((item) => {
+                const importedRecords = item.ranges.map(({ startDate, endDate }) => createVacationRecord({
+                    employeeId: item.employee.id,
+                    startDate,
+                    endDate,
+                    type: 'vacation',
+                    dayCountMode: 'calendar'
+                }, { source: VACATION_2026_UPDATE_ID })).filter(Boolean);
+                importedRecordsByEmployee.set(item.employee.id, importedRecords);
+                importedRecords.forEach((record) => replacementRecords.set(record.id, record));
+            });
+
+            const estimatedWrites = recordsToReplace.length + replacementRecords.size + plan.items.length + 1;
+            if (estimatedWrites > 500) {
+                const error = new Error(`The 2026 vacation update needs ${estimatedWrites} writes; the safe limit is 500.`);
+                error.code = 'vacation-2026-update-too-large';
+                throw error;
+            }
+
+            const batch = writeBatch(this.db);
+            recordsToReplace.forEach((record) => {
+                batch.delete(doc(this.db, 'vacation_records', record.id));
+            });
+            replacementRecords.forEach((record) => {
+                batch.set(
+                    doc(this.db, 'vacation_records', record.id),
+                    this.createVacationRecordPayload(record, record.source || VACATION_2026_UPDATE_ID),
+                    { merge: true }
+                );
+            });
+
+            plan.items.forEach((item) => {
+                const preservedVacations = (item.employee.vacations || [])
+                    .flatMap((vacation) => this.splitVacationRecordOutsideYear(
+                        vacation,
+                        item.employee.id,
+                        VACATION_2026_UPDATE_YEAR
+                    ));
+                const mergedVacations = mergeEmployeeVacations(
+                    preservedVacations,
+                    importedRecordsByEmployee.get(item.employee.id) || [],
+                    item.employee.id
+                );
+                batch.update(doc(this.db, 'employees', item.employee.id), {
+                    vacations: this.serializeEmployeeVacations(mergedVacations, item.employee.id),
+                    [`vacationAllowancesByYear.${VACATION_2026_UPDATE_YEAR}`]: item.openingAllowance,
+                    [`vacationUsageAdjustmentsByYear.${VACATION_2026_UPDATE_YEAR}`]: item.usageAdjustment,
+                    vacationLifetimeBaseline: {
+                        throughYear: VACATION_2026_UPDATE_YEAR,
+                        totalEntitlement: item.sourceRow.totalEntitlement,
+                        usedBeforeYear: item.sourceRow.usedThrough2025,
+                        source: VACATION_2026_UPDATE_ID
+                    }
+                });
+            });
+
+            const updateRecord = {
+                applied: true,
+                appliedAt: new Date().toISOString(),
+                year: VACATION_2026_UPDATE_YEAR,
+                employeeCount: plan.items.length,
+                source: VACATION_2026_UPDATE_ID
+            };
+            batch.set(doc(this.db, 'settings', 'global'), {
+                vacationDataUpdates: {
+                    ...this.vacationDataUpdates,
+                    [VACATION_2026_UPDATE_ID]: updateRecord
+                }
+            }, { merge: true });
+
+            this.vacation2026UpdateAwaitingEmployeeRefresh = true;
+            await batch.commit();
+            this.vacationDataUpdates = {
+                ...this.vacationDataUpdates,
+                [VACATION_2026_UPDATE_ID]: updateRecord
+            };
+            return updateRecord;
+        } catch (error) {
+            this.vacation2026UpdateAwaitingEmployeeRefresh = false;
+            this.vacation2026UpdateError = error;
+            throw error;
+        } finally {
+            this.isApplyingVacation2026Update = false;
+        }
+    }
+
     async syncLegacyVacationRecords() {
-        if (!this.hasLoadedVacationRecords || this.isSyncingLegacyVacationRecords) {
+        const updatePending = this.hasPrivilegedRole()
+            && (
+                !this.hasLoadedGlobalSettings
+                || !this.vacationDataUpdates?.[VACATION_2026_UPDATE_ID]?.applied
+            );
+        if (
+            !this.hasLoadedVacationRecords
+            || this.isSyncingLegacyVacationRecords
+            || updatePending
+            || this.isApplyingVacation2026Update
+            || this.vacation2026UpdateAwaitingEmployeeRefresh
+        ) {
             return;
         }
 
@@ -660,7 +872,12 @@ export class DataManager {
                 .map((vacation) => createVacationRecord({
                     employeeId: employee.id,
                     startDate: vacation?.startDate,
-                    endDate: vacation?.endDate
+                    endDate: vacation?.endDate,
+                    type: vacation?.type,
+                    status: vacation?.status,
+                    note: vacation?.note,
+                    visibility: vacation?.visibility,
+                    dayCountMode: vacation?.dayCountMode
                 }, { source: 'employee-doc' }))
                 .filter((record) => record && !existingRecordIds.has(record.id));
         });
@@ -762,7 +979,8 @@ export class DataManager {
             type: type || previousVacation.type,
             status: previousVacation.status,
             note: previousVacation.note,
-            visibility: previousVacation.visibility
+            visibility: previousVacation.visibility,
+            dayCountMode: previousVacation.dayCountMode
         }, { source: 'planner', visibility: previousVacation.visibility || 'team' });
 
         if (!updatedVacation) {
@@ -1314,7 +1532,8 @@ export class DataManager {
                     type: employeeVacation.type,
                     status: employeeVacation.status,
                     note: employeeVacation.note,
-                    visibility: employeeVacation.visibility
+                    visibility: employeeVacation.visibility,
+                    dayCountMode: employeeVacation.dayCountMode
                 };
             });
         }).filter(Boolean);

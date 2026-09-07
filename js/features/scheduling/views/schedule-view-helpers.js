@@ -25,9 +25,15 @@ export function getUpcomingVacationEntries(dataManager, { includePast = false } 
 }
 
 export function calculateEmployeeVacationDaysForYear(employee, year, holidays = {}) {
-    return getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (vacation) => (
+    const recordedDays = getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (vacation) => (
         leaveTypeDeductsFromVacation(vacation.type)
     )).size;
+    return Math.max(0, recordedDays + getVacationUsageAdjustmentForYear(employee, year));
+}
+
+export function getVacationUsageAdjustmentForYear(employee, year) {
+    const adjustment = Number(employee?.vacationUsageAdjustmentsByYear?.[String(year)] || 0);
+    return Number.isFinite(adjustment) ? Math.trunc(adjustment) : 0;
 }
 
 function getEmployeeWorkDays(employee) {
@@ -56,7 +62,8 @@ function getEmployeeLeaveWeekdaysForYear(employee, year, holidays = {}, predicat
             }
 
             const dateKey = getLocalDateKey(current);
-            if (workDays.has(current.getDay()) && !holidays?.[dateKey]) {
+            const countsEveryMarkedDate = vacation.dayCountMode === 'calendar';
+            if (countsEveryMarkedDate || (workDays.has(current.getDay()) && !holidays?.[dateKey])) {
                 leaveDays.add(dateKey);
             }
         }
@@ -70,13 +77,23 @@ export function calculateEmployeeVacationUsageForYear(employee, year, referenceD
     const vacationDays = [...getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (vacation) => (
         leaveTypeDeductsFromVacation(vacation.type)
     ))];
-    const takenDays = vacationDays.filter((dateKey) => dateKey <= todayKey).length;
-    const plannedDays = vacationDays.length - takenDays;
+    let takenDays = vacationDays.filter((dateKey) => dateKey <= todayKey).length;
+    let plannedDays = vacationDays.length - takenDays;
+    const adjustment = getVacationUsageAdjustmentForYear(employee, year);
+
+    if (adjustment >= 0) {
+        takenDays += adjustment;
+    } else {
+        let daysToRemove = Math.min(-adjustment, plannedDays);
+        plannedDays -= daysToRemove;
+        daysToRemove = Math.min(-adjustment - daysToRemove, takenDays);
+        takenDays -= daysToRemove;
+    }
 
     return {
         takenDays,
         plannedDays,
-        recordedDays: vacationDays.length
+        recordedDays: takenDays + plannedDays
     };
 }
 
@@ -86,11 +103,22 @@ export function calculateEmployeeLeaveUsageByTypeForYear(employee, year, referen
         const days = [...getEmployeeLeaveWeekdaysForYear(employee, year, holidays, (entry) => (
             normalizeLeaveType(entry.type) === type
         ))];
-        usageByType[type] = {
-            takenDays: days.filter((dateKey) => dateKey <= todayKey).length,
-            plannedDays: days.filter((dateKey) => dateKey > todayKey).length,
-            recordedDays: days.length
-        };
+        let takenDays = days.filter((dateKey) => dateKey <= todayKey).length;
+        let plannedDays = days.filter((dateKey) => dateKey > todayKey).length;
+
+        if (type === 'vacation') {
+            const adjustment = getVacationUsageAdjustmentForYear(employee, year);
+            if (adjustment >= 0) {
+                takenDays += adjustment;
+            } else {
+                let daysToRemove = Math.min(-adjustment, plannedDays);
+                plannedDays -= daysToRemove;
+                daysToRemove = Math.min(-adjustment - daysToRemove, takenDays);
+                takenDays -= daysToRemove;
+            }
+        }
+
+        usageByType[type] = { takenDays, plannedDays, recordedDays: takenDays + plannedDays };
         return usageByType;
     }, {});
 }
@@ -165,6 +193,7 @@ export function calculateVacationPlannerYearSummary(employees = [], year, refere
             hasYearlyOverride: Number.isFinite(yearlyAllowance) && yearlyAllowance >= 0,
             carryOver: allowance.carryOver,
             expiredCarryOver: allowance.expiredCarryOver,
+            usageAdjustment: getVacationUsageAdjustmentForYear(employee, year),
             ...usage
         };
     });

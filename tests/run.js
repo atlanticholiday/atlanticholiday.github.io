@@ -52,6 +52,7 @@ import "./unit/features/scheduling/time-clock-controls.test.js";
 import "./unit/features/scheduling/time-clock-station.test.js";
 import "./unit/features/scheduling/vacation-board-view-model.test.js";
 import "./unit/features/scheduling/vacation-center-manager.test.js";
+import "./unit/features/scheduling/vacation-2026-update.test.js";
 import "./unit/features/scheduling/vacation-planner-manager.test.js";
 import "./unit/features/scheduling/vacation-policy-utils.test.js";
 import "./unit/features/scheduling/vacation-records.test.js";

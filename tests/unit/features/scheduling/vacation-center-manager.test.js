@@ -131,11 +131,12 @@ describe("VacationCenterManager", () => {
 
     const summary = document.querySelector("[data-vc-all-years-summary]");
     const values = [...summary.querySelectorAll("dd")].map((element) => Number(element.textContent));
-    assert.deepEqual(values, [5, 61]);
+    assert.deepEqual(values, [66, 5, 61]);
     assert.equal(document.querySelector("[data-vc-toggle-all-years]").getAttribute("aria-expanded"), "true");
     assert.deepEqual(manager.getEmployeeAllYearsSummary(manager.getEmployees()[0], manager.getVacationEntries()), {
       startYear: 2024,
       endYear: 2026,
+      entitlementDays: 66,
       usedDays: 5,
       remainingDays: 61,
       closedYears: 0
@@ -149,9 +150,34 @@ describe("VacationCenterManager", () => {
     assert.deepEqual(manager.getEmployeeAllYearsSummary(employees[0], manager.getVacationEntries()), {
       startYear: 2024,
       endYear: 2026,
+      entitlementDays: 66,
       usedDays: 5,
       remainingDays: 39,
       closedYears: 1
+    });
+  });
+
+  test("uses an imported lifetime baseline for the all-years total", () => {
+    const { manager, employees } = createFixture();
+    employees[0].vacationLifetimeBaseline = {
+      throughYear: 2026,
+      totalEntitlement: 92,
+      usedBeforeYear: 18
+    };
+    employees[0].vacationAllowancesByYear = { "2026": 74 };
+    employees[0].vacations = [{
+      startDate: "2026-01-01",
+      endDate: "2026-01-20",
+      dayCountMode: "calendar"
+    }];
+
+    assert.deepEqual(manager.getEmployeeAllYearsSummary(employees[0], manager.getVacationEntries()), {
+      startYear: 2024,
+      endYear: 2026,
+      entitlementDays: 92,
+      usedDays: 38,
+      remainingDays: 54,
+      closedYears: 0
     });
   });
 

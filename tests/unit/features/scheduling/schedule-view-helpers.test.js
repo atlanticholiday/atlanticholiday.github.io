@@ -140,6 +140,25 @@ describe("schedule-view-helpers", () => {
     }), 1);
   });
 
+  test("counts every imported calendar date and applies a source-total adjustment", () => {
+    const employee = {
+      workDays: [1],
+      vacationUsageAdjustmentsByYear: { "2026": -1 },
+      vacations: [{
+        startDate: "2026-01-01",
+        endDate: "2026-01-03",
+        dayCountMode: "calendar"
+      }]
+    };
+    const holidays = { "2026-01-01": "New Year's Day" };
+
+    assert.equal(calculateEmployeeVacationDaysForYear(employee, 2026, holidays), 2);
+    assert.deepEqual(
+      calculateEmployeeVacationUsageForYear(employee, 2026, new Date("2026-01-02T12:00:00"), holidays),
+      { takenDays: 2, plannedDays: 0, recordedDays: 2 }
+    );
+  });
+
   test("keeps non-vacation absence types out of the vacation balance", () => {
     const employee = {
       vacations: [

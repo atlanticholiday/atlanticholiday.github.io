@@ -163,6 +163,47 @@ export class VacationCenterManager {
 
     getEmployeeAllYearsSummary(employee, entries = []) {
         const { startYear, endYear } = this.getEmployeeYearBounds(employee, entries);
+        const baseline = employee?.vacationLifetimeBaseline;
+        const baselineYear = Number(baseline?.throughYear);
+        const baselineEntitlement = Number(baseline?.totalEntitlement);
+        const usedBeforeBaselineYear = Number(baseline?.usedBeforeYear);
+
+        if (
+            Number.isInteger(baselineYear)
+            && baselineYear >= 1900
+            && Number.isFinite(baselineEntitlement)
+            && Number.isFinite(usedBeforeBaselineYear)
+        ) {
+            const latestYear = Math.max(endYear, baselineYear);
+            let entitlementDays = baselineEntitlement;
+            let usedDays = usedBeforeBaselineYear;
+
+            for (let year = baselineYear; year <= latestYear; year += 1) {
+                const balance = calculateEmployeeLeaveBalanceForYear(
+                    employee,
+                    year,
+                    this.dataManager.getHolidaysForYear?.(year) || {},
+                    this.now()
+                );
+                usedDays += balance.vacationDays;
+
+                if (year > baselineYear) {
+                    const carryOver = Number(employee?.vacationCarryOverByYear?.[String(year)] || 0);
+                    entitlementDays += Math.max(0, balance.vacationAllowance - carryOver);
+                }
+            }
+
+            return {
+                startYear: this.getEmployeeEntranceYear(employee) ?? baselineYear,
+                endYear: latestYear,
+                entitlementDays,
+                usedDays,
+                remainingDays: entitlementDays - usedDays,
+                closedYears: 0
+            };
+        }
+
+        let entitlementDays = 0;
         let usedDays = 0;
         let remainingDays = 0;
         let closedYears = 0;
@@ -174,6 +215,7 @@ export class VacationCenterManager {
                 this.dataManager.getHolidaysForYear?.(year) || {},
                 this.now()
             );
+            entitlementDays += balance.vacationAllowance;
             usedDays += balance.vacationDays;
             if (this.dataManager.isVacationYearClosed?.(year)) {
                 closedYears += 1;
@@ -182,7 +224,7 @@ export class VacationCenterManager {
             }
         }
 
-        return { startYear, endYear, usedDays, remainingDays, closedYears };
+        return { startYear, endYear, entitlementDays, usedDays, remainingDays, closedYears };
     }
 
     render() {
@@ -426,6 +468,7 @@ export class VacationCenterManager {
                             <strong>${t('vacationCenter.allYearsRange', { startYear: allYears.startYear, endYear: allYears.endYear })}</strong>
                         </div>
                         <dl>
+                            <div><dt>${t('vacationCenter.totalEntitlement')}</dt><dd>${allYears.entitlementDays}</dd></div>
                             <div><dt>${t('vacationCenter.totalUsed')}</dt><dd>${allYears.usedDays}</dd></div>
                             <div><dt>${t('vacationCenter.totalRemaining')}</dt><dd>${allYears.remainingDays}</dd></div>
                         </dl>
@@ -453,7 +496,7 @@ export class VacationCenterManager {
                         <button type="button" data-vc-open-vacation="${escapeHtml(entry.id)}" data-employee-id="${escapeHtml(entry.employeeId)}">
                             <span><i class="vacation-center-type-dot vacation-center-type-dot--${normalizeLeaveType(entry.type)}"></i>${this.formatRange(entry.startDate, entry.endDate)} · ${t(`schedule.vacation.types.${normalizeLeaveType(entry.type)}`)}</span>
                             <strong>${calculateEmployeeLeaveUsageByTypeForYear(
-                                { ...employee, vacations: [entry] },
+                                { ...employee, vacations: [entry], vacationUsageAdjustmentsByYear: {} },
                                 this.currentYear,
                                 this.now(),
                                 holidays
@@ -461,6 +504,7 @@ export class VacationCenterManager {
                         </button>
                     `).join('') : `<p>${t('schedule.vacation.noYearRecords')}</p>`}
                 </div>
+                ${row.usageAdjustment ? `<p class="vacation-center-source-adjustment">${t('vacationCenter.sourceAdjustment', { count: row.usageAdjustment })}</p>` : ''}
             </section>
         `;
     }
