@@ -69,6 +69,15 @@ export class UIManager {
         return new Intl.DateTimeFormat(this.getCurrentLocale(), options).format(date);
     }
 
+    escapeHtml(value = '') {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
     getWeekdayLabels(style = 'short') {
         return Config.DAYS_OF_WEEK.map((fallback, index) => {
             const translationKey = `days.${style}.${index}`;
@@ -971,6 +980,9 @@ export class UIManager {
             label.textContent = `${monday.toLocaleDateString()} - ${endOfWeek.toLocaleDateString()}`;
         }
 
+        const compliance = this.dataManager.getAttendanceComplianceSettings();
+        const complianceValue = (value) => this.escapeHtml(value || t('timeClock.compliance.missingValue'));
+
         // Build Table
         const employees = this.dataManager.getActiveEmployees();
 
@@ -982,6 +994,21 @@ export class UIManager {
         }
 
         let html = `
+            <section class="mb-5 border border-gray-300 rounded-lg p-4 text-sm">
+                <h3 class="text-xl font-bold text-gray-900">${t('timeClock.compliance.rosterTitle')}</h3>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-2 mt-3">
+                    <div><strong>${t('timeClock.compliance.employerName')}:</strong> ${complianceValue(compliance.employerName)}</div>
+                    <div><strong>${t('timeClock.compliance.activity')}:</strong> ${complianceValue(compliance.activity)}</div>
+                    <div><strong>${t('timeClock.compliance.headquarters')}:</strong> ${complianceValue(compliance.headquarters)}</div>
+                    <div><strong>${t('timeClock.compliance.workplace')}:</strong> ${complianceValue(compliance.workplace)}</div>
+                    <div><strong>${t('timeClock.compliance.operatingPeriod')}:</strong> ${complianceValue(compliance.operatingPeriod)}</div>
+                    <div><strong>${t('timeClock.compliance.closingDay')}:</strong> ${complianceValue(compliance.closingDay)}</div>
+                    <div><strong>${t('timeClock.compliance.defaultBreak')}:</strong> ${complianceValue(compliance.defaultBreak)}</div>
+                    <div><strong>${t('timeClock.compliance.weeklyRest')}:</strong> ${complianceValue(compliance.weeklyRest)}</div>
+                    <div><strong>${t('timeClock.compliance.collectiveAgreement')}:</strong> ${complianceValue(compliance.collectiveAgreement)}</div>
+                    <div><strong>${t('timeClock.compliance.adaptabilityRegime')}:</strong> ${complianceValue(compliance.adaptabilityRegime)}</div>
+                </div>
+            </section>
             <table class="w-full text-sm border-collapse border border-gray-300">
                 <thead>
                     <tr class="bg-gray-100">
@@ -1007,7 +1034,7 @@ export class UIManager {
                 let cellClass = '';
 
                 if (status === 'Working') {
-                    cellText = (emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00';
+                    cellText = `${(emp.shifts && emp.shifts.default) ? emp.shifts.default : '9:00-18:00'}${compliance.defaultBreak ? `<br><span class="text-xs text-gray-500">${t('timeClock.compliance.breakShort')}: ${this.escapeHtml(compliance.defaultBreak)}</span>` : ''}`;
                     cellClass = 'bg-white';
                 } else if (status === 'Off') {
                     cellText = 'OFF';
@@ -1026,7 +1053,10 @@ export class UIManager {
             html += `</tr>`;
         });
 
-        html += `</tbody></table>`;
+        html += `</tbody></table>
+            <div class="mt-4 text-xs text-gray-600">
+                ${t('timeClock.compliance.madeiraReference')}: ${complianceValue(compliance.madeiraSubmissionReference)}
+            </div>`;
         container.innerHTML = html;
 
         // Save date for navigation
@@ -1731,7 +1761,9 @@ export class UIManager {
             : null;
         const statusCopy = this.getAttendanceStatusCopy(todaySummary);
         const reviewQueue = this.dataManager.getAttendanceReviewQueue({ referenceDateTime }).slice(0, 6);
-        const canManageAttendance = !this.dataManager.isClockOnlyUser();
+        const overtimeReviewQueue = this.dataManager.getOvertimeReviewQueue().slice(0, 6);
+        const canManageAttendance = this.dataManager.hasPrivilegedRole() || this.dataManager.canAccessApp('staff');
+        const canConfigureCompliance = this.dataManager.hasPrivilegedRole();
         const isClockOnlyUser = this.dataManager.isClockOnlyUser();
         const canOpenWorkSchedule = this.dataManager.isScheduleOnlyUser();
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
@@ -1757,20 +1789,37 @@ export class UIManager {
                 .slice()
                 .sort((left, right) => right.dateKey.localeCompare(left.dateKey))
             : [];
+        const todayOvertimeRecords = employee
+            ? this.dataManager.getOvertimeRecordsForEmployee(employee.id, todayDateKey)
+            : [];
+        const actionableOvertime = todayOvertimeRecords.find((record) => ['authorized', 'in-progress', 'awaiting-worker-validation'].includes(record.status)) || null;
         const adjustmentEmployeeOptions = this.dataManager.getActiveEmployees()
-            .map((entry) => `<option value="${entry.id}">${entry.name}</option>`)
+            .map((entry) => `<option value="${this.escapeHtml(entry.id)}">${this.escapeHtml(entry.name)}</option>`)
             .join('');
+        const compliance = this.dataManager.getAttendanceComplianceSettings();
+        const complianceRequiredFields = ['employerName', 'activity', 'headquarters', 'workplace', 'operatingPeriod', 'defaultBreak', 'weeklyRest'];
+        const missingComplianceFields = complianceRequiredFields.filter((field) => !compliance[field]);
+        const complianceField = (field) => this.escapeHtml(compliance[field] || '');
+        const recentCorrectionTargets = Object.values(this.dataManager.attendanceRecords || {})
+            .flatMap((record) => (record.punches || [])
+                .filter((punch) => !(record.voidedEventIds || []).includes(punch.id))
+                .map((punch) => ({ record, punch })))
+            .sort((left, right) => String(right.punch.occurredAt || '').localeCompare(String(left.punch.occurredAt || '')))
+            .slice(0, 10);
         const timeline = todaySummary?.punches?.length
             ? todaySummary.punches.map((punch) => {
-                const sourceTag = punch.source === 'manual'
-                    ? `<span class="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-1 rounded-full">${t('timeClock.selfService.manualTag')}</span>`
-                    : `<span class="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 px-2 py-1 rounded-full">${t('timeClock.selfService.webTag')}</span>`;
+                const sourceLabel = punch.source === 'manual'
+                    ? t('timeClock.selfService.manualTag')
+                    : punch.source === 'station'
+                        ? t('timeClock.station.sourceStation')
+                        : t('timeClock.selfService.webTag');
+                const sourceTag = `<span class="text-[10px] uppercase tracking-wide ${punch.source === 'manual' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'} px-2 py-1 rounded-full">${sourceLabel}</span>`;
 
                 return `
                     <li class="flex items-start justify-between gap-4 py-3 border-b last:border-b-0">
                         <div>
                             <div class="font-medium text-slate-900">${this.formatAttendanceEventLabel(punch.type)}</div>
-                            <div class="text-sm text-slate-500">${punch.note || t('timeClock.selfService.savedImmediate')}</div>
+                            <div class="text-sm text-slate-500">${this.escapeHtml(punch.note || t('timeClock.selfService.savedImmediate'))}</div>
                         </div>
                         <div class="text-right shrink-0">
                             <div class="font-semibold text-slate-900">${formatTimeLabel(punch.occurredAt)}</div>
@@ -1814,6 +1863,9 @@ export class UIManager {
                                 ${summary.autoBreakMinutes ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">${t('timeClock.selfService.autoLunchDeduction')}</span>` : ''}
                                 ${record.review?.status === 'needs-attention' ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">${t('timeClock.station.needsReview')}</span>` : ''}
                                 ${record.review?.status === 'reviewed' ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">${t('timeClock.selfService.reviewed')}</span>` : ''}
+                                ${record.workerAttestation?.status === 'attested'
+                                    ? `<span class="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">${t('timeClock.selfService.attested')}</span>`
+                                    : (!summary.hasOpenSession ? `<button type="button" data-attendance-attest-employee-id="${this.escapeHtml(record.employeeId)}" data-attendance-attest-date-key="${this.escapeHtml(record.dateKey)}" class="px-3 py-1 rounded-full text-xs font-medium bg-blue-700 text-white">${t('timeClock.actions.attestDay')}</button>` : '')}
                             </div>
                         </div>
                         <div class="grid gap-3 mt-5 md:grid-cols-4">
@@ -1863,7 +1915,7 @@ export class UIManager {
                             <div class="text-sm text-slate-500">${t('timeClock.selfService.reviewQueueOpen', { count: reviewQueue.length })}</div>
                         </div>
                         <div id="attendance-review-list" class="space-y-3">
-                            ${reviewQueue.length ? reviewQueue.map(({ record, summary }) => `
+                            ${reviewQueue.length ? reviewQueue.map(({ record, summary, needsWorkerAttestation }) => `
                                 <article class="rounded-2xl bg-white border border-slate-200 p-4">
                                     <div class="flex items-start justify-between gap-4">
                                         <div>
@@ -1879,7 +1931,9 @@ export class UIManager {
                                         </button>
                                     </div>
                                     <div class="mt-3 text-sm text-slate-600">
-                                        ${summary.hasOpenSession ? t('timeClock.selfService.openSessionNeedsConfirmation') : (record.review.note || t('timeClock.selfService.manualAdjustmentAwaiting'))}
+                                        ${summary.hasOpenSession
+                                            ? t('timeClock.selfService.openSessionNeedsConfirmation')
+                                            : (needsWorkerAttestation ? t('timeClock.selfService.workerAttestationPending') : (record.review.note || t('timeClock.selfService.manualAdjustmentAwaiting')))}
                                     </div>
                                     <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
                                         <span class="px-2 py-1 rounded-full bg-slate-100">${t('timeClock.selfService.workedBadge', { duration: this.formatMinutesAsDuration(summary.workedMinutes) })}</span>
@@ -1911,8 +1965,108 @@ export class UIManager {
                             <button type="submit" class="w-full rounded-full bg-slate-900 text-white px-4 py-3 hover:bg-slate-800 transition-colors">${t('timeClock.actions.saveManualEvent')}</button>
                             <p id="attendance-adjustment-feedback" class="text-sm text-slate-500 h-5"></p>
                         </form>
+                        <div class="mt-5 border-t border-slate-200 pt-4">
+                            <div class="text-sm font-medium text-slate-800">${t('timeClock.selfService.voidRecentTitle')}</div>
+                            <p class="mt-1 text-xs text-slate-500">${t('timeClock.selfService.voidRecentDescription')}</p>
+                            <div class="mt-3 space-y-2">
+                                ${recentCorrectionTargets.length ? recentCorrectionTargets.map(({ record, punch }) => `
+                                    <div class="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs">
+                                        <span>${this.escapeHtml(record.employeeName)} · ${this.escapeHtml(punch.occurredAt)} · ${this.formatAttendanceEventLabel(punch.type)}</span>
+                                        <button type="button" class="text-rose-700" data-attendance-void-employee-id="${this.escapeHtml(record.employeeId)}" data-attendance-void-date-key="${this.escapeHtml(record.dateKey)}" data-attendance-void-event-id="${this.escapeHtml(punch.id)}">${t('timeClock.actions.voidEvent')}</button>
+                                    </div>
+                                `).join('') : `<p class="text-xs text-slate-500">${t('timeClock.selfService.noRecentEvents')}</p>`}
+                            </div>
+                        </div>
                     </div>
                 </div>
+                ${canConfigureCompliance ? `
+                    <div class="mt-6 rounded-3xl border ${missingComplianceFields.length ? 'border-amber-300 bg-amber-50/60' : 'border-emerald-200 bg-emerald-50/40'} p-5">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div class="font-semibold text-slate-900">${t('timeClock.compliance.title')}</div>
+                                <p class="mt-1 text-sm text-slate-600">${t('timeClock.compliance.description')}</p>
+                            </div>
+                            <span class="rounded-full px-3 py-1 text-xs font-medium ${missingComplianceFields.length ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                                ${missingComplianceFields.length
+                                    ? t('timeClock.compliance.missingCount', { count: missingComplianceFields.length })
+                                    : t('timeClock.compliance.complete')}
+                            </span>
+                        </div>
+                        <form id="attendance-compliance-form" class="mt-5 grid gap-3 md:grid-cols-2">
+                            <input name="employerName" required maxlength="200" value="${complianceField('employerName')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.employerName')}">
+                            <input name="activity" required maxlength="200" value="${complianceField('activity')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.activity')}">
+                            <input name="headquarters" required maxlength="300" value="${complianceField('headquarters')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.headquarters')}">
+                            <input name="workplace" required maxlength="300" value="${complianceField('workplace')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.workplace')}">
+                            <input name="operatingPeriod" required maxlength="200" value="${complianceField('operatingPeriod')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.operatingPeriod')}">
+                            <input name="closingDay" maxlength="100" value="${complianceField('closingDay')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.closingDay')}">
+                            <input name="defaultBreak" required maxlength="100" value="${complianceField('defaultBreak')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.defaultBreak')}">
+                            <input name="weeklyRest" required maxlength="150" value="${complianceField('weeklyRest')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.weeklyRest')}">
+                            <input name="collectiveAgreement" maxlength="300" value="${complianceField('collectiveAgreement')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.collectiveAgreement')}">
+                            <input name="adaptabilityRegime" maxlength="300" value="${complianceField('adaptabilityRegime')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.adaptabilityRegime')}">
+                            <input name="privacyContact" type="email" maxlength="254" value="${complianceField('privacyContact')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.privacyContact')}">
+                            <input name="madeiraSubmissionReference" maxlength="300" value="${complianceField('madeiraSubmissionReference')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.madeiraSubmissionReference')}">
+                            <div class="md:col-span-2 flex items-center gap-4">
+                                <button type="submit" class="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800">${t('timeClock.actions.saveCompliance')}</button>
+                                <p id="attendance-compliance-feedback" class="text-sm text-slate-600"></p>
+                            </div>
+                        </form>
+                    </div>
+                ` : ''}
+                <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                    <div class="font-semibold text-slate-900">${t('timeClock.overtime.managerTitle')}</div>
+                    <p class="mt-1 text-sm text-slate-600">${t('timeClock.overtime.managerDescription')}</p>
+                    <form id="overtime-authorization-form" class="mt-4 grid gap-3 md:grid-cols-2">
+                        <select name="employeeId" required class="rounded-xl border border-slate-300 bg-white px-4 py-3">${adjustmentEmployeeOptions}</select>
+                        <input name="dateKey" type="date" required value="${todayDateKey}" class="rounded-xl border border-slate-300 bg-white px-4 py-3">
+                        <select name="legalBasis" class="rounded-xl border border-slate-300 bg-white px-4 py-3">
+                            <option value="temporary-increase">${t('timeClock.overtime.temporaryIncrease')}</option>
+                            <option value="force-majeure">${t('timeClock.overtime.forceMajeure')}</option>
+                            <option value="prevent-serious-harm">${t('timeClock.overtime.preventSeriousHarm')}</option>
+                        </select>
+                        <select name="compensationChoice" class="rounded-xl border border-slate-300 bg-white px-4 py-3">
+                            <option value="payment">${t('timeClock.overtime.payment')}</option>
+                            <option value="rest">${t('timeClock.overtime.rest')}</option>
+                        </select>
+                        <input name="workplace" required minlength="2" maxlength="300" value="${complianceField('workplace')}" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.compliance.workplace')}">
+                        <input name="reason" required minlength="8" maxlength="500" class="rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.overtime.reason')}">
+                        <div class="md:col-span-2 flex items-center gap-4">
+                            <button type="submit" class="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white">${t('timeClock.actions.authorizeOvertime')}</button>
+                            <p id="overtime-authorization-feedback" class="text-sm text-slate-600"></p>
+                        </div>
+                    </form>
+                    <div class="mt-5 space-y-3">
+                        ${overtimeReviewQueue.length ? overtimeReviewQueue.map((record) => `
+                            <form data-overtime-review-form data-overtime-record-id="${this.escapeHtml(record.id)}" class="rounded-2xl border border-slate-200 bg-white p-4">
+                                <div class="font-medium text-slate-900">${this.escapeHtml(record.employeeName)} · ${this.escapeHtml(record.dateKey)}</div>
+                                <div class="mt-1 text-sm text-slate-600">${this.escapeHtml(record.reason)}</div>
+                                <div class="mt-3 grid gap-2 md:grid-cols-[1fr_180px_auto]">
+                                    <input name="note" required minlength="3" maxlength="500" value="${t('timeClock.overtime.reviewDefault')}" class="rounded-xl border border-slate-300 px-3 py-2" aria-label="${t('timeClock.overtime.reviewNote')}">
+                                    <input name="restDate" type="date" class="rounded-xl border border-slate-300 px-3 py-2" aria-label="${t('timeClock.overtime.restDate')}">
+                                    <button type="submit" class="rounded-full bg-emerald-700 px-4 py-2 font-medium text-white">${t('timeClock.actions.reviewOvertime')}</button>
+                                </div>
+                                <p class="mt-2 text-sm text-slate-500" data-overtime-review-feedback></p>
+                            </form>
+                        `).join('') : `<p class="mt-4 text-sm text-slate-500">${t('timeClock.overtime.reviewEmpty')}</p>`}
+                    </div>
+                </div>
+            </section>
+        ` : '';
+
+        const overtimePanel = employee ? `
+            <section class="rounded-[28px] border border-indigo-200 bg-indigo-50/60 p-6 lg:col-span-2">
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <div class="text-xs uppercase tracking-[0.24em] text-indigo-500">${t('timeClock.overtime.kicker')}</div>
+                        <h3 class="mt-2 text-2xl font-semibold text-slate-900">${t('timeClock.overtime.title')}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${actionableOvertime
+                            ? `${this.escapeHtml(actionableOvertime.reason)} · ${this.escapeHtml(actionableOvertime.workplace)}`
+                            : t('timeClock.overtime.noneAuthorized')}</p>
+                    </div>
+                    ${actionableOvertime?.status === 'authorized' ? `<button type="button" data-overtime-action="start" data-overtime-record-id="${this.escapeHtml(actionableOvertime.id)}" class="rounded-full bg-indigo-700 px-5 py-3 font-semibold text-white">${t('timeClock.actions.startOvertime')}</button>` : ''}
+                    ${actionableOvertime?.status === 'in-progress' ? `<button type="button" data-overtime-action="end" data-overtime-record-id="${this.escapeHtml(actionableOvertime.id)}" class="rounded-full bg-indigo-700 px-5 py-3 font-semibold text-white">${t('timeClock.actions.endOvertime')}</button>` : ''}
+                    ${actionableOvertime?.status === 'awaiting-worker-validation' ? `<button type="button" data-overtime-action="validate" data-overtime-record-id="${this.escapeHtml(actionableOvertime.id)}" class="rounded-full bg-indigo-700 px-5 py-3 font-semibold text-white">${t('timeClock.actions.validateOvertime')}</button>` : ''}
+                </div>
+                <p id="overtime-feedback" class="mt-3 text-sm text-indigo-800"></p>
             </section>
         ` : '';
 
@@ -2060,6 +2214,13 @@ export class UIManager {
                     </div>
                 </section>
 
+                <section class="rounded-[28px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600 lg:col-span-2">
+                    <div class="font-semibold text-slate-900">${t('timeClock.privacy.title')}</div>
+                    <p class="mt-2">${t('timeClock.privacy.summary')}</p>
+                    <p class="mt-2">${t('timeClock.privacy.contact')}: ${this.escapeHtml(compliance.privacyContact || t('timeClock.compliance.missingValue'))}</p>
+                </section>
+
+                ${overtimePanel}
                 ${managerPanel}
             </div>
         `;
@@ -2116,6 +2277,12 @@ export class UIManager {
             .forEach((punch) => {
                 notes.push(`${this.formatAttendanceEventLabel(punch.type)}: ${punch.note}`);
             });
+
+        (safeRecord.corrections || []).forEach((correction) => {
+            if (correction.reason) {
+                notes.push(`${t('timeClock.notes.correction')}: ${correction.reason}`);
+            }
+        });
 
         return notes.join(' | ');
     }
@@ -2174,7 +2341,10 @@ export class UIManager {
 
         this.currentTimesheetDate = startDate;
 
-        const employees = this.dataManager.getActiveEmployees();
+        const employees = [
+            ...this.dataManager.getActiveEmployees(),
+            ...this.dataManager.getArchivedEmployees().map((employee) => ({ ...employee, isArchived: true }))
+        ];
         const employeeSelect = document.getElementById('timesheet-employee-select');
         if (employees.length === 0) {
             this.currentTimesheetEmployeeId = null;
@@ -2194,7 +2364,7 @@ export class UIManager {
         const selectedEmployee = this.resolveSelectedTimesheetEmployee(employees);
         if (employeeSelect) {
             employeeSelect.innerHTML = employees.map((employee) => `
-                <option value="${employee.id}">${employee.name}</option>
+                <option value="${this.escapeHtml(employee.id)}">${this.escapeHtml(employee.name)}${employee.isArchived ? ` (${t('timeClock.print.archived')})` : ''}</option>
             `).join('');
             employeeSelect.value = selectedEmployee?.id || '';
             employeeSelect.disabled = false;
@@ -2210,6 +2380,8 @@ export class UIManager {
         }
 
         const employee = selectedEmployee;
+        const compliance = this.dataManager.getAttendanceComplianceSettings();
+        const printableComplianceValue = (value) => this.escapeHtml(value || t('timeClock.compliance.missingValue'));
         const days = [];
         let plannedTotalHours = 0;
         let recordedTotalMinutes = 0;
@@ -2227,12 +2399,24 @@ export class UIManager {
                 : null;
             const attendanceRecord = this.dataManager.getAttendanceRecord(employee.id, currentDate);
             const attendanceSummary = this.dataManager.getAttendanceSummary(employee.id, currentDate, { referenceDateTime });
+            const normalizedEmployeeEmail = String(employee.email || '').trim().toLowerCase();
+            const attendanceNeedsWorkerAttestation = (attendanceRecord?.punches || []).some((punch) => (
+                punch.source === 'manual'
+                || punch.source === 'station'
+                || (normalizedEmployeeEmail && String(punch.actorEmail || '').trim().toLowerCase() !== normalizedEmployeeEmail)
+            ));
             recordedTotalMinutes += attendanceSummary.workedMinutes || 0;
 
-            const recordedHours = (attendanceSummary.workedMinutes || 0) / 60;
-            const manualExtraHours = Number(employee.extraHours?.[dateKey] || 0);
-            const calculatedExtraHours = Math.max(0, recordedHours - (plannedHours || 0));
-            const extraHoursValue = manualExtraHours > 0 ? manualExtraHours : calculatedExtraHours;
+            const overtimeRecords = this.dataManager.getOvertimeRecordsForEmployee(employee.id, dateKey);
+            const overtimeMinutes = overtimeRecords.reduce((total, record) => {
+                if (!record.startEvent?.occurredAt || !record.endEvent?.occurredAt) return total;
+                return total + Math.max(0, this.getMinutesBetween(
+                    record.startEvent.occurredAtUtc || record.startEvent.occurredAt,
+                    record.endEvent.occurredAtUtc || record.endEvent.occurredAt
+                ));
+            }, 0);
+            const overtimeNotes = overtimeRecords.map((record) => record.reason).filter(Boolean).join(' | ');
+            const overtimeValidated = overtimeRecords.length > 0 && overtimeRecords.every((record) => record.workerValidation?.status === 'validated');
 
             days.push({
                 dateLabel: this.formatLocaleDate(currentDate, {
@@ -2247,9 +2431,15 @@ export class UIManager {
                 breakWindows: this.getBreakSummaryText(attendanceSummary),
                 endTime: formatTimeLabel(attendanceSummary.lastClockOut),
                 recordedHours: this.formatMinutesAsDuration(attendanceSummary.workedMinutes || 0),
-                extraHours: extraHoursValue > 0 ? this.formatDurationHours(extraHoursValue) : '',
-                notes: this.getAttendanceNotesText(attendanceRecord, attendanceSummary),
-                proof: attendanceRecord?.punches?.length ? t('timeClock.print.digitalLog') : ''
+                extraHours: overtimeMinutes > 0 ? this.formatMinutesAsDuration(overtimeMinutes) : '',
+                notes: [this.getAttendanceNotesText(attendanceRecord, attendanceSummary), overtimeNotes].filter(Boolean).join(' | '),
+                proof: overtimeRecords.length
+                    ? (overtimeValidated ? t('timeClock.print.workerValidated') : t('timeClock.print.validationPending'))
+                    : (attendanceRecord?.workerAttestation?.status === 'attested'
+                        ? t('timeClock.print.workerAttested')
+                        : (attendanceNeedsWorkerAttestation
+                            ? t('timeClock.print.validationPending')
+                            : (attendanceRecord?.punches?.length ? t('timeClock.print.digitalLog') : '')))
             });
         }
 
@@ -2280,20 +2470,26 @@ export class UIManager {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div class="border rounded-lg p-3">
                             <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.employerLabel')}</div>
-                            <div class="h-6 border-b border-dashed border-gray-400"></div>
+                            <div class="font-semibold text-gray-900">${printableComplianceValue(compliance.employerName)}</div>
                         </div>
                         <div class="border rounded-lg p-3">
                             <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.locationLabel')}</div>
-                            <div class="h-6 border-b border-dashed border-gray-400"></div>
+                            <div class="font-semibold text-gray-900">${printableComplianceValue([compliance.activity, compliance.workplace].filter(Boolean).join(' · '))}</div>
                         </div>
                         <div class="border rounded-lg p-3">
                             <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.workerLabel')}</div>
-                            <div class="font-semibold text-gray-900">${employee.name}</div>
+                            <div class="font-semibold text-gray-900">${this.escapeHtml(employee.name)}${employee.isArchived ? ` (${t('timeClock.print.archived')})` : ''}</div>
                         </div>
                         <div class="border rounded-lg p-3">
                             <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">${t('timeClock.print.numberAndBaseLabel')}</div>
-                            <div class="font-semibold text-gray-900">${employee.staffNumber ? employee.staffNumber : '-'} / ${employee.shifts?.default || '9:00-18:00'}</div>
+                            <div class="font-semibold text-gray-900">${this.escapeHtml(employee.staffNumber || '-')} / ${this.escapeHtml(employee.shifts?.default || '9:00-18:00')}</div>
                         </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div><strong>${t('timeClock.compliance.headquarters')}:</strong> ${printableComplianceValue(compliance.headquarters)}</div>
+                        <div><strong>${t('timeClock.compliance.operatingPeriod')}:</strong> ${printableComplianceValue(compliance.operatingPeriod)}</div>
+                        <div><strong>${t('timeClock.compliance.collectiveAgreement')}:</strong> ${printableComplianceValue(compliance.collectiveAgreement)}</div>
                     </div>
 
                     <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
@@ -2361,6 +2557,107 @@ export class UIManager {
                 </div>
             </section>
         `;
+    }
+
+    exportAttendanceRegisterCSV() {
+        const employees = [...this.dataManager.getActiveEmployees(), ...this.dataManager.getArchivedEmployees()];
+        const employee = employees.find((entry) => entry.id === this.currentTimesheetEmployeeId);
+        if (!employee) return;
+        const { startDate, endDate } = getAttendancePrintRange(
+            this.currentTimesheetDate || new Date(),
+            this.currentTimesheetMode
+        );
+        const compliance = this.dataManager.getAttendanceComplianceSettings();
+        const csvCell = (value) => {
+            let text = value == null ? '' : String(value);
+            if (/^[=+\-@]/.test(text)) text = `'${text}`;
+            return `"${text.replaceAll('"', '""')}"`;
+        };
+        const rows = [[
+            'employer', 'employeeId', 'employeeName', 'staffNumber', 'date', 'eventType',
+            'localDateTime', 'utcDateTime', 'timeZone', 'source', 'trustedServerTime',
+            'actorEmail', 'note', 'voided', 'correctionId', 'reviewStatus', 'workerAttestation', 'retainUntil',
+            'overtimeRecordId', 'overtimeReason', 'overtimeLegalBasis', 'overtimeStatus',
+            'workerValidation'
+        ]];
+
+        for (let current = new Date(startDate); current <= endDate; current.setDate(current.getDate() + 1)) {
+            const dateKey = this.dataManager.getDateKey(current);
+            const record = this.dataManager.getAttendanceRecord(employee.id, dateKey);
+            const overtime = this.dataManager.getOvertimeRecordsForEmployee(employee.id, dateKey);
+            (record?.punches || []).forEach((punch) => {
+                const correction = (record.corrections || []).filter((entry) => entry.eventId === punch.id).map((entry) => entry.id).join('|');
+                rows.push([
+                    compliance.employerName, employee.id, employee.name, employee.staffNumber, dateKey,
+                    punch.type, punch.occurredAt, punch.occurredAtUtc, punch.timeZone, punch.source,
+                    punch.trustedServerTime, punch.actorEmail, punch.note,
+                    (record.voidedEventIds || []).includes(punch.id), correction,
+                    record.review?.status, record.workerAttestation?.status, record.retainUntil, '', '', '', '', ''
+                ]);
+            });
+            overtime.forEach((entry) => {
+                [entry.startEvent, entry.endEvent].filter(Boolean).forEach((event) => rows.push([
+                    compliance.employerName, employee.id, employee.name, employee.staffNumber, dateKey,
+                    event.type, event.occurredAt, event.occurredAtUtc, event.timeZone, event.source,
+                    event.trustedServerTime, event.actorEmail, event.note, false, '', '', '', entry.retainUntil,
+                    entry.id, entry.reason, entry.legalBasis, entry.status,
+                    entry.workerValidation?.status || ''
+                ]));
+            });
+        }
+
+        const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `registo-tempos_${employee.id}_${this.dataManager.getDateKey(startDate)}_${this.dataManager.getDateKey(endDate)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    exportAnnualOvertimeCSV() {
+        const year = (this.currentTimesheetDate || new Date()).getFullYear();
+        const csvCell = (value) => {
+            let text = value == null ? '' : String(value);
+            if (/^[=+\-@]/.test(text)) text = `'${text}`;
+            return `"${text.replaceAll('"', '""')}"`;
+        };
+        const rows = [[
+            'employeeId', 'employeeName', 'date', 'start', 'end', 'durationMinutes',
+            'reason', 'legalBasis', 'workplace', 'compensation', 'compensatoryRestDate',
+            'workerValidation', 'managerReview', 'retainUntil'
+        ]];
+        Object.values(this.dataManager.overtimeRecords || {})
+            .filter((record) => String(record.dateKey || '').startsWith(`${year}-`))
+            .sort((left, right) => String(left.dateKey || '').localeCompare(String(right.dateKey || '')))
+            .forEach((record) => {
+                const durationMinutes = record.startEvent?.occurredAt && record.endEvent?.occurredAt
+                    ? Math.max(0, this.getMinutesBetween(
+                        record.startEvent.occurredAtUtc || record.startEvent.occurredAt,
+                        record.endEvent.occurredAtUtc || record.endEvent.occurredAt
+                    ))
+                    : '';
+                rows.push([
+                    record.employeeId, record.employeeName, record.dateKey,
+                    record.startEvent?.occurredAt, record.endEvent?.occurredAt, durationMinutes,
+                    record.reason, record.legalBasis, record.workplace, record.compensationChoice,
+                    record.compensatoryRest?.dateKey, record.workerValidation?.status,
+                    record.managerReview?.note, record.retainUntil
+                ]);
+            });
+        const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `relacao-trabalho-suplementar_${year}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     }
 
     renderWeeklyTimesheet(startDate) {

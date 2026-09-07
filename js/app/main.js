@@ -397,7 +397,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const holidayCalculator = new HolidayCalculator();
 
         // Initialize DataManager
-        dataManager = new DataManager(db, auth.currentUser ? auth.currentUser.uid : null, holidayCalculator);
+        dataManager = new DataManager(
+            db,
+            auth.currentUser ? auth.currentUser.uid : null,
+            holidayCalculator,
+            {
+                recordPunch: httpsCallable(functionsInstance, 'recordAttendancePunch'),
+                addCorrection: httpsCallable(functionsInstance, 'addManualAttendanceCorrection'),
+                voidEvent: httpsCallable(functionsInstance, 'voidAttendanceEvent'),
+                attestRecord: httpsCallable(functionsInstance, 'attestAttendanceRecord'),
+                reviewRecord: httpsCallable(functionsInstance, 'reviewAttendanceRecord'),
+                authorizeOvertime: httpsCallable(functionsInstance, 'authorizeOvertime'),
+                recordOvertimePunch: httpsCallable(functionsInstance, 'recordOvertimePunch'),
+                validateOvertimeRecord: httpsCallable(functionsInstance, 'validateOvertimeRecord'),
+                reviewOvertimeRecord: httpsCallable(functionsInstance, 'reviewOvertimeRecord')
+            }
+        );
         window.dataManager = dataManager; // For debugging
         if (!unsubscribeAccessModeSync) {
             unsubscribeAccessModeSync = dataManager.subscribeToDataChanges(() => {

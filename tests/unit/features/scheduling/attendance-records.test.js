@@ -66,15 +66,59 @@ describe("Attendance records", () => {
     assert.equal(summary.hasOpenSession, false);
   });
 
-  test("automatically deducts one lunch hour for a closed single-block full day with no break punches", () => {
+  test("does not invent a lunch break when no break punches were recorded", () => {
     let record = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
     record = appendAttendanceEvent(record, { type: "clockIn", occurredAt: "2026-03-23T09:00:00" });
     record = appendAttendanceEvent(record, { type: "clockOut", occurredAt: "2026-03-23T18:00:00" });
 
     const summary = summarizeAttendanceRecord(record);
+    assert.equal(summary.workedMinutes, 540);
+    assert.equal(summary.breakMinutes, 0);
+    assert.equal(summary.autoBreakMinutes, 0);
+  });
+
+  test("keeps an overnight shift in one record and totals across midnight", () => {
+    let record = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
+    record = appendAttendanceEvent(record, { type: "clockIn", occurredAt: "2026-03-23T22:00:00" });
+    record = appendAttendanceEvent(record, { type: "breakStart", occurredAt: "2026-03-24T01:00:00" });
+    record = appendAttendanceEvent(record, { type: "breakEnd", occurredAt: "2026-03-24T01:30:00" });
+    record = appendAttendanceEvent(record, { type: "clockOut", occurredAt: "2026-03-24T06:00:00" });
+
+    const summary = summarizeAttendanceRecord(record);
+    assert.equal(summary.workedMinutes, 450);
+    assert.equal(summary.breakMinutes, 30);
+    assert.equal(summary.hasOpenSession, false);
+  });
+
+  test("uses trusted UTC timestamps for completed duration totals", () => {
+    let record = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-29" });
+    record = appendAttendanceEvent(record, {
+      type: "clockIn",
+      occurredAt: "2026-03-29T09:00:00",
+      occurredAtUtc: "2026-03-29T08:00:00.000Z",
+      trustedServerTime: true
+    });
+    record = appendAttendanceEvent(record, {
+      type: "clockOut",
+      occurredAt: "2026-03-29T18:00:00",
+      occurredAtUtc: "2026-03-29T16:00:00.000Z",
+      trustedServerTime: true
+    });
+
+    assert.equal(summarizeAttendanceRecord(record).workedMinutes, 480);
+  });
+
+  test("keeps voided events in history but excludes them from totals", () => {
+    let record = createAttendanceRecord({ employeeId: "emp-1", employeeName: "Ana", dateKey: "2026-03-23" });
+    record = appendAttendanceEvent(record, { id: "in-good", type: "clockIn", occurredAt: "2026-03-23T09:00:00" });
+    record = appendAttendanceEvent(record, { id: "out-wrong", type: "clockOut", occurredAt: "2026-03-23T12:00:00" });
+    record = appendAttendanceEvent(record, { id: "out-good", type: "clockOut", occurredAt: "2026-03-23T17:00:00" });
+    record.voidedEventIds = ["out-wrong"];
+
+    const summary = summarizeAttendanceRecord(record);
+    assert.equal(summary.punches.length, 2);
     assert.equal(summary.workedMinutes, 480);
-    assert.equal(summary.breakMinutes, 60);
-    assert.equal(summary.autoBreakMinutes, 60);
+    assert.equal(record.punches.length, 3);
   });
 
   test("does not auto-deduct lunch for short or split days", () => {
@@ -154,8 +198,8 @@ describe("Attendance records", () => {
     assert.equal(reviewed.review.status, "reviewed");
     assert.equal(reviewed.review.note, "Checked by manager");
     assert.equal(reviewed.review.reviewedBy, "manager@example.com");
-    assert.equal(weeklySummary.workedMinutes, 780);
-    assert.equal(weeklySummary.breakMinutes, 120);
+    assert.equal(weeklySummary.workedMinutes, 900);
+    assert.equal(weeklySummary.breakMinutes, 0);
     assert.equal(weeklySummary.daysWithPunches, 2);
   });
 

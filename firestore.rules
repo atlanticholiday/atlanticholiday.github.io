@@ -441,21 +441,20 @@ service cloud.firestore {
     match /attendance_records/{recordId} {
       allow read: if privileged()
         || hasApp('staff')
-        || hasRole('employee')
-        || hasRole('time-clock-station');
-      allow create: if privileged()
+        || hasRole('time-clock-station')
+        || isOwnAttendance(resource.data);
+
+      // Attendance is written only by authenticated callable functions using the
+      // Admin SDK. Browser clients cannot replace or erase the legal register.
+      allow create, update, delete: if false;
+    }
+
+    match /overtime_records/{recordId} {
+      allow read: if privileged()
         || hasApp('staff')
         || hasRole('time-clock-station')
-        || (hasRole('employee') && isOwnAttendance(request.resource.data));
-      allow update: if privileged()
-        || hasApp('staff')
-        || hasRole('time-clock-station')
-        || (hasRole('employee')
-          && isOwnAttendance(resource.data)
-          && isOwnAttendance(request.resource.data));
-      allow delete: if privileged()
-        || hasApp('staff')
-        || (hasRole('employee') && isOwnAttendance(resource.data));
+        || isOwnAttendance(resource.data);
+      allow create, update, delete: if false;
     }
 
     match /daily_notes/{recordId} {

@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, getDocsFromServer, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, getDocsFromServer, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { t } from '../../core/i18n.js';
 
 async function getDocsFresh(ref) {
@@ -26,13 +26,10 @@ import {
     toEmployeeVacationEntry
 } from './vacation-records.js';
 import {
-    appendAttendanceEvent,
-    createAttendanceRecord,
     formatLocalDateTime,
     getAttendanceActionState,
     getAttendanceReviewQueue,
     getWeeklyAttendanceSummary,
-    setAttendanceReview,
     summarizeAttendanceRecord
 } from './attendance-records.js';
 import { HolidayCalculator, getDateKey } from './holiday-calculator.js';
@@ -59,9 +56,10 @@ import {
 } from './vacation-2026-update.js';
 
 export class DataManager {
-    constructor(db, userId = null, holidayCalculator = new HolidayCalculator()) {
+    constructor(db, userId = null, holidayCalculator = new HolidayCalculator(), attendanceApi = {}) {
         this.db = db;
         this.userId = userId;
+        this.attendanceApi = attendanceApi;
         this.rawActiveEmployees = [];
         this.rawArchivedEmployees = [];
         this.activeEmployees = [];
@@ -82,6 +80,7 @@ export class DataManager {
         this.minStaffThreshold = 0;
         this.vacationYearPolicies = {};
         this.vacationDataUpdates = {};
+        this.attendanceCompliance = {};
         this.hasLoadedGlobalSettings = false;
         this.isApplyingVacation2026Update = false;
         this.vacation2026UpdateAwaitingEmployeeRefresh = false;
@@ -89,8 +88,10 @@ export class DataManager {
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
+        this.unsubscribeOvertime = null;
         this.unsubscribeVacationRecords = null;
         this.attendanceRecords = {};
+        this.overtimeRecords = {};
         this.hasLoadedVacationRecords = false;
         this.isSyncingLegacyVacationRecords = false;
         this.attendanceSyncState = {
@@ -151,11 +152,13 @@ export class DataManager {
         this.employeeLoadError = null;
         this.vacationRecords = [];
         this.attendanceRecords = {};
+        this.overtimeRecords = {};
         this.dailyNotes = {};
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
         this.vacationYearPolicies = {};
         this.vacationDataUpdates = {};
+        this.attendanceCompliance = {};
         this.hasLoadedGlobalSettings = false;
         this.isApplyingVacation2026Update = false;
         this.vacation2026UpdateAwaitingEmployeeRefresh = false;
@@ -184,6 +187,26 @@ export class DataManager {
 
     getAttendanceCollectionRef() {
         return collection(this.db, "attendance_records");
+    }
+
+    getAttendanceReadRef() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        if (this.isClockOnlyUser() && linkedEmployeeId) {
+            return query(this.getAttendanceCollectionRef(), where('employeeId', '==', linkedEmployeeId));
+        }
+        return this.getAttendanceCollectionRef();
+    }
+
+    getOvertimeCollectionRef() {
+        return collection(this.db, 'overtime_records');
+    }
+
+    getOvertimeReadRef() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        if (this.isClockOnlyUser() && linkedEmployeeId) {
+            return query(this.getOvertimeCollectionRef(), where('employeeId', '==', linkedEmployeeId));
+        }
+        return this.getOvertimeCollectionRef();
     }
 
     getVacationRecordsCollectionRef() {
@@ -365,10 +388,12 @@ export class DataManager {
                 this.minStaffThreshold = data.minStaffThreshold || 0;
                 this.vacationYearPolicies = data.vacationYearPolicies || {};
                 this.vacationDataUpdates = data.vacationDataUpdates || {};
+                this.attendanceCompliance = data.attendanceCompliance || {};
             } else {
                 this.minStaffThreshold = 0;
                 this.vacationYearPolicies = {};
                 this.vacationDataUpdates = {};
+                this.attendanceCompliance = {};
             }
             this.hasLoadedGlobalSettings = true;
             this.notifyDataChange();
@@ -381,7 +406,7 @@ export class DataManager {
             return;
         }
 
-        this.unsubscribeAttendance = onSnapshot(this.getAttendanceCollectionRef(), { includeMetadataChanges: true }, (snapshot) => {
+        this.unsubscribeAttendance = onSnapshot(this.getAttendanceReadRef(), { includeMetadataChanges: true }, (snapshot) => {
             const nextAttendanceRecords = { ...this.attendanceRecords };
 
             snapshot.docChanges().forEach((change) => {
@@ -421,6 +446,18 @@ export class DataManager {
         });
     }
 
+    listenForOvertimeChanges() {
+        if (this.unsubscribeOvertime) return;
+        this.unsubscribeOvertime = onSnapshot(this.getOvertimeReadRef(), (snapshot) => {
+            const next = {};
+            snapshot.docs.forEach((recordDoc) => {
+                next[recordDoc.id] = { id: recordDoc.id, ...recordDoc.data() };
+            });
+            this.overtimeRecords = next;
+            this.notifyDataChange();
+        }, (error) => console.error('Error listening for overtime records:', error));
+    }
+
     async saveShiftPreset(name, start, end) {
         await addDoc(collection(this.db, "shift_presets"), { name, start, end });
     }
@@ -432,6 +469,41 @@ export class DataManager {
     async saveMinStaffThreshold(count) {
         const settingsRef = doc(this.db, "settings", "global");
         await setDoc(settingsRef, { minStaffThreshold: parseInt(count) }, { merge: true });
+    }
+
+    getAttendanceComplianceSettings() {
+        return { ...(this.attendanceCompliance || {}) };
+    }
+
+    async saveAttendanceComplianceSettings(settings = {}) {
+        if (!this.hasPrivilegedRole()) {
+            throw new Error(t('timeClock.errors.managerRequired'));
+        }
+        const cleanText = (value, maxLength = 300) => typeof value === 'string'
+            ? value.trim().slice(0, maxLength)
+            : '';
+        const normalized = {
+            employerName: cleanText(settings.employerName, 200),
+            activity: cleanText(settings.activity, 200),
+            headquarters: cleanText(settings.headquarters, 300),
+            workplace: cleanText(settings.workplace, 300),
+            operatingPeriod: cleanText(settings.operatingPeriod, 200),
+            closingDay: cleanText(settings.closingDay, 100),
+            defaultBreak: cleanText(settings.defaultBreak, 100),
+            weeklyRest: cleanText(settings.weeklyRest, 150),
+            collectiveAgreement: cleanText(settings.collectiveAgreement, 300),
+            adaptabilityRegime: cleanText(settings.adaptabilityRegime, 300),
+            privacyContact: cleanText(settings.privacyContact, 254),
+            madeiraSubmissionReference: cleanText(settings.madeiraSubmissionReference, 300),
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.currentUserContext.email || ''
+        };
+        await setDoc(doc(this.db, 'settings', 'global'), {
+            attendanceCompliance: normalized
+        }, { merge: true });
+        this.attendanceCompliance = normalized;
+        this.notifyDataChange();
+        return normalized;
     }
 
     // Removed showSetupScreen - navigation is now handled by NavigationManager
@@ -1103,6 +1175,7 @@ export class DataManager {
         this.listenForVacationRecordChanges();
         this.listenForDailyNotes();
         this.listenForAttendanceChanges();
+        this.listenForOvertimeChanges();
     }
 
     stopRealtimeListeners() {
@@ -1112,6 +1185,7 @@ export class DataManager {
             this.unsubscribeShiftPresets,
             this.unsubscribeSettings,
             this.unsubscribeAttendance,
+            this.unsubscribeOvertime,
             this.unsubscribeVacationRecords
         ].forEach((unsubscribe) => {
             if (typeof unsubscribe === 'function') {
@@ -1124,6 +1198,7 @@ export class DataManager {
         this.unsubscribeShiftPresets = null;
         this.unsubscribeSettings = null;
         this.unsubscribeAttendance = null;
+        this.unsubscribeOvertime = null;
         this.unsubscribeVacationRecords = null;
     }
 
@@ -1340,7 +1415,25 @@ export class DataManager {
     }
 
     getAttendanceReviewQueue({ referenceDateTime = null } = {}) {
-        return getAttendanceReviewQueue(Object.values(this.attendanceRecords), { referenceDateTime });
+        const records = Object.values(this.attendanceRecords);
+        const queueById = new Map(getAttendanceReviewQueue(records, { referenceDateTime })
+            .map((entry) => [this.getAttendanceDocId(entry.record.employeeId, entry.record.dateKey), entry]));
+        records.forEach((record) => {
+            const needsWorkerAttestation = (record.punches || []).some((punch) => ['manual', 'station'].includes(punch.source))
+                && record.workerAttestation?.status !== 'attested';
+            if (!needsWorkerAttestation) return;
+            const key = this.getAttendanceDocId(record.employeeId, record.dateKey);
+            const existing = queueById.get(key);
+            queueById.set(key, {
+                ...(existing || {
+                    record,
+                    summary: summarizeAttendanceRecord(record),
+                    needsAttention: true
+                }),
+                needsWorkerAttestation: true
+            });
+        });
+        return [...queueById.values()].sort((left, right) => String(right.record.dateKey || '').localeCompare(String(left.record.dateKey || '')));
     }
 
     resolveAttendanceEmployee(employeeId) {
@@ -1368,58 +1461,19 @@ export class DataManager {
     }
 
     async saveAttendanceEvent(employeeId, eventInput) {
-        const employee = this.resolveAttendanceEmployee(employeeId);
-
-        if (!employee) {
-            throw new Error(t('timeClock.errors.employeeNotFound'));
-        }
-
-        const dateKey = eventInput.dateKey || eventInput.occurredAt.slice(0, 10);
-        const docRef = doc(this.db, "attendance_records", this.getAttendanceDocId(employeeId, dateKey));
-
-        await runTransaction(this.db, async (transaction) => {
-            const recordSnapshot = await transaction.get(docRef);
-            const baseRecord = recordSnapshot.exists()
-                ? { id: recordSnapshot.id, ...recordSnapshot.data() }
-                : createAttendanceRecord({
-                    employeeId,
-                    employeeName: employee.name || '',
-                    dateKey
-                });
-
-            const nextRecord = appendAttendanceEvent(baseRecord, {
-                ...eventInput,
-                employeeId,
-                employeeName: employee.name || ''
-            });
-
-            transaction.set(docRef, nextRecord);
-        });
+        throw new Error('Direct attendance writes are disabled. Use the protected attendance service.');
     }
 
-    async recordAttendanceForEmployee(employeeId, eventType, { source = 'web', occurredAt = formatLocalDateTime() } = {}) {
+    async recordAttendanceForEmployee(employeeId, eventType, { source = 'web' } = {}) {
         const employee = this.resolveAttendanceEmployee(employeeId);
         if (!employee) {
             throw new Error(t('timeClock.errors.employeeNotFound'));
         }
-
-        const dateKey = occurredAt.slice(0, 10);
-        const currentRecord = this.getAttendanceRecord(employee.id, dateKey);
-        const actionState = getAttendanceActionState(currentRecord);
-        const allowedActions = [actionState.primaryAction, actionState.secondaryAction].filter(Boolean);
-
-        if (!allowedActions.includes(eventType)) {
-            throw new Error(t('timeClock.errors.actionUnavailable'));
+        if (typeof this.attendanceApi.recordPunch !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
         }
-
-        await this.saveAttendanceEvent(employee.id, {
-            type: eventType,
-            occurredAt,
-            dateKey,
-            source,
-            actorUid: this.currentUserContext.uid,
-            actorEmail: this.currentUserContext.email
-        });
+        const result = await this.attendanceApi.recordPunch({ employeeId: employee.id, eventType, source });
+        return result?.data || result;
     }
 
     async recordCurrentUserAttendance(eventType) {
@@ -1438,24 +1492,39 @@ export class DataManager {
             throw new Error(t('timeClock.errors.manualFieldsRequired'));
         }
 
-        if (!this.currentUserContext.uid && !this.currentUserContext.email) {
-            throw new Error(t('timeClock.feedback.manualActorRequired'));
-        }
-
         const normalizedNote = normalizeManualAttendanceNote(note);
         if (!normalizedNote) {
             throw new Error(t('timeClock.feedback.manualReasonRequired'));
         }
-
-        await this.saveAttendanceEvent(employeeId, {
-            type: eventType,
-            occurredAt: `${dateKey}T${localTime.length === 5 ? `${localTime}:00` : localTime}`,
+        if (typeof this.attendanceApi.addCorrection !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.addCorrection({
+            employeeId,
             dateKey,
-            source: 'manual',
-            actorUid: this.currentUserContext.uid,
-            actorEmail: this.currentUserContext.email,
-            note: normalizedNote
+            eventType,
+            localTime,
+            reason: normalizedNote
         });
+        return result?.data || result;
+    }
+
+    async voidAttendanceEvent(employeeId, dateKey, eventId, reason) {
+        const normalizedReason = normalizeManualAttendanceNote(reason);
+        if (!normalizedReason) throw new Error(t('timeClock.feedback.manualReasonRequired'));
+        if (typeof this.attendanceApi.voidEvent !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.voidEvent({ employeeId, dateKey, eventId, reason: normalizedReason });
+        return result?.data || result;
+    }
+
+    async attestAttendanceRecord(employeeId, dateKey) {
+        if (typeof this.attendanceApi.attestRecord !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.attestRecord({ employeeId, dateKey });
+        return result?.data || result;
     }
 
     async setAttendanceRecordReview(employeeId, dateKey, { status = null, note = null } = {}) {
@@ -1466,27 +1535,61 @@ export class DataManager {
             throw new Error(t('timeClock.errors.reviewEmployeeNotFound'));
         }
 
-        const docRef = doc(this.db, "attendance_records", this.getAttendanceDocId(employeeId, dateKey));
+        if (typeof this.attendanceApi.reviewRecord !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.reviewRecord({ employeeId, dateKey, status, note });
+        return result?.data || result;
+    }
 
-        await runTransaction(this.db, async (transaction) => {
-            const recordSnapshot = await transaction.get(docRef);
-            const baseRecord = recordSnapshot.exists()
-                ? { id: recordSnapshot.id, ...recordSnapshot.data() }
-                : createAttendanceRecord({
-                    employeeId,
-                    employeeName: employee.name || '',
-                    dateKey
-                });
+    getOvertimeRecordsForEmployee(employeeId, dateKey = null) {
+        return Object.values(this.overtimeRecords)
+            .filter((record) => record.employeeId === employeeId && (!dateKey || record.dateKey === dateKey))
+            .sort((left, right) => String(left.startEvent?.occurredAt || left.authorizedAt || '')
+                .localeCompare(String(right.startEvent?.occurredAt || right.authorizedAt || '')));
+    }
 
-            const nextRecord = setAttendanceReview(baseRecord, {
-                status,
-                note,
-                reviewedBy: this.currentUserContext.email,
-                reviewedAt: new Date().toISOString()
-            });
+    getOpenOvertimeRecordForEmployee(employeeId, dateKey = this.getDateKey(new Date())) {
+        return this.getOvertimeRecordsForEmployee(employeeId, dateKey)
+            .find((record) => ['authorized', 'in-progress', 'awaiting-worker-validation'].includes(record.status)) || null;
+    }
 
-            transaction.set(docRef, nextRecord);
-        });
+    getOvertimeReviewQueue() {
+        return Object.values(this.overtimeRecords)
+            .filter((record) => record.status === 'worker-validated')
+            .sort((left, right) => String(left.dateKey || '').localeCompare(String(right.dateKey || '')));
+    }
+
+    async authorizeOvertime(input) {
+        if (typeof this.attendanceApi.authorizeOvertime !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.authorizeOvertime(input);
+        return result?.data || result;
+    }
+
+    async recordOvertimePunch(overtimeRecordId, action) {
+        if (typeof this.attendanceApi.recordOvertimePunch !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.recordOvertimePunch({ overtimeRecordId, action });
+        return result?.data || result;
+    }
+
+    async validateOvertimeRecord(overtimeRecordId) {
+        if (typeof this.attendanceApi.validateOvertimeRecord !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.validateOvertimeRecord({ overtimeRecordId });
+        return result?.data || result;
+    }
+
+    async reviewOvertimeRecord(overtimeRecordId, { note, restDate = null } = {}) {
+        if (typeof this.attendanceApi.reviewOvertimeRecord !== 'function') {
+            throw new Error(t('timeClock.errors.secureServiceUnavailable'));
+        }
+        const result = await this.attendanceApi.reviewOvertimeRecord({ overtimeRecordId, note, restDate });
+        return result?.data || result;
     }
 
     getHolidays(year) {

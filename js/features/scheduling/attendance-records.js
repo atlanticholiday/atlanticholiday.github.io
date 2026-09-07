@@ -1,7 +1,6 @@
 const VALID_EVENT_TYPES = new Set(['clockIn', 'clockOut', 'breakStart', 'breakEnd']);
 const VALID_REVIEW_STATUSES = new Set(['needs-attention', 'reviewed']);
-const AUTO_LUNCH_DEDUCTION_MINUTES = 60;
-const AUTO_LUNCH_MINIMUM_WORKED_MINUTES = 6 * 60;
+const VALID_EVENT_SOURCES = new Set(['web', 'station', 'manual']);
 
 function pad(value) {
     return String(value).padStart(2, '0');
@@ -42,8 +41,14 @@ function createEventId(eventType, occurredAt) {
 }
 
 function toMinutesBetween(startDateTime, endDateTime) {
-    const start = new Date(startDateTime);
-    const end = new Date(endDateTime);
+    const startValue = typeof startDateTime === 'object'
+        ? (startDateTime?.occurredAtUtc || startDateTime?.occurredAt)
+        : startDateTime;
+    const endValue = typeof endDateTime === 'object'
+        ? (endDateTime?.occurredAtUtc || endDateTime?.occurredAt)
+        : endDateTime;
+    const start = new Date(startValue);
+    const end = new Date(endValue);
     return Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
 }
 
@@ -65,6 +70,8 @@ export function createAttendanceRecord({ employeeId, employeeName = '', dateKey,
         employeeName: typeof employeeName === 'string' ? employeeName.trim() : '',
         dateKey,
         punches: [],
+        voidedEventIds: [],
+        corrections: [],
         review: {
             status: null,
             note: null,
@@ -85,11 +92,14 @@ export function normalizeAttendanceRecord(record = {}) {
                 id: normalizeOptionalText(punch.id) || createEventId(punch.type, normalizeLocalDateTime(punch.occurredAt)),
                 type: punch.type,
                 occurredAt: normalizeLocalDateTime(punch.occurredAt),
+                occurredAtUtc: normalizeOptionalText(punch.occurredAtUtc),
+                timeZone: normalizeOptionalText(punch.timeZone),
                 capturedAt: normalizeOptionalText(punch.capturedAt),
-                source: punch.source === 'manual' ? 'manual' : 'web',
+                source: VALID_EVENT_SOURCES.has(punch.source) ? punch.source : 'web',
                 actorUid: normalizeOptionalText(punch.actorUid),
                 actorEmail: normalizeOptionalText(punch.actorEmail),
-                note: normalizeOptionalText(punch.note)
+                note: normalizeOptionalText(punch.note),
+                trustedServerTime: punch.trustedServerTime === true
             }))
             .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt))
         : [];
@@ -99,6 +109,12 @@ export function normalizeAttendanceRecord(record = {}) {
         employeeName: typeof safeRecord.employeeName === 'string' ? safeRecord.employeeName.trim() : '',
         dateKey: normalizeOptionalText(safeRecord.dateKey),
         punches,
+        voidedEventIds: Array.isArray(safeRecord.voidedEventIds)
+            ? [...new Set(safeRecord.voidedEventIds.filter((eventId) => typeof eventId === 'string' && eventId))]
+            : [],
+        corrections: Array.isArray(safeRecord.corrections)
+            ? safeRecord.corrections.filter((correction) => correction && typeof correction === 'object').map((correction) => ({ ...correction }))
+            : [],
         review: {
             status: normalizeReviewStatus(safeRecord.review?.status),
             note: normalizeOptionalText(safeRecord.review?.note),
@@ -121,11 +137,14 @@ export function appendAttendanceEvent(record, eventInput) {
         id: normalizeOptionalText(eventInput.id) || createEventId(eventInput.type, occurredAt),
         type: eventInput.type,
         occurredAt,
+        occurredAtUtc: normalizeOptionalText(eventInput.occurredAtUtc),
+        timeZone: normalizeOptionalText(eventInput.timeZone),
         capturedAt: normalizeOptionalText(eventInput.capturedAt) || new Date().toISOString(),
-        source: eventInput.source === 'manual' ? 'manual' : 'web',
+        source: VALID_EVENT_SOURCES.has(eventInput.source) ? eventInput.source : 'web',
         actorUid: normalizeOptionalText(eventInput.actorUid),
         actorEmail: normalizeOptionalText(eventInput.actorEmail),
-        note: normalizeOptionalText(eventInput.note)
+        note: normalizeOptionalText(eventInput.note),
+        trustedServerTime: eventInput.trustedServerTime === true
     };
 
     const punches = [...normalizedRecord.punches, nextEvent].sort((left, right) => left.occurredAt.localeCompare(right.occurredAt));
@@ -138,6 +157,8 @@ export function appendAttendanceEvent(record, eventInput) {
         employeeName: normalizedRecord.employeeName || (typeof eventInput.employeeName === 'string' ? eventInput.employeeName.trim() : ''),
         dateKey: normalizedRecord.dateKey || occurredAt.slice(0, 10),
         punches,
+        voidedEventIds: normalizedRecord.voidedEventIds,
+        corrections: normalizedRecord.corrections,
         review: {
             status: nextReviewStatus,
             note: nextReviewStatus === 'needs-attention'
@@ -169,10 +190,11 @@ export function setAttendanceReview(record, { status = null, note = null, review
 
 export function getAttendanceActionState(record) {
     const normalizedRecord = normalizeAttendanceRecord(record);
+    const voidedEventIds = new Set(normalizedRecord.voidedEventIds);
     let isClockedIn = false;
     let isOnBreak = false;
 
-    normalizedRecord.punches.forEach((punch) => {
+    normalizedRecord.punches.filter((punch) => !voidedEventIds.has(punch.id)).forEach((punch) => {
         if (punch.type === 'clockIn') {
             isClockedIn = true;
             isOnBreak = false;
@@ -211,7 +233,8 @@ export function getAttendanceActionState(record) {
 
 export function summarizeAttendanceRecord(record, { referenceDateTime = null } = {}) {
     const normalizedRecord = normalizeAttendanceRecord(record);
-    const punches = normalizedRecord.punches;
+    const voidedEventIds = new Set(normalizedRecord.voidedEventIds);
+    const punches = normalizedRecord.punches.filter((punch) => !voidedEventIds.has(punch.id));
     const fallbackReference = punches[punches.length - 1]?.occurredAt || formatLocalDateTime();
     const effectiveReference = referenceDateTime ? normalizeLocalDateTime(referenceDateTime) : fallbackReference;
 
@@ -219,6 +242,8 @@ export function summarizeAttendanceRecord(record, { referenceDateTime = null } =
     let breakMinutes = 0;
     let activeSessionStartedAt = null;
     let activeBreakStartedAt = null;
+    let activeSessionPunch = null;
+    let activeBreakPunch = null;
     let firstClockIn = null;
     let lastClockOut = null;
 
@@ -226,22 +251,30 @@ export function summarizeAttendanceRecord(record, { referenceDateTime = null } =
         if (punch.type === 'clockIn') {
             activeSessionStartedAt = punch.occurredAt;
             activeBreakStartedAt = null;
+            activeSessionPunch = punch;
+            activeBreakPunch = null;
             firstClockIn = firstClockIn || punch.occurredAt;
         } else if (punch.type === 'breakStart' && activeSessionStartedAt && !activeBreakStartedAt) {
-            workedMinutes += toMinutesBetween(activeSessionStartedAt, punch.occurredAt);
+            workedMinutes += toMinutesBetween(activeSessionPunch, punch);
             activeBreakStartedAt = punch.occurredAt;
             activeSessionStartedAt = null;
+            activeBreakPunch = punch;
+            activeSessionPunch = null;
         } else if (punch.type === 'breakEnd' && activeBreakStartedAt) {
-            breakMinutes += toMinutesBetween(activeBreakStartedAt, punch.occurredAt);
+            breakMinutes += toMinutesBetween(activeBreakPunch, punch);
             activeBreakStartedAt = null;
             activeSessionStartedAt = punch.occurredAt;
+            activeBreakPunch = null;
+            activeSessionPunch = punch;
         } else if (punch.type === 'clockOut') {
             if (activeBreakStartedAt) {
-                breakMinutes += toMinutesBetween(activeBreakStartedAt, punch.occurredAt);
+                breakMinutes += toMinutesBetween(activeBreakPunch, punch);
                 activeBreakStartedAt = null;
+                activeBreakPunch = null;
             } else if (activeSessionStartedAt) {
-                workedMinutes += toMinutesBetween(activeSessionStartedAt, punch.occurredAt);
+                workedMinutes += toMinutesBetween(activeSessionPunch, punch);
                 activeSessionStartedAt = null;
+                activeSessionPunch = null;
             }
 
             lastClockOut = punch.occurredAt;
@@ -249,35 +282,17 @@ export function summarizeAttendanceRecord(record, { referenceDateTime = null } =
     });
 
     if (activeBreakStartedAt) {
-        breakMinutes += toMinutesBetween(activeBreakStartedAt, effectiveReference);
+        breakMinutes += toMinutesBetween(activeBreakPunch, effectiveReference);
     } else if (activeSessionStartedAt) {
-        workedMinutes += toMinutesBetween(activeSessionStartedAt, effectiveReference);
+        workedMinutes += toMinutesBetween(activeSessionPunch, effectiveReference);
     }
 
     const actionState = getAttendanceActionState(normalizedRecord);
-    const clockInCount = punches.filter((punch) => punch.type === 'clockIn').length;
-    const clockOutCount = punches.filter((punch) => punch.type === 'clockOut').length;
-    const hasExplicitBreakPunches = punches.some((punch) => punch.type === 'breakStart' || punch.type === 'breakEnd');
-    const isClosedDay = !activeSessionStartedAt && !activeBreakStartedAt;
-    const qualifiesForAutoLunch = isClosedDay
-        && clockInCount === 1
-        && clockOutCount === 1
-        && !hasExplicitBreakPunches
-        && workedMinutes >= AUTO_LUNCH_MINIMUM_WORKED_MINUTES;
-    const autoBreakMinutes = qualifiesForAutoLunch
-        ? Math.min(AUTO_LUNCH_DEDUCTION_MINUTES, workedMinutes)
-        : 0;
-
-    if (autoBreakMinutes > 0) {
-        workedMinutes -= autoBreakMinutes;
-        breakMinutes += autoBreakMinutes;
-    }
-
     return {
         ...actionState,
         workedMinutes,
         breakMinutes,
-        autoBreakMinutes,
+        autoBreakMinutes: 0,
         firstClockIn,
         lastClockOut,
         activeSessionStartedAt,

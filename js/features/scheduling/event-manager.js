@@ -243,6 +243,62 @@ export class EventManager {
                     return;
                 }
 
+                const overtimeButton = e.target.closest('[data-overtime-action]');
+                if (overtimeButton) {
+                    const overtimeFeedback = document.getElementById('overtime-feedback');
+                    if (overtimeFeedback) overtimeFeedback.textContent = '';
+                    try {
+                        const action = overtimeButton.dataset.overtimeAction;
+                        const recordId = overtimeButton.dataset.overtimeRecordId;
+                        if (action === 'validate') {
+                            await this.dataManager.validateOvertimeRecord(recordId);
+                        } else {
+                            await this.dataManager.recordOvertimePunch(recordId, action);
+                        }
+                        const refreshedFeedback = document.getElementById('overtime-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.overtimeSaved');
+                    } catch (error) {
+                        if (overtimeFeedback) overtimeFeedback.textContent = error.message || t('timeClock.feedback.overtimeSaveFailed');
+                    }
+                    return;
+                }
+
+                const voidButton = e.target.closest('[data-attendance-void-event-id]');
+                if (voidButton) {
+                    const reason = window.prompt(t('timeClock.selfService.voidReasonPrompt')) || '';
+                    if (!reason.trim()) return;
+                    const adjustmentFeedback = document.getElementById('attendance-adjustment-feedback');
+                    try {
+                        await this.dataManager.voidAttendanceEvent(
+                            voidButton.dataset.attendanceVoidEmployeeId,
+                            voidButton.dataset.attendanceVoidDateKey,
+                            voidButton.dataset.attendanceVoidEventId,
+                            reason
+                        );
+                        const refreshedFeedback = document.getElementById('attendance-adjustment-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.eventVoided');
+                    } catch (error) {
+                        if (adjustmentFeedback) adjustmentFeedback.textContent = error.message || t('timeClock.feedback.eventVoidFailed');
+                    }
+                    return;
+                }
+
+                const attestButton = e.target.closest('[data-attendance-attest-employee-id]');
+                if (attestButton) {
+                    const feedback = document.getElementById('time-clock-feedback');
+                    try {
+                        await this.dataManager.attestAttendanceRecord(
+                            attestButton.dataset.attendanceAttestEmployeeId,
+                            attestButton.dataset.attendanceAttestDateKey
+                        );
+                        const refreshedFeedback = document.getElementById('time-clock-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.dayAttested');
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.feedback.dayAttestationFailed');
+                    }
+                    return;
+                }
+
             });
 
             timeClockContent.addEventListener('input', (e) => {
@@ -256,6 +312,54 @@ export class EventManager {
             });
 
             timeClockContent.addEventListener('submit', async (e) => {
+                if (e.target.matches('[data-overtime-review-form]')) {
+                    e.preventDefault();
+                    const feedback = e.target.querySelector('[data-overtime-review-feedback]');
+                    if (feedback) feedback.textContent = '';
+                    try {
+                        const formData = new FormData(e.target);
+                        await this.dataManager.reviewOvertimeRecord(e.target.dataset.overtimeRecordId, {
+                            note: formData.get('note'),
+                            restDate: formData.get('restDate') || null
+                        });
+                        if (feedback) feedback.textContent = t('timeClock.feedback.overtimeReviewed');
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.feedback.overtimeReviewFailed');
+                    }
+                    return;
+                }
+
+                if (e.target.id === 'overtime-authorization-form') {
+                    e.preventDefault();
+                    const feedback = document.getElementById('overtime-authorization-feedback');
+                    if (feedback) feedback.textContent = '';
+                    try {
+                        const formData = new FormData(e.target);
+                        await this.dataManager.authorizeOvertime(Object.fromEntries(formData.entries()));
+                        const refreshedFeedback = document.getElementById('overtime-authorization-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.overtimeAuthorized');
+                        e.target.elements.reason.value = '';
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.feedback.overtimeAuthorizationFailed');
+                    }
+                    return;
+                }
+
+                if (e.target.id === 'attendance-compliance-form') {
+                    e.preventDefault();
+                    const feedback = document.getElementById('attendance-compliance-feedback');
+                    if (feedback) feedback.textContent = '';
+                    try {
+                        const formData = new FormData(e.target);
+                        await this.dataManager.saveAttendanceComplianceSettings(Object.fromEntries(formData.entries()));
+                        const refreshedFeedback = document.getElementById('attendance-compliance-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.complianceSaved');
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.feedback.complianceSaveFailed');
+                    }
+                    return;
+                }
+
                 if (e.target.id !== 'attendance-adjustment-form') return;
                 e.preventDefault();
 
@@ -418,6 +522,20 @@ export class EventManager {
             printTimesheetActionBtn.addEventListener('click', () => {
                 activatePrintModal('timesheet-modal');
                 window.print();
+            });
+        }
+
+        const exportTimesheetCsvBtn = document.getElementById('export-timesheet-csv-btn');
+        if (exportTimesheetCsvBtn) {
+            exportTimesheetCsvBtn.addEventListener('click', () => {
+                this.uiManager.exportAttendanceRegisterCSV();
+            });
+        }
+
+        const exportAnnualOvertimeCsvBtn = document.getElementById('export-annual-overtime-csv-btn');
+        if (exportAnnualOvertimeCsvBtn) {
+            exportAnnualOvertimeCsvBtn.addEventListener('click', () => {
+                this.uiManager.exportAnnualOvertimeCSV();
             });
         }
 
