@@ -11,6 +11,7 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 - revisão por responsável e trilho de auditoria;
 - retenção indicada por cinco anos e bloqueio de escrita/apagamento direto pelo browser;
 - consulta limitada aos próprios registos para utilizadores ligados a um trabalhador;
+- estação de tablet com PIN individual validado no servidor, bloqueio de tentativas e credenciais inacessíveis ao browser;
 - exportação CSV e impressão semanal/mensal, incluindo trabalhadores arquivados;
 - mapa semanal com os campos estruturais do artigo 215.º;
 - registo separado de trabalho suplementar: autorização/fundamento, início, termo, visto do trabalhador, revisão e descanso compensatório.
@@ -24,7 +25,8 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 5. Implantar o site.
 6. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, correção, impressão e CSV.
 7. Preencher “Configuração legal do registo” na área de gestor.
-8. Imprimir e afixar o mapa aplicável; na Madeira, enviar a cópia à Direção Regional do Trabalho com a antecedência exigida e guardar prova.
+8. Criar a conta exclusiva do tablet com apenas a função `time-clock-station` e configurar os PINs conforme a [política do tablet partilhado](POLITICA-PIN-TABLET.md).
+9. Imprimir e afixar o mapa aplicável; na Madeira, enviar a cópia à Direção Regional do Trabalho com a antecedência exigida e guardar prova.
 
 Não inverter os passos 2 e 4: se as regras forem implantadas antes das funções, o registo de ponto fica temporariamente indisponível.
 

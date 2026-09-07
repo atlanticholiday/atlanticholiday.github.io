@@ -449,6 +449,12 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // PIN salts, hashes and lockout state are server-only credentials. Even
+    // administrators manage them through callable functions and never read them.
+    match /attendance_pin_credentials/{employeeId} {
+      allow read, write: if false;
+    }
+
     match /overtime_records/{recordId} {
       allow read: if privileged()
         || hasApp('staff')

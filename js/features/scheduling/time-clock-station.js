@@ -17,6 +17,28 @@ function getEmployeeSearchText(employee = {}) {
     ].join(' '));
 }
 
+export const ATTENDANCE_PIN_MIN_LENGTH = 6;
+export const ATTENDANCE_PIN_MAX_LENGTH = 10;
+
+export function normalizeAttendancePin(value = '') {
+    return String(value ?? '')
+        .replace(/\D/g, '')
+        .slice(0, ATTENDANCE_PIN_MAX_LENGTH);
+}
+
+export function isAttendancePinReady(value = '') {
+    const pin = normalizeAttendancePin(value);
+    return pin.length >= ATTENDANCE_PIN_MIN_LENGTH && pin.length <= ATTENDANCE_PIN_MAX_LENGTH;
+}
+
+export function applyAttendancePinKey(currentValue = '', key = '') {
+    const current = normalizeAttendancePin(currentValue);
+    if (key === 'clear') return '';
+    if (key === 'backspace') return current.slice(0, -1);
+    if (/^\d$/.test(key)) return normalizeAttendancePin(`${current}${key}`);
+    return current;
+}
+
 export function filterTimeClockStationEmployees(employees = [], query = '') {
     const tokens = normalizeSearchValue(query)
         .split(/\s+/)

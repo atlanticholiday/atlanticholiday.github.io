@@ -2,11 +2,13 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
-const { randomUUID } = require("node:crypto");
+const { randomBytes, randomUUID, scrypt: scryptCallback, timingSafeEqual } = require("node:crypto");
+const { promisify } = require("node:util");
 
 initializeApp();
 const auth = getAuth();
 const firestore = getFirestore();
+const scrypt = promisify(scryptCallback);
 
 const PRIVILEGED_ROLE_KEYS = new Set(["admin", "manager", "supervisor"]);
 const ATTENDANCE_EVENT_TYPES = new Set(["clockIn", "clockOut", "breakStart", "breakEnd"]);
@@ -14,6 +16,11 @@ const ATTENDANCE_REVIEW_STATUSES = new Set(["needs-attention", "reviewed"]);
 const OVERTIME_LEGAL_BASES = new Set(["temporary-increase", "force-majeure", "prevent-serious-harm"]);
 const PORTUGAL_TIME_ZONE = "Europe/Lisbon";
 const ATTENDANCE_RETENTION_YEARS = 5;
+const ATTENDANCE_PIN_MIN_LENGTH = 6;
+const ATTENDANCE_PIN_MAX_LENGTH = 10;
+const ATTENDANCE_PIN_MAX_ATTEMPTS = 5;
+const ATTENDANCE_PIN_LOCK_MS = 5 * 60 * 1000;
+const ATTENDANCE_PIN_KEY_LENGTH = 64;
 const APP_ACCESS_KEYS = new Set([
   "vehicles",
   "staff",
@@ -41,6 +48,9 @@ exports.recordAttendancePunch = onCall(async (request) => {
   const eventType = normalizeAttendanceEventType(request.data?.eventType);
   const actor = await requireAttendanceAccess(request, employeeId);
   const employee = await getActiveEmployee(employeeId);
+  if (actor.station) {
+    await verifyAttendancePin(employeeId, request.data?.pin, actor);
+  }
   const now = new Date();
   const occurredAt = formatPortugalLocalDateTime(now);
   const todayKey = occurredAt.slice(0, 10);
@@ -104,6 +114,69 @@ exports.recordAttendancePunch = onCall(async (request) => {
     attendanceEventType: eventType
   });
   return result;
+});
+
+exports.setAttendancePin = onCall(async (request) => {
+  const employeeId = requireDocumentId(request.data?.employeeId, "A valid colleague is required.");
+  const actor = await requireAttendancePinAdministrator(request);
+  const pin = normalizeAttendancePin(request.data?.pin);
+  await getActiveEmployee(employeeId);
+
+  const salt = randomBytes(24);
+  const hash = await deriveAttendancePinHash(pin, salt);
+  const now = new Date().toISOString();
+  const credentialRef = firestore.collection("attendance_pin_credentials").doc(employeeId);
+  const employeeRef = firestore.collection("employees").doc(employeeId);
+  const batch = firestore.batch();
+  batch.set(credentialRef, {
+    employeeId,
+    algorithm: "scrypt-v1",
+    salt: salt.toString("base64"),
+    hash: hash.toString("base64"),
+    failedAttempts: 0,
+    lockedUntil: null,
+    updatedAt: now,
+    updatedAtServer: FieldValue.serverTimestamp(),
+    updatedByUid: actor.uid,
+    updatedByEmail: actor.email
+  });
+  batch.set(employeeRef, {
+    attendancePinConfigured: true,
+    attendancePinUpdatedAt: now
+  }, { merge: true });
+  await batch.commit();
+
+  await writeAudit({
+    email: actor.email,
+    uid: actor.uid,
+    event: "attendance_pin_set",
+    employeeId
+  });
+  return { employeeId, configured: true };
+});
+
+exports.removeAttendancePin = onCall(async (request) => {
+  const employeeId = requireDocumentId(request.data?.employeeId, "A valid colleague is required.");
+  const actor = await requireAttendancePinAdministrator(request);
+  await getEmployee(employeeId);
+
+  const credentialRef = firestore.collection("attendance_pin_credentials").doc(employeeId);
+  const employeeRef = firestore.collection("employees").doc(employeeId);
+  const batch = firestore.batch();
+  batch.delete(credentialRef);
+  batch.set(employeeRef, {
+    attendancePinConfigured: false,
+    attendancePinUpdatedAt: new Date().toISOString()
+  }, { merge: true });
+  await batch.commit();
+
+  await writeAudit({
+    email: actor.email,
+    uid: actor.uid,
+    event: "attendance_pin_removed",
+    employeeId
+  });
+  return { employeeId, configured: false };
 });
 
 exports.addManualAttendanceCorrection = onCall(async (request) => {
@@ -343,6 +416,9 @@ exports.recordOvertimePunch = onCall(async (request) => {
   const initial = await recordRef.get();
   if (!initial.exists) throw new HttpsError("not-found", "The overtime record does not exist.");
   const actor = await requireAttendanceAccess(request, initial.data()?.employeeId);
+  if (actor.station) {
+    await verifyAttendancePin(initial.data()?.employeeId, request.data?.pin, actor);
+  }
   const now = new Date();
   const occurredAt = formatPortugalLocalDateTime(now);
   const event = createTrustedAttendanceEvent({
@@ -898,6 +974,79 @@ async function getActiveEmployee(employeeId) {
   return employee;
 }
 
+function normalizeAttendancePin(value) {
+  const pin = typeof value === "string" ? value.trim() : "";
+  const pattern = new RegExp(`^\\d{${ATTENDANCE_PIN_MIN_LENGTH},${ATTENDANCE_PIN_MAX_LENGTH}}$`);
+  if (!pattern.test(pin)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `The PIN must contain ${ATTENDANCE_PIN_MIN_LENGTH} to ${ATTENDANCE_PIN_MAX_LENGTH} digits.`,
+      { reason: "invalid-pin-format" }
+    );
+  }
+  return pin;
+}
+
+async function deriveAttendancePinHash(pin, salt) {
+  return scrypt(pin, salt, ATTENDANCE_PIN_KEY_LENGTH);
+}
+
+async function verifyAttendancePin(employeeId, rawPin, actor) {
+  const pin = normalizeAttendancePin(rawPin);
+  const credentialRef = firestore.collection("attendance_pin_credentials").doc(employeeId);
+  const nowMs = Date.now();
+
+  const verification = await firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(credentialRef);
+    const credential = snapshot.exists ? snapshot.data() : null;
+    const lockedUntilMs = credential?.lockedUntil ? Date.parse(credential.lockedUntil) : 0;
+
+    if (!credential?.salt || !credential?.hash || credential.algorithm !== "scrypt-v1") {
+      return { valid: false, reason: "invalid-pin" };
+    }
+    if (Number.isFinite(lockedUntilMs) && lockedUntilMs > nowMs) {
+      return { valid: false, reason: "pin-locked", retryAt: credential.lockedUntil };
+    }
+
+    const expectedHash = Buffer.from(credential.hash, "base64");
+    const suppliedHash = await deriveAttendancePinHash(pin, Buffer.from(credential.salt, "base64"));
+    const valid = expectedHash.length === suppliedHash.length && timingSafeEqual(expectedHash, suppliedHash);
+
+    if (!valid) {
+      const failedAttempts = Number(credential.failedAttempts || 0) + 1;
+      const shouldLock = failedAttempts >= ATTENDANCE_PIN_MAX_ATTEMPTS;
+      transaction.update(credentialRef, {
+        failedAttempts: shouldLock ? 0 : failedAttempts,
+        lockedUntil: shouldLock ? new Date(nowMs + ATTENDANCE_PIN_LOCK_MS).toISOString() : null,
+        lastFailedAt: new Date(nowMs).toISOString()
+      });
+      return { valid: false, reason: shouldLock ? "pin-locked" : "invalid-pin" };
+    }
+
+    transaction.update(credentialRef, {
+      failedAttempts: 0,
+      lockedUntil: null,
+      lastUsedAt: new Date(nowMs).toISOString()
+    });
+    return { valid: true };
+  });
+
+  if (!verification.valid) {
+    const locked = verification.reason === "pin-locked";
+    await writeAudit({
+      email: actor.email,
+      uid: actor.uid,
+      event: locked ? "attendance_pin_locked" : "attendance_pin_failed",
+      employeeId
+    });
+    throw new HttpsError(
+      locked ? "resource-exhausted" : "permission-denied",
+      locked ? "Too many PIN attempts. Try again later." : "The PIN could not be validated.",
+      { reason: verification.reason, retryAt: verification.retryAt || null }
+    );
+  }
+}
+
 async function requireAttendanceAccess(request, employeeId) {
   const access = await requireAuthenticatedAccess(request, "Sign in before recording attendance.");
   const roles = normalizeRoles(access.accessEntry?.roles);
@@ -922,6 +1071,16 @@ async function requireAttendanceManager(request) {
     throw new HttpsError("permission-denied", "Only an authorized manager can correct attendance.");
   }
   return { uid: request.auth.uid, email: normalizeRawEmail(access.email), roles, privileged, staff, station: false, own: false };
+}
+
+async function requireAttendancePinAdministrator(request) {
+  const access = await requireAuthenticatedAccess(request, "Sign in before managing attendance PINs.");
+  const roles = normalizeRoles(access.accessEntry?.roles);
+  const privileged = roles.some((role) => PRIVILEGED_ROLE_KEYS.has(role));
+  if (!privileged) {
+    throw new HttpsError("permission-denied", "Only an authorized manager can manage attendance PINs.");
+  }
+  return { uid: request.auth.uid, email: normalizeRawEmail(access.email), roles, privileged };
 }
 
 async function requireAdminAccess(request) {

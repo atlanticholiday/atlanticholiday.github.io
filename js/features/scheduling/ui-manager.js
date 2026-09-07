@@ -5,7 +5,15 @@ import { getAttendancePrintRange, normalizeAttendancePrintMode } from './attenda
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
 import { getPaidShiftHours } from './shift-hours.js';
 import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './time-clock-controls.js';
-import { filterTimeClockStationEmployees, getTimeClockStationEmployeeInitials } from './time-clock-station.js';
+import {
+    applyAttendancePinKey,
+    ATTENDANCE_PIN_MAX_LENGTH,
+    ATTENDANCE_PIN_MIN_LENGTH,
+    filterTimeClockStationEmployees,
+    getTimeClockStationEmployeeInitials,
+    isAttendancePinReady,
+    normalizeAttendancePin
+} from './time-clock-station.js';
 import { renderMadeiraReferenceView } from './views/madeira-reference-view.js';
 import { renderMonthlyCalendarMobileCards, renderMonthlyCalendarView } from './views/monthly-schedule-view.js';
 import { getScheduleViewMeta, renderScheduleAccessBanner } from './views/schedule-shell-view.js';
@@ -20,9 +28,11 @@ export class UIManager {
         this.liveClockTimer = null;
         this.currentTimesheetEmployeeId = null;
         this.currentTimesheetMode = 'week';
+        this.currentTimeClockSection = 'today';
         this.timeClockStationPreviewEnabled = false;
         this.timeClockStationEmployeeId = null;
         this.timeClockStationSearch = '';
+        this.timeClockStationPin = '';
         this.timeClockStationFeedback = '';
         this.timeClockStationFeedbackTone = 'success';
         this.timeClockStationNotice = '';
@@ -67,6 +77,12 @@ export class UIManager {
     formatLocaleTime(date, options = {}) {
         if (!date) return '';
         return new Intl.DateTimeFormat(this.getCurrentLocale(), options).format(date);
+    }
+
+    setTimeClockSection(section) {
+        const allowed = new Set(['today', 'history', 'overtime', 'management', 'configuration']);
+        this.currentTimeClockSection = allowed.has(section) ? section : 'today';
+        this.renderTimeClockPage();
     }
 
     escapeHtml(value = '') {
@@ -1301,6 +1317,7 @@ export class UIManager {
     resetTimeClockStationState({ clearSearch = false, clearFeedback = true } = {}) {
         this.clearTimeClockStationResetTimer();
         this.timeClockStationEmployeeId = null;
+        this.timeClockStationPin = '';
         if (clearSearch) {
             this.timeClockStationSearch = '';
         }
@@ -1359,6 +1376,7 @@ export class UIManager {
         this.clearTimeClockStationNotice();
         this.registerTimeClockStationActivity();
         this.timeClockStationEmployeeId = employeeId;
+        this.timeClockStationPin = '';
         this.timeClockStationFeedback = '';
         this.timeClockStationFeedbackTone = 'success';
         this.renderTimeClockPage();
@@ -1370,11 +1388,42 @@ export class UIManager {
         this.renderTimeClockPage();
     }
 
+    getTimeClockStationPin() {
+        return this.timeClockStationPin;
+    }
+
+    setTimeClockStationPin(value = '') {
+        this.timeClockStationPin = normalizeAttendancePin(value);
+        this.clearTimeClockStationNotice();
+        this.registerTimeClockStationActivity();
+
+        const input = document.getElementById('time-clock-station-pin');
+        if (input && input.value !== this.timeClockStationPin) {
+            input.value = this.timeClockStationPin;
+        }
+        const progress = document.getElementById('time-clock-station-pin-progress');
+        if (progress) {
+            progress.textContent = this.timeClockStationPin.length
+                ? '●'.repeat(this.timeClockStationPin.length)
+                : t('timeClock.station.pinWaiting');
+        }
+        const ready = isAttendancePinReady(this.timeClockStationPin);
+        document.querySelectorAll('[data-time-clock-action][data-time-clock-employee-id]').forEach((button) => {
+            button.disabled = !ready;
+            button.setAttribute('aria-disabled', String(!ready));
+        });
+    }
+
+    applyTimeClockStationPinKey(key = '') {
+        this.setTimeClockStationPin(applyAttendancePinKey(this.timeClockStationPin, key));
+    }
+
     setTimeClockStationFeedback(message = '', tone = 'success') {
         this.clearTimeClockStationResetTimer();
         this.registerTimeClockStationActivity();
         this.timeClockStationFeedback = message;
         this.timeClockStationFeedbackTone = tone === 'error' ? 'error' : 'success';
+        this.timeClockStationPin = '';
         this.renderTimeClockPage();
     }
 
@@ -1384,6 +1433,7 @@ export class UIManager {
         this.clearTimeClockStationNotice();
         this.timeClockStationFeedback = t('timeClock.station.feedbackSaved', { action: actionLabel, name: employeeName });
         this.timeClockStationFeedbackTone = 'success';
+        this.timeClockStationPin = '';
         this.renderTimeClockPage();
         this.scheduleTimeClockStationReset();
     }
@@ -1599,6 +1649,11 @@ export class UIManager {
         const tileStatus = this.getTimeClockStationTileStatus(todaySummary);
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
         const secondaryAction = todaySummary?.secondaryAction || null;
+        const pinConfigured = selectedEmployee.attendancePinConfigured === true;
+        const pinReady = pinConfigured && isAttendancePinReady(this.timeClockStationPin);
+        const pinDigitButtons = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => `
+            <button type="button" data-time-clock-pin-key="${digit}" class="time-clock-pin-key">${digit}</button>
+        `).join('');
         const feedbackClasses = this.timeClockStationFeedbackTone === 'error'
             ? 'text-rose-200'
             : 'text-emerald-200';
@@ -1647,12 +1702,44 @@ export class UIManager {
                             <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                             <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
+                        ${pinConfigured ? `
+                            <div class="mt-9 max-w-lg border-t border-white/12 pt-7">
+                                <label for="time-clock-station-pin" class="block text-sm font-semibold text-white">${t('timeClock.station.pinTitle')}</label>
+                                <p class="mt-1 text-sm text-slate-400">${t('timeClock.station.pinDescription')}</p>
+                                <input
+                                    id="time-clock-station-pin"
+                                    type="password"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    autocomplete="off"
+                                    minlength="${ATTENDANCE_PIN_MIN_LENGTH}"
+                                    maxlength="${ATTENDANCE_PIN_MAX_LENGTH}"
+                                    value="${this.escapeHtml(this.timeClockStationPin)}"
+                                    aria-describedby="time-clock-station-pin-progress"
+                                    class="mt-5 w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-center text-3xl tracking-[0.4em] text-white outline-none transition focus:border-white/50 focus:bg-white/15">
+                                <div id="time-clock-station-pin-progress" class="mt-3 min-h-6 text-center text-sm tracking-[0.22em] text-slate-300">
+                                    ${this.timeClockStationPin.length ? '●'.repeat(this.timeClockStationPin.length) : t('timeClock.station.pinWaiting')}
+                                </div>
+                                <div class="mt-4 grid grid-cols-3 gap-2" aria-label="${t('timeClock.station.pinKeypadLabel')}">
+                                    ${pinDigitButtons}
+                                    <button type="button" data-time-clock-pin-key="clear" class="time-clock-pin-key time-clock-pin-key--utility">${t('timeClock.station.pinClear')}</button>
+                                    <button type="button" data-time-clock-pin-key="0" class="time-clock-pin-key">0</button>
+                                    <button type="button" data-time-clock-pin-key="backspace" aria-label="${t('timeClock.station.pinBackspace')}" class="time-clock-pin-key time-clock-pin-key--utility">⌫</button>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="mt-9 max-w-lg rounded-2xl border border-amber-300/40 bg-amber-300/10 px-5 py-4 text-sm text-amber-100">
+                                <div class="font-semibold">${t('timeClock.station.pinMissingTitle')}</div>
+                                <div class="mt-1 text-amber-100/80">${t('timeClock.station.pinMissingDescription')}</div>
+                            </div>
+                        `}
                         <div class="mt-10 grid gap-3 sm:grid-cols-[1.35fr_0.85fr]">
                             <button
                                 type="button"
                                 data-time-clock-action="${primaryAction}"
                                 data-time-clock-employee-id="${selectedEmployee.id}"
-                                class="time-clock-station-primary-action rounded-[28px] bg-white px-6 py-6 text-left text-slate-900 transition-colors hover:bg-slate-100">
+                                ${pinReady ? '' : 'disabled aria-disabled="true"'}
+                                class="time-clock-station-primary-action rounded-[28px] bg-white px-6 py-6 text-left text-slate-900 transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35">
                                 <div class="text-xs uppercase tracking-[0.24em] text-slate-500">${t('timeClock.station.primaryAction')}</div>
                                 <div class="mt-2 text-3xl font-semibold">${this.formatAttendanceEventLabel(primaryAction)}</div>
                             </button>
@@ -1661,7 +1748,8 @@ export class UIManager {
                                     type="button"
                                     data-time-clock-action="${secondaryAction}"
                                     data-time-clock-employee-id="${selectedEmployee.id}"
-                                    class="rounded-[28px] border border-white/20 bg-white/8 px-6 py-5 text-left text-white transition-colors hover:bg-white/12">
+                                    ${pinReady ? '' : 'disabled aria-disabled="true"'}
+                                    class="rounded-[28px] border border-white/20 bg-white/8 px-6 py-5 text-left text-white transition-all hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-35">
                                     <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.secondaryAction')}</div>
                                     <div class="mt-2 text-xl font-semibold">${this.formatAttendanceEventLabel(secondaryAction)}</div>
                                 </button>
@@ -1765,6 +1853,18 @@ export class UIManager {
         const canManageAttendance = this.dataManager.hasPrivilegedRole() || this.dataManager.canAccessApp('staff');
         const canConfigureCompliance = this.dataManager.hasPrivilegedRole();
         const isClockOnlyUser = this.dataManager.isClockOnlyUser();
+        const availableTimeClockSections = [
+            'today',
+            'history',
+            ...(employee || canManageAttendance ? ['overtime'] : []),
+            ...(canManageAttendance ? ['management'] : []),
+            ...(canConfigureCompliance ? ['configuration'] : [])
+        ];
+        if (!availableTimeClockSections.includes(this.currentTimeClockSection)) {
+            this.currentTimeClockSection = 'today';
+        }
+        const activeTimeClockSection = this.currentTimeClockSection;
+        const sectionClass = (section) => `time-clock-panel ${activeTimeClockSection === section ? '' : 'hidden'}`;
         const canOpenWorkSchedule = this.dataManager.isScheduleOnlyUser();
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
         const secondaryAction = todaySummary?.secondaryAction || null;
@@ -1796,6 +1896,27 @@ export class UIManager {
         const adjustmentEmployeeOptions = this.dataManager.getActiveEmployees()
             .map((entry) => `<option value="${this.escapeHtml(entry.id)}">${this.escapeHtml(entry.name)}</option>`)
             .join('');
+        const pinEmployeeOptions = this.dataManager.getActiveEmployees()
+            .map((entry) => `<option value="${this.escapeHtml(entry.id)}">${this.escapeHtml(entry.name)}</option>`)
+            .join('');
+        const pinDirectoryMarkup = this.dataManager.getActiveEmployees()
+            .map((entry) => `
+                <div class="flex items-center justify-between gap-4 border-b border-slate-200 py-3 last:border-b-0">
+                    <div class="min-w-0">
+                        <div class="truncate font-medium text-slate-900">${this.escapeHtml(entry.name)}</div>
+                        <div class="mt-1 text-xs text-slate-500">${entry.attendancePinConfigured ? t('timeClock.pinAdmin.configured') : t('timeClock.pinAdmin.notConfigured')}</div>
+                    </div>
+                    ${entry.attendancePinConfigured ? `
+                        <button
+                            type="button"
+                            data-remove-attendance-pin="${this.escapeHtml(entry.id)}"
+                            data-employee-name="${this.escapeHtml(entry.name)}"
+                            class="shrink-0 text-sm font-medium text-rose-700 hover:text-rose-800">
+                            ${t('timeClock.pinAdmin.remove')}
+                        </button>
+                    ` : `<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-slate-300" aria-hidden="true"></span>`}
+                </div>
+            `).join('');
         const compliance = this.dataManager.getAttendanceComplianceSettings();
         const complianceRequiredFields = ['employerName', 'activity', 'headquarters', 'workplace', 'operatingPeriod', 'defaultBreak', 'weeklyRest'];
         const missingComplianceFields = complianceRequiredFields.filter((field) => !compliance[field]);
@@ -1897,8 +2018,8 @@ export class UIManager {
             : `<div class="rounded-3xl border border-dashed border-slate-300 p-8 text-sm text-slate-500">${t('timeClock.selfService.historyEmpty')}</div>`;
 
         const managerPanel = canManageAttendance ? `
-            <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
-                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <section class="${['management', 'configuration', 'overtime'].includes(activeTimeClockSection) ? 'time-clock-panel' : 'hidden'} rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
+                <div class="${activeTimeClockSection === 'management' ? '' : 'hidden'} flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                     <div class="flex-1">
                         <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.managerReviewKicker')}</div>
                         <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.managerReviewTitle')}</h3>
@@ -1908,7 +2029,7 @@ export class UIManager {
                         ${t('timeClock.actions.openPrintView')}
                     </button>
                 </div>
-                <div class="grid gap-6 lg:grid-cols-[1fr_0.95fr] mt-8">
+                <div class="${activeTimeClockSection === 'management' ? 'grid' : 'hidden'} gap-6 lg:grid-cols-[1fr_0.95fr] mt-8">
                     <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                         <div class="flex items-center justify-between mb-4">
                             <div class="font-semibold text-slate-900">${t('timeClock.selfService.needsAttention')}</div>
@@ -1980,7 +2101,7 @@ export class UIManager {
                     </div>
                 </div>
                 ${canConfigureCompliance ? `
-                    <div class="mt-6 rounded-3xl border ${missingComplianceFields.length ? 'border-amber-300 bg-amber-50/60' : 'border-emerald-200 bg-emerald-50/40'} p-5">
+                    <div class="${activeTimeClockSection === 'configuration' ? '' : 'hidden'} rounded-3xl border ${missingComplianceFields.length ? 'border-amber-300 bg-amber-50/60' : 'border-emerald-200 bg-emerald-50/40'} p-5">
                         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <div class="font-semibold text-slate-900">${t('timeClock.compliance.title')}</div>
@@ -2011,8 +2132,46 @@ export class UIManager {
                             </div>
                         </form>
                     </div>
+                    <div class="${activeTimeClockSection === 'configuration' ? '' : 'hidden'} rounded-3xl border border-slate-200 bg-white p-5">
+                        <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                            <div>
+                                <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.pinAdmin.kicker')}</div>
+                                <h3 class="mt-2 text-xl font-semibold text-slate-900">${t('timeClock.pinAdmin.title')}</h3>
+                                <p class="mt-2 text-sm text-slate-600">${t('timeClock.pinAdmin.description')}</p>
+                                <form id="attendance-pin-form" class="mt-5 space-y-3">
+                                    <label class="block">
+                                        <span class="mb-1.5 block text-sm font-medium text-slate-700">${t('timeClock.pinAdmin.colleague')}</span>
+                                        <select name="employeeId" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                            <option value="">${t('timeClock.pinAdmin.selectColleague')}</option>
+                                            ${pinEmployeeOptions}
+                                        </select>
+                                    </label>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <label class="block">
+                                            <span class="mb-1.5 block text-sm font-medium text-slate-700">${t('timeClock.pinAdmin.newPin')}</span>
+                                            <input name="pin" type="password" inputmode="numeric" pattern="[0-9]{${ATTENDANCE_PIN_MIN_LENGTH},${ATTENDANCE_PIN_MAX_LENGTH}}" minlength="${ATTENDANCE_PIN_MIN_LENGTH}" maxlength="${ATTENDANCE_PIN_MAX_LENGTH}" autocomplete="new-password" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1.5 block text-sm font-medium text-slate-700">${t('timeClock.pinAdmin.confirmPin')}</span>
+                                            <input name="pinConfirmation" type="password" inputmode="numeric" pattern="[0-9]{${ATTENDANCE_PIN_MIN_LENGTH},${ATTENDANCE_PIN_MAX_LENGTH}}" minlength="${ATTENDANCE_PIN_MIN_LENGTH}" maxlength="${ATTENDANCE_PIN_MAX_LENGTH}" autocomplete="new-password" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-slate-500">${t('timeClock.pinAdmin.pinRule')}</p>
+                                    <div class="flex flex-wrap items-center gap-4">
+                                        <button type="submit" class="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800">${t('timeClock.pinAdmin.save')}</button>
+                                        <p id="attendance-pin-feedback" class="text-sm text-slate-600"></p>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="border-t border-slate-200 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                                <div class="font-semibold text-slate-900">${t('timeClock.pinAdmin.statusTitle')}</div>
+                                <p class="mt-1 text-sm text-slate-500">${t('timeClock.pinAdmin.statusDescription')}</p>
+                                <div class="mt-4 max-h-80 overflow-y-auto pr-2">${pinDirectoryMarkup}</div>
+                            </div>
+                        </div>
+                    </div>
                 ` : ''}
-                <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                <div class="${activeTimeClockSection === 'overtime' ? '' : 'hidden'} rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                     <div class="font-semibold text-slate-900">${t('timeClock.overtime.managerTitle')}</div>
                     <p class="mt-1 text-sm text-slate-600">${t('timeClock.overtime.managerDescription')}</p>
                     <form id="overtime-authorization-form" class="mt-4 grid gap-3 md:grid-cols-2">
@@ -2053,7 +2212,7 @@ export class UIManager {
         ` : '';
 
         const overtimePanel = employee ? `
-            <section class="rounded-[28px] border border-indigo-200 bg-indigo-50/60 p-6 lg:col-span-2">
+            <section class="${sectionClass('overtime')} rounded-[28px] border border-indigo-200 bg-indigo-50/60 p-6 lg:col-span-2">
                 <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                         <div class="text-xs uppercase tracking-[0.24em] text-indigo-500">${t('timeClock.overtime.kicker')}</div>
@@ -2072,7 +2231,19 @@ export class UIManager {
 
         container.innerHTML = `
             <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                <section class="rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_52%,#334155_100%)] text-white p-8 shadow-xl overflow-hidden relative">
+                <nav class="time-clock-navigation lg:col-span-2 sticky top-0 z-20 -mx-2 px-2 py-2 bg-slate-50/95 backdrop-blur" aria-label="${t('timeClock.navigation.label')}">
+                    <div class="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+                        ${availableTimeClockSections.map((section) => `
+                            <button type="button" data-time-clock-section="${section}" aria-current="${activeTimeClockSection === section ? 'page' : 'false'}"
+                                class="shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${activeTimeClockSection === section ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}">
+                                ${t(`timeClock.navigation.${section}`)}
+                                ${section === 'management' && reviewQueue.length ? `<span class="ml-1.5 rounded-full ${activeTimeClockSection === section ? 'bg-white/20' : 'bg-amber-100 text-amber-800'} px-2 py-0.5 text-xs">${reviewQueue.length}</span>` : ''}
+                            </button>
+                        `).join('')}
+                    </div>
+                </nav>
+
+                <section class="${sectionClass('today')} rounded-[32px] bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_52%,#334155_100%)] text-white p-6 sm:p-8 shadow-xl overflow-hidden relative">
                     <div class="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.28),transparent_58%)] pointer-events-none"></div>
                     <div class="relative">
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border ${statusCopy.tone} text-sm font-medium">
@@ -2118,7 +2289,7 @@ export class UIManager {
                     </div>
                 </section>
 
-                <section class="rounded-[32px] bg-white border border-slate-200 shadow-sm p-6">
+                <section class="${sectionClass('today')} rounded-[32px] bg-white border border-slate-200 shadow-sm p-6">
                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.todayKicker')}</div>
                     <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.liveSummaryTitle')}</h3>
                     <div class="grid grid-cols-2 gap-3 mt-6">
@@ -2159,7 +2330,7 @@ export class UIManager {
                     </div>
                 </section>
 
-                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
+                <section class="${sectionClass('today')} rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.todayLogKicker')}</div>
@@ -2170,7 +2341,7 @@ export class UIManager {
                     <ul class="mt-6">${timeline}</ul>
                 </section>
 
-                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6">
+                <section class="${sectionClass('history')} rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.weeklySnapshotKicker')}</div>
                     <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.attendanceTotalsTitle')}</h3>
                     <div class="space-y-4 mt-6">
@@ -2192,7 +2363,7 @@ export class UIManager {
                     </div>
                 </section>
 
-                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
+                <section class="${sectionClass('today')} rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.plannedScheduleKicker')}</div>
                     <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.plannedScheduleTitle')}</h3>
                     <div class="grid gap-3 mt-6 md:grid-cols-2 xl:grid-cols-4">
@@ -2206,7 +2377,7 @@ export class UIManager {
                     </div>
                 </section>
 
-                <section class="rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
+                <section class="${sectionClass('history')} rounded-[28px] bg-white border border-slate-200 shadow-sm p-6 lg:col-span-2">
                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400 mb-2">${t('timeClock.selfService.historyKicker')}</div>
                     <h3 class="text-2xl font-semibold text-slate-900">${t('timeClock.selfService.historyTitle')}</h3>
                     <div class="space-y-4 mt-6">
@@ -2214,7 +2385,7 @@ export class UIManager {
                     </div>
                 </section>
 
-                <section class="rounded-[28px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600 lg:col-span-2">
+                <section class="${sectionClass('history')} rounded-[28px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600 lg:col-span-2">
                     <div class="font-semibold text-slate-900">${t('timeClock.privacy.title')}</div>
                     <p class="mt-2">${t('timeClock.privacy.summary')}</p>
                     <p class="mt-2">${t('timeClock.privacy.contact')}: ${this.escapeHtml(compliance.privacyContact || t('timeClock.compliance.missingValue'))}</p>

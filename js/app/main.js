@@ -403,6 +403,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             holidayCalculator,
             {
                 recordPunch: httpsCallable(functionsInstance, 'recordAttendancePunch'),
+                setPin: httpsCallable(functionsInstance, 'setAttendancePin'),
+                removePin: httpsCallable(functionsInstance, 'removeAttendancePin'),
                 addCorrection: httpsCallable(functionsInstance, 'addManualAttendanceCorrection'),
                 voidEvent: httpsCallable(functionsInstance, 'voidAttendanceEvent'),
                 attestRecord: httpsCallable(functionsInstance, 'attestAttendanceRecord'),

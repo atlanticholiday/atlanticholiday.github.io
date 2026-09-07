@@ -172,6 +172,12 @@ export class EventManager {
                     return;
                 }
 
+                const sectionButton = e.target.closest('[data-time-clock-section]');
+                if (sectionButton) {
+                    this.uiManager.setTimeClockSection(sectionButton.dataset.timeClockSection);
+                    return;
+                }
+
                 const colleagueButton = e.target.closest('[data-time-clock-station-employee-id]');
                 if (colleagueButton) {
                     this.uiManager.selectTimeClockStationEmployee(colleagueButton.dataset.timeClockStationEmployeeId);
@@ -181,6 +187,28 @@ export class EventManager {
                 const clearSelectionButton = e.target.closest('[data-time-clock-station-clear-selection]');
                 if (clearSelectionButton) {
                     this.uiManager.clearTimeClockStationSelection();
+                    return;
+                }
+
+                const pinKeyButton = e.target.closest('[data-time-clock-pin-key]');
+                if (pinKeyButton) {
+                    this.uiManager.applyTimeClockStationPinKey(pinKeyButton.dataset.timeClockPinKey);
+                    return;
+                }
+
+                const removePinButton = e.target.closest('[data-remove-attendance-pin]');
+                if (removePinButton) {
+                    const employeeName = removePinButton.dataset.employeeName || t('timeClock.station.selectedColleagueFallback');
+                    if (!window.confirm(t('timeClock.pinAdmin.removeConfirm', { name: employeeName }))) return;
+                    const pinFeedback = document.getElementById('attendance-pin-feedback');
+                    if (pinFeedback) pinFeedback.textContent = '';
+                    try {
+                        await this.dataManager.removeAttendancePin(removePinButton.dataset.removeAttendancePin);
+                        const refreshedFeedback = document.getElementById('attendance-pin-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.pinRemoved');
+                    } catch (error) {
+                        if (pinFeedback) pinFeedback.textContent = error.message || t('timeClock.feedback.pinRemoveFailed');
+                    }
                     return;
                 }
 
@@ -197,10 +225,11 @@ export class EventManager {
                     try {
                         const selectedEmployeeId = actionButton.dataset.timeClockEmployeeId;
                         if (selectedEmployeeId) {
+                            const pin = this.uiManager.getTimeClockStationPin();
                             await this.dataManager.recordAttendanceForEmployee(
                                 selectedEmployeeId,
                                 actionButton.dataset.timeClockAction,
-                                { source: 'station' }
+                                { source: 'station', pin }
                             );
                             this.uiManager.handleTimeClockStationAttendanceSaved(selectedEmployeeId, actionButton.textContent.trim());
                         } else {
@@ -308,6 +337,8 @@ export class EventManager {
 
                 if (e.target.id === 'time-clock-station-search') {
                     this.uiManager.setTimeClockStationSearch(e.target.value);
+                } else if (e.target.id === 'time-clock-station-pin') {
+                    this.uiManager.setTimeClockStationPin(e.target.value);
                 }
             });
 
@@ -356,6 +387,28 @@ export class EventManager {
                         if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.complianceSaved');
                     } catch (error) {
                         if (feedback) feedback.textContent = error.message || t('timeClock.feedback.complianceSaveFailed');
+                    }
+                    return;
+                }
+
+                if (e.target.id === 'attendance-pin-form') {
+                    e.preventDefault();
+                    const feedback = document.getElementById('attendance-pin-feedback');
+                    if (feedback) feedback.textContent = '';
+                    const formData = new FormData(e.target);
+                    const pin = String(formData.get('pin') || '');
+                    const confirmation = String(formData.get('pinConfirmation') || '');
+                    if (pin !== confirmation) {
+                        if (feedback) feedback.textContent = t('timeClock.errors.pinMismatch');
+                        return;
+                    }
+                    try {
+                        await this.dataManager.setAttendancePin(String(formData.get('employeeId') || ''), pin);
+                        e.target.reset();
+                        const refreshedFeedback = document.getElementById('attendance-pin-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.feedback.pinSaved');
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.feedback.pinSaveFailed');
                     }
                     return;
                 }

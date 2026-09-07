@@ -2895,6 +2895,14 @@
             "station": "Modo estação",
             "sharedTabletStation": "Estação partilhada em tablet"
         },
+        "navigation": {
+            "label": "Áreas do relógio de ponto",
+            "today": "Hoje",
+            "history": "Histórico",
+            "overtime": "Trabalho suplementar",
+            "management": "Gestão",
+            "configuration": "Configuração"
+        },
         "actions": {
             "clockIn": "Registar entrada",
             "clockOut": "Registar saída",
@@ -2995,7 +3003,15 @@
             "autoLunchHint": "Registe o início e o fim reais de todas as pausas excluídas. O sistema nunca inventa nem desconta pausas automaticamente.",
             "todayLogKicker": "Registo de hoje",
             "timelineTitle": "Linha temporal de registos",
-            "needsReview": "Precisa de revisão"
+            "needsReview": "Precisa de revisão",
+            "pinTitle": "Introduza o seu PIN",
+            "pinDescription": "O PIN é pessoal. Confirme que escolheu o seu nome antes de continuar.",
+            "pinWaiting": "6 a 10 algarismos",
+            "pinKeypadLabel": "Teclado numérico do PIN",
+            "pinClear": "Limpar",
+            "pinBackspace": "Apagar último algarismo",
+            "pinMissingTitle": "PIN ainda não configurado",
+            "pinMissingDescription": "Um gestor tem de criar o PIN deste colega em Configuração antes de poder usar o tablet."
         },
         "selfService": {
             "kicker": "Relógio de Ponto Digital",
@@ -3082,6 +3098,23 @@
             "madeiraReference": "Prova de envio à Direção Regional do Trabalho",
             "breakShort": "Intervalo"
         },
+        "pinAdmin": {
+            "kicker": "Tablet partilhado",
+            "title": "PINs dos colegas",
+            "description": "Crie ou substitua o PIN usado por cada colega no tablet. O valor nunca fica visível nem guardado em texto simples.",
+            "colleague": "Colega",
+            "selectColleague": "Selecionar colega",
+            "newPin": "Novo PIN",
+            "confirmPin": "Confirmar PIN",
+            "pinRule": "Use 6 a 10 algarismos. Não reutilize códigos óbvios como datas de nascimento ou 123456.",
+            "save": "Guardar PIN",
+            "statusTitle": "Estado dos PINs",
+            "statusDescription": "A lista mostra apenas se existe um PIN; o código nunca pode ser consultado.",
+            "configured": "PIN configurado",
+            "notConfigured": "Sem PIN",
+            "remove": "Remover",
+            "removeConfirm": "Remover o PIN de {{name}}? Este colega deixará de poder marcar ponto no tablet até ser criado um novo PIN."
+        },
         "overtime": {
             "kicker": "Artigo 231.º",
             "title": "Registo autónomo de trabalho suplementar",
@@ -3167,6 +3200,10 @@
             "reviewFailed": "Falha ao marcar o registo como revisto.",
             "complianceSaved": "Configuração legal guardada.",
             "complianceSaveFailed": "Não foi possível guardar a configuração legal.",
+            "pinSaved": "PIN guardado com segurança.",
+            "pinSaveFailed": "Não foi possível guardar o PIN.",
+            "pinRemoved": "PIN removido.",
+            "pinRemoveFailed": "Não foi possível remover o PIN.",
             "overtimeAuthorized": "Trabalho suplementar autorizado e registado.",
             "overtimeAuthorizationFailed": "Não foi possível autorizar o trabalho suplementar.",
             "overtimeSaved": "Registo de trabalho suplementar atualizado.",
@@ -3185,6 +3222,10 @@
             "manualFieldsRequired": "Colaborador, data, tipo de evento e hora são obrigatórios.",
             "reviewEmployeeNotFound": "Não foi possível encontrar o colaborador para esta revisão.",
             "managerRequired": "Apenas um gestor autorizado pode alterar esta configuração.",
+            "pinInvalid": "PIN incorreto. Confirme o código e tente novamente.",
+            "pinLocked": "Demasiadas tentativas incorretas. Aguarde 5 minutos antes de voltar a tentar.",
+            "pinFormat": "O PIN deve ter entre 6 e 10 algarismos.",
+            "pinMismatch": "Os dois PINs não coincidem.",
             "secureServiceUnavailable": "O serviço protegido de assiduidade não está disponível. Atualize a aplicação ou contacte o administrador."
         },
         "labels": {

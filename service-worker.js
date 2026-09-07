@@ -1,4 +1,4 @@
-const CACHE_NAME = "horario-pwa-v14-attendance-compliance";
+const CACHE_NAME = "horario-pwa-v16-attendance-pin";
 
 const APP_SHELL_URLS = [
   "./",
@@ -10,7 +10,7 @@ const APP_SHELL_URLS = [
   "./assets/icons/icon-180.png",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
-  "./styles/main.css?v=20260823-dialog-hotfix",
+  "./styles/main.css?v=20260907-attendance-pin",
   "./styles/allinfo.css",
   "./styles/property-settings.css",
   "./styles/property-settings-update.css",

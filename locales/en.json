@@ -2889,6 +2889,14 @@
       "station": "Station mode",
       "sharedTabletStation": "Shared tablet station"
     },
+    "navigation": {
+      "label": "Time clock areas",
+      "today": "Today",
+      "history": "History",
+      "overtime": "Overtime",
+      "management": "Management",
+      "configuration": "Settings"
+    },
     "actions": {
       "clockIn": "Clock in",
       "clockOut": "Clock out",
@@ -2989,7 +2997,15 @@
       "autoLunchHint": "Record the real start and end of every excluded break. The system never invents or automatically deducts a break.",
       "todayLogKicker": "Today's log",
       "timelineTitle": "Punch timeline",
-      "needsReview": "Needs review"
+      "needsReview": "Needs review",
+      "pinTitle": "Enter your PIN",
+      "pinDescription": "Your PIN is personal. Check that you selected your own name before continuing.",
+      "pinWaiting": "6 to 10 digits",
+      "pinKeypadLabel": "PIN number pad",
+      "pinClear": "Clear",
+      "pinBackspace": "Delete last digit",
+      "pinMissingTitle": "PIN not configured yet",
+      "pinMissingDescription": "A manager must create this colleague's PIN in Settings before they can use the tablet."
     },
     "selfService": {
       "kicker": "Digital Time Clock",
@@ -3076,6 +3092,23 @@
       "madeiraReference": "Proof of submission to the Regional Labour Directorate",
       "breakShort": "Break"
     },
+    "pinAdmin": {
+      "kicker": "Shared tablet",
+      "title": "Colleague PINs",
+      "description": "Create or replace the PIN each colleague uses on the tablet. The value is never displayed or stored as plain text.",
+      "colleague": "Colleague",
+      "selectColleague": "Select colleague",
+      "newPin": "New PIN",
+      "confirmPin": "Confirm PIN",
+      "pinRule": "Use 6 to 10 digits. Do not reuse obvious codes such as birth dates or 123456.",
+      "save": "Save PIN",
+      "statusTitle": "PIN status",
+      "statusDescription": "This list only shows whether a PIN exists; the code can never be viewed.",
+      "configured": "PIN configured",
+      "notConfigured": "No PIN",
+      "remove": "Remove",
+      "removeConfirm": "Remove {{name}}'s PIN? This colleague will not be able to clock in on the tablet until a new PIN is created."
+    },
     "overtime": {
       "kicker": "Article 231",
       "title": "Separate overtime register",
@@ -3161,6 +3194,10 @@
       "reviewFailed": "Failed to mark the record as reviewed.",
       "complianceSaved": "Legal settings saved.",
       "complianceSaveFailed": "Could not save the legal settings.",
+      "pinSaved": "PIN saved securely.",
+      "pinSaveFailed": "Could not save the PIN.",
+      "pinRemoved": "PIN removed.",
+      "pinRemoveFailed": "Could not remove the PIN.",
       "overtimeAuthorized": "Overtime authorized and recorded.",
       "overtimeAuthorizationFailed": "Could not authorize overtime.",
       "overtimeSaved": "Overtime register updated.",
@@ -3179,6 +3216,10 @@
       "manualFieldsRequired": "Employee, date, event type, and time are required.",
       "reviewEmployeeNotFound": "Employee not found for attendance review.",
       "managerRequired": "Only an authorized manager can change this setting.",
+      "pinInvalid": "Incorrect PIN. Check the code and try again.",
+      "pinLocked": "Too many incorrect attempts. Wait 5 minutes before trying again.",
+      "pinFormat": "The PIN must contain 6 to 10 digits.",
+      "pinMismatch": "The two PINs do not match.",
       "secureServiceUnavailable": "The protected attendance service is unavailable. Refresh the app or contact an administrator."
     },
     "labels": {

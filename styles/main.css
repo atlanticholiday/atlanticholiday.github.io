@@ -10508,3 +10508,60 @@ body:has(#landing-page:not(.hidden)) .quick-search-trigger {
 .user-management-page-shell.user-management-page-shell {
     background: #f4f6f8;
 }
+@keyframes time-clock-panel-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.time-clock-panel:not(.hidden) {
+    animation: time-clock-panel-enter 180ms ease-out both;
+}
+
+.time-clock-pin-key {
+    min-height: 3.5rem;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 1rem;
+    background: rgb(255 255 255 / 0.1);
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 650;
+    transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+    touch-action: manipulation;
+}
+
+.time-clock-pin-key:hover,
+.time-clock-pin-key:focus-visible {
+    border-color: rgb(255 255 255 / 0.32);
+    background: rgb(255 255 255 / 0.16);
+    outline: none;
+}
+
+.time-clock-pin-key:active {
+    transform: scale(0.96);
+}
+
+.time-clock-pin-key--utility {
+    color: rgb(203 213 225);
+    font-size: 0.85rem;
+}
+
+.time-clock-navigation button[aria-current="page"] {
+    transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .time-clock-panel:not(.hidden) {
+        animation: none;
+    }
+
+    .time-clock-navigation button[aria-current="page"] {
+        transform: none;
+    }
+}
