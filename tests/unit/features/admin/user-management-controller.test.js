@@ -786,6 +786,58 @@ describe("UserManagementController", () => {
     assert.deepEqual(alerts, ["Password updated. Existing sessions have been signed out."]);
   });
 
+  test("explains when the direct password function is not deployed", async () => {
+    createFixture();
+
+    const controller = new UserManagementController({
+      accessManager: {
+        async listEmails() {
+          return ["ana@example.com"];
+        },
+        async getRoles() {
+          return [];
+        },
+        async getAllowedApps() {
+          return [];
+        },
+        async setRoles() {},
+        async setAllowedApps() {},
+        async removeEmail() {},
+        async addEmail() {}
+      },
+      roleManager: {
+        async listRoles() {
+          return [];
+        },
+        async addRole() {}
+      },
+      createAuthUser: async () => {},
+      setUserPassword: async () => {
+        const error = new Error("internal");
+        error.code = "functions/internal";
+        throw error;
+      },
+      sendPasswordReset: async () => {},
+      getEmployees: () => [],
+      windowRef: {
+        alert() {},
+        confirm() {
+          return true;
+        }
+      }
+    });
+
+    controller.init();
+    await controller.refreshUserList();
+    document.querySelector('[data-user-action="set-password"]').click();
+    document.getElementById("set-user-password").value = "a-secure-password";
+    document.getElementById("confirm-user-password").value = "a-secure-password";
+    await controller.handleSetUserPassword().catch(() => {});
+
+    assert.includes(document.getElementById("set-password-error").textContent, "Reset Password");
+    assert.equal(document.getElementById("set-password-modal").classList.contains("hidden"), false);
+  });
+
   test("shows generated reset links so admins are not blocked by email delivery", async () => {
     createFixture();
 

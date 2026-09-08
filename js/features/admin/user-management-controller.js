@@ -420,8 +420,15 @@ export class UserManagementController {
             this.setPasswordDialogOpen(false);
             this.window.alert(this.translate('userManagement.password.success', 'Password updated. Existing sessions have been signed out.'));
         } catch (error) {
-            const message = error?.code === 'functions/not-found' || error?.code === 'functions/unimplemented'
-                ? this.translate('userManagement.password.serviceUnavailable', 'The secure password-change service has not been deployed yet.')
+            const code = String(error?.code || '').trim().toLowerCase();
+            const isUnavailable = code === 'functions/not-found'
+                || code === 'functions/unimplemented'
+                // Firebase callable endpoints that have not been deployed can be
+                // reported as a generic internal error when the HTTP request is 404.
+                || code === 'functions/internal'
+                || (code === 'internal' && String(error?.message || '').trim().toLowerCase() === 'internal');
+            const message = isUnavailable
+                ? this.translate('userManagement.password.serviceUnavailable', 'Direct password changes are not available on this Firebase plan. Use Reset Password to let the user choose a new password by email.')
                 : error?.message || this.translate('userManagement.password.failed', 'The password could not be updated.');
             this.setText('set-password-error', message);
             throw error;

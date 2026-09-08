@@ -2189,7 +2189,7 @@
       "matchError": "The passwords do not match.",
       "success": "Password updated. Existing sessions have been signed out.",
       "failed": "The password could not be updated.",
-      "serviceUnavailable": "The secure password-change service has not been deployed yet."
+      "serviceUnavailable": "Direct password changes are not available on this Firebase plan. Use Reset Password to let the user choose a new password by email."
     },
     "directory": {
       "searchPlaceholder": "Search name or email",

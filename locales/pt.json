@@ -2194,7 +2194,7 @@
             "matchError": "As passwords não coincidem.",
             "success": "Password atualizada. As sessões existentes foram terminadas.",
             "failed": "Não foi possível atualizar a password.",
-            "serviceUnavailable": "O serviço seguro de alteração de password ainda não foi publicado."
+            "serviceUnavailable": "A alteração direta de passwords não está disponível neste plano Firebase. Utilize Repor Password para o utilizador escolher uma nova password por email."
         },
         "directory": {
             "searchPlaceholder": "Pesquisar nome ou email",
