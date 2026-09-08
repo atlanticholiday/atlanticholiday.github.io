@@ -65,6 +65,116 @@ service cloud.firestore {
         && data.employeeId == accessData().linkedEmployeeId;
     }
 
+    function attendanceCredentialPath() {
+      return /databases/$(database)/documents/attendance_credentials/$(request.auth.token.email);
+    }
+
+    function isAttendanceCredential() {
+      return signedIn()
+        && request.auth.token.email is string
+        && exists(attendanceCredentialPath())
+        && get(attendanceCredentialPath()).data.active == true;
+    }
+
+    function isCredentialOwnAttendance(data) {
+      return isAttendanceCredential()
+        && data.employeeId == get(attendanceCredentialPath()).data.employeeId;
+    }
+
+    function isDirectAttendanceOwner(data) {
+      return isOwnAttendance(data) || isCredentialOwnAttendance(data);
+    }
+
+    function isOwnAttendanceRecordId(recordId) {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && recordId.matches(accessData().linkedEmployeeId + '_[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    function isCredentialAttendanceRecordId(recordId) {
+      return isAttendanceCredential()
+        && recordId.matches(get(attendanceCredentialPath()).data.employeeId + '_[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    function validFreshAttendanceEvent(event) {
+      return event is map
+        && event.keys().hasAll([
+          'id', 'type', 'occurredAt', 'occurredAtUtc', 'occurredAtEpochMs',
+          'timeZone', 'capturedAt', 'source', 'actorUid', 'actorEmail',
+          'note', 'trustedServerTime'
+        ])
+        && event.keys().hasOnly([
+          'id', 'type', 'occurredAt', 'occurredAtUtc', 'occurredAtEpochMs',
+          'timeZone', 'capturedAt', 'source', 'actorUid', 'actorEmail',
+          'note', 'trustedServerTime'
+        ])
+        && event.id is string
+        && event.id.size() > 8
+        && event.id.size() <= 160
+        && event.type in ['clockIn', 'clockOut', 'breakStart', 'breakEnd']
+        && event.occurredAt is string
+        && event.occurredAtUtc is string
+        && event.occurredAtEpochMs is int
+        && event.occurredAtEpochMs >= request.time.toMillis() - 60000
+        && event.occurredAtEpochMs <= request.time.toMillis() + 60000
+        && event.timeZone == 'Europe/Lisbon'
+        && event.capturedAt is string
+        && event.actorUid == request.auth.uid
+        && request.auth.token.email is string
+        && event.actorEmail == request.auth.token.email
+        && event.note == null
+        && event.trustedServerTime == true
+        && (
+          (isAttendanceCredential() && event.source == 'station')
+          || (!isAttendanceCredential() && event.source == 'web')
+        );
+    }
+
+    function validDirectAttendanceCreate() {
+      return isDirectAttendanceOwner(request.resource.data)
+        && request.resource.data.keys().hasOnly([
+          'employeeId', 'employeeName', 'dateKey', 'punches', 'corrections',
+          'voidedEventIds', 'workerAttestation', 'attestationHistory', 'review',
+          'createdAt', 'updatedAt', 'updatedAtServer', 'retainUntil', 'schemaVersion'
+        ])
+        && request.resource.data.employeeId is string
+        && request.resource.data.employeeName is string
+        && request.resource.data.dateKey is string
+        && request.resource.data.punches is list
+        && request.resource.data.punches.size() == 1
+        && validFreshAttendanceEvent(request.resource.data.punches[0])
+        && request.resource.data.corrections is list
+        && request.resource.data.corrections.size() == 0
+        && request.resource.data.voidedEventIds is list
+        && request.resource.data.voidedEventIds.size() == 0
+        && request.resource.data.workerAttestation == null
+        && request.resource.data.attestationHistory is list
+        && request.resource.data.attestationHistory.size() == 0
+        && request.resource.data.review is map
+        && request.resource.data.updatedAtServer == request.time
+        && request.resource.data.schemaVersion == 3;
+    }
+
+    function validDirectAttendanceAppend() {
+      let nextPunch = request.resource.data.punches[request.resource.data.punches.size() - 1];
+      return isDirectAttendanceOwner(resource.data)
+        && isDirectAttendanceOwner(request.resource.data)
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.employeeName == resource.data.employeeName
+        && request.resource.data.dateKey == resource.data.dateKey
+        && request.resource.data.punches is list
+        && resource.data.punches is list
+        && request.resource.data.punches.size() == resource.data.punches.size() + 1
+        && request.resource.data.punches.hasAll(resource.data.punches)
+        && !(nextPunch in resource.data.punches)
+        && validFreshAttendanceEvent(nextPunch)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'punches', 'updatedAt', 'updatedAtServer', 'schemaVersion'
+        ])
+        && request.resource.data.updatedAtServer == request.time
+        && request.resource.data.schemaVersion == 3;
+    }
+
     function taskAssignedToCurrentUser(data) {
       return approved()
         && accessData().linkedEmployeeId is string
@@ -439,20 +549,37 @@ service cloud.firestore {
     }
 
     match /attendance_records/{recordId} {
-      allow read: if privileged()
+      allow get: if privileged()
         || hasApp('staff')
         || hasRole('time-clock-station')
+        || isCredentialOwnAttendance(resource.data)
+        || isOwnAttendance(resource.data)
+        || isCredentialAttendanceRecordId(recordId)
+        || isOwnAttendanceRecordId(recordId);
+      allow list: if privileged()
+        || hasApp('staff')
+        || hasRole('time-clock-station')
+        || isCredentialOwnAttendance(resource.data)
         || isOwnAttendance(resource.data);
 
-      // Attendance is written only by authenticated callable functions using the
-      // Admin SDK. Browser clients cannot replace or erase the legal register.
-      allow create, update, delete: if false;
+      // Spark-plan writes remain append-only. Firebase Authentication identifies
+      // the worker and request.time validates the client timestamp window.
+      allow create: if validDirectAttendanceCreate();
+      allow update: if validDirectAttendanceAppend();
+      allow delete: if false;
     }
 
     // PIN salts, hashes and lockout state are server-only credentials. Even
     // administrators manage them through callable functions and never read them.
     match /attendance_pin_credentials/{employeeId} {
       allow read, write: if false;
+    }
+
+    // Isolated Firebase Auth identities used only to validate a colleague's PIN
+    // on the shared tablet. Their mapping is invisible to browser clients.
+    match /attendance_credentials/{credentialEmail} {
+      allow read: if false;
+      allow create, update, delete: if privileged();
     }
 
     match /overtime_records/{recordId} {

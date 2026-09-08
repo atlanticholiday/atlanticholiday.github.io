@@ -36,6 +36,24 @@ function normalizeReviewStatus(status) {
     return VALID_REVIEW_STATUSES.has(status) ? status : null;
 }
 
+function formatPortugalEpoch(epochMs) {
+    const date = new Date(epochMs);
+    if (!Number.isFinite(date.getTime())) return null;
+    const values = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Lisbon',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(date)
+        .filter((part) => part.type !== 'literal')
+        .map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}`;
+}
+
 function createEventId(eventType, occurredAt) {
     return `${eventType}-${occurredAt}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -88,19 +106,26 @@ export function normalizeAttendanceRecord(record = {}) {
     const punches = Array.isArray(safeRecord.punches)
         ? safeRecord.punches
             .filter((punch) => VALID_EVENT_TYPES.has(punch?.type) && typeof punch?.occurredAt === 'string')
-            .map((punch) => ({
-                id: normalizeOptionalText(punch.id) || createEventId(punch.type, normalizeLocalDateTime(punch.occurredAt)),
+            .map((punch) => {
+                const trustedEpochMs = Number.isInteger(punch.occurredAtEpochMs)
+                    ? punch.occurredAtEpochMs
+                    : null;
+                const trustedLocalTime = trustedEpochMs !== null ? formatPortugalEpoch(trustedEpochMs) : null;
+                const occurredAt = trustedLocalTime || normalizeLocalDateTime(punch.occurredAt);
+                return {
+                id: normalizeOptionalText(punch.id) || createEventId(punch.type, occurredAt),
                 type: punch.type,
-                occurredAt: normalizeLocalDateTime(punch.occurredAt),
-                occurredAtUtc: normalizeOptionalText(punch.occurredAtUtc),
+                occurredAt,
+                occurredAtUtc: trustedEpochMs !== null ? new Date(trustedEpochMs).toISOString() : normalizeOptionalText(punch.occurredAtUtc),
+                occurredAtEpochMs: trustedEpochMs,
                 timeZone: normalizeOptionalText(punch.timeZone),
                 capturedAt: normalizeOptionalText(punch.capturedAt),
                 source: VALID_EVENT_SOURCES.has(punch.source) ? punch.source : 'web',
                 actorUid: normalizeOptionalText(punch.actorUid),
                 actorEmail: normalizeOptionalText(punch.actorEmail),
                 note: normalizeOptionalText(punch.note),
-                trustedServerTime: punch.trustedServerTime === true
-            }))
+                trustedServerTime: punch.trustedServerTime === true && (trustedEpochMs !== null || Boolean(punch.occurredAtUtc))
+            }})
             .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt))
         : [];
 

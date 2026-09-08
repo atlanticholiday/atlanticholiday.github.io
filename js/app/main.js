@@ -43,6 +43,7 @@ import { NavigationManager } from '../features/scheduling/navigation-manager.js'
 import { TaskManager } from '../features/tasks/task-manager.js';
 import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
+import { createSparkAttendanceApi } from '../features/scheduling/spark-attendance-api.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
 import { UIManager } from '../features/scheduling/ui-manager.js';
 import { VacationCenterManager } from '../features/scheduling/vacation-center-manager.js';
@@ -402,9 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             auth.currentUser ? auth.currentUser.uid : null,
             holidayCalculator,
             {
-                recordPunch: httpsCallable(functionsInstance, 'recordAttendancePunch'),
-                setPin: httpsCallable(functionsInstance, 'setAttendancePin'),
-                removePin: httpsCallable(functionsInstance, 'removeAttendancePin'),
+                ...createSparkAttendanceApi({ db, auth }),
                 addCorrection: httpsCallable(functionsInstance, 'addManualAttendanceCorrection'),
                 voidEvent: httpsCallable(functionsInstance, 'voidAttendanceEvent'),
                 attestRecord: httpsCallable(functionsInstance, 'attestAttendanceRecord'),

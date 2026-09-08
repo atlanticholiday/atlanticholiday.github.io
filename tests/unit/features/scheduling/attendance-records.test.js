@@ -6,6 +6,7 @@ import {
   getAttendanceActionState,
   getAttendanceReviewQueue,
   getWeeklyAttendanceSummary,
+  normalizeAttendanceRecord,
   setAttendanceReview,
   summarizeAttendanceRecord
 } from "../../../../js/features/scheduling/attendance-records.js";
@@ -106,6 +107,25 @@ describe("Attendance records", () => {
     });
 
     assert.equal(summarizeAttendanceRecord(record).workedMinutes, 480);
+  });
+
+  test("derives display time from the epoch validated by Firestore rules", () => {
+    const normalized = normalizeAttendanceRecord({
+      employeeId: "emp-1",
+      dateKey: "2026-09-08",
+      punches: [{
+        id: "clock-in-trusted",
+        type: "clockIn",
+        occurredAt: "1999-01-01T00:00:00",
+        occurredAtUtc: "1999-01-01T00:00:00.000Z",
+        occurredAtEpochMs: Date.parse("2026-09-08T08:15:00.000Z"),
+        trustedServerTime: true,
+        source: "station"
+      }]
+    });
+
+    assert.equal(normalized.punches[0].occurredAt, "2026-09-08T09:15:00");
+    assert.equal(normalized.punches[0].occurredAtUtc, "2026-09-08T08:15:00.000Z");
   });
 
   test("keeps voided events in history but excludes them from totals", () => {

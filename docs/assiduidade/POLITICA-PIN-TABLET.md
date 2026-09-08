@@ -7,12 +7,14 @@ O PIN serve para atribuir cada marcação feita no tablet partilhado ao colega q
 ## Regras técnicas aplicadas
 
 - cada colega ativo recebe um PIN pessoal de 6 a 10 algarismos;
-- o PIN nunca é guardado em texto simples: o servidor conserva apenas um hash `scrypt` com salt aleatório;
-- o browser e a conta do tablet não podem ler hashes, salts ou estado interno dos PINs;
-- cada marcação da conta com função `time-clock-station` exige validação do PIN no servidor;
-- após cinco tentativas incorretas, o PIN fica bloqueado durante cinco minutos;
+- o PIN nunca é guardado em texto simples pela aplicação nem no Firestore; a credencial é verificada pelo Firebase Authentication;
+- o browser e a conta principal do tablet não podem ler qualquer verificador da palavra-passe;
+- cada PIN corresponde a uma identidade técnica sem funções da aplicação e associada, nas regras do Firestore, a um único colega;
+- cada marcação abre uma sessão de autenticação isolada, mantida apenas em memória, valida o PIN, grava a marcação permitida e termina essa sessão sem encerrar a conta principal do tablet;
+- o Firebase Authentication limita automaticamente tentativas abusivas; quando esse limite é atingido, a aplicação pede para aguardar alguns minutos;
+- as regras só aceitam uma nova marcação com hora próxima da hora do servidor, preservam todas as marcações anteriores e nunca permitem apagá-las pelo browser;
 - o PIN é apagado do ecrã após cada tentativa, depois de uma marcação e após inatividade;
-- criar, substituir ou remover um PIN exige uma conta de administrador, gestor ou supervisor e gera um evento de auditoria.
+- criar, substituir ou remover um PIN exige uma conta de administrador, gestor ou supervisor e atualiza a data de configuração no perfil do colega.
 
 ## Procedimento operacional
 

@@ -1,7 +1,7 @@
 import { describe, test, assert } from '../test-harness.js';
 
 describe('Attendance register security', () => {
-    test('blocks browser writes and limits self-service reads to the linked worker', async () => {
+    test('allows only fresh append-only attendance writes by the linked identity', async () => {
         const response = await fetch('../firestore.rules');
         assert.ok(response.ok, 'Failed to fetch firestore.rules');
         const rules = await response.text();
@@ -11,21 +11,30 @@ describe('Attendance register security', () => {
 
         assert.includes(rules, 'data.employeeId == accessData().linkedEmployeeId');
         assert.includes(attendanceRules, 'isOwnAttendance(resource.data)');
-        assert.includes(attendanceRules, 'allow create, update, delete: if false');
+        assert.includes(attendanceRules, 'allow create: if validDirectAttendanceCreate()');
+        assert.includes(attendanceRules, 'allow update: if validDirectAttendanceAppend()');
+        assert.includes(attendanceRules, 'allow delete: if false');
+        assert.includes(attendanceRules, 'isCredentialAttendanceRecordId(recordId)');
+        assert.includes(attendanceRules, 'isOwnAttendanceRecordId(recordId)');
+        assert.includes(rules, 'request.resource.data.updatedAtServer == request.time');
+        assert.includes(rules, 'event.occurredAtEpochMs >= request.time.toMillis() - 60000');
         assert.includes(overtimeRules, 'isOwnAttendance(resource.data)');
         assert.includes(overtimeRules, 'allow create, update, delete: if false');
         assert.includes(pinRules, 'allow read, write: if false');
     });
 
-    test('routes attendance mutations through protected callable functions', async () => {
-        const [functionsResponse, mainResponse] = await Promise.all([
+    test('routes tablet punches through an isolated Firebase Authentication identity', async () => {
+        const [functionsResponse, mainResponse, sparkApiResponse] = await Promise.all([
             fetch('../functions/index.js'),
-            fetch('../js/app/main.js')
+            fetch('../js/app/main.js'),
+            fetch('../js/features/scheduling/spark-attendance-api.js')
         ]);
         assert.ok(functionsResponse.ok, 'Failed to fetch functions/index.js');
         assert.ok(mainResponse.ok, 'Failed to fetch js/app/main.js');
+        assert.ok(sparkApiResponse.ok, 'Failed to fetch Spark attendance API');
         const functionsSource = await functionsResponse.text();
         const mainSource = await mainResponse.text();
+        const sparkApiSource = await sparkApiResponse.text();
 
         assert.includes(functionsSource, 'exports.recordAttendancePunch = onCall');
         assert.includes(functionsSource, 'trustedServerTime: source !== "manual"');
@@ -35,8 +44,13 @@ describe('Attendance register security', () => {
         assert.includes(functionsSource, 'exports.removeAttendancePin = onCall');
         assert.includes(functionsSource, 'timingSafeEqual(expectedHash, suppliedHash)');
         assert.includes(functionsSource, 'ATTENDANCE_PIN_MAX_ATTEMPTS = 5');
-        assert.includes(mainSource, "httpsCallable(functionsInstance, 'recordAttendancePunch')");
-        assert.includes(mainSource, "httpsCallable(functionsInstance, 'setAttendancePin')");
+        assert.includes(mainSource, 'createSparkAttendanceApi({ db, auth })');
+        assert.includes(sparkApiSource, 'inMemoryPersistence');
+        assert.includes(sparkApiSource, 'signInWithEmailAndPassword(');
+        assert.includes(sparkApiSource, 'deriveCredentialPassword(pin)');
+        assert.includes(sparkApiSource, "if (!/^\\d{6,10}$/.test(normalizedPin))");
+        assert.includes(sparkApiSource, "transaction.set(targetRef, createPunchRecord");
+        assert.includes(sparkApiSource, "batch.set(doc(db, 'attendance_credentials', credentialEmail)");
     });
 
     test('shows an actionable message when the protected Firebase service is not deployed', async () => {

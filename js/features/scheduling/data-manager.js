@@ -1479,7 +1479,27 @@ export class DataManager {
             if (reason === 'invalid-pin-format') throw new Error(t('timeClock.errors.pinFormat'));
             if (reason === 'invalid-pin') throw new Error(t('timeClock.errors.pinInvalid'));
 
-            const code = String(error?.code || '').replace(/^functions\//, '');
+            const rawCode = String(error?.code || '');
+            if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(rawCode)) {
+                throw new Error(t('timeClock.errors.pinInvalid'));
+            }
+            if (rawCode === 'auth/too-many-requests') {
+                throw new Error(t('timeClock.errors.pinLocked'));
+            }
+            if (rawCode === 'auth/weak-password') {
+                throw new Error(t('timeClock.errors.pinFormat'));
+            }
+            if (rawCode === 'attendance/invalid-pin-format') {
+                throw new Error(t('timeClock.errors.pinFormat'));
+            }
+            if (rawCode === 'attendance/action-unavailable') {
+                throw new Error(t('timeClock.errors.actionUnavailable'));
+            }
+            if (rawCode === 'attendance/pin-not-configured') {
+                throw new Error(t('timeClock.errors.pinNotConfigured'));
+            }
+
+            const code = rawCode.replace(/^functions\//, '');
             if (['internal', 'not-found', 'unavailable', 'unimplemented'].includes(code)) {
                 throw new Error(t('timeClock.errors.secureServiceNotDeployed'));
             }
@@ -1492,15 +1512,19 @@ export class DataManager {
         if (!employee) {
             throw new Error(t('timeClock.errors.employeeNotFound'));
         }
-        return this.invokeAttendanceApi('recordPunch', { employeeId: employee.id, eventType, source, pin });
+        return this.invokeAttendanceApi('recordPunch', { employee, employeeId: employee.id, eventType, source, pin });
     }
 
     async setAttendancePin(employeeId, pin) {
-        return this.invokeAttendanceApi('setPin', { employeeId, pin });
+        const employee = this.resolveAttendanceEmployee(employeeId);
+        if (!employee) throw new Error(t('timeClock.errors.employeeNotFound'));
+        return this.invokeAttendanceApi('setPin', { employee, employeeId, pin });
     }
 
     async removeAttendancePin(employeeId) {
-        return this.invokeAttendanceApi('removePin', { employeeId });
+        const employee = this.resolveAttendanceEmployee(employeeId);
+        if (!employee) throw new Error(t('timeClock.errors.employeeNotFound'));
+        return this.invokeAttendanceApi('removePin', { employee, employeeId });
     }
 
     async recordCurrentUserAttendance(eventType) {

@@ -3217,9 +3217,10 @@
       "reviewEmployeeNotFound": "Employee not found for attendance review.",
       "managerRequired": "Only an authorized manager can change this setting.",
       "pinInvalid": "Incorrect PIN. Check the code and try again.",
-      "pinLocked": "Too many incorrect attempts. Wait 5 minutes before trying again.",
+      "pinLocked": "Too many incorrect attempts. Wait a few minutes before trying again.",
       "pinFormat": "The PIN must contain 6 to 10 digits.",
       "pinMismatch": "The two PINs do not match.",
+      "pinNotConfigured": "This colleague does not have a PIN configured yet.",
       "secureServiceNotDeployed": "The protected service has not been deployed to Firebase yet. An administrator must enable the Blaze plan and deploy the Cloud Functions.",
       "secureServiceUnavailable": "The protected attendance service is unavailable. Refresh the app or contact an administrator."
     },

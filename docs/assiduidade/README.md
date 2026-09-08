@@ -5,35 +5,34 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 ## O que a aplicação passa a suportar
 
 - registo individual de entrada, saída e início/fim de cada pausa;
-- hora confiável do servidor em `Europe/Lisbon`, conservando também UTC;
+- marcação aceite apenas junto da hora do servidor Firestore, apresentada em `Europe/Lisbon` e conservada também em UTC;
 - turnos que terminam depois da meia-noite;
 - histórico de correções manuais sem apagar o evento original, sempre com motivo e autor;
 - revisão por responsável e trilho de auditoria;
-- retenção indicada por cinco anos e bloqueio de escrita/apagamento direto pelo browser;
+- retenção indicada por cinco anos, escrita incremental e proibição de apagar o registo pelo browser;
 - consulta limitada aos próprios registos para utilizadores ligados a um trabalhador;
-- estação de tablet com PIN individual validado no servidor, bloqueio de tentativas e credenciais inacessíveis ao browser;
+- estação de tablet com PIN individual validado pelo Firebase Authentication numa sessão isolada e limitação automática de tentativas abusivas;
 - exportação CSV e impressão semanal/mensal, incluindo trabalhadores arquivados;
 - mapa semanal com os campos estruturais do artigo 215.º;
 - registo separado de trabalho suplementar: autorização/fundamento, início, termo, visto do trabalhador, revisão e descanso compensatório.
 
-## Ordem obrigatória de implantação
+## Implantação sem plano pago
 
 1. Fazer cópia de segurança/exportação do Firestore atual.
-2. Implantar primeiro as Cloud Functions.
-3. Confirmar que as funções respondem num ambiente de teste.
-4. Implantar as regras do Firestore; a partir desse momento o browser deixa de escrever diretamente nos registos.
-5. Implantar o site.
-6. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, correção, impressão e CSV.
+2. Implantar as regras do Firestore.
+3. Implantar o site.
+4. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, impressão e CSV.
+5. Criar a conta exclusiva do tablet com apenas a função `time-clock-station`, iniciar sessão no tablet e configurar um PIN de teste.
+6. Confirmar que o PIN errado é recusado, que o PIN correto regista a marcação e que a sessão principal do tablet continua ativa.
 7. Preencher “Configuração legal do registo” na área de gestor.
-8. Criar a conta exclusiva do tablet com apenas a função `time-clock-station` e configurar os PINs conforme a [política do tablet partilhado](POLITICA-PIN-TABLET.md).
+8. Configurar os restantes PINs conforme a [política do tablet partilhado](POLITICA-PIN-TABLET.md).
 9. Imprimir e afixar o mapa aplicável; na Madeira, enviar a cópia à Direção Regional do Trabalho com a antecedência exigida e guardar prova.
 
-Não inverter os passos 2 e 4: se as regras forem implantadas antes das funções, o registo de ponto fica temporariamente indisponível.
+O fluxo normal de marcação e os PINs do tablet não usam Cloud Functions e são compatíveis com o plano gratuito Spark. A identidade técnica de cada PIN não recebe funções nem acesso geral: as regras permitem-lhe apenas consultar/criar o registo do trabalhador associado, sem apagar ou substituir marcações anteriores.
 
-Com a configuração Firebase atual, os dois primeiros comandos são:
+Para publicar as regras:
 
 ```powershell
-firebase deploy --only functions
 firebase deploy --only firestore:rules
 ```
 
