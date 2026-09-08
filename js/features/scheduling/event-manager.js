@@ -391,6 +391,21 @@ export class EventManager {
                     return;
                 }
 
+                if (e.target.id === 'attendance-archive-form') {
+                    e.preventDefault();
+                    const feedback = document.getElementById('attendance-archive-feedback');
+                    if (feedback) feedback.textContent = t('timeClock.archive.preparing');
+                    try {
+                        const formData = new FormData(e.target);
+                        const archive = await this.uiManager.exportVerifiableAttendanceArchive(formData.get('period'));
+                        const refreshedFeedback = document.getElementById('attendance-archive-feedback');
+                        if (refreshedFeedback) refreshedFeedback.textContent = t('timeClock.archive.ready', { hash: archive.sha256 });
+                    } catch (error) {
+                        if (feedback) feedback.textContent = error.message || t('timeClock.archive.failed');
+                    }
+                    return;
+                }
+
                 if (e.target.id === 'attendance-pin-form') {
                     e.preventDefault();
                     const feedback = document.getElementById('attendance-pin-feedback');

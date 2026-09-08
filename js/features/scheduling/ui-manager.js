@@ -1644,8 +1644,16 @@ export class UIManager {
             return;
         }
 
-        const todaySummary = this.dataManager.getAttendanceSummary(selectedEmployee.id, now, { referenceDateTime });
+        let todaySummary = this.dataManager.getAttendanceSummary(selectedEmployee.id, now, { referenceDateTime });
         const todayRecord = this.dataManager.getAttendanceRecord(selectedEmployee.id, now);
+        if (!todayRecord && this.dataManager.isTimeClockStationUser() && selectedEmployee.status) {
+            const directoryActions = selectedEmployee.status === 'on-break'
+                ? { status: 'on-break', primaryAction: 'breakEnd', secondaryAction: 'clockOut' }
+                : selectedEmployee.status === 'working'
+                    ? { status: 'working', primaryAction: 'clockOut', secondaryAction: 'breakStart' }
+                    : { status: 'clocked-out', primaryAction: 'clockIn', secondaryAction: null };
+            todaySummary = { ...todaySummary, ...directoryActions };
+        }
         const tileStatus = this.getTimeClockStationTileStatus(todaySummary);
         const primaryAction = todaySummary?.primaryAction || 'clockIn';
         const secondaryAction = todaySummary?.secondaryAction || null;
@@ -2131,6 +2139,22 @@ export class UIManager {
                                 <p id="attendance-compliance-feedback" class="text-sm text-slate-600"></p>
                             </div>
                         </form>
+                    </div>
+                    <div class="${activeTimeClockSection === 'configuration' ? '' : 'hidden'} rounded-3xl border border-slate-200 bg-white p-5">
+                        <div class="grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
+                            <div>
+                                <div class="font-semibold text-slate-900">${t('timeClock.archive.title')}</div>
+                                <p class="mt-1 text-sm text-slate-600">${t('timeClock.archive.description')}</p>
+                            </div>
+                            <form id="attendance-archive-form" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <label class="block">
+                                    <span class="mb-1.5 block text-sm font-medium text-slate-700">${t('timeClock.archive.month')}</span>
+                                    <input name="period" type="month" required value="${this.dataManager.getDateKey(now).slice(0, 7)}" class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900">
+                                </label>
+                                <button type="submit" class="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800">${t('timeClock.archive.download')}</button>
+                            </form>
+                        </div>
+                        <p id="attendance-archive-feedback" class="mt-3 text-sm text-slate-600"></p>
                     </div>
                     <div class="${activeTimeClockSection === 'configuration' ? '' : 'hidden'} rounded-3xl border border-slate-200 bg-white p-5">
                         <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
@@ -2745,7 +2769,7 @@ export class UIManager {
             return `"${text.replaceAll('"', '""')}"`;
         };
         const rows = [[
-            'employer', 'employeeId', 'employeeName', 'staffNumber', 'date', 'eventType',
+            'employer', 'employeeId', 'employeeName', 'staffNumber', 'date', 'eventType', 'canonicalEventId',
             'localDateTime', 'utcDateTime', 'timeZone', 'source', 'trustedServerTime',
             'actorEmail', 'note', 'voided', 'correctionId', 'reviewStatus', 'workerAttestation', 'retainUntil',
             'overtimeRecordId', 'overtimeReason', 'overtimeLegalBasis', 'overtimeStatus',
@@ -2760,7 +2784,7 @@ export class UIManager {
                 const correction = (record.corrections || []).filter((entry) => entry.eventId === punch.id).map((entry) => entry.id).join('|');
                 rows.push([
                     compliance.employerName, employee.id, employee.name, employee.staffNumber, dateKey,
-                    punch.type, punch.occurredAt, punch.occurredAtUtc, punch.timeZone, punch.source,
+                    punch.type, punch.canonicalEventId, punch.occurredAt, punch.occurredAtUtc, punch.timeZone, punch.source,
                     punch.trustedServerTime, punch.actorEmail, punch.note,
                     (record.voidedEventIds || []).includes(punch.id), correction,
                     record.review?.status, record.workerAttestation?.status, record.retainUntil, '', '', '', '', ''
@@ -2769,7 +2793,7 @@ export class UIManager {
             overtime.forEach((entry) => {
                 [entry.startEvent, entry.endEvent].filter(Boolean).forEach((event) => rows.push([
                     compliance.employerName, employee.id, employee.name, employee.staffNumber, dateKey,
-                    event.type, event.occurredAt, event.occurredAtUtc, event.timeZone, event.source,
+                    event.type, event.canonicalEventId, event.occurredAt, event.occurredAtUtc, event.timeZone, event.source,
                     event.trustedServerTime, event.actorEmail, event.note, false, '', '', '', entry.retainUntil,
                     entry.id, entry.reason, entry.legalBasis, entry.status,
                     entry.workerValidation?.status || ''
@@ -2787,6 +2811,25 @@ export class UIManager {
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
+    }
+
+    downloadTextArtifact(filename, content, type = 'application/json;charset=utf-8') {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async exportVerifiableAttendanceArchive(periodKey) {
+        const archive = await this.dataManager.createVerifiableAttendanceArchive(periodKey);
+        this.downloadTextArtifact(archive.dataFilename, archive.dataContent);
+        this.downloadTextArtifact(archive.manifestFilename, archive.manifestContent);
+        return archive;
     }
 
     exportAnnualOvertimeCSV() {

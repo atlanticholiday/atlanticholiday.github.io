@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Firestore rules pending</title></head>
+<body>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import {
+  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs,
+  getFirestore, serverTimestamp, updateDoc, writeBatch
+} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+const projectId = 'demo-horario';
+const now = new Date();
+const epoch = now.getTime();
+const dateKey = now.toISOString().slice(0, 10);
+
+function client(name, token) {
+  const app = initializeApp({ projectId, apiKey: 'demo-key', appId: `demo-${name}` }, name);
+  const db = getFirestore(app);
+  connectFirestoreEmulator(db, '127.0.0.1', 8080, { mockUserToken: token });
+  return db;
+}
+
+function canonicalData({ id, recordId, employeeId = 'emp-1', category = 'attendance', action, eventType = null, targetEventId = null, reason = null, source = 'web', actorUid = null, actorEmail = null }) {
+  const privilegedAction = action === 'manual-punch' || action === 'authorized';
+  return {
+    id, recordId, employeeId, dateKey, category, action, eventType, targetEventId,
+    reason, source, actorUid: actorUid || (privilegedAction ? 'admin-uid' : 'worker-uid'),
+    actorEmail: actorEmail || (privilegedAction ? 'admin@example.com' : 'worker@example.com'),
+    occurredAt: eventType ? `${dateKey}T09:00:00` : null,
+    occurredAtEpochMs: eventType && source !== 'manual' ? epoch : null,
+    serverRecordedAt: serverTimestamp(), schemaVersion: 1
+  };
+}
+
+async function expectDenied(operation, label) {
+  try {
+    await operation();
+    throw new Error(`${label}: operation unexpectedly succeeded`);
+  } catch (error) {
+    if (String(error?.message || '').includes('unexpectedly succeeded')) throw error;
+  }
+}
+
+async function run() {
+  let stage = 'initialize';
+  try {
+  const workerDb = client('worker', { sub: 'worker-uid', user_id: 'worker-uid', email: 'worker@example.com' });
+  const adminDb = client('admin', { sub: 'admin-uid', user_id: 'admin-uid', email: 'admin@example.com' });
+  const stationDb = client('station', { sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com' });
+  const credentialDb = client('credential', { sub: 'credential-uid', user_id: 'credential-uid', email: 'clock-test@example.com' });
+  const recordId = `emp-1_${dateKey}`;
+  const punchId = 'punch-clock-in-0001';
+  const canonicalId = 'canonical-punch-0001';
+  const punch = {
+    id: punchId, type: 'clockIn', occurredAt: `${dateKey}T09:00:00`, occurredAtUtc: now.toISOString(),
+    occurredAtEpochMs: epoch, timeZone: 'Europe/Lisbon', capturedAt: now.toISOString(), source: 'web',
+    actorUid: 'worker-uid', actorEmail: 'worker@example.com', note: null, trustedServerTime: true,
+    canonicalEventId: canonicalId
+  };
+  const batch = writeBatch(workerDb);
+  batch.set(doc(workerDb, 'attendance_events', canonicalId), canonicalData({
+    id: canonicalId, recordId, action: 'punch', eventType: 'clockIn', targetEventId: punchId
+  }));
+  batch.set(doc(workerDb, 'attendance_records', recordId), {
+    employeeId: 'emp-1', employeeName: 'Worker', dateKey, punches: [punch], corrections: [],
+    voidedEventIds: [], workerAttestation: null, attestationHistory: [], reviewHistory: [],
+    review: { status: null, note: null, reviewedAt: null, reviewedBy: null },
+    createdAt: now.toISOString(), updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(),
+    retainUntil: '2031-01-01', schemaVersion: 3, lastCanonicalEventId: canonicalId
+  });
+  stage = 'worker punch';
+  console.log(stage);
+  await batch.commit();
+  if (!(await getDoc(doc(workerDb, 'attendance_records', recordId))).exists()) throw new Error('worker punch was not saved');
+  await expectDenied(() => updateDoc(doc(workerDb, 'attendance_events', canonicalId), { reason: 'tampered' }), 'canonical update');
+  await expectDenied(() => deleteDoc(doc(workerDb, 'attendance_records', recordId)), 'attendance delete');
+
+  const credentialRecordId = `emp-2_${dateKey}`;
+  const credentialPunchId = 'station-clock-in-0001';
+  const credentialCanonicalId = 'canonical-station-0001';
+  const credentialPunch = {
+    ...punch, id: credentialPunchId, source: 'station', actorUid: 'credential-uid',
+    actorEmail: 'clock-test@example.com', canonicalEventId: credentialCanonicalId
+  };
+  const credentialRecord = {
+    employeeId: 'emp-2', employeeName: 'Station Worker', dateKey, punches: [credentialPunch], corrections: [],
+    voidedEventIds: [], workerAttestation: null, attestationHistory: [], reviewHistory: [],
+    review: { status: null, note: null, reviewedAt: null, reviewedBy: null },
+    createdAt: now.toISOString(), updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(),
+    retainUntil: '2031-01-01', schemaVersion: 3, lastCanonicalEventId: credentialCanonicalId
+  };
+  const forgedCredentialBatch = writeBatch(credentialDb);
+  forgedCredentialBatch.set(doc(credentialDb, 'attendance_events', credentialCanonicalId), canonicalData({
+    id: credentialCanonicalId, recordId: credentialRecordId, employeeId: 'emp-2', action: 'punch',
+    eventType: 'clockIn', targetEventId: credentialPunchId, source: 'station',
+    actorUid: 'credential-uid', actorEmail: 'clock-test@example.com'
+  }));
+  forgedCredentialBatch.set(doc(credentialDb, 'attendance_records', credentialRecordId), {
+    ...credentialRecord,
+    forgedManagerApproval: true
+  });
+  await expectDenied(() => forgedCredentialBatch.commit(), 'PIN credential forged field');
+
+  const credentialBatch = writeBatch(credentialDb);
+  credentialBatch.set(doc(credentialDb, 'attendance_events', credentialCanonicalId), canonicalData({
+    id: credentialCanonicalId, recordId: credentialRecordId, employeeId: 'emp-2', action: 'punch',
+    eventType: 'clockIn', targetEventId: credentialPunchId, source: 'station',
+    actorUid: 'credential-uid', actorEmail: 'clock-test@example.com'
+  }));
+  const credentialRecordBatch = credentialBatch;
+  credentialRecordBatch.set(doc(credentialDb, 'attendance_records', credentialRecordId), credentialRecord);
+  stage = 'PIN credential punch';
+  console.log(stage);
+  await credentialRecordBatch.commit();
+  stage = 'PIN directory status';
+  console.log(stage);
+  await updateDoc(doc(credentialDb, 'attendance_station_directory', 'emp-2'), {
+    status: 'working', lastEventType: 'clockIn', lastOccurredAtEpochMs: epoch,
+    updatedAtServer: serverTimestamp()
+  });
+  if (!(await getDoc(doc(credentialDb, 'attendance_records', credentialRecordId))).exists()) throw new Error('PIN credential punch was not saved');
+
+  const manualCanonicalId = 'canonical-manual-0001';
+  const manualPunchId = 'manual-clock-out-0001';
+  const manualBatch = writeBatch(adminDb);
+  manualBatch.set(doc(adminDb, 'attendance_events', manualCanonicalId), canonicalData({
+    id: manualCanonicalId, recordId, action: 'manual-punch', eventType: 'clockOut',
+    targetEventId: manualPunchId, reason: 'Correção documentada', source: 'manual'
+  }));
+  manualBatch.update(doc(adminDb, 'attendance_records', recordId), {
+    punches: [punch, {
+      ...punch, id: manualPunchId, type: 'clockOut', occurredAtEpochMs: null,
+      occurredAtUtc: null, source: 'manual', actorUid: 'admin-uid', actorEmail: 'admin@example.com',
+      note: 'Correção documentada', trustedServerTime: false, canonicalEventId: manualCanonicalId
+    }],
+    corrections: [{
+      id: 'correction-0001', type: 'event-added', eventId: manualPunchId, reason: 'Correção documentada',
+      actorUid: 'admin-uid', actorEmail: 'admin@example.com', recordedAt: now.toISOString(),
+      status: 'needs-attention', canonicalEventId: manualCanonicalId
+    }],
+    workerAttestation: null,
+    review: { status: 'needs-attention', note: 'Correção documentada', reviewedAt: null, reviewedBy: null },
+    reviewHistory: [], updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(),
+    lastCanonicalEventId: manualCanonicalId
+  });
+  stage = 'manual correction';
+  console.log(stage);
+  await manualBatch.commit();
+
+  const overtimeId = 'overtime-0001';
+  const overtimeCanonicalId = 'canonical-overtime-0001';
+  const authorization = { id: 'audit-authorized-0001', event: 'authorized', actorUid: 'admin-uid', actorEmail: 'admin@example.com', recordedAt: now.toISOString(), canonicalEventId: overtimeCanonicalId };
+  const overtimeBatch = writeBatch(adminDb);
+  overtimeBatch.set(doc(adminDb, 'attendance_events', overtimeCanonicalId), canonicalData({
+    id: overtimeCanonicalId, recordId: overtimeId, action: 'authorized', category: 'overtime',
+    reason: 'Acréscimo transitório documentado', source: 'manual'
+  }));
+  overtimeBatch.set(doc(adminDb, 'overtime_records', overtimeId), {
+    employeeId: 'emp-1', employeeName: 'Worker', dateKey, reason: 'Acréscimo transitório documentado',
+    legalBasis: 'temporary-increase', workplace: 'Sede', compensationChoice: 'payment', status: 'authorized',
+    authorizedAt: now.toISOString(), authorizedByUid: 'admin-uid', authorizedBy: 'admin@example.com',
+    startEvent: null, endEvent: null, workerValidation: null, managerReview: null, compensatoryRest: null,
+    auditTrail: [authorization],
+    createdAt: now.toISOString(), updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(),
+    retainUntil: '2031-01-01', schemaVersion: 2, lastCanonicalEventId: overtimeCanonicalId
+  });
+  stage = 'overtime authorization';
+  console.log(stage);
+  await overtimeBatch.commit();
+
+  const startCanonicalId = 'canonical-overtime-start-0001';
+  const startEvent = {
+    id: 'overtime-start-event-0001', type: 'overtimeStart', occurredAt: `${dateKey}T09:00:00`,
+    occurredAtUtc: now.toISOString(), occurredAtEpochMs: epoch, timeZone: 'Europe/Lisbon',
+    capturedAt: now.toISOString(), source: 'web', actorUid: 'worker-uid', actorEmail: 'worker@example.com',
+    note: null, trustedServerTime: true, canonicalEventId: startCanonicalId
+  };
+  const startBatch = writeBatch(workerDb);
+  startBatch.set(doc(workerDb, 'attendance_events', startCanonicalId), canonicalData({
+    id: startCanonicalId, recordId: overtimeId, action: 'started', category: 'overtime',
+    eventType: 'overtimeStart', targetEventId: startEvent.id
+  }));
+  startBatch.update(doc(workerDb, 'overtime_records', overtimeId), {
+    startEvent, status: 'in-progress', workerValidation: null,
+    auditTrail: [authorization, { id: 'audit-started-0001', event: 'started', actorUid: 'worker-uid', actorEmail: 'worker@example.com', recordedAt: now.toISOString(), canonicalEventId: startCanonicalId }],
+    updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(), lastCanonicalEventId: startCanonicalId
+  });
+  stage = 'overtime start';
+  console.log(stage);
+  await startBatch.commit();
+  console.log('overtime start saved');
+
+  stage = 'station directory read';
+  console.log(stage);
+  if ((await getDocs(collection(stationDb, 'attendance_station_directory'))).size !== 2) throw new Error('station directory not readable');
+  stage = 'station restricted reads';
+  console.log(stage);
+  return { passed: true };
+  } catch (error) {
+    throw new Error(`${stage}: ${error?.stack || error}`);
+  }
+}
+
+run().then((result) => {
+  window.__firestoreRulesResult = result;
+  document.title = 'PASS firestore rules';
+}).catch((error) => {
+  window.__firestoreRulesResult = { passed: false, error: error?.stack || String(error) };
+  document.title = 'FAIL firestore rules';
+});
+</script>
+</body>
+</html>

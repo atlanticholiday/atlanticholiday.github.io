@@ -3137,6 +3137,15 @@
             "summary": "Os registos são tratados para cumprir obrigações laborais, gerir assiduidade e apurar remuneração/descansos. São acessíveis apenas a pessoas autorizadas e conservados durante cinco anos, sem prejuízo de obrigação adicional ou litígio.",
             "contact": "Contacto para exercer direitos ou pedir cópia"
         },
+        "archive": {
+            "title": "Arquivo mensal verificável",
+            "description": "Descarrega os registos, trabalho suplementar e eventos canónicos do mês, acompanhados por um manifesto SHA-256. Guarde os dois ficheiros em locais separados.",
+            "month": "Mês a arquivar",
+            "download": "Descarregar arquivo",
+            "preparing": "A preparar o arquivo a partir do servidor…",
+            "ready": "Arquivo criado. SHA-256: {{hash}}",
+            "failed": "Não foi possível criar o arquivo verificável."
+        },
         "print": {
             "title": "Vista de impressão da assiduidade",
             "subtitle": "Vista semanal ou mensal imprimível do registo de tempos de trabalho a partir do relógio digital.",

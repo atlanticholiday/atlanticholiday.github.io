@@ -3131,6 +3131,15 @@
       "summary": "Records are processed to meet employment-law duties, manage attendance, and calculate pay/rest. Access is restricted to authorized people and records are retained for five years, subject to additional legal duties or disputes.",
       "contact": "Contact for rights requests or copies"
     },
+    "archive": {
+      "title": "Verifiable monthly archive",
+      "description": "Downloads the month's attendance, overtime, and canonical events with a SHA-256 manifest. Store the two files separately.",
+      "month": "Month to archive",
+      "download": "Download archive",
+      "preparing": "Preparing the archive from the server…",
+      "ready": "Archive created. SHA-256: {{hash}}",
+      "failed": "The verifiable archive could not be created."
+    },
     "print": {
       "title": "Attendance Print View",
       "subtitle": "Printable weekly or monthly registo de tempos de trabalho from the digital clock log.",

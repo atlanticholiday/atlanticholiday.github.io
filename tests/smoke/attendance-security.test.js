@@ -7,49 +7,54 @@ describe('Attendance register security', () => {
         const rules = await response.text();
         const attendanceRules = rules.match(/match \/attendance_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const overtimeRules = rules.match(/match \/overtime_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
+        const employeeRules = rules.match(/match \/employees\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const pinRules = rules.match(/match \/attendance_pin_credentials\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
 
         assert.includes(rules, 'data.employeeId == accessData().linkedEmployeeId');
         assert.includes(attendanceRules, 'isOwnAttendance(resource.data)');
-        assert.includes(attendanceRules, 'allow create: if validDirectAttendanceCreate()');
-        assert.includes(attendanceRules, 'allow update: if validDirectAttendanceAppend()');
+        assert.includes(attendanceRules, 'validDirectAttendanceCreate(recordId)');
+        assert.includes(attendanceRules, 'validPrivilegedAttendanceCreate(recordId)');
+        assert.includes(attendanceRules, 'validDirectAttendanceAppend(recordId)');
+        assert.includes(attendanceRules, 'validOwnAttendanceAttestation(recordId)');
         assert.includes(attendanceRules, 'allow delete: if false');
         assert.includes(attendanceRules, 'isCredentialAttendanceRecordId(recordId)');
         assert.includes(attendanceRules, 'isOwnAttendanceRecordId(recordId)');
         assert.includes(rules, 'request.resource.data.updatedAtServer == request.time');
         assert.includes(rules, 'event.occurredAtEpochMs >= request.time.toMillis() - 60000');
-        assert.includes(overtimeRules, 'isOwnAttendance(resource.data)');
-        assert.includes(overtimeRules, 'allow create, update, delete: if false');
+        assert.includes(overtimeRules, 'allow create: if validOvertimeCreate(recordId)');
+        assert.includes(overtimeRules, 'allow update: if validOvertimeUpdate(recordId)');
+        assert.includes(overtimeRules, 'allow delete: if false');
         assert.includes(pinRules, 'allow read, write: if false');
+        assert.includes(rules, 'match /attendance_events/{eventId}');
+        assert.includes(rules, 'allow update, delete: if false');
+        assert.includes(rules, 'data.serverRecordedAt == request.time');
+        assert.includes(rules, 'match /attendance_station_directory/{employeeId}');
+        assert.ok(!employeeRules.includes("hasRole('time-clock-station')"));
+        assert.ok(!attendanceRules.includes("hasRole('time-clock-station')"));
+        assert.ok(!overtimeRules.includes("hasRole('time-clock-station')"));
     });
 
     test('routes tablet punches through an isolated Firebase Authentication identity', async () => {
-        const [functionsResponse, mainResponse, sparkApiResponse] = await Promise.all([
-            fetch('../functions/index.js'),
+        const [mainResponse, sparkApiResponse] = await Promise.all([
             fetch('../js/app/main.js'),
             fetch('../js/features/scheduling/spark-attendance-api.js')
         ]);
-        assert.ok(functionsResponse.ok, 'Failed to fetch functions/index.js');
         assert.ok(mainResponse.ok, 'Failed to fetch js/app/main.js');
         assert.ok(sparkApiResponse.ok, 'Failed to fetch Spark attendance API');
-        const functionsSource = await functionsResponse.text();
         const mainSource = await mainResponse.text();
         const sparkApiSource = await sparkApiResponse.text();
 
-        assert.includes(functionsSource, 'exports.recordAttendancePunch = onCall');
-        assert.includes(functionsSource, 'trustedServerTime: source !== "manual"');
-        assert.includes(functionsSource, 'exports.authorizeOvertime = onCall');
-        assert.includes(functionsSource, 'exports.validateOvertimeRecord = onCall');
-        assert.includes(functionsSource, 'exports.setAttendancePin = onCall');
-        assert.includes(functionsSource, 'exports.removeAttendancePin = onCall');
-        assert.includes(functionsSource, 'timingSafeEqual(expectedHash, suppliedHash)');
-        assert.includes(functionsSource, 'ATTENDANCE_PIN_MAX_ATTEMPTS = 5');
         assert.includes(mainSource, 'createSparkAttendanceApi({ db, auth })');
+        assert.ok(!mainSource.includes("httpsCallable(functionsInstance, 'addManualAttendanceCorrection')"));
+        assert.ok(!mainSource.includes("httpsCallable(functionsInstance, 'authorizeOvertime')"));
         assert.includes(sparkApiSource, 'inMemoryPersistence');
         assert.includes(sparkApiSource, 'signInWithEmailAndPassword(');
         assert.includes(sparkApiSource, 'deriveCredentialPassword(pin)');
         assert.includes(sparkApiSource, "if (!/^\\d{6,10}$/.test(normalizedPin))");
-        assert.includes(sparkApiSource, "transaction.set(targetRef, createPunchRecord");
+        assert.includes(sparkApiSource, "canonicalEvent(transaction, db, actor");
+        assert.includes(sparkApiSource, "action: 'manual-punch'");
+        assert.includes(sparkApiSource, "action: 'worker-attested'");
+        assert.includes(sparkApiSource, "action: 'authorized'");
         assert.includes(sparkApiSource, "batch.set(doc(db, 'attendance_credentials', credentialEmail)");
     });
 

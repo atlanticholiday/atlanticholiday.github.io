@@ -402,17 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             db,
             auth.currentUser ? auth.currentUser.uid : null,
             holidayCalculator,
-            {
-                ...createSparkAttendanceApi({ db, auth }),
-                addCorrection: httpsCallable(functionsInstance, 'addManualAttendanceCorrection'),
-                voidEvent: httpsCallable(functionsInstance, 'voidAttendanceEvent'),
-                attestRecord: httpsCallable(functionsInstance, 'attestAttendanceRecord'),
-                reviewRecord: httpsCallable(functionsInstance, 'reviewAttendanceRecord'),
-                authorizeOvertime: httpsCallable(functionsInstance, 'authorizeOvertime'),
-                recordOvertimePunch: httpsCallable(functionsInstance, 'recordOvertimePunch'),
-                validateOvertimeRecord: httpsCallable(functionsInstance, 'validateOvertimeRecord'),
-                reviewOvertimeRecord: httpsCallable(functionsInstance, 'reviewOvertimeRecord')
-            }
+            createSparkAttendanceApi({ db, auth })
         );
         window.dataManager = dataManager; // For debugging
         if (!unsubscribeAccessModeSync) {
@@ -1067,7 +1057,8 @@ function subscribeScheduleDataForCurrentUser() {
     const hasPrivilegedScheduleAccess = dataManager.hasPrivilegedRole?.();
     const canUseSchedule = dataManager.canAccessWorkSchedule?.();
     const canUseVacationCenter = dataManager.canAccessApp?.('vacationCenter');
-    const needsTimeClockData = dataManager.isTimeClockStationUser?.() || dataManager.isClockOnlyUser?.();
+    const isTimeClockStation = dataManager.isTimeClockStationUser?.();
+    const needsTimeClockData = isTimeClockStation || dataManager.isClockOnlyUser?.();
     const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || canUseVacationCenter || needsTimeClockData;
 
     if (!shouldLoadEmployeeDirectory) {
@@ -1086,8 +1077,9 @@ function subscribeScheduleDataForCurrentUser() {
         dataManager.listenForShiftPresets();
     }
 
-    if (canUseSchedule || needsTimeClockData) {
+    if (canUseSchedule || (needsTimeClockData && !isTimeClockStation)) {
         dataManager.listenForAttendanceChanges();
+        dataManager.listenForOvertimeChanges();
     }
 }
 
@@ -1168,6 +1160,7 @@ async function initializeScheduleApp() {
                 dataManager.listenForShiftPresets();
                 dataManager.listenForGlobalSettings();
                 dataManager.listenForAttendanceChanges();
+                dataManager.listenForOvertimeChanges();
             } else {
                 console.log('✅ [OPTIMIZATION] Employee listener already active');
             }

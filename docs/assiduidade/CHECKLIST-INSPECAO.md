@@ -10,7 +10,7 @@
 - [ ] Na Madeira, cada mapa novo ou alterado foi enviado à Direção Regional do Trabalho pelo menos oito dias antes da entrada em vigor; a referência e o comprovativo estão arquivados.
 - [ ] A informação de privacidade foi entregue aos trabalhadores.
 - [ ] O registo de atividades de tratamento foi aprovado.
-- [ ] Existe cópia de segurança automática e foi testado um restauro.
+- [ ] Existe arquivo mensal JSON com manifesto SHA-256, cópia separada e foi testado um restauro.
 - [ ] Foi nomeado um responsável de substituição para disponibilizar os registos numa inspeção.
 
 ## Todos os dias
@@ -23,7 +23,8 @@
 
 ## Todos os meses
 
-- [ ] Exportar os registos do mês em CSV por trabalhador e conservar cópia imutável/assinada ou com hash verificável.
+- [ ] Descarregar o arquivo mensal verificável e guardar o JSON e o manifesto SHA-256 em destinos separados.
+- [ ] Exportar os registos do mês em CSV por trabalhador e conservar junto do arquivo canónico.
 - [ ] Exportar e arquivar o registo separado de trabalho suplementar.
 - [ ] Conferir totais diários e semanais, intervalos, trabalho exterior e descansos compensatórios.
 - [ ] Confirmar que trabalhadores arquivados continuam disponíveis na vista histórica.

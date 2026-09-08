@@ -13,7 +13,7 @@
 | Destinatários | RH/gestão autorizada, processamento salarial, alojamento/suporte contratado, autoridades competentes |
 | Transferências | [País, mecanismo e garantias; ou “não aplicável”] |
 | Prazo | Cinco anos para os registos laborais; documentar início da contagem e exceções de litígio |
-| Segurança | Autenticação individual, menor privilégio, funções de servidor, bloqueio de escrita direta, trilho de correções, TLS, backups, teste de restauro, revisão de acessos |
+| Segurança | Autenticação individual, menor privilégio, eventos canónicos imutáveis com hora do Firestore, escritas incrementais, trilho de correções, TLS, arquivo SHA-256, cópia separada, teste de restauro e revisão de acessos |
 | Subcontratantes | [Firebase/Google Cloud e outros, contratos e regiões] |
 | Avaliação de impacto | [Decisão fundamentada; rever se forem introduzidos GPS, biometria, monitorização sistemática ou perfis] |
 

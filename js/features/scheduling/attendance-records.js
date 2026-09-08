@@ -124,7 +124,8 @@ export function normalizeAttendanceRecord(record = {}) {
                 actorUid: normalizeOptionalText(punch.actorUid),
                 actorEmail: normalizeOptionalText(punch.actorEmail),
                 note: normalizeOptionalText(punch.note),
-                trustedServerTime: punch.trustedServerTime === true && (trustedEpochMs !== null || Boolean(punch.occurredAtUtc))
+                trustedServerTime: punch.trustedServerTime === true && (trustedEpochMs !== null || Boolean(punch.occurredAtUtc)),
+                canonicalEventId: normalizeOptionalText(punch.canonicalEventId)
             }})
             .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt))
         : [];

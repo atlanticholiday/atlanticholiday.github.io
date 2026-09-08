@@ -82,7 +82,7 @@ service cloud.firestore {
     }
 
     function isDirectAttendanceOwner(data) {
-      return isOwnAttendance(data) || isCredentialOwnAttendance(data);
+      return isCredentialOwnAttendance(data) || isOwnAttendance(data);
     }
 
     function isOwnAttendanceRecordId(recordId) {
@@ -96,17 +96,29 @@ service cloud.firestore {
         && recordId.matches(get(attendanceCredentialPath()).data.employeeId + '_[0-9]{4}-[0-9]{2}-[0-9]{2}');
     }
 
+    function isOwnAttendanceDirectoryId(employeeId) {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && employeeId == accessData().linkedEmployeeId;
+    }
+
+    function isCredentialAttendanceDirectoryId(employeeId) {
+      return isAttendanceCredential()
+        && employeeId == get(attendanceCredentialPath()).data.employeeId;
+    }
+
     function validFreshAttendanceEvent(event) {
+      let credential = isAttendanceCredential();
       return event is map
         && event.keys().hasAll([
           'id', 'type', 'occurredAt', 'occurredAtUtc', 'occurredAtEpochMs',
           'timeZone', 'capturedAt', 'source', 'actorUid', 'actorEmail',
-          'note', 'trustedServerTime'
+          'note', 'trustedServerTime', 'canonicalEventId'
         ])
         && event.keys().hasOnly([
           'id', 'type', 'occurredAt', 'occurredAtUtc', 'occurredAtEpochMs',
           'timeZone', 'capturedAt', 'source', 'actorUid', 'actorEmail',
-          'note', 'trustedServerTime'
+          'note', 'trustedServerTime', 'canonicalEventId'
         ])
         && event.id is string
         && event.id.size() > 8
@@ -124,18 +136,79 @@ service cloud.firestore {
         && event.actorEmail == request.auth.token.email
         && event.note == null
         && event.trustedServerTime == true
+        && event.canonicalEventId is string
         && (
-          (isAttendanceCredential() && event.source == 'station')
-          || (!isAttendanceCredential() && event.source == 'web')
+          (credential && event.source == 'station')
+          || (!credential && event.source == 'web')
         );
     }
 
-    function validDirectAttendanceCreate() {
+    function validCredentialCanonicalPunch(eventId) {
+      let data = request.resource.data;
+      let credential = get(attendanceCredentialPath()).data;
+      return signedIn()
+        && request.auth.token.email is string
+        && exists(attendanceCredentialPath())
+        && credential.active == true
+        && data.keys().hasAll([
+          'id', 'recordId', 'employeeId', 'dateKey', 'category', 'action',
+          'eventType', 'targetEventId', 'reason', 'source', 'actorUid',
+          'actorEmail', 'occurredAt', 'occurredAtEpochMs', 'serverRecordedAt',
+          'schemaVersion'
+        ])
+        && data.keys().hasOnly([
+          'id', 'recordId', 'employeeId', 'dateKey', 'category', 'action',
+          'eventType', 'targetEventId', 'reason', 'source', 'actorUid',
+          'actorEmail', 'occurredAt', 'occurredAtEpochMs', 'serverRecordedAt',
+          'schemaVersion'
+        ])
+        && data.id == eventId
+        && data.recordId is string
+        && data.category == 'attendance'
+        && data.action == 'punch'
+        && data.employeeId == credential.employeeId
+        && data.dateKey is string
+        && data.targetEventId is string
+        && data.reason == null
+        && data.source == 'station'
+        && data.actorUid == request.auth.uid
+        && data.actorEmail == request.auth.token.email
+        && data.occurredAt is string
+        && data.eventType in ['clockIn', 'clockOut', 'breakStart', 'breakEnd']
+        && data.occurredAtEpochMs is int
+        && data.occurredAtEpochMs >= request.time.toMillis() - 60000
+        && data.occurredAtEpochMs <= request.time.toMillis() + 60000
+        && data.serverRecordedAt == request.time
+        && data.schemaVersion == 1;
+    }
+
+    function canonicalAttendanceEventPath(eventId) {
+      return /databases/$(database)/documents/attendance_events/$(eventId);
+    }
+
+    function canonicalEventData(eventId) {
+      return getAfter(canonicalAttendanceEventPath(eventId)).data;
+    }
+
+    function validCanonicalLink(recordId) {
+      let eventId = request.resource.data.lastCanonicalEventId;
+      let event = canonicalEventData(eventId);
+      return eventId is string
+        && existsAfter(canonicalAttendanceEventPath(eventId))
+        && event.recordId == recordId
+        && event.employeeId == request.resource.data.employeeId
+        && event.dateKey == request.resource.data.dateKey
+        && event.serverRecordedAt == request.time;
+    }
+
+    function validDirectAttendanceCreate(recordId) {
+      let canonical = canonicalEventData(request.resource.data.lastCanonicalEventId);
       return isDirectAttendanceOwner(request.resource.data)
         && request.resource.data.keys().hasOnly([
           'employeeId', 'employeeName', 'dateKey', 'punches', 'corrections',
           'voidedEventIds', 'workerAttestation', 'attestationHistory', 'review',
-          'createdAt', 'updatedAt', 'updatedAtServer', 'retainUntil', 'schemaVersion'
+          'reviewHistory', 'createdAt', 'updatedAt', 'updatedAtServer', 'retainUntil', 'schemaVersion',
+          'lastCanonicalEventId'
         ])
         && request.resource.data.employeeId is string
         && request.resource.data.employeeName is string
@@ -150,13 +223,74 @@ service cloud.firestore {
         && request.resource.data.workerAttestation == null
         && request.resource.data.attestationHistory is list
         && request.resource.data.attestationHistory.size() == 0
+        && request.resource.data.reviewHistory is list
+        && request.resource.data.reviewHistory.size() == 0
         && request.resource.data.review is map
         && request.resource.data.updatedAtServer == request.time
-        && request.resource.data.schemaVersion == 3;
+        && request.resource.data.schemaVersion == 3
+        && validCanonicalLink(recordId)
+        && canonical.action == 'punch'
+        && canonical.eventType == request.resource.data.punches[0].type
+        && canonical.targetEventId == request.resource.data.punches[0].id
+        && request.resource.data.punches[0].type == 'clockIn';
     }
 
-    function validDirectAttendanceAppend() {
+    function validCredentialAttendanceCreate(recordId) {
+      let data = request.resource.data;
+      let punch = data.punches[0];
+      let credential = get(attendanceCredentialPath()).data;
+      let canonical = getAfter(canonicalAttendanceEventPath(data.lastCanonicalEventId)).data;
+      return signedIn()
+        && request.auth.token.email is string
+        && exists(attendanceCredentialPath())
+        && credential.active == true
+        && data.employeeId == credential.employeeId
+        && recordId == data.employeeId + '_' + data.dateKey
+        && data.keys().hasOnly([
+          'employeeId', 'employeeName', 'dateKey', 'punches', 'corrections',
+          'voidedEventIds', 'workerAttestation', 'attestationHistory', 'review',
+          'reviewHistory', 'createdAt', 'updatedAt', 'updatedAtServer', 'retainUntil',
+          'schemaVersion', 'lastCanonicalEventId'
+        ])
+        && data.employeeName is string
+        && data.dateKey.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && data.punches is list
+        && data.punches.size() == 1
+        && punch.type == 'clockIn'
+        && punch.id is string
+        && punch.source == 'station'
+        && punch.actorUid == request.auth.uid
+        && punch.actorEmail == request.auth.token.email
+        && punch.timeZone == 'Europe/Lisbon'
+        && punch.note == null
+        && punch.trustedServerTime == true
+        && punch.occurredAtEpochMs is int
+        && punch.occurredAtEpochMs >= request.time.toMillis() - 60000
+        && punch.occurredAtEpochMs <= request.time.toMillis() + 60000
+        && punch.canonicalEventId == data.lastCanonicalEventId
+        && data.corrections is list
+        && data.corrections.size() == 0
+        && data.voidedEventIds is list
+        && data.voidedEventIds.size() == 0
+        && data.workerAttestation == null
+        && data.attestationHistory is list
+        && data.attestationHistory.size() == 0
+        && data.reviewHistory is list
+        && data.reviewHistory.size() == 0
+        && data.review is map
+        && data.updatedAtServer == request.time
+        && data.schemaVersion == 3
+        && canonical.id == data.lastCanonicalEventId
+        && canonical.recordId == recordId
+        && canonical.employeeId == data.employeeId
+        && canonical.eventType == punch.type
+        && canonical.targetEventId == punch.id
+        && canonical.serverRecordedAt == request.time;
+    }
+
+    function validDirectAttendanceAppend(recordId) {
       let nextPunch = request.resource.data.punches[request.resource.data.punches.size() - 1];
+      let canonical = canonicalEventData(request.resource.data.lastCanonicalEventId);
       return isDirectAttendanceOwner(resource.data)
         && isDirectAttendanceOwner(request.resource.data)
         && request.resource.data.employeeId == resource.data.employeeId
@@ -169,10 +303,301 @@ service cloud.firestore {
         && !(nextPunch in resource.data.punches)
         && validFreshAttendanceEvent(nextPunch)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'punches', 'updatedAt', 'updatedAtServer', 'schemaVersion'
+          'punches', 'updatedAt', 'updatedAtServer', 'schemaVersion', 'lastCanonicalEventId'
         ])
         && request.resource.data.updatedAtServer == request.time
-        && request.resource.data.schemaVersion == 3;
+        && request.resource.data.schemaVersion == 3
+        && nextPunch.canonicalEventId == request.resource.data.lastCanonicalEventId
+        && validCanonicalLink(recordId)
+        && canonical.action == 'punch'
+        && canonical.eventType == nextPunch.type
+        && canonical.targetEventId == nextPunch.id
+        && (
+          resource.data.voidedEventIds.size() > 0
+          || (resource.data.punches[resource.data.punches.size() - 1].type == 'clockOut' && nextPunch.type == 'clockIn')
+          || (resource.data.punches[resource.data.punches.size() - 1].type in ['clockIn', 'breakEnd'] && nextPunch.type in ['clockOut', 'breakStart'])
+          || (resource.data.punches[resource.data.punches.size() - 1].type == 'breakStart' && nextPunch.type in ['breakEnd', 'clockOut'])
+        );
+    }
+
+    function validCredentialAttendanceAppend(recordId) {
+      let data = request.resource.data;
+      let nextPunch = data.punches[data.punches.size() - 1];
+      let credential = get(attendanceCredentialPath()).data;
+      let canonical = getAfter(canonicalAttendanceEventPath(data.lastCanonicalEventId)).data;
+      return signedIn()
+        && request.auth.token.email is string
+        && exists(attendanceCredentialPath())
+        && credential.active == true
+        && resource.data.employeeId == credential.employeeId
+        && data.employeeId == credential.employeeId
+        && recordId == data.employeeId + '_' + data.dateKey
+        && data.employeeName == resource.data.employeeName
+        && data.dateKey == resource.data.dateKey
+        && data.punches is list
+        && data.punches.size() == resource.data.punches.size() + 1
+        && data.punches.hasAll(resource.data.punches)
+        && nextPunch.id is string
+        && nextPunch.type in ['clockIn', 'clockOut', 'breakStart', 'breakEnd']
+        && nextPunch.source == 'station'
+        && nextPunch.actorUid == request.auth.uid
+        && nextPunch.actorEmail == request.auth.token.email
+        && nextPunch.timeZone == 'Europe/Lisbon'
+        && nextPunch.note == null
+        && nextPunch.trustedServerTime == true
+        && nextPunch.occurredAtEpochMs is int
+        && nextPunch.occurredAtEpochMs >= request.time.toMillis() - 60000
+        && nextPunch.occurredAtEpochMs <= request.time.toMillis() + 60000
+        && nextPunch.canonicalEventId == data.lastCanonicalEventId
+        && data.diff(resource.data).affectedKeys().hasOnly([
+          'punches', 'updatedAt', 'updatedAtServer', 'schemaVersion', 'lastCanonicalEventId'
+        ])
+        && data.updatedAtServer == request.time
+        && canonical.id == data.lastCanonicalEventId
+        && canonical.recordId == recordId
+        && canonical.employeeId == data.employeeId
+        && canonical.eventType == nextPunch.type
+        && canonical.targetEventId == nextPunch.id
+        && canonical.serverRecordedAt == request.time
+        && (
+          resource.data.voidedEventIds.size() > 0
+          || (resource.data.punches[resource.data.punches.size() - 1].type == 'clockOut' && nextPunch.type == 'clockIn')
+          || (resource.data.punches[resource.data.punches.size() - 1].type in ['clockIn', 'breakEnd'] && nextPunch.type in ['clockOut', 'breakStart'])
+          || (resource.data.punches[resource.data.punches.size() - 1].type == 'breakStart' && nextPunch.type in ['breakEnd', 'clockOut'])
+        );
+    }
+
+    function attendanceHistoryPreserved() {
+      return request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.employeeName == resource.data.employeeName
+        && request.resource.data.dateKey == resource.data.dateKey
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.retainUntil == resource.data.retainUntil
+        && request.resource.data.punches is list
+        && resource.data.punches is list
+        && request.resource.data.punches.hasAll(resource.data.punches)
+        && request.resource.data.corrections is list
+        && resource.data.corrections is list
+        && request.resource.data.corrections.hasAll(resource.data.corrections)
+        && request.resource.data.voidedEventIds is list
+        && resource.data.voidedEventIds is list
+        && request.resource.data.voidedEventIds.hasAll(resource.data.voidedEventIds)
+        && request.resource.data.attestationHistory is list
+        && resource.data.attestationHistory is list
+        && request.resource.data.attestationHistory.hasAll(resource.data.attestationHistory)
+        && (!(resource.data.reviewHistory is list)
+          || (request.resource.data.reviewHistory is list
+            && request.resource.data.reviewHistory.hasAll(resource.data.reviewHistory)))
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function validPrivilegedAttendanceCreate(recordId) {
+      return privileged()
+        && request.resource.data.punches is list
+        && request.resource.data.punches.size() == 1
+        && request.resource.data.corrections is list
+        && request.resource.data.corrections.size() == 1
+        && request.resource.data.voidedEventIds is list
+        && request.resource.data.voidedEventIds.size() == 0
+        && request.resource.data.updatedAtServer == request.time
+        && validCanonicalLink(recordId)
+        && canonicalEventData(request.resource.data.lastCanonicalEventId).action == 'manual-punch'
+        && request.resource.data.punches[0].canonicalEventId == request.resource.data.lastCanonicalEventId
+        && request.resource.data.corrections[0].canonicalEventId == request.resource.data.lastCanonicalEventId
+        && request.resource.data.corrections[0].eventId == canonicalEventData(request.resource.data.lastCanonicalEventId).targetEventId;
+    }
+
+    function validPrivilegedAttendanceUpdate(recordId) {
+      let action = canonicalEventData(request.resource.data.lastCanonicalEventId).action;
+      return privileged()
+        && validCanonicalLink(recordId)
+        && action in ['manual-punch', 'event-voided', 'manager-reviewed']
+        && attendanceHistoryPreserved()
+        && (
+          (action == 'manual-punch'
+            && request.resource.data.punches.size() == resource.data.punches.size() + 1
+            && request.resource.data.corrections.size() == resource.data.corrections.size() + 1
+            && request.resource.data.corrections[request.resource.data.corrections.size() - 1].canonicalEventId == request.resource.data.lastCanonicalEventId
+            && request.resource.data.corrections[request.resource.data.corrections.size() - 1].eventId == canonicalEventData(request.resource.data.lastCanonicalEventId).targetEventId)
+          || (action == 'event-voided'
+            && request.resource.data.punches.size() == resource.data.punches.size()
+            && request.resource.data.corrections.size() == resource.data.corrections.size() + 1
+            && request.resource.data.voidedEventIds.size() == resource.data.voidedEventIds.size() + 1
+            && request.resource.data.corrections[request.resource.data.corrections.size() - 1].canonicalEventId == request.resource.data.lastCanonicalEventId
+            && request.resource.data.voidedEventIds[request.resource.data.voidedEventIds.size() - 1] == canonicalEventData(request.resource.data.lastCanonicalEventId).targetEventId)
+          || (action == 'manager-reviewed'
+            && request.resource.data.punches.size() == resource.data.punches.size()
+            && request.resource.data.corrections.size() == resource.data.corrections.size()
+            && request.resource.data.voidedEventIds.size() == resource.data.voidedEventIds.size()
+            && request.resource.data.reviewHistory is list
+            && request.resource.data.reviewHistory.size() == (!(resource.data.reviewHistory is list) ? 1 : resource.data.reviewHistory.size() + 1)
+            && request.resource.data.reviewHistory[request.resource.data.reviewHistory.size() - 1].canonicalEventId == request.resource.data.lastCanonicalEventId)
+        );
+    }
+
+    function validOwnAttendanceAttestation(recordId) {
+      return isOwnAttendance(resource.data)
+        && isOwnAttendance(request.resource.data)
+        && attendanceHistoryPreserved()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'workerAttestation', 'attestationHistory', 'updatedAt', 'updatedAtServer', 'lastCanonicalEventId'
+        ])
+        && request.resource.data.attestationHistory.size() == resource.data.attestationHistory.size() + 1
+        && request.resource.data.workerAttestation.workerUid == request.auth.uid
+        && request.resource.data.workerAttestation.workerEmail == request.auth.token.email
+        && request.resource.data.workerAttestation.canonicalEventId == request.resource.data.lastCanonicalEventId
+        && request.resource.data.attestationHistory[request.resource.data.attestationHistory.size() - 1].canonicalEventId == request.resource.data.lastCanonicalEventId
+        && validCanonicalLink(recordId)
+        && canonicalEventData(request.resource.data.lastCanonicalEventId).action == 'worker-attested';
+    }
+
+    function overtimeHistoryPreserved() {
+      return request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.employeeName == resource.data.employeeName
+        && request.resource.data.dateKey == resource.data.dateKey
+        && request.resource.data.reason == resource.data.reason
+        && request.resource.data.legalBasis == resource.data.legalBasis
+        && request.resource.data.workplace == resource.data.workplace
+        && request.resource.data.compensationChoice == resource.data.compensationChoice
+        && request.resource.data.authorizedAt == resource.data.authorizedAt
+        && request.resource.data.authorizedByUid == resource.data.authorizedByUid
+        && request.resource.data.authorizedBy == resource.data.authorizedBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.retainUntil == resource.data.retainUntil
+        && request.resource.data.auditTrail is list
+        && resource.data.auditTrail is list
+        && request.resource.data.auditTrail.hasAll(resource.data.auditTrail)
+        && request.resource.data.auditTrail.size() == resource.data.auditTrail.size() + 1
+        && request.resource.data.updatedAtServer == request.time;
+    }
+
+    function validOvertimeCreate(recordId) {
+      return privileged()
+        && request.resource.data.status == 'authorized'
+        && request.resource.data.startEvent == null
+        && request.resource.data.endEvent == null
+        && request.resource.data.workerValidation == null
+        && request.resource.data.auditTrail is list
+        && request.resource.data.auditTrail.size() == 1
+        && request.resource.data.updatedAtServer == request.time
+        && request.resource.data.schemaVersion == 2
+        && validCanonicalLink(recordId)
+        && canonicalEventData(request.resource.data.lastCanonicalEventId).action == 'authorized';
+    }
+
+    function validOvertimeUpdate(recordId) {
+      let action = canonicalEventData(request.resource.data.lastCanonicalEventId).action;
+      return overtimeHistoryPreserved()
+        && validCanonicalLink(recordId)
+        && (
+          (action in ['started', 'ended']
+            && (privileged() || isOwnAttendance(resource.data))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'startEvent', 'endEvent', 'status', 'workerValidation', 'auditTrail',
+              'updatedAt', 'updatedAtServer', 'lastCanonicalEventId'
+            ])
+            && (action == 'started'
+              ? (request.resource.data.startEvent.canonicalEventId == request.resource.data.lastCanonicalEventId
+                && request.resource.data.startEvent.type == 'overtimeStart')
+              : (request.resource.data.endEvent.canonicalEventId == request.resource.data.lastCanonicalEventId
+                && request.resource.data.endEvent.type == 'overtimeEnd')))
+          || (action == 'worker-validated'
+            && isOwnAttendance(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'workerValidation', 'auditTrail', 'updatedAt', 'updatedAtServer', 'lastCanonicalEventId'
+            ])
+            && request.resource.data.workerValidation.workerUid == request.auth.uid
+            && request.resource.data.workerValidation.workerEmail == request.auth.token.email
+            && request.resource.data.workerValidation.canonicalEventId == request.resource.data.lastCanonicalEventId)
+          || (action == 'manager-reviewed'
+            && privileged()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status', 'managerReview', 'compensatoryRest', 'auditTrail',
+              'updatedAt', 'updatedAtServer', 'lastCanonicalEventId'
+            ])
+            && request.resource.data.managerReview.reviewedByUid == request.auth.uid
+            && request.resource.data.managerReview.reviewedBy == request.auth.token.email
+            && request.resource.data.managerReview.canonicalEventId == request.resource.data.lastCanonicalEventId)
+        );
+    }
+
+    function canonicalActorMatchesRequester(data) {
+      return data.actorUid == request.auth.uid
+        && request.auth.token.email is string
+        && data.actorEmail == request.auth.token.email;
+    }
+
+    function validCanonicalAttendancePunch(data) {
+      return data.action == 'punch'
+        && data.eventType in ['clockIn', 'clockOut', 'breakStart', 'breakEnd']
+        && data.occurredAtEpochMs is int
+        && data.occurredAtEpochMs >= request.time.toMillis() - 60000
+        && data.occurredAtEpochMs <= request.time.toMillis() + 60000
+        && ((data.source == 'station' && isCredentialOwnAttendance(data))
+          || (data.source == 'web' && isOwnAttendance(data)));
+    }
+
+    function validCanonicalEventCreate(eventId) {
+      let data = request.resource.data;
+      return signedIn()
+        && data.keys().hasAll([
+          'id', 'recordId', 'employeeId', 'dateKey', 'category', 'action',
+          'eventType', 'targetEventId', 'reason', 'source', 'actorUid',
+          'actorEmail', 'occurredAt', 'occurredAtEpochMs', 'serverRecordedAt',
+          'schemaVersion'
+        ])
+        && data.keys().hasOnly([
+          'id', 'recordId', 'employeeId', 'dateKey', 'category', 'action',
+          'eventType', 'targetEventId', 'reason', 'source', 'actorUid',
+          'actorEmail', 'occurredAt', 'occurredAtEpochMs', 'serverRecordedAt',
+          'schemaVersion'
+        ])
+        && data.id == eventId
+        && data.recordId is string
+        && data.employeeId is string
+        && data.dateKey is string
+        && data.serverRecordedAt == request.time
+        && data.schemaVersion == 1
+        && canonicalActorMatchesRequester(data)
+        && (
+          (data.category == 'attendance' && (
+            validCanonicalAttendancePunch(data)
+            || (data.action in ['manual-punch', 'event-voided', 'manager-reviewed']
+              && privileged() && data.source == 'manual')
+            || (data.action == 'worker-attested'
+              && isOwnAttendance(data) && data.source == 'web')
+          ))
+          || (data.category == 'overtime' && (
+            (data.action in ['authorized', 'manager-reviewed']
+              && privileged() && data.source == 'manual')
+            || (data.action in ['started', 'ended']
+              && (privileged() || isOwnAttendance(data))
+              && data.source == 'web'
+              && data.occurredAtEpochMs is int
+              && data.occurredAtEpochMs >= request.time.toMillis() - 60000
+              && data.occurredAtEpochMs <= request.time.toMillis() + 60000)
+            || (data.action == 'worker-validated'
+              && isOwnAttendance(data) && data.source == 'web')
+          ))
+        );
+    }
+
+    function validStationStatusUpdate() {
+      return isDirectAttendanceOwner(resource.data)
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.attendancePinConfigured == resource.data.attendancePinConfigured
+        && request.resource.data.attendancePinLoginEmail == resource.data.attendancePinLoginEmail
+        && request.resource.data.isArchived == resource.data.isArchived
+        && request.resource.data.status in ['clocked-out', 'working', 'on-break']
+        && request.resource.data.lastEventType in ['clockIn', 'clockOut', 'breakStart', 'breakEnd']
+        && request.resource.data.lastOccurredAtEpochMs is int
+        && request.resource.data.lastOccurredAtEpochMs >= request.time.toMillis() - 60000
+        && request.resource.data.lastOccurredAtEpochMs <= request.time.toMillis() + 60000
+        && request.resource.data.updatedAtServer == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'lastEventType', 'lastOccurredAtEpochMs', 'updatedAtServer'
+        ]);
     }
 
     function taskAssignedToCurrentUser(data) {
@@ -543,30 +968,53 @@ service cloud.firestore {
     match /employees/{employeeId} {
       allow read: if privileged()
         || hasApp('staff')
-        || hasRole('employee')
-        || hasRole('time-clock-station');
+        || hasRole('employee');
       allow write: if privileged() || hasApp('staff');
+    }
+
+    match /attendance_station_directory/{employeeId} {
+      allow read: if privileged()
+        || hasRole('time-clock-station')
+        || isOwnAttendance(resource.data)
+        || isCredentialOwnAttendance(resource.data)
+        || isOwnAttendanceDirectoryId(employeeId)
+        || isCredentialAttendanceDirectoryId(employeeId);
+      allow create, delete: if privileged();
+      allow update: if validStationStatusUpdate() || privileged();
     }
 
     match /attendance_records/{recordId} {
       allow get: if privileged()
         || hasApp('staff')
-        || hasRole('time-clock-station')
         || isCredentialOwnAttendance(resource.data)
         || isOwnAttendance(resource.data)
         || isCredentialAttendanceRecordId(recordId)
         || isOwnAttendanceRecordId(recordId);
       allow list: if privileged()
         || hasApp('staff')
-        || hasRole('time-clock-station')
         || isCredentialOwnAttendance(resource.data)
         || isOwnAttendance(resource.data);
 
       // Spark-plan writes remain append-only. Firebase Authentication identifies
       // the worker and request.time validates the client timestamp window.
-      allow create: if validDirectAttendanceCreate();
-      allow update: if validDirectAttendanceAppend();
+      allow create: if validCredentialAttendanceCreate(recordId)
+        || validDirectAttendanceCreate(recordId)
+        || validPrivilegedAttendanceCreate(recordId);
+      allow update: if validCredentialAttendanceAppend(recordId)
+        || validDirectAttendanceAppend(recordId)
+        || validPrivilegedAttendanceUpdate(recordId)
+        || validOwnAttendanceAttestation(recordId);
       allow delete: if false;
+    }
+
+    match /attendance_events/{eventId} {
+      allow read: if privileged()
+        || hasApp('staff')
+        || isOwnAttendance(resource.data)
+        || isCredentialOwnAttendance(resource.data);
+      allow create: if validCredentialCanonicalPunch(eventId)
+        || validCanonicalEventCreate(eventId);
+      allow update, delete: if false;
     }
 
     // PIN salts, hashes and lockout state are server-only credentials. Even
@@ -585,9 +1033,10 @@ service cloud.firestore {
     match /overtime_records/{recordId} {
       allow read: if privileged()
         || hasApp('staff')
-        || hasRole('time-clock-station')
         || isOwnAttendance(resource.data);
-      allow create, update, delete: if false;
+      allow create: if validOvertimeCreate(recordId);
+      allow update: if validOvertimeUpdate(recordId);
+      allow delete: if false;
     }
 
     match /daily_notes/{recordId} {

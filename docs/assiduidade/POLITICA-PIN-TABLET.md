@@ -13,6 +13,7 @@ O PIN serve para atribuir cada marcação feita no tablet partilhado ao colega q
 - cada marcação abre uma sessão de autenticação isolada, mantida apenas em memória, valida o PIN, grava a marcação permitida e termina essa sessão sem encerrar a conta principal do tablet;
 - o Firebase Authentication limita automaticamente tentativas abusivas; quando esse limite é atingido, a aplicação pede para aguardar alguns minutos;
 - as regras só aceitam uma nova marcação com hora próxima da hora do servidor, preservam todas as marcações anteriores e nunca permitem apagá-las pelo browser;
+- a conta principal do tablet consulta apenas o diretório mínimo dos colegas com PIN configurado; não pode listar perfis completos, históricos de assiduidade nem trabalho suplementar;
 - o PIN é apagado do ecrã após cada tentativa, depois de uma marcação e após inatividade;
 - criar, substituir ou remover um PIN exige uma conta de administrador, gestor ou supervisor e atualiza a data de configuração no perfil do colega.
 

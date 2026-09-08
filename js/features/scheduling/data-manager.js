@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, getDocsFromServer, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, addDoc, onSnapshot, deleteDoc, setDoc, updateDoc, deleteField, runTransaction, increment, getDocs, getDocsFromServer, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { t } from '../../core/i18n.js';
 
 async function getDocsFresh(ref) {
@@ -47,6 +47,7 @@ import {
 } from '../../shared/access-roles.js';
 import { normalizeAllowedApps } from '../../shared/app-access.js';
 import { normalizeManualAttendanceNote } from './time-clock-controls.js';
+import { buildVerifiableAttendanceArchive, getArchivePeriodRange, normalizeArchivePeriod } from './attendance-archive.js';
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
 import {
     buildVacation2026UpdatePlan,
@@ -92,6 +93,7 @@ export class DataManager {
         this.unsubscribeVacationRecords = null;
         this.attendanceRecords = {};
         this.overtimeRecords = {};
+        this.stationDirectorySyncSignature = null;
         this.hasLoadedVacationRecords = false;
         this.isSyncingLegacyVacationRecords = false;
         this.attendanceSyncState = {
@@ -182,6 +184,9 @@ export class DataManager {
     }
 
     getEmployeesCollectionRef() {
+        if (this.isTimeClockStationUser()) {
+            return collection(this.db, 'attendance_station_directory');
+        }
         return collection(this.db, "employees");
     }
 
@@ -304,6 +309,10 @@ export class DataManager {
             const { activeEmployees, archivedEmployees } = partitionEmployeesByArchiveStatus(allEmployees);
             this.rawActiveEmployees = activeEmployees;
             this.rawArchivedEmployees = archivedEmployees;
+            this.syncAttendanceStationDirectory(allEmployees).catch((error) => {
+                this.stationDirectorySyncSignature = null;
+                console.error('Failed to synchronize the attendance station directory:', error);
+            });
             if (this.vacation2026UpdateAwaitingEmployeeRefresh) {
                 const updatedEmployeeCount = allEmployees.filter((employee) => (
                     employee?.vacationLifetimeBaseline?.source === VACATION_2026_UPDATE_ID
@@ -321,6 +330,41 @@ export class DataManager {
             this.notifyDataChange();
             console.error("Error listening:", error);
         });
+    }
+
+    async syncAttendanceStationDirectory(employees = []) {
+        if (!this.hasPrivilegedRole() || this.isTimeClockStationUser()) return;
+        const entries = employees
+            .filter((employee) => employee?.id && employee.id !== 'metadata')
+            .map((employee) => ({
+                id: employee.id,
+                name: String(employee.name || '').trim().slice(0, 200),
+                configured: employee.attendancePinConfigured === true,
+                loginEmail: canonicalizeEmail(employee.attendancePinLoginEmail || ''),
+                archived: employee.isArchived === true
+            }))
+            .sort((left, right) => left.id.localeCompare(right.id));
+        const signature = JSON.stringify(entries);
+        if (signature === this.stationDirectorySyncSignature) return;
+        this.stationDirectorySyncSignature = signature;
+
+        const batch = writeBatch(this.db);
+        entries.forEach((entry) => {
+            const directoryRef = doc(this.db, 'attendance_station_directory', entry.id);
+            if (!entry.configured || entry.archived) {
+                batch.delete(directoryRef);
+                return;
+            }
+            batch.set(directoryRef, {
+                employeeId: entry.id,
+                name: entry.name,
+                attendancePinConfigured: true,
+                attendancePinLoginEmail: entry.loginEmail,
+                isArchived: false,
+                updatedAtServer: serverTimestamp()
+            }, { merge: true });
+        });
+        if (entries.length) await batch.commit();
     }
 
     listenForVacationRecordChanges() {
@@ -1512,7 +1556,12 @@ export class DataManager {
         if (!employee) {
             throw new Error(t('timeClock.errors.employeeNotFound'));
         }
-        return this.invokeAttendanceApi('recordPunch', { employee, employeeId: employee.id, eventType, source, pin });
+        const result = await this.invokeAttendanceApi('recordPunch', { employee, employeeId: employee.id, eventType, source, pin });
+        if (this.isTimeClockStationUser() && result?.record && result?.recordId) {
+            this.attendanceRecords[result.recordId] = { id: result.recordId, ...result.record };
+            this.notifyDataChange();
+        }
+        return result;
     }
 
     async setAttendancePin(employeeId, pin) {
@@ -1551,6 +1600,7 @@ export class DataManager {
             throw new Error(t('timeClock.errors.secureServiceUnavailable'));
         }
         const result = await this.attendanceApi.addCorrection({
+            employee: this.resolveAttendanceEmployee(employeeId),
             employeeId,
             dateKey,
             eventType,
@@ -1615,7 +1665,9 @@ export class DataManager {
         if (typeof this.attendanceApi.authorizeOvertime !== 'function') {
             throw new Error(t('timeClock.errors.secureServiceUnavailable'));
         }
-        const result = await this.attendanceApi.authorizeOvertime(input);
+        const employee = this.resolveAttendanceEmployee(input?.employeeId);
+        if (!employee) throw new Error(t('timeClock.errors.employeeNotFound'));
+        const result = await this.attendanceApi.authorizeOvertime({ ...input, employee });
         return result?.data || result;
     }
 
@@ -1623,7 +1675,11 @@ export class DataManager {
         if (typeof this.attendanceApi.recordOvertimePunch !== 'function') {
             throw new Error(t('timeClock.errors.secureServiceUnavailable'));
         }
-        const result = await this.attendanceApi.recordOvertimePunch({ overtimeRecordId, action });
+        const result = await this.attendanceApi.recordOvertimePunch({
+            overtimeRecordId,
+            action,
+            linkedEmployeeId: this.currentUserContext.linkedEmployee?.id || null
+        });
         return result?.data || result;
     }
 
@@ -1641,6 +1697,29 @@ export class DataManager {
         }
         const result = await this.attendanceApi.reviewOvertimeRecord({ overtimeRecordId, note, restDate });
         return result?.data || result;
+    }
+
+    async createVerifiableAttendanceArchive(periodKey) {
+        if (!this.hasPrivilegedRole()) throw new Error(t('timeClock.errors.managerRequired'));
+        const period = normalizeArchivePeriod(periodKey);
+        const { startDateKey, endDateKey } = getArchivePeriodRange(period);
+        const rangeQuery = (collectionName) => query(
+            collection(this.db, collectionName),
+            where('dateKey', '>=', startDateKey),
+            where('dateKey', '<=', endDateKey)
+        );
+        const [attendanceSnapshot, overtimeSnapshot, canonicalSnapshot] = await Promise.all([
+            getDocsFromServer(rangeQuery('attendance_records')),
+            getDocsFromServer(rangeQuery('overtime_records')),
+            getDocsFromServer(rangeQuery('attendance_events'))
+        ]);
+        const toRecords = (snapshot) => snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+        return buildVerifiableAttendanceArchive({
+            periodKey: period,
+            attendanceRecords: toRecords(attendanceSnapshot),
+            overtimeRecords: toRecords(overtimeSnapshot),
+            canonicalEvents: toRecords(canonicalSnapshot)
+        });
     }
 
     getHolidays(year) {

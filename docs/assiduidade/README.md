@@ -7,28 +7,29 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 - registo individual de entrada, saída e início/fim de cada pausa;
 - marcação aceite apenas junto da hora do servidor Firestore, apresentada em `Europe/Lisbon` e conservada também em UTC;
 - turnos que terminam depois da meia-noite;
-- histórico de correções manuais sem apagar o evento original, sempre com motivo e autor;
+- histórico de correções manuais sem apagar o evento original, sempre com motivo, autor e evento canónico imutável;
 - revisão por responsável e trilho de auditoria;
 - retenção indicada por cinco anos, escrita incremental e proibição de apagar o registo pelo browser;
 - consulta limitada aos próprios registos para utilizadores ligados a um trabalhador;
 - estação de tablet com PIN individual validado pelo Firebase Authentication numa sessão isolada e limitação automática de tentativas abusivas;
 - exportação CSV e impressão semanal/mensal, incluindo trabalhadores arquivados;
 - mapa semanal com os campos estruturais do artigo 215.º;
-- registo separado de trabalho suplementar: autorização/fundamento, início, termo, visto do trabalhador, revisão e descanso compensatório.
+- registo separado de trabalho suplementar: autorização/fundamento, início, termo, visto do trabalhador, revisão e descanso compensatório;
+- arquivo mensal JSON com os registos e eventos canónicos acompanhado por manifesto SHA-256.
 
 ## Implantação sem plano pago
 
 1. Fazer cópia de segurança/exportação do Firestore atual.
 2. Implantar as regras do Firestore.
 3. Implantar o site.
-4. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, impressão e CSV.
+4. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, correção, visto, trabalho suplementar, impressão e CSV.
 5. Criar a conta exclusiva do tablet com apenas a função `time-clock-station`, iniciar sessão no tablet e configurar um PIN de teste.
 6. Confirmar que o PIN errado é recusado, que o PIN correto regista a marcação e que a sessão principal do tablet continua ativa.
-7. Preencher “Configuração legal do registo” na área de gestor.
+7. Preencher “Configuração legal do registo” e descarregar o primeiro “Arquivo mensal verificável” na área de gestor.
 8. Configurar os restantes PINs conforme a [política do tablet partilhado](POLITICA-PIN-TABLET.md).
 9. Imprimir e afixar o mapa aplicável; na Madeira, enviar a cópia à Direção Regional do Trabalho com a antecedência exigida e guardar prova.
 
-O fluxo normal de marcação e os PINs do tablet não usam Cloud Functions e são compatíveis com o plano gratuito Spark. A identidade técnica de cada PIN não recebe funções nem acesso geral: as regras permitem-lhe apenas consultar/criar o registo do trabalhador associado, sem apagar ou substituir marcações anteriores.
+Os fluxos de marcação, PIN, correção, visto e trabalho suplementar não usam Cloud Functions e são compatíveis com o plano gratuito Spark. Cada mutação cria, na mesma operação atómica, um evento canónico com hora do Firestore. Esses eventos não podem ser alterados nem apagados pelo browser. A conta principal do tablet consulta apenas um diretório mínimo; só a identidade temporária validada pelo PIN pode consultar e criar o registo do trabalhador associado.
 
 Para publicar as regras:
 

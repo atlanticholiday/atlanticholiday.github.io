@@ -39,6 +39,7 @@ import "./unit/features/search/quick-search-manager.test.js";
 import "./unit/features/tasks/task-utils.test.js";
 import "./unit/features/tasks/task-manager.test.js";
 import "./unit/features/scheduling/attendance-print-period.test.js";
+import "./unit/features/scheduling/attendance-archive.test.js";
 import "./unit/features/scheduling/attendance-records.test.js";
 import "./unit/features/scheduling/employee-records.test.js";
 import "./unit/features/scheduling/holiday-calculator.test.js";
