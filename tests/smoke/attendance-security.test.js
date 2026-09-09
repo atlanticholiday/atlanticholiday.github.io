@@ -9,6 +9,7 @@ describe('Attendance register security', () => {
         const overtimeRules = rules.match(/match \/overtime_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const employeeRules = rules.match(/match \/employees\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const scheduleDirectoryRules = rules.match(/match \/schedule_directory\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
+        const dailyNoteRules = rules.match(/match \/daily_notes\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const stationDirectoryRules = rules.match(/match \/attendance_station_directory\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const credentialRules = rules.match(/match \/attendance_credentials\/\{credentialEmail\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const pinRules = rules.match(/match \/attendance_pin_credentials\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
@@ -36,11 +37,33 @@ describe('Attendance register security', () => {
         assert.ok(!stationDirectoryRules.includes("hasRole('time-clock-station')"));
         assert.ok(!attendanceRules.includes("hasRole('time-clock-station')"));
         assert.ok(!overtimeRules.includes("hasRole('time-clock-station')"));
-        assert.includes(scheduleDirectoryRules, "hasRole('employee') && !hasRole('time-clock-station')");
+        assert.includes(scheduleDirectoryRules, "hasRole('employee') || hasLinkedEmployee()");
+        assert.includes(scheduleDirectoryRules, "!hasRole('time-clock-station')");
         assert.includes(scheduleDirectoryRules, 'request.resource.data.keys().hasOnly');
         assert.includes(scheduleDirectoryRules, 'request.resource.data.updatedAtServer == request.time');
+        assert.includes(scheduleDirectoryRules, "privileged() || hasApp('staff')");
+        assert.includes(employeeRules, 'isOwnEmployeeDocument(employeeId)');
+        assert.includes(employeeRules, 'allow list: if privileged()');
+        assert.ok(!employeeRules.includes("|| hasRole('employee')"));
+        assert.ok(!dailyNoteRules.includes("hasRole('employee')"));
         assert.includes(credentialRules, 'request.auth.token.email == credentialEmail');
         assert.includes(credentialRules, 'allow list: if false');
+    });
+
+    test('keeps private schedule fields out of the colleague data path', async () => {
+        const [mainResponse, dataManagerResponse, uiResponse] = await Promise.all([
+            fetch('../js/app/main.js'),
+            fetch('../js/features/scheduling/data-manager.js'),
+            fetch('../js/features/scheduling/ui-manager.js')
+        ]);
+        const mainSource = await mainResponse.text();
+        const dataManagerSource = await dataManagerResponse.text();
+        const uiSource = await uiResponse.text();
+
+        assert.includes(mainSource, 'getScheduleDataAccessPlan');
+        assert.includes(dataManagerSource, 'getEmployeeDirectoryCollectionName');
+        assert.includes(uiSource, 'dayDetailsPolicy.showDailyNote');
+        assert.includes(uiSource, 'dayDetailsPolicy.showExtraHours');
     });
 
     test('routes tablet punches through an isolated Firebase Authentication identity', async () => {

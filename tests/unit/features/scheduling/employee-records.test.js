@@ -2,6 +2,7 @@ import { describe, test, assert } from "../../../test-harness.js";
 import {
   buildEmployeeUpdatePayload,
   createEmployeeRecord,
+  getAvailabilityStatusForDate,
   getEmployeeStatusForDate,
   partitionEmployeesByArchiveStatus
 } from "../../../../js/features/scheduling/employee-records.js";
@@ -116,5 +117,17 @@ describe("Employee records", () => {
       getEmployeeStatusForDate(standardEmployee, new Date(2026, 11, 27), {}),
       "Scheduled Off"
     );
+  });
+
+  test("derives only generic availability from the limited schedule projection", () => {
+    const availabilityPeriods = [
+      { startDate: "2026-09-10", endDate: "2026-09-12", status: "Vacation" },
+      { startDate: "2026-09-20", endDate: "2026-09-21", status: "Absent" }
+    ];
+    const employee = { workDays: [1, 2, 3, 4, 5], overrides: {}, availabilityPeriods };
+
+    assert.equal(getAvailabilityStatusForDate(new Date(2026, 8, 11), availabilityPeriods), "On Vacation");
+    assert.equal(getEmployeeStatusForDate(employee, new Date(2026, 8, 21), {}), "Absent");
+    assert.equal(getAvailabilityStatusForDate(new Date(2026, 8, 22), availabilityPeriods), null);
   });
 });

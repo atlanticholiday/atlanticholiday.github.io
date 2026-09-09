@@ -61,7 +61,10 @@ describe("monthly-schedule-view", () => {
         return createDateKey(date);
       },
       getDailyNote() {
-        return "";
+        return "Private management note";
+      },
+      usesLimitedScheduleData() {
+        return true;
       },
       getActiveEmployees() {
         return employees;
@@ -79,6 +82,8 @@ describe("monthly-schedule-view", () => {
 
     const firstDateCellIndex = gridChildren.findIndex((node) => node.dataset?.date === "2026-03-01");
     assert.equal(firstDateCellIndex, 13, "March 2026 should render after six Monday-first placeholders");
+    assert.ok(!document.getElementById("calendar-grid").textContent.includes("Private management note"));
+    assert.ok(!document.getElementById("calendar-mobile-cards").textContent.includes("Private management note"));
 
     i18n.translations = previousTranslations;
     i18n.currentLang = previousLang;

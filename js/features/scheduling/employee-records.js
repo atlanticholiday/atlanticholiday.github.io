@@ -139,10 +139,30 @@ export function isDateInVacation(date, vacations = []) {
     });
 }
 
+export function getAvailabilityStatusForDate(date, availabilityPeriods = []) {
+    if (!Array.isArray(availabilityPeriods) || availabilityPeriods.length === 0) {
+        return null;
+    }
+
+    const dateKey = getDateKey(date);
+    const matchingPeriod = availabilityPeriods.find((period) => (
+        typeof period?.startDate === 'string'
+        && typeof period?.endDate === 'string'
+        && period.startDate <= dateKey
+        && period.endDate >= dateKey
+    ));
+
+    return matchingPeriod?.status === 'Vacation'
+        ? 'On Vacation'
+        : (matchingPeriod ? 'Absent' : null);
+}
+
 export function getEmployeeStatusForDate(employee, date, holidaysForYear = {}) {
     const dateKey = getDateKey(date);
 
     if (isDateInVacation(date, employee?.vacations)) return 'On Vacation';
+    const availabilityStatus = getAvailabilityStatusForDate(date, employee?.availabilityPeriods);
+    if (availabilityStatus) return availabilityStatus;
     if (employee?.overrides && employee.overrides[dateKey]) return employee.overrides[dateKey];
     if (holidaysForYear[dateKey]) return 'Off';
 

@@ -5,7 +5,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import {
-  connectFirestoreEmulator, deleteDoc, doc, getDoc,
+  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs,
   getFirestore, serverTimestamp, updateDoc, writeBatch
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
@@ -48,6 +48,8 @@ async function run() {
   try {
   const workerDb = client('worker', { sub: 'worker-uid', user_id: 'worker-uid', email: 'worker@example.com' });
   const adminDb = client('admin', { sub: 'admin-uid', user_id: 'admin-uid', email: 'admin@example.com' });
+  const staffDb = client('staff', { sub: 'staff-uid', user_id: 'staff-uid', email: 'staff@example.com' });
+  const linkedDb = client('linked', { sub: 'linked-uid', user_id: 'linked-uid', email: 'linked@example.com' });
   const credentialDb = client('credential', { sub: 'credential-uid', user_id: 'credential-uid', email: 'clock-test@example.com' });
   const recordId = `emp-1_${dateKey}`;
   const punchId = 'punch-clock-in-0001';
@@ -74,6 +76,10 @@ async function run() {
   console.log(stage);
   await batch.commit();
   if (!(await getDoc(doc(workerDb, 'attendance_records', recordId))).exists()) throw new Error('worker punch was not saved');
+  if (!(await getDoc(doc(workerDb, 'employees', 'emp-1'))).exists()) throw new Error('worker cannot read own employee document');
+  await expectDenied(() => getDoc(doc(workerDb, 'employees', 'emp-2')), 'other employee private document read');
+  await expectDenied(() => getDocs(collection(workerDb, 'employees')), 'employee directory list');
+  if ((await getDocs(collection(staffDb, 'employees'))).size < 2) throw new Error('authorized staff cannot read employee directory');
   await expectDenied(() => updateDoc(doc(workerDb, 'attendance_events', canonicalId), { reason: 'tampered' }), 'canonical update');
   await expectDenied(() => deleteDoc(doc(workerDb, 'attendance_records', recordId)), 'attendance delete');
 
@@ -196,6 +202,8 @@ async function run() {
   console.log(stage);
   await startBatch.commit();
   console.log('overtime start saved');
+  if (!(await getDoc(doc(workerDb, 'overtime_records', overtimeId))).exists()) throw new Error('worker cannot read own overtime');
+  await expectDenied(() => getDoc(doc(workerDb, 'overtime_records', 'peer-overtime-seeded')), 'other employee overtime read');
 
   stage = 'credential-private identity read';
   console.log(stage);
@@ -226,6 +234,12 @@ async function run() {
   const voidedRecord = await getDoc(doc(adminDb, 'attendance_records', recordId));
   if (!voidedRecord.data()?.voidedEventIds?.includes(manualPunchId)) throw new Error('admin void was not saved');
 
+  const privateNoteBatch = writeBatch(adminDb);
+  privateNoteBatch.set(doc(adminDb, 'daily_notes', dateKey), { note: 'Private management note' });
+  await privateNoteBatch.commit();
+  if (!(await getDoc(doc(adminDb, 'daily_notes', dateKey))).exists()) throw new Error('admin cannot read daily note');
+  await expectDenied(() => getDoc(doc(workerDb, 'daily_notes', dateKey)), 'private daily note read');
+
   stage = 'limited schedule directory';
   console.log(stage);
   const scheduleEntry = {
@@ -237,6 +251,10 @@ async function run() {
   scheduleBatch.set(doc(adminDb, 'schedule_directory', 'emp-1'), scheduleEntry);
   await scheduleBatch.commit();
   if (!(await getDoc(doc(workerDb, 'schedule_directory', 'emp-1'))).exists()) throw new Error('worker cannot read limited schedule directory');
+  if (!(await getDoc(doc(linkedDb, 'schedule_directory', 'emp-1'))).exists()) throw new Error('linked self-service account cannot read limited schedule directory');
+  await updateDoc(doc(staffDb, 'schedule_directory', 'emp-1'), {
+    name: 'Worker updated by staff', updatedAtServer: serverTimestamp()
+  });
   await expectDenied(() => getDoc(doc(client('station-schedule', {
     sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com'
   }), 'schedule_directory', 'emp-1')), 'station schedule directory read');

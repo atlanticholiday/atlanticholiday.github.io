@@ -43,6 +43,7 @@ import { NavigationManager } from '../features/scheduling/navigation-manager.js'
 import { TaskManager } from '../features/tasks/task-manager.js';
 import { PDFGenerator } from '../features/scheduling/pdf-generator.js';
 import { ScheduleManager } from '../features/scheduling/schedule-manager.js';
+import { getScheduleDataAccessPlan } from '../features/scheduling/schedule-data-access.js';
 import { createSparkAttendanceApi } from '../features/scheduling/spark-attendance-api.js';
 import { StaffManager } from '../features/scheduling/staff-manager.js';
 import { UIManager } from '../features/scheduling/ui-manager.js';
@@ -1058,8 +1059,15 @@ function subscribeScheduleDataForCurrentUser() {
     const canUseSchedule = dataManager.canAccessWorkSchedule?.();
     const canUseVacationCenter = dataManager.canAccessApp?.('vacationCenter');
     const isTimeClockStation = dataManager.isTimeClockStationUser?.();
+    const isLimitedScheduleUser = dataManager.usesLimitedScheduleData?.()
+        ?? dataManager.isScheduleOnlyUser?.();
     const needsTimeClockData = !isTimeClockStation && dataManager.isClockOnlyUser?.();
     const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || canUseVacationCenter || needsTimeClockData;
+    const scheduleDataAccess = getScheduleDataAccessPlan({
+        canUseSchedule,
+        canUseVacationCenter,
+        isLimitedScheduleUser
+    });
 
     if (!shouldLoadEmployeeDirectory) {
         return;
@@ -1067,13 +1075,19 @@ function subscribeScheduleDataForCurrentUser() {
 
     dataManager.listenForEmployeeChanges();
 
-    if (canUseSchedule || canUseVacationCenter) {
+    if (scheduleDataAccess.loadVacationRecords) {
         dataManager.listenForVacationRecordChanges();
+    }
+
+    if (scheduleDataAccess.loadGlobalSettings) {
         dataManager.listenForGlobalSettings();
     }
 
-    if (canUseSchedule) {
+    if (scheduleDataAccess.loadDailyNotes) {
         dataManager.listenForDailyNotes();
+    }
+
+    if (scheduleDataAccess.loadShiftPresets) {
         dataManager.listenForShiftPresets();
     }
 

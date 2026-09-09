@@ -3,6 +3,7 @@ import { i18n, t } from '../../core/i18n.js';
 import { formatLocalDateTime, formatTimeLabel } from './attendance-records.js';
 import { getAttendancePrintRange, normalizeAttendancePrintMode } from './attendance-print-period.js';
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
+import { getScheduleDayDetailsPolicy } from './schedule-data-access.js';
 import { getPaidShiftHours } from './shift-hours.js';
 import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './time-clock-controls.js';
 import {
@@ -432,12 +433,19 @@ export class UIManager {
         const [year, month, day] = dateKey.split('-').map(Number);
         const date = new Date(year, month - 1, day);
         const readOnlyScheduleMode = this.isScheduleOnlyMode();
+        const isLimitedScheduleData = this.dataManager.usesLimitedScheduleData?.() ?? readOnlyScheduleMode;
+        const dayDetailsPolicy = getScheduleDayDetailsPolicy({
+            isLimitedScheduleUser: isLimitedScheduleData
+        });
         document.getElementById('modal-date-header').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         // Add Daily Note Section
         const modalBody = document.querySelector('#day-details-modal .modal-content');
         let noteSection = document.getElementById('daily-note-section');
-        if (!noteSection) {
+        if (!dayDetailsPolicy.showDailyNote) {
+            noteSection?.remove();
+            noteSection = null;
+        } else if (!noteSection) {
             noteSection = document.createElement('div');
             noteSection.id = 'daily-note-section';
             noteSection.className = 'mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200';
@@ -446,8 +454,9 @@ export class UIManager {
             modalBody.insertBefore(noteSection, employeeList);
         }
 
-        const currentNote = this.dataManager.getDailyNote(dateKey);
-        noteSection.innerHTML = readOnlyScheduleMode ? `
+        const currentNote = dayDetailsPolicy.showDailyNote ? this.dataManager.getDailyNote(dateKey) : '';
+        if (noteSection) {
+            noteSection.innerHTML = readOnlyScheduleMode ? `
             <div class="mb-3 rounded-lg border border-sky-200 bg-white/80 px-3 py-3 text-sm text-sky-800">
                 ${t('schedule.selfService.readOnlyDayNotice')}
             </div>
@@ -457,8 +466,9 @@ export class UIManager {
             <label class="block text-sm font-medium text-yellow-800 mb-1">${t('schedule.modals.dailyNote')}</label>
             <textarea id="daily-note-input" rows="2" class="w-full p-2 border border-yellow-300 rounded-md text-sm focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="${t('schedule.modals.dailyNotePlaceholder')}">${currentNote}</textarea>
         `;
+        }
 
-        if (!readOnlyScheduleMode) {
+        if (dayDetailsPolicy.showDailyNote && !readOnlyScheduleMode) {
             const noteInput = document.getElementById('daily-note-input');
             noteInput?.addEventListener('change', () => {
                 this.dataManager.saveDailyNote(dateKey, noteInput.value);
@@ -467,9 +477,9 @@ export class UIManager {
 
         const listContainer = document.getElementById('modal-employee-list');
         listContainer.innerHTML = this.dataManager.getActiveEmployees().map(emp => {
-            const onVacation = this.dataManager.isDateInVacation(date, emp.vacations);
             const isHoliday = (this.dataManager.getAllHolidays()[year] && this.dataManager.getAllHolidays()[year][dateKey]);
             const currentStatus = this.dataManager.getEmployeeStatusForDate(emp, date);
+            const onVacation = currentStatus === 'On Vacation' || currentStatus === 'Vacation';
             const isScheduled = emp.workDays.includes(date.getDay());
             const defaultStatusText = isScheduled ? "Working" : "Off";
             let effectiveStatus = currentStatus;
@@ -487,6 +497,14 @@ export class UIManager {
                         ${status}
                     </label>
                 </div>`).join('');
+            const publicStatusKey = effectiveStatus === 'Working'
+                ? 'working'
+                : ((effectiveStatus === 'On Vacation' || effectiveStatus === 'Vacation')
+                    ? 'vacation'
+                    : ((effectiveStatus === 'Off' || effectiveStatus === 'Scheduled Off') ? 'off' : 'absent'));
+            const statusControls = isLimitedScheduleData
+                ? `<span data-public-schedule-status="${publicStatusKey}" class="inline-flex rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-700 ring-1 ring-slate-200">${t(`statuses.${publicStatusKey}`)}</span>`
+                : radioButtons;
 
             const extraHours = (emp.extraHours && emp.extraHours[dateKey]) || '';
             const extraHoursNote = (emp.extraHoursNotes && emp.extraHoursNotes[dateKey]) || '';
@@ -498,8 +516,8 @@ export class UIManager {
             return `
                 <div class="p-4 rounded-lg ${onVacation ? 'bg-blue-50' : (isHoliday ? 'bg-yellow-50' : 'bg-gray-50')}">
                     <p class="font-medium mb-2">${emp.name} ${statusText}</p>
-                    <div class="flex flex-wrap gap-2 items-center">${radioButtons}</div>
-                    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="flex flex-wrap gap-2 items-center">${statusControls}</div>
+                    ${dayDetailsPolicy.showExtraHours ? `<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                          <div class="md:col-span-1">
                             <label class="text-sm font-medium text-gray-700">Extra Hours</label>
                             <input type="number" min="0" step="0.5"
@@ -516,7 +534,7 @@ export class UIManager {
                                    ${readOnlyScheduleMode ? 'readonly disabled' : ''}
                                    data-employee-id="${emp.id}" data-date-key="${dateKey}">
                         </div>
-                    </div>
+                    </div>` : ''}
                 </div>`;
         }).join('');
         modal.classList.remove('hidden');

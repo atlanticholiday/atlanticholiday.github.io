@@ -3,7 +3,7 @@
 **Versão:** 1.0  
 **Data da decisão:** 9 de setembro de 2026
 
-**Estado:** política aprovada; a projeção mínima da etapa 2 está implementada em paralelo, mas as contas dos colegas ainda não foram mudadas para essa fonte. Enquanto as etapas seguintes não forem concluídas, as regras atuais do Firestore permitem uma leitura mais ampla da coleção `employees` por contas com a função `employee`.
+**Estado:** etapas 1 a 3 implementadas. As contas dos colegas usam a projeção mínima `schedule_directory`; os documentos completos de `employees` só podem ser lidos pelo próprio titular ou por perfis de gestão autorizados, e as notas diárias internas deixaram de ser carregadas ou apresentadas no horário self-service.
 
 ## Objetivo
 
@@ -70,6 +70,6 @@ Estados detalhados como doença, ausência pessoal ou ausência injustificada s�
 - A interface e as regras do Firestore devem aplicar a mesma limitação; esconder elementos apenas no ecrã não é controlo de acesso suficiente.
 - Qualquer novo campo deve ser privado por defeito. A partilha com a equipa exige finalidade operacional documentada.
 
-## Decisão para a próxima etapa
+## Próxima etapa
 
-A próxima etapa técnica é criar a projeção mínima do horário sem retirar ainda os acessos atuais. A mudança das leituras e o bloqueio definitivo da coleção `employees` serão feitos e testados em etapas posteriores, para não interromper o horário em produção.
+A próxima etapa é separar os detalhes privados de férias e ausências do estado operacional genérico já incluído na projeção do horário. Até essa etapa estar concluída, a coleção histórica `vacation_records` mantém as permissões anteriores, embora deixe de ser carregada pela interface normal de um colega.

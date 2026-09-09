@@ -1,5 +1,6 @@
 import { t } from '../../../core/i18n.js';
 import { getScheduleLocale } from './schedule-view-helpers.js';
+import { getScheduleDayDetailsPolicy } from '../schedule-data-access.js';
 
 function escapeHtml(value = '') {
     return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
@@ -106,13 +107,16 @@ function getDayLabel(summary, locale) {
 function buildMonthDaySummaries(dataManager, year, month, locale) {
     const currentYearHolidays = dataManager.getHolidaysForYear(year);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dayDetailsPolicy = getScheduleDayDetailsPolicy({
+        isLimitedScheduleUser: dataManager.usesLimitedScheduleData?.() === true
+    });
 
     return Array.from({ length: daysInMonth }, (_, index) => {
         const dayNumber = index + 1;
         const date = new Date(year, month, dayNumber);
         const dateKey = dataManager.getDateKey(date);
         const holidayName = currentYearHolidays[dateKey];
-        const dailyNote = dataManager.getDailyNote(dateKey);
+        const dailyNote = dayDetailsPolicy.showDailyNote ? dataManager.getDailyNote(dateKey) : '';
         const workingCount = dataManager.getActiveEmployees().filter((employee) => {
             return dataManager.getEmployeeStatusForDate(employee, date) === 'Working';
         }).length;

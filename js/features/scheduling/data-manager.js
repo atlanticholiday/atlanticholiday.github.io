@@ -50,6 +50,7 @@ import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 import { buildVerifiableAttendanceArchive, getArchivePeriodRange, normalizeArchivePeriod } from './attendance-archive.js';
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
 import { buildScheduleDirectoryEntries } from './schedule-directory.js';
+import { getEmployeeDirectoryCollectionName } from './schedule-data-access.js';
 import {
     buildVacation2026UpdatePlan,
     VACATION_2026_SOURCE_ROWS,
@@ -190,10 +191,11 @@ export class DataManager {
     }
 
     getEmployeesCollectionRef() {
-        if (this.isTimeClockStationUser()) {
-            return collection(this.db, 'attendance_station_directory');
-        }
-        return collection(this.db, "employees");
+        return collection(this.db, getEmployeeDirectoryCollectionName({
+            isTimeClockStation: this.isTimeClockStationUser(),
+            isLimitedScheduleUser: this.isScheduleOnlyUser(),
+            canAccessPrivateEmployeeDirectory: this.canAccessApp('staff')
+        }));
     }
 
     getAttendanceCollectionRef() {
@@ -374,7 +376,7 @@ export class DataManager {
     }
 
     syncScheduleDirectory(employees = []) {
-        if (!this.hasPrivilegedRole() || this.isTimeClockStationUser()) return Promise.resolve();
+        if ((!this.hasPrivilegedRole() && !this.canAccessApp('staff')) || this.isTimeClockStationUser()) return Promise.resolve();
         const entries = buildScheduleDirectoryEntries(employees);
         const signature = JSON.stringify(entries);
         if (signature === this.scheduleDirectorySyncSignature) return this.scheduleDirectorySyncPromise;
@@ -1431,6 +1433,10 @@ export class DataManager {
 
     isScheduleOnlyUser() {
         return this.isClockOnlyUser();
+    }
+
+    usesLimitedScheduleData() {
+        return this.isScheduleOnlyUser() && !this.canAccessApp('staff');
     }
 
     getAllowedScheduleViews() {

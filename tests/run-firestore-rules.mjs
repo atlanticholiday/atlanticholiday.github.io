@@ -44,9 +44,12 @@ async function seed(collectionName, documentId, fields) {
 
 await seed('userAccess', 'worker-uid', { active: true, roles: ['employee'], allowedApps: [], linkedEmployeeId: 'emp-1' });
 await seed('userAccess', 'admin-uid', { active: true, roles: ['admin'], allowedApps: [], linkedEmployeeId: '' });
+await seed('userAccess', 'staff-uid', { active: true, roles: ['employee'], allowedApps: ['staff'], linkedEmployeeId: 'emp-1' });
+await seed('userAccess', 'linked-uid', { active: true, roles: [], allowedApps: [], linkedEmployeeId: 'emp-1' });
 await seed('userAccess', 'station-uid', { active: true, roles: ['time-clock-station'], allowedApps: [], linkedEmployeeId: '' });
 await seed('employees', 'emp-1', { name: 'Worker', isArchived: false });
 await seed('employees', 'emp-2', { name: 'Station Worker', isArchived: false });
+await seed('overtime_records', 'peer-overtime-seeded', { employeeId: 'emp-2', employeeName: 'Station Worker' });
 await seed('attendance_credentials', 'clock-test@example.com', {
   email: 'clock-test@example.com', employeeId: 'emp-2', employeeName: 'Station Worker', active: true, createdAt: ''
 });

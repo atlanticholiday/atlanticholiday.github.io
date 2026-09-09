@@ -65,6 +65,18 @@ service cloud.firestore {
         && data.employeeId == accessData().linkedEmployeeId;
     }
 
+    function isOwnEmployeeDocument(employeeId) {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && employeeId == accessData().linkedEmployeeId;
+    }
+
+    function hasLinkedEmployee() {
+      return approved()
+        && accessData().linkedEmployeeId is string
+        && accessData().linkedEmployeeId.size() > 0;
+    }
+
     function attendanceCredentialPath() {
       return /databases/$(database)/documents/attendance_credentials/$(request.auth.token.email);
     }
@@ -966,9 +978,10 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read: if privileged()
+      allow get: if privileged()
         || hasApp('staff')
-        || hasRole('employee');
+        || isOwnEmployeeDocument(employeeId);
+      allow list: if privileged() || hasApp('staff');
       allow write: if privileged() || hasApp('staff');
     }
 
@@ -976,8 +989,8 @@ service cloud.firestore {
     // profile, attendance, overtime and leave-detail fields are not accepted.
     match /schedule_directory/{employeeId} {
       allow read: if privileged()
-        || (hasRole('employee') && !hasRole('time-clock-station'));
-      allow create, update: if privileged()
+        || ((hasRole('employee') || hasLinkedEmployee()) && !hasRole('time-clock-station'));
+      allow create, update: if (privileged() || hasApp('staff'))
         && request.resource.data.keys().hasAll([
           'name', 'department', 'workDays', 'shifts', 'overrides',
           'availabilityPeriods', 'schemaVersion', 'updatedAtServer'
@@ -996,7 +1009,7 @@ service cloud.firestore {
         && request.resource.data.availabilityPeriods is list
         && request.resource.data.schemaVersion == 1
         && request.resource.data.updatedAtServer == request.time;
-      allow delete: if privileged();
+      allow delete: if privileged() || hasApp('staff');
     }
 
     match /attendance_station_directory/{employeeId} {
@@ -1070,7 +1083,7 @@ service cloud.firestore {
     }
 
     match /daily_notes/{recordId} {
-      allow read: if privileged() || hasApp('staff') || hasRole('employee');
+      allow read: if privileged() || hasApp('staff');
       allow write: if privileged() || hasApp('staff');
     }
 
