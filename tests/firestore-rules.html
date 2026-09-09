@@ -22,14 +22,14 @@ function client(name, token) {
   return db;
 }
 
-function canonicalData({ id, recordId, employeeId = 'emp-1', category = 'attendance', action, eventType = null, targetEventId = null, reason = null, source = 'web', actorUid = null, actorEmail = null }) {
+function canonicalData({ id, recordId, employeeId = 'emp-1', category = 'attendance', action, eventType = null, targetEventId = null, reason = null, source = 'web', actorUid = null, actorEmail = null, eventEpochMs = epoch }) {
   const privilegedAction = action === 'manual-punch' || action === 'authorized';
   return {
     id, recordId, employeeId, dateKey, category, action, eventType, targetEventId,
     reason, source, actorUid: actorUid || (privilegedAction ? 'admin-uid' : 'worker-uid'),
     actorEmail: actorEmail || (privilegedAction ? 'admin@example.com' : 'worker@example.com'),
     occurredAt: eventType ? `${dateKey}T09:00:00` : null,
-    occurredAtEpochMs: eventType && source !== 'manual' ? epoch : null,
+    occurredAtEpochMs: eventType && source !== 'manual' ? eventEpochMs : null,
     serverRecordedAt: serverTimestamp(), schemaVersion: 1
   };
 }
@@ -124,22 +124,25 @@ async function run() {
 
   const manualCanonicalId = 'canonical-manual-0001';
   const manualPunchId = 'manual-clock-out-0001';
+  const manualPunch = {
+    ...punch, id: manualPunchId, type: 'clockOut', occurredAtEpochMs: null,
+    occurredAtUtc: null, source: 'manual', actorUid: 'admin-uid', actorEmail: 'admin@example.com',
+    note: 'Correção documentada', trustedServerTime: false, canonicalEventId: manualCanonicalId
+  };
+  const manualCorrection = {
+    id: 'correction-0001', type: 'event-added', eventId: manualPunchId, reason: 'Correção documentada',
+    actorUid: 'admin-uid', actorEmail: 'admin@example.com', recordedAt: now.toISOString(),
+    status: 'needs-attention', canonicalEventId: manualCanonicalId
+  };
   const manualBatch = writeBatch(adminDb);
   manualBatch.set(doc(adminDb, 'attendance_events', manualCanonicalId), canonicalData({
     id: manualCanonicalId, recordId, action: 'manual-punch', eventType: 'clockOut',
-    targetEventId: manualPunchId, reason: 'Correção documentada', source: 'manual'
+    targetEventId: manualPunchId, reason: 'Correção documentada', source: 'manual',
+    actorUid: 'admin-uid', actorEmail: 'admin@example.com'
   }));
   manualBatch.update(doc(adminDb, 'attendance_records', recordId), {
-    punches: [punch, {
-      ...punch, id: manualPunchId, type: 'clockOut', occurredAtEpochMs: null,
-      occurredAtUtc: null, source: 'manual', actorUid: 'admin-uid', actorEmail: 'admin@example.com',
-      note: 'Correção documentada', trustedServerTime: false, canonicalEventId: manualCanonicalId
-    }],
-    corrections: [{
-      id: 'correction-0001', type: 'event-added', eventId: manualPunchId, reason: 'Correção documentada',
-      actorUid: 'admin-uid', actorEmail: 'admin@example.com', recordedAt: now.toISOString(),
-      status: 'needs-attention', canonicalEventId: manualCanonicalId
-    }],
+    punches: [punch, manualPunch],
+    corrections: [manualCorrection],
     workerAttestation: null,
     review: { status: 'needs-attention', note: 'Correção documentada', reviewedAt: null, reviewedBy: null },
     reviewHistory: [], updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(),
@@ -171,16 +174,18 @@ async function run() {
   await overtimeBatch.commit();
 
   const startCanonicalId = 'canonical-overtime-start-0001';
+  const startEpoch = Date.now();
+  const startCapturedAt = new Date(startEpoch).toISOString();
   const startEvent = {
     id: 'overtime-start-event-0001', type: 'overtimeStart', occurredAt: `${dateKey}T09:00:00`,
-    occurredAtUtc: now.toISOString(), occurredAtEpochMs: epoch, timeZone: 'Europe/Lisbon',
-    capturedAt: now.toISOString(), source: 'web', actorUid: 'worker-uid', actorEmail: 'worker@example.com',
+    occurredAtUtc: startCapturedAt, occurredAtEpochMs: startEpoch, timeZone: 'Europe/Lisbon',
+    capturedAt: startCapturedAt, source: 'web', actorUid: 'worker-uid', actorEmail: 'worker@example.com',
     note: null, trustedServerTime: true, canonicalEventId: startCanonicalId
   };
   const startBatch = writeBatch(workerDb);
   startBatch.set(doc(workerDb, 'attendance_events', startCanonicalId), canonicalData({
     id: startCanonicalId, recordId: overtimeId, action: 'started', category: 'overtime',
-    eventType: 'overtimeStart', targetEventId: startEvent.id
+    eventType: 'overtimeStart', targetEventId: startEvent.id, eventEpochMs: startEpoch
   }));
   startBatch.update(doc(workerDb, 'overtime_records', overtimeId), {
     startEvent, status: 'in-progress', workerValidation: null,
@@ -196,6 +201,30 @@ async function run() {
   console.log(stage);
   if (!(await getDoc(doc(credentialDb, 'attendance_credentials', 'clock-test@example.com'))).exists()) throw new Error('credential cannot read its own mapping');
   if (!(await getDoc(doc(credentialDb, 'attendance_station_directory', 'emp-2'))).exists()) throw new Error('credential cannot read its own directory entry');
+
+  const voidCanonicalId = 'canonical-void-0001';
+  const voidCorrection = {
+    id: 'correction-void-0001', type: 'event-voided', eventId: manualPunchId,
+    reason: 'Marcação introduzida por engano', actorUid: 'admin-uid', actorEmail: 'admin@example.com',
+    recordedAt: now.toISOString(), status: 'needs-attention', canonicalEventId: voidCanonicalId
+  };
+  const voidBatch = writeBatch(adminDb);
+  voidBatch.set(doc(adminDb, 'attendance_events', voidCanonicalId), canonicalData({
+    id: voidCanonicalId, recordId, action: 'event-voided', targetEventId: manualPunchId,
+    reason: voidCorrection.reason, source: 'manual', actorUid: 'admin-uid', actorEmail: 'admin@example.com'
+  }));
+  voidBatch.update(doc(adminDb, 'attendance_records', recordId), {
+    voidedEventIds: [manualPunchId],
+    corrections: [manualCorrection, voidCorrection],
+    workerAttestation: null,
+    review: { status: 'needs-attention', note: voidCorrection.reason, reviewedAt: null, reviewedBy: null },
+    updatedAt: now.toISOString(), updatedAtServer: serverTimestamp(), lastCanonicalEventId: voidCanonicalId
+  });
+  stage = 'admin void correction';
+  console.log(stage);
+  await voidBatch.commit();
+  const voidedRecord = await getDoc(doc(adminDb, 'attendance_records', recordId));
+  if (!voidedRecord.data()?.voidedEventIds?.includes(manualPunchId)) throw new Error('admin void was not saved');
 
   stage = 'limited schedule directory';
   console.log(stage);

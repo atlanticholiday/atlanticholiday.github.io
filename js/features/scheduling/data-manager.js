@@ -1606,6 +1606,9 @@ export class DataManager {
             if (rawCode === 'attendance/pin-not-configured') {
                 throw new Error(t('timeClock.errors.pinNotConfigured'));
             }
+            if (rawCode === 'permission-denied' || rawCode === 'firestore/permission-denied') {
+                throw new Error(t('timeClock.errors.permissionDenied'));
+            }
 
             const code = rawCode.replace(/^functions\//, '');
             if (['internal', 'not-found', 'unavailable', 'unimplemented'].includes(code)) {

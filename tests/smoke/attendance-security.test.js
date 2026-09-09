@@ -77,6 +77,7 @@ describe('Attendance register security', () => {
 
         assert.includes(source, "['internal', 'not-found', 'unavailable', 'unimplemented']");
         assert.includes(source, "timeClock.errors.secureServiceNotDeployed");
+        assert.includes(source, "timeClock.errors.permissionDenied");
     });
 
     test('separates daily, history, overtime, management, and configuration workspaces', async () => {

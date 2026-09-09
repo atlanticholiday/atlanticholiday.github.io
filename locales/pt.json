@@ -3242,6 +3242,7 @@
             "pinFormat": "O PIN deve ter entre 6 e 10 algarismos.",
             "pinMismatch": "Os dois PINs não coincidem.",
             "pinNotConfigured": "Este colega ainda não tem um PIN configurado.",
+            "permissionDenied": "A sua conta não tem autorização para efetuar esta operação de assiduidade.",
             "secureServiceNotDeployed": "O serviço protegido ainda não está publicado no Firebase. Um administrador tem de ativar o plano Blaze e publicar as Cloud Functions.",
             "secureServiceUnavailable": "O serviço protegido de assiduidade não está disponível. Atualize a aplicação ou contacte o administrador."
         },

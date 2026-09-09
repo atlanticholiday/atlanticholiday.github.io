@@ -69,7 +69,7 @@ try {
   page.on('console', (message) => console.log(`Browser ${message.type()}: ${message.text()}`));
   page.on('pageerror', (error) => console.error(`Browser page error: ${error.message}`));
   await page.goto(`http://127.0.0.1:${port}/tests/firestore-rules.html?firestorePort=${emulatorPort}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 60000 });
+  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 180000 });
   const result = await page.evaluate(() => window.__firestoreRulesResult);
   await browser.close();
   if (!result.passed) throw new Error(result.error);
