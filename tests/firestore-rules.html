@@ -49,6 +49,7 @@ async function run() {
   const workerDb = client('worker', { sub: 'worker-uid', user_id: 'worker-uid', email: 'worker@example.com' });
   const adminDb = client('admin', { sub: 'admin-uid', user_id: 'admin-uid', email: 'admin@example.com' });
   const staffDb = client('staff', { sub: 'staff-uid', user_id: 'staff-uid', email: 'staff@example.com' });
+  const vacationDb = client('vacation', { sub: 'vacation-uid', user_id: 'vacation-uid', email: 'vacation@example.com' });
   const linkedDb = client('linked', { sub: 'linked-uid', user_id: 'linked-uid', email: 'linked@example.com' });
   const credentialDb = client('credential', { sub: 'credential-uid', user_id: 'credential-uid', email: 'clock-test@example.com' });
   const recordId = `emp-1_${dateKey}`;
@@ -76,10 +77,18 @@ async function run() {
   console.log(stage);
   await batch.commit();
   if (!(await getDoc(doc(workerDb, 'attendance_records', recordId))).exists()) throw new Error('worker punch was not saved');
-  if (!(await getDoc(doc(workerDb, 'employees', 'emp-1'))).exists()) throw new Error('worker cannot read own employee document');
-  await expectDenied(() => getDoc(doc(workerDb, 'employees', 'emp-2')), 'other employee private document read');
-  await expectDenied(() => getDocs(collection(workerDb, 'employees')), 'employee directory list');
-  if ((await getDocs(collection(staffDb, 'employees'))).size < 2) throw new Error('authorized staff cannot read employee directory');
+  const [workerEmployee, linkedEmployee, staffEmployees] = await Promise.all([
+    getDoc(doc(workerDb, 'employees', 'emp-1')),
+    getDoc(doc(linkedDb, 'employees', 'emp-1')),
+    getDocs(collection(staffDb, 'employees')),
+    expectDenied(() => getDoc(doc(workerDb, 'employees', 'emp-2')), 'other employee private document read'),
+    expectDenied(() => getDocs(collection(workerDb, 'employees')), 'employee directory list'),
+    expectDenied(() => getDoc(doc(linkedDb, 'employees', 'emp-2')), 'linked account other employee private document read'),
+    expectDenied(() => getDocs(collection(linkedDb, 'employees')), 'linked account employee directory list')
+  ]);
+  if (!workerEmployee.exists()) throw new Error('worker cannot read own employee document');
+  if (!linkedEmployee.exists()) throw new Error('linked self-service account cannot read own employee document');
+  if (staffEmployees.size < 2) throw new Error('authorized staff cannot read employee directory');
   await expectDenied(() => updateDoc(doc(workerDb, 'attendance_events', canonicalId), { reason: 'tampered' }), 'canonical update');
   await expectDenied(() => deleteDoc(doc(workerDb, 'attendance_records', recordId)), 'attendance delete');
 
@@ -239,6 +248,20 @@ async function run() {
   await privateNoteBatch.commit();
   if (!(await getDoc(doc(adminDb, 'daily_notes', dateKey))).exists()) throw new Error('admin cannot read daily note');
   await expectDenied(() => getDoc(doc(workerDb, 'daily_notes', dateKey)), 'private daily note read');
+
+  stage = 'private vacation records';
+  console.log(stage);
+  const [adminVacations, staffVacations, vacationCenterVacations] = await Promise.all([
+    getDocs(collection(adminDb, 'vacation_records')),
+    getDocs(collection(staffDb, 'vacation_records')),
+    getDocs(collection(vacationDb, 'vacation_records')),
+    expectDenied(() => getDoc(doc(workerDb, 'vacation_records', 'own-vacation-seeded')), 'ordinary employee own detailed vacation read'),
+    expectDenied(() => getDoc(doc(workerDb, 'vacation_records', 'peer-vacation-seeded')), 'other employee detailed vacation read'),
+    expectDenied(() => getDocs(collection(workerDb, 'vacation_records')), 'ordinary employee vacation collection list')
+  ]);
+  if (adminVacations.size < 2) throw new Error('admin cannot read detailed vacation records');
+  if (staffVacations.size < 2) throw new Error('authorized staff cannot read detailed vacation records');
+  if (vacationCenterVacations.size < 2) throw new Error('Vacation Center account cannot read detailed vacation records');
 
   stage = 'limited schedule directory';
   console.log(stage);

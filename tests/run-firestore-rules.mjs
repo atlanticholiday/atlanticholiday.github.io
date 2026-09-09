@@ -45,11 +45,20 @@ async function seed(collectionName, documentId, fields) {
 await seed('userAccess', 'worker-uid', { active: true, roles: ['employee'], allowedApps: [], linkedEmployeeId: 'emp-1' });
 await seed('userAccess', 'admin-uid', { active: true, roles: ['admin'], allowedApps: [], linkedEmployeeId: '' });
 await seed('userAccess', 'staff-uid', { active: true, roles: ['employee'], allowedApps: ['staff'], linkedEmployeeId: 'emp-1' });
+await seed('userAccess', 'vacation-uid', { active: true, roles: ['employee'], allowedApps: ['vacationCenter'], linkedEmployeeId: 'emp-1' });
 await seed('userAccess', 'linked-uid', { active: true, roles: [], allowedApps: [], linkedEmployeeId: 'emp-1' });
 await seed('userAccess', 'station-uid', { active: true, roles: ['time-clock-station'], allowedApps: [], linkedEmployeeId: '' });
 await seed('employees', 'emp-1', { name: 'Worker', isArchived: false });
 await seed('employees', 'emp-2', { name: 'Station Worker', isArchived: false });
 await seed('overtime_records', 'peer-overtime-seeded', { employeeId: 'emp-2', employeeName: 'Station Worker' });
+await seed('vacation_records', 'own-vacation-seeded', {
+  employeeId: 'emp-1', startDate: '2026-09-14', endDate: '2026-09-18',
+  type: 'vacation', status: 'approved', note: 'Private own vacation note'
+});
+await seed('vacation_records', 'peer-vacation-seeded', {
+  employeeId: 'emp-2', startDate: '2026-09-21', endDate: '2026-09-25',
+  type: 'sick', status: 'approved', note: 'Private peer absence note'
+});
 await seed('attendance_credentials', 'clock-test@example.com', {
   email: 'clock-test@example.com', employeeId: 'emp-2', employeeName: 'Station Worker', active: true, createdAt: ''
 });
@@ -72,7 +81,7 @@ try {
   page.on('console', (message) => console.log(`Browser ${message.type()}: ${message.text()}`));
   page.on('pageerror', (error) => console.error(`Browser page error: ${error.message}`));
   await page.goto(`http://127.0.0.1:${port}/tests/firestore-rules.html?firestorePort=${emulatorPort}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 180000 });
+  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 300000 });
   const result = await page.evaluate(() => window.__firestoreRulesResult);
   await browser.close();
   if (!result.passed) throw new Error(result.error);

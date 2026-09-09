@@ -1,9 +1,9 @@
 # Política de acesso dos colegas — self-service e horário de equipa
 
-**Versão:** 1.0  
+**Versão:** 1.1
 **Data da decisão:** 9 de setembro de 2026
 
-**Estado:** etapas 1 a 3 implementadas. As contas dos colegas usam a projeção mínima `schedule_directory`; os documentos completos de `employees` só podem ser lidos pelo próprio titular ou por perfis de gestão autorizados, e as notas diárias internas deixaram de ser carregadas ou apresentadas no horário self-service.
+**Estado:** etapa 4 concluída e etapa 5 iniciada. As contas dos colegas usam a projeção mínima `schedule_directory`; os documentos completos de `employees` só podem ser lidos pelo próprio titular ou por perfis de gestão autorizados. As notas diárias internas e os registos detalhados de férias/ausências deixaram de poder ser consultados por contas comuns de colegas.
 
 ## Objetivo
 
@@ -72,4 +72,6 @@ Estados detalhados como doença, ausência pessoal ou ausência injustificada s�
 
 ## Próxima etapa
 
-A próxima etapa é separar os detalhes privados de férias e ausências do estado operacional genérico já incluído na projeção do horário. Até essa etapa estar concluída, a coleção histórica `vacation_records` mantém as permissões anteriores, embora deixe de ser carregada pela interface normal de um colega.
+O estado operacional genérico de férias/ausências já é partilhado através de `schedule_directory`, sem motivo, nota ou dados de aprovação. A coleção detalhada `vacation_records` fica reservada à gestão, ao Staff autorizado e a contas com acesso ao Centro de Férias.
+
+Para concluir a etapa 5, falta criar uma projeção individual segura para o self-service. Essa projeção permitirá ao colega consultar apenas as suas próprias férias/ausências e respetivo estado, sem receber notas internas de gestão.

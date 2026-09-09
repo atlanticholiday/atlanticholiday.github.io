@@ -1165,19 +1165,9 @@ async function initializeScheduleApp() {
         } else {
             console.log('👥 Employees found, initializing main schedule app');
 
-            // Start listening for employee changes if not already listening
-            if (!dataManager.unsubscribe) {
-                console.log('🔄 [OPTIMIZATION] Starting employee listener for first time');
-                dataManager.listenForEmployeeChanges();
-                dataManager.listenForVacationRecordChanges();
-                dataManager.listenForDailyNotes();
-                dataManager.listenForShiftPresets();
-                dataManager.listenForGlobalSettings();
-                dataManager.listenForAttendanceChanges();
-                dataManager.listenForOvertimeChanges();
-            } else {
-                console.log('✅ [OPTIMIZATION] Employee listener already active');
-            }
+            // Reuse the access-aware subscription plan even on this fallback path.
+            console.log('🔄 [OPTIMIZATION] Confirming schedule listeners for the current access level');
+            subscribeScheduleDataForCurrentUser();
 
             // Show the main app interface
             const loadingEl = document.getElementById('loading');

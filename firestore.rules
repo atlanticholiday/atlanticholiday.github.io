@@ -1093,7 +1093,7 @@ service cloud.firestore {
     }
 
     match /vacation_records/{recordId} {
-      allow read: if privileged() || hasApp('staff') || hasRole('employee');
+      allow read: if privileged() || hasApp('staff') || hasApp('vacationCenter');
       allow write: if privileged() || hasApp('staff');
     }
 
