@@ -3,7 +3,7 @@
 **Versão:** 1.0  
 **Data da decisão:** 9 de setembro de 2026
 
-**Estado:** política aprovada; implementação técnica pendente das etapas seguintes. Enquanto essas etapas não forem concluídas, as regras atuais do Firestore permitem uma leitura mais ampla da coleção `employees` por contas com a função `employee`.
+**Estado:** política aprovada; a projeção mínima da etapa 2 está implementada em paralelo, mas as contas dos colegas ainda não foram mudadas para essa fonte. Enquanto as etapas seguintes não forem concluídas, as regras atuais do Firestore permitem uma leitura mais ampla da coleção `employees` por contas com a função `employee`.
 
 ## Objetivo
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const emulatorPort = Number.parseInt(process.argv[2] || '8080', 10);
 
 function startServer() {
   const server = createServer((request, response) => {
@@ -32,7 +33,7 @@ function firestoreValue(value) {
 }
 
 async function seed(collectionName, documentId, fields) {
-  const url = `http://127.0.0.1:8080/v1/projects/demo-horario/databases/(default)/documents/${collectionName}/${documentId}`;
+  const url = `http://127.0.0.1:${emulatorPort}/v1/projects/demo-horario/databases/(default)/documents/${collectionName}/${documentId}`;
   const response = await fetch(url, {
     method: 'PATCH',
     headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
@@ -67,8 +68,8 @@ try {
   const page = await browser.newPage();
   page.on('console', (message) => console.log(`Browser ${message.type()}: ${message.text()}`));
   page.on('pageerror', (error) => console.error(`Browser page error: ${error.message}`));
-  await page.goto(`http://127.0.0.1:${port}/tests/firestore-rules.html`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 30000 });
+  await page.goto(`http://127.0.0.1:${port}/tests/firestore-rules.html?firestorePort=${emulatorPort}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 60000 });
   const result = await page.evaluate(() => window.__firestoreRulesResult);
   await browser.close();
   if (!result.passed) throw new Error(result.error);

@@ -49,6 +49,7 @@ import { normalizeAllowedApps } from '../../shared/app-access.js';
 import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 import { buildVerifiableAttendanceArchive, getArchivePeriodRange, normalizeArchivePeriod } from './attendance-archive.js';
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
+import { buildScheduleDirectoryEntries } from './schedule-directory.js';
 import {
     buildVacation2026UpdatePlan,
     VACATION_2026_SOURCE_ROWS,
@@ -95,6 +96,8 @@ export class DataManager {
         this.overtimeRecords = {};
         this.stationIdentifiedEmployee = null;
         this.stationDirectorySyncSignature = null;
+        this.scheduleDirectorySyncSignature = null;
+        this.scheduleDirectorySyncPromise = Promise.resolve();
         this.hasLoadedVacationRecords = false;
         this.isSyncingLegacyVacationRecords = false;
         this.attendanceSyncState = {
@@ -169,6 +172,7 @@ export class DataManager {
         this.vacation2026UpdateError = null;
         this.selectedDateKey = null;
         this.hasLoadedVacationRecords = false;
+        this.scheduleDirectorySyncSignature = null;
         this.attendanceSyncState = {
             online: this.getBrowserOnlineStatus(),
             fromCache: false,
@@ -367,6 +371,51 @@ export class DataManager {
             }, { merge: true });
         });
         if (entries.length) await batch.commit();
+    }
+
+    syncScheduleDirectory(employees = []) {
+        if (!this.hasPrivilegedRole() || this.isTimeClockStationUser()) return Promise.resolve();
+        const entries = buildScheduleDirectoryEntries(employees);
+        const signature = JSON.stringify(entries);
+        if (signature === this.scheduleDirectorySyncSignature) return this.scheduleDirectorySyncPromise;
+        this.scheduleDirectorySyncSignature = signature;
+
+        const pendingSync = this.scheduleDirectorySyncPromise
+            .catch(() => undefined)
+            .then(() => this.commitScheduleDirectory(entries))
+            .catch((error) => {
+                if (this.scheduleDirectorySyncSignature === signature) {
+                    this.scheduleDirectorySyncSignature = null;
+                }
+                throw error;
+            });
+        this.scheduleDirectorySyncPromise = pendingSync;
+        return pendingSync;
+    }
+
+    async commitScheduleDirectory(entries = []) {
+        const directoryRef = collection(this.db, 'schedule_directory');
+        const currentSnapshot = await getDocsFresh(directoryRef);
+        const targetIds = new Set(entries.map((entry) => entry.id));
+        const operations = [
+            ...currentSnapshot.docs
+                .filter((entryDoc) => !targetIds.has(entryDoc.id))
+                .map((entryDoc) => ({ type: 'delete', ref: entryDoc.ref })),
+            ...entries.map((entry) => ({
+                type: 'set',
+                ref: doc(this.db, 'schedule_directory', entry.id),
+                data: { ...entry.data, updatedAtServer: serverTimestamp() }
+            }))
+        ];
+
+        for (let index = 0; index < operations.length; index += 400) {
+            const batch = writeBatch(this.db);
+            operations.slice(index, index + 400).forEach((operation) => {
+                if (operation.type === 'delete') batch.delete(operation.ref);
+                else batch.set(operation.ref, operation.data);
+            });
+            await batch.commit();
+        }
     }
 
     listenForVacationRecordChanges() {
@@ -726,6 +775,9 @@ export class DataManager {
 
         this.activeEmployees = this.rawActiveEmployees.map(mergeEmployee);
         this.archivedEmployees = this.rawArchivedEmployees.map(mergeEmployee);
+        this.syncScheduleDirectory(this.activeEmployees).catch((error) => {
+            console.error('Failed to synchronize the limited schedule directory:', error);
+        });
         this.preloadHolidaysAroundYear(this.currentDate.getFullYear());
         this.notifyDataChange();
     }

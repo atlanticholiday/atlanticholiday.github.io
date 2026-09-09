@@ -8,6 +8,7 @@ describe('Attendance register security', () => {
         const attendanceRules = rules.match(/match \/attendance_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const overtimeRules = rules.match(/match \/overtime_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const employeeRules = rules.match(/match \/employees\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
+        const scheduleDirectoryRules = rules.match(/match \/schedule_directory\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const stationDirectoryRules = rules.match(/match \/attendance_station_directory\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const credentialRules = rules.match(/match \/attendance_credentials\/\{credentialEmail\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const pinRules = rules.match(/match \/attendance_pin_credentials\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
@@ -35,6 +36,9 @@ describe('Attendance register security', () => {
         assert.ok(!stationDirectoryRules.includes("hasRole('time-clock-station')"));
         assert.ok(!attendanceRules.includes("hasRole('time-clock-station')"));
         assert.ok(!overtimeRules.includes("hasRole('time-clock-station')"));
+        assert.includes(scheduleDirectoryRules, "hasRole('employee') && !hasRole('time-clock-station')");
+        assert.includes(scheduleDirectoryRules, 'request.resource.data.keys().hasOnly');
+        assert.includes(scheduleDirectoryRules, 'request.resource.data.updatedAtServer == request.time');
         assert.includes(credentialRules, 'request.auth.token.email == credentialEmail');
         assert.includes(credentialRules, 'allow list: if false');
     });

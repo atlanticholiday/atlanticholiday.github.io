@@ -972,6 +972,33 @@ service cloud.firestore {
       allow write: if privileged() || hasApp('staff');
     }
 
+    // Minimum operational projection for the read-only team schedule. Private
+    // profile, attendance, overtime and leave-detail fields are not accepted.
+    match /schedule_directory/{employeeId} {
+      allow read: if privileged()
+        || (hasRole('employee') && !hasRole('time-clock-station'));
+      allow create, update: if privileged()
+        && request.resource.data.keys().hasAll([
+          'name', 'department', 'workDays', 'shifts', 'overrides',
+          'availabilityPeriods', 'schemaVersion', 'updatedAtServer'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name', 'department', 'workDays', 'shifts', 'overrides',
+          'availabilityPeriods', 'schemaVersion', 'updatedAtServer'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 200
+        && (request.resource.data.department == null || request.resource.data.department is string)
+        && request.resource.data.workDays is list
+        && request.resource.data.shifts is map
+        && request.resource.data.overrides is map
+        && request.resource.data.availabilityPeriods is list
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.updatedAtServer == request.time;
+      allow delete: if privileged();
+    }
+
     match /attendance_station_directory/{employeeId} {
       allow read: if privileged()
         || isOwnAttendance(resource.data)

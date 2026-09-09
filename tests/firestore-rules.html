@@ -10,6 +10,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const projectId = 'demo-horario';
+const emulatorPort = Number.parseInt(new URLSearchParams(window.location.search).get('firestorePort') || '8080', 10);
 const now = new Date();
 const epoch = now.getTime();
 const dateKey = now.toISOString().slice(0, 10);
@@ -17,7 +18,7 @@ const dateKey = now.toISOString().slice(0, 10);
 function client(name, token) {
   const app = initializeApp({ projectId, apiKey: 'demo-key', appId: `demo-${name}` }, name);
   const db = getFirestore(app);
-  connectFirestoreEmulator(db, '127.0.0.1', 8080, { mockUserToken: token });
+  connectFirestoreEmulator(db, '127.0.0.1', emulatorPort, { mockUserToken: token });
   return db;
 }
 
@@ -57,6 +58,7 @@ async function run() {
     actorUid: 'worker-uid', actorEmail: 'worker@example.com', note: null, trustedServerTime: true,
     canonicalEventId: canonicalId
   };
+
   const batch = writeBatch(workerDb);
   batch.set(doc(workerDb, 'attendance_events', canonicalId), canonicalData({
     id: canonicalId, recordId, action: 'punch', eventType: 'clockIn', targetEventId: punchId
@@ -194,6 +196,32 @@ async function run() {
   console.log(stage);
   if (!(await getDoc(doc(credentialDb, 'attendance_credentials', 'clock-test@example.com'))).exists()) throw new Error('credential cannot read its own mapping');
   if (!(await getDoc(doc(credentialDb, 'attendance_station_directory', 'emp-2'))).exists()) throw new Error('credential cannot read its own directory entry');
+
+  stage = 'limited schedule directory';
+  console.log(stage);
+  const scheduleEntry = {
+    name: 'Worker', department: 'Operations', workDays: [1, 2, 3, 4, 5],
+    shifts: { default: '09:00-18:00' }, overrides: { [dateKey]: 'Working' },
+    availabilityPeriods: [], schemaVersion: 1, updatedAtServer: serverTimestamp()
+  };
+  const scheduleBatch = writeBatch(adminDb);
+  scheduleBatch.set(doc(adminDb, 'schedule_directory', 'emp-1'), scheduleEntry);
+  await scheduleBatch.commit();
+  if (!(await getDoc(doc(workerDb, 'schedule_directory', 'emp-1'))).exists()) throw new Error('worker cannot read limited schedule directory');
+  await expectDenied(() => getDoc(doc(client('station-schedule', {
+    sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com'
+  }), 'schedule_directory', 'emp-1')), 'station schedule directory read');
+
+  const workerScheduleWrite = writeBatch(workerDb);
+  workerScheduleWrite.set(doc(workerDb, 'schedule_directory', 'forged-worker'), scheduleEntry);
+  await expectDenied(() => workerScheduleWrite.commit(), 'worker schedule directory write');
+
+  const privateFieldBatch = writeBatch(adminDb);
+  privateFieldBatch.set(doc(adminDb, 'schedule_directory', 'forged-private'), {
+    ...scheduleEntry, email: 'private@example.com', updatedAtServer: serverTimestamp()
+  });
+  await expectDenied(() => privateFieldBatch.commit(), 'private schedule directory field');
+
   stage = 'station restricted reads';
   console.log(stage);
   return { passed: true };
