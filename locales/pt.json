@@ -2984,7 +2984,7 @@
             "noSecondaryAction": "Sem ação secundária",
             "nextPunchHint": "Use o botão principal para guardar o próximo registo.",
             "defaultFeedback": "Use cada ação apenas uma vez. Depois de guardar com sucesso, a estação volta automaticamente à lista de colegas.",
-            "feedbackSaved": "{{action}} guardado para {{name}}. A regressar à lista de colegas...",
+            "feedbackSaved": "{{action}} guardado para {{name}}. Já pode escolher outro colega.",
             "tileWorkingBadge": "Em turno",
             "tileWorkingDetail": "Com entrada registada e a trabalhar.",
             "tileBreakBadge": "Em pausa",

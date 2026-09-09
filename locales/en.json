@@ -2978,7 +2978,7 @@
       "noSecondaryAction": "No secondary action",
       "nextPunchHint": "Use the main button to record the next punch.",
       "defaultFeedback": "Use one action only once. After a successful save, the station returns to the colleague list automatically.",
-      "feedbackSaved": "{{action}} saved for {{name}}. Returning to the colleague list...",
+      "feedbackSaved": "{{action}} saved for {{name}}. You can now choose another colleague.",
       "tileWorkingBadge": "On shift",
       "tileWorkingDetail": "Clocked in and working.",
       "tileBreakBadge": "On break",

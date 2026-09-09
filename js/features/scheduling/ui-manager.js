@@ -37,12 +37,15 @@ export class UIManager {
         this.timeClockStationFeedbackTone = 'success';
         this.timeClockStationNotice = '';
         this.timeClockStationNoticeTone = 'info';
-        this.timeClockStationResetTimer = null;
         this.timeClockStationIdleTimer = null;
         this.timeClockStationIdleMs = 60000;
         this.dataManager.subscribeToDataChanges(() => {
             this.updateView();
-            this.renderTimeClockPage();
+            if (this.isTimeClockStationSearchFocused()) {
+                this.refreshTimeClockStationDirectory();
+            } else {
+                this.renderTimeClockPage();
+            }
 
             // Refresh day details modal if it's open
             if (document.getElementById('day-details-modal').classList.contains('hidden') === false) {
@@ -1275,13 +1278,6 @@ export class UIManager {
         }
     }
 
-    clearTimeClockStationResetTimer() {
-        if (this.timeClockStationResetTimer) {
-            clearTimeout(this.timeClockStationResetTimer);
-            this.timeClockStationResetTimer = null;
-        }
-    }
-
     clearTimeClockStationNotice() {
         this.timeClockStationNotice = '';
         this.timeClockStationNoticeTone = 'info';
@@ -1289,7 +1285,7 @@ export class UIManager {
 
     setTimeClockStationNotice(message = '', tone = 'info') {
         this.timeClockStationNotice = typeof message === 'string' ? message : '';
-        this.timeClockStationNoticeTone = tone === 'warning' ? 'warning' : 'info';
+        this.timeClockStationNoticeTone = ['info', 'success', 'warning'].includes(tone) ? tone : 'info';
     }
 
     ensureTimeClockStationIdleTimer() {
@@ -1315,7 +1311,6 @@ export class UIManager {
     }
 
     resetTimeClockStationState({ clearSearch = false, clearFeedback = true } = {}) {
-        this.clearTimeClockStationResetTimer();
         this.timeClockStationEmployeeId = null;
         this.timeClockStationPin = '';
         if (clearSearch) {
@@ -1354,17 +1349,7 @@ export class UIManager {
         this.timeClockStationSearch = typeof query === 'string' ? query : '';
         this.clearTimeClockStationNotice();
         this.registerTimeClockStationActivity();
-        this.renderTimeClockPage();
-
-        requestAnimationFrame(() => {
-            const searchInput = document.getElementById('time-clock-station-search');
-            if (!searchInput) return;
-            searchInput.focus();
-            const cursorPosition = searchInput.value.length;
-            if (typeof searchInput.setSelectionRange === 'function') {
-                searchInput.setSelectionRange(cursorPosition, cursorPosition);
-            }
-        });
+        this.refreshTimeClockStationDirectory();
     }
 
     selectTimeClockStationEmployee(employeeId) {
@@ -1372,7 +1357,6 @@ export class UIManager {
             return;
         }
 
-        this.clearTimeClockStationResetTimer();
         this.clearTimeClockStationNotice();
         this.registerTimeClockStationActivity();
         this.timeClockStationEmployeeId = employeeId;
@@ -1384,7 +1368,7 @@ export class UIManager {
 
     clearTimeClockStationSelection() {
         this.registerTimeClockStationActivity();
-        this.resetTimeClockStationState({ clearSearch: false });
+        this.resetTimeClockStationState({ clearSearch: true });
         this.renderTimeClockPage();
     }
 
@@ -1419,7 +1403,6 @@ export class UIManager {
     }
 
     setTimeClockStationFeedback(message = '', tone = 'success') {
-        this.clearTimeClockStationResetTimer();
         this.registerTimeClockStationActivity();
         this.timeClockStationFeedback = message;
         this.timeClockStationFeedbackTone = tone === 'error' ? 'error' : 'success';
@@ -1430,20 +1413,10 @@ export class UIManager {
     handleTimeClockStationAttendanceSaved(employeeId, actionLabel) {
         const employee = this.dataManager.resolveAttendanceEmployee(employeeId);
         const employeeName = employee?.name || t('timeClock.station.selectedColleagueFallback');
-        this.clearTimeClockStationNotice();
-        this.timeClockStationFeedback = t('timeClock.station.feedbackSaved', { action: actionLabel, name: employeeName });
-        this.timeClockStationFeedbackTone = 'success';
-        this.timeClockStationPin = '';
+        const message = t('timeClock.station.feedbackSaved', { action: actionLabel, name: employeeName });
+        this.resetTimeClockStationState({ clearSearch: true, clearFeedback: true });
+        this.setTimeClockStationNotice(message, 'success');
         this.renderTimeClockPage();
-        this.scheduleTimeClockStationReset();
-    }
-
-    scheduleTimeClockStationReset(delayMs = 1800) {
-        this.clearTimeClockStationResetTimer();
-        this.timeClockStationResetTimer = setTimeout(() => {
-            this.resetTimeClockStationState({ clearSearch: true });
-            this.renderTimeClockPage();
-        }, delayMs);
     }
 
     getTimeClockModeToggleMarkup(activeMode = 'self-service') {
@@ -1502,16 +1475,96 @@ export class UIManager {
         };
     }
 
-    renderTimeClockStationPage(container) {
-        const now = new Date();
+    isTimeClockStationSearchFocused() {
+        return document.activeElement?.id === 'time-clock-station-search'
+            && !this.timeClockStationEmployeeId
+            && this.isTimeClockStationMode();
+    }
+
+    getTimeClockStationDirectoryView(now = new Date()) {
         const referenceDateTime = formatLocalDateTime(now);
         const employees = this.dataManager.getActiveEmployees();
         const filteredEmployees = filterTimeClockStationEmployees(employees, this.timeClockStationSearch);
+        const employeeDirectoryMarkup = filteredEmployees.length
+            ? filteredEmployees.map((employee) => {
+                const summary = this.dataManager.getAttendanceSummary(employee.id, now, { referenceDateTime });
+                const statusCopy = this.getTimeClockStationTileStatus(summary);
+                const staffMeta = [
+                    employee.staffNumber ? `${t('staff.staffNumber')} #${employee.staffNumber}` : null,
+                    employee.shifts?.default || null
+                ].filter(Boolean).join(' / ');
+
+                return `
+                    <button
+                        type="button"
+                        data-time-clock-station-employee-id="${this.escapeHtml(employee.id)}"
+                        class="time-clock-station-quick-tile group rounded-[28px] border border-slate-200 bg-slate-50/90 p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-400">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="time-clock-station-quick-tile__avatar flex items-center justify-center rounded-2xl bg-slate-900 font-semibold text-white">
+                                ${this.escapeHtml(getTimeClockStationEmployeeInitials(employee.name))}
+                            </div>
+                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusCopy.tone}">
+                                ${statusCopy.badge}
+                            </span>
+                        </div>
+                        <div class="mt-6">
+                            <div class="time-clock-station-quick-tile__name font-semibold tracking-tight text-slate-900">${this.escapeHtml(employee.name)}</div>
+                            <div class="mt-2 text-base text-slate-500">${this.escapeHtml(staffMeta || t('timeClock.station.activeColleague'))}</div>
+                        </div>
+                        <div class="mt-6 flex items-center justify-between text-sm font-medium text-slate-600">
+                            <span>${this.formatAttendanceEventLabel(summary?.primaryAction || 'clockIn')}</span>
+                            <span>${this.formatMinutesAsDuration(summary?.workedMinutes || 0)}</span>
+                        </div>
+                    </button>
+                `;
+            }).join('')
+            : `
+                <div class="rounded-[28px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-12 text-center text-slate-500">
+                    ${t('timeClock.station.noMatches')}
+                </div>
+            `;
+
+        return { employees, filteredEmployees, employeeDirectoryMarkup };
+    }
+
+    refreshTimeClockStationDirectory() {
+        if (this.timeClockStationEmployeeId) return false;
+        const grid = document.getElementById('time-clock-station-employee-grid');
+        const visibleCount = document.getElementById('time-clock-station-visible-count');
+        const visibleSummary = document.getElementById('time-clock-station-visible-summary');
+        const shownCount = document.getElementById('time-clock-station-shown-count');
+        if (!grid || !visibleCount || !visibleSummary || !shownCount) return false;
+
+        const { employees, filteredEmployees, employeeDirectoryMarkup } = this.getTimeClockStationDirectoryView();
+        visibleCount.textContent = String(filteredEmployees.length);
+        visibleSummary.textContent = t('timeClock.station.visibleCount', {
+            shown: filteredEmployees.length,
+            total: employees.length
+        });
+        shownCount.textContent = t('timeClock.station.shownCount', { count: filteredEmployees.length });
+        grid.innerHTML = employeeDirectoryMarkup;
+        return true;
+    }
+
+    renderTimeClockStationPage(container) {
+        const now = new Date();
+        const referenceDateTime = formatLocalDateTime(now);
+        const { employees, filteredEmployees, employeeDirectoryMarkup } = this.getTimeClockStationDirectoryView(now);
         const heroStatusMarkup = this.getTimeClockHeroStatusMarkup({ includeStationIdle: true });
+        const noticeToneClasses = {
+            warning: 'border-amber-200 bg-amber-50 text-amber-900',
+            success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+            info: 'border-sky-200 bg-sky-50 text-sky-900'
+        }[this.timeClockStationNoticeTone] || 'border-sky-200 bg-sky-50 text-sky-900';
+        const noticeBadgeClasses = {
+            warning: 'text-amber-700',
+            success: 'text-emerald-700',
+            info: 'text-sky-700'
+        }[this.timeClockStationNoticeTone] || 'text-sky-700';
         const stationNoticeMarkup = this.timeClockStationNotice
             ? `
-                <div class="rounded-[28px] border ${this.timeClockStationNoticeTone === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-sky-200 bg-sky-50 text-sky-900'} px-6 py-4">
-                    <div class="text-xs uppercase tracking-[0.24em] ${this.timeClockStationNoticeTone === 'warning' ? 'text-amber-700' : 'text-sky-700'}">${t('timeClock.station.noticeBadge')}</div>
+                <div class="rounded-[28px] border ${noticeToneClasses} px-6 py-4" role="status" aria-live="polite">
+                    <div class="text-xs uppercase tracking-[0.24em] ${noticeBadgeClasses}">${t('timeClock.station.noticeBadge')}</div>
                     <div class="mt-2 text-sm">${this.timeClockStationNotice}</div>
                 </div>
             `
@@ -1524,45 +1577,6 @@ export class UIManager {
         const modeToggle = this.getTimeClockModeToggleMarkup('station');
 
         if (!selectedEmployee) {
-            const employeeDirectoryMarkup = filteredEmployees.length
-                ? filteredEmployees.map((employee) => {
-                    const summary = this.dataManager.getAttendanceSummary(employee.id, now, { referenceDateTime });
-                    const statusCopy = this.getTimeClockStationTileStatus(summary);
-                    const staffMeta = [
-                        employee.staffNumber ? `${t('staff.staffNumber')} #${employee.staffNumber}` : null,
-                        employee.shifts?.default || null
-                    ].filter(Boolean).join(' / ');
-
-                    return `
-                        <button
-                            type="button"
-                            data-time-clock-station-employee-id="${employee.id}"
-                            class="time-clock-station-quick-tile group rounded-[28px] border border-slate-200 bg-slate-50/90 p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-400">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="time-clock-station-quick-tile__avatar flex items-center justify-center rounded-2xl bg-slate-900 font-semibold text-white">
-                                    ${getTimeClockStationEmployeeInitials(employee.name)}
-                                </div>
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusCopy.tone}">
-                                    ${statusCopy.badge}
-                                </span>
-                            </div>
-                            <div class="mt-6">
-                                <div class="time-clock-station-quick-tile__name font-semibold tracking-tight text-slate-900">${employee.name}</div>
-                                <div class="mt-2 text-base text-slate-500">${staffMeta || t('timeClock.station.activeColleague')}</div>
-                            </div>
-                            <div class="mt-6 flex items-center justify-between text-sm font-medium text-slate-600">
-                                <span>${this.formatAttendanceEventLabel(summary?.primaryAction || 'clockIn')}</span>
-                                <span>${this.formatMinutesAsDuration(summary?.workedMinutes || 0)}</span>
-                            </div>
-                        </button>
-                    `;
-                }).join('')
-                : `
-                    <div class="rounded-[28px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-12 text-center text-slate-500">
-                        ${t('timeClock.station.noMatches')}
-                    </div>
-                `;
-
             container.innerHTML = `
                 <div class="space-y-6">
                     <section class="rounded-[36px] bg-[linear-gradient(135deg,#020617_0%,#0f172a_46%,#1e293b_100%)] text-white p-8 lg:p-10 shadow-xl overflow-hidden relative">
@@ -1601,14 +1615,19 @@ export class UIManager {
                                 <input
                                     id="time-clock-station-search"
                                     type="search"
-                                    value="${this.timeClockStationSearch}"
+                                    inputmode="search"
+                                    enterkeyhint="search"
+                                    autocomplete="off"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    value="${this.escapeHtml(this.timeClockStationSearch)}"
                                     placeholder="${t('timeClock.station.searchPlaceholder')}"
                                     class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none">
                             </label>
                             <div class="mt-5 rounded-2xl bg-slate-900 px-4 py-4 text-white">
                                 <div class="text-xs uppercase tracking-[0.24em] text-slate-300">${t('timeClock.station.visibleNow')}</div>
-                                <div class="mt-2 text-4xl font-semibold tracking-tight">${filteredEmployees.length}</div>
-                                <div class="mt-1 text-sm text-slate-300">${t('timeClock.station.visibleCount', { shown: filteredEmployees.length, total: employees.length })}</div>
+                                <div id="time-clock-station-visible-count" class="mt-2 text-4xl font-semibold tracking-tight">${filteredEmployees.length}</div>
+                                <div id="time-clock-station-visible-summary" class="mt-1 text-sm text-slate-300">${t('timeClock.station.visibleCount', { shown: filteredEmployees.length, total: employees.length })}</div>
                             </div>
                             <div class="mt-5 space-y-3 text-sm text-slate-600">
                                 <div class="flex items-center justify-between">
@@ -1632,9 +1651,9 @@ export class UIManager {
                                     <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.colleaguesKicker')}</div>
                                     <h3 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">${t('timeClock.station.colleaguesTitle')}</h3>
                                 </div>
-                                <div class="text-sm text-slate-500">${t('timeClock.station.shownCount', { count: filteredEmployees.length })}</div>
+                                <div id="time-clock-station-shown-count" class="text-sm text-slate-500">${t('timeClock.station.shownCount', { count: filteredEmployees.length })}</div>
                             </div>
-                            <div class="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+                            <div id="time-clock-station-employee-grid" class="mt-6 grid gap-5 md:grid-cols-2 2xl:grid-cols-3" aria-live="polite">
                                 ${employeeDirectoryMarkup}
                             </div>
                         </section>

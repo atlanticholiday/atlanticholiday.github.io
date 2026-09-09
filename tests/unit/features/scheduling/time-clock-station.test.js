@@ -6,6 +6,8 @@ import {
   isAttendancePinReady,
   normalizeAttendancePin
 } from "../../../../js/features/scheduling/time-clock-station.js";
+import { UIManager } from "../../../../js/features/scheduling/ui-manager.js";
+import { resetDom } from "../../../test-utils.js";
 
 describe("Time clock station helpers", () => {
   test("filters colleagues by name, accents, and staff number", () => {
@@ -48,5 +50,71 @@ describe("Time clock station helpers", () => {
     assert.equal(applyAttendancePinKey("123456", "backspace"), "12345");
     assert.equal(applyAttendancePinKey("123456", "clear"), "");
     assert.equal(applyAttendancePinKey("123456", "x"), "123456");
+  });
+
+  test("filters the station directory without replacing the focused search input", () => {
+    resetDom(`
+      <input id="time-clock-station-search">
+      <span id="time-clock-station-visible-count"></span>
+      <span id="time-clock-station-visible-summary"></span>
+      <span id="time-clock-station-shown-count"></span>
+      <div id="time-clock-station-employee-grid"></div>
+    `);
+    const fixture = document.getElementById('fixture');
+    fixture.hidden = false;
+    const ui = Object.create(UIManager.prototype);
+    ui.timeClockStationEmployeeId = null;
+    ui.timeClockStationSearch = '';
+    ui.timeClockStationNotice = '';
+    ui.timeClockStationNoticeTone = 'info';
+    ui.dataManager = {
+      getActiveEmployees: () => [
+        { id: 'ana', name: 'Ana Silva' },
+        { id: 'bruno', name: 'Bruno Costa' }
+      ],
+      getAttendanceSummary: () => ({ status: 'clocked-out', primaryAction: 'clockIn', workedMinutes: 0 })
+    };
+    ui.registerTimeClockStationActivity = () => {};
+    ui.formatAttendanceEventLabel = (value) => value;
+    ui.formatMinutesAsDuration = () => '0h';
+    ui.renderTimeClockPage = () => { throw new Error('Search must not render the whole station page'); };
+
+    try {
+      const searchInput = document.getElementById('time-clock-station-search');
+      searchInput.focus();
+      searchInput.value = 'ana';
+      ui.setTimeClockStationSearch(searchInput.value);
+
+      assert.equal(document.activeElement, searchInput);
+      assert.equal(document.getElementById('time-clock-station-visible-count').textContent, '1');
+      assert.includes(document.getElementById('time-clock-station-employee-grid').textContent, 'Ana Silva');
+      assert.equal(document.getElementById('time-clock-station-employee-grid').textContent.includes('Bruno Costa'), false);
+    } finally {
+      fixture.hidden = true;
+      resetDom();
+    }
+  });
+
+  test("returns to the complete colleague list immediately after a saved punch", () => {
+    const ui = Object.create(UIManager.prototype);
+    let renderCount = 0;
+    ui.timeClockStationEmployeeId = 'ana';
+    ui.timeClockStationSearch = 'ana';
+    ui.timeClockStationPin = '123456';
+    ui.timeClockStationFeedback = '';
+    ui.timeClockStationFeedbackTone = 'success';
+    ui.timeClockStationNotice = '';
+    ui.timeClockStationNoticeTone = 'info';
+    ui.dataManager = { resolveAttendanceEmployee: () => ({ id: 'ana', name: 'Ana Silva' }) };
+    ui.renderTimeClockPage = () => { renderCount += 1; };
+
+    ui.handleTimeClockStationAttendanceSaved('ana', 'Entrada');
+
+    assert.equal(ui.timeClockStationEmployeeId, null);
+    assert.equal(ui.timeClockStationSearch, '');
+    assert.equal(ui.timeClockStationPin, '');
+    assert.ok(ui.timeClockStationNotice);
+    assert.equal(ui.timeClockStationNoticeTone, 'success');
+    assert.equal(renderCount, 1);
   });
 });
