@@ -1312,6 +1312,7 @@ export class UIManager {
 
     resetTimeClockStationState({ clearSearch = false, clearFeedback = true } = {}) {
         this.timeClockStationEmployeeId = null;
+        this.dataManager.clearIdentifiedAttendanceStationEmployee?.();
         this.timeClockStationPin = '';
         if (clearSearch) {
             this.timeClockStationSearch = '';
@@ -1376,6 +1377,16 @@ export class UIManager {
         return this.timeClockStationPin;
     }
 
+    handleTimeClockStationEmployeeIdentified(employee) {
+        if (!employee?.id) return;
+        this.clearTimeClockStationNotice();
+        this.timeClockStationEmployeeId = employee.id;
+        this.timeClockStationFeedback = '';
+        this.timeClockStationFeedbackTone = 'success';
+        this.registerTimeClockStationActivity();
+        this.renderTimeClockPage();
+    }
+
     setTimeClockStationPin(value = '') {
         this.timeClockStationPin = normalizeAttendancePin(value);
         this.clearTimeClockStationNotice();
@@ -1393,6 +1404,10 @@ export class UIManager {
         }
         const ready = isAttendancePinReady(this.timeClockStationPin);
         document.querySelectorAll('[data-time-clock-action][data-time-clock-employee-id]').forEach((button) => {
+            button.disabled = !ready;
+            button.setAttribute('aria-disabled', String(!ready));
+        });
+        document.querySelectorAll('[data-time-clock-station-identify]').forEach((button) => {
             button.disabled = !ready;
             button.setAttribute('aria-disabled', String(!ready));
         });
@@ -1546,10 +1561,89 @@ export class UIManager {
         return true;
     }
 
+    renderTimeClockStationIdentificationPage(container, now, { heroStatusMarkup, stationNoticeMarkup, modeToggle }) {
+        const pinReady = isAttendancePinReady(this.timeClockStationPin);
+        const pinDigitButtons = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => `
+            <button type="button" data-time-clock-pin-key="${digit}" class="time-clock-pin-key">${digit}</button>
+        `).join('');
+        const feedbackClasses = this.timeClockStationFeedbackTone === 'error'
+            ? 'text-rose-200'
+            : 'text-emerald-200';
+
+        container.innerHTML = `
+            <div class="space-y-4">
+                ${stationNoticeMarkup}
+                <section class="relative min-h-[calc(100svh-9rem)] overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#020617_0%,#0f172a_55%,#1e293b_100%)] p-5 text-white shadow-xl sm:p-7 lg:p-9">
+                    <div class="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_58%)]"></div>
+                    <div class="relative mx-auto flex h-full max-w-5xl flex-col">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100">
+                                <span class="inline-block h-2 w-2 rounded-full bg-emerald-300"></span>
+                                ${t('timeClock.modes.sharedTabletStation')}
+                            </div>
+                            ${modeToggle}
+                        </div>
+
+                        <div class="mt-5 grid flex-1 items-center gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:gap-12">
+                            <div class="max-w-xl">
+                                <div class="text-xs uppercase tracking-[0.28em] text-slate-300">${t('timeClock.station.kicker')}</div>
+                                <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">${t('timeClock.station.pinFirstTitle')}</h2>
+                                <p class="mt-3 text-base text-slate-300 sm:text-lg">${t('timeClock.station.pinFirstDescription')}</p>
+                                <div class="mt-5 flex items-end gap-4">
+                                    <div>
+                                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.station.currentTime')}</div>
+                                        <div id="time-clock-current-time" class="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                                    </div>
+                                    <div id="time-clock-current-date" class="pb-1 text-sm text-slate-400">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                                </div>
+                                <div class="mt-5 hidden lg:block">${heroStatusMarkup}</div>
+                            </div>
+
+                            <form id="time-clock-station-identification-form" class="mx-auto w-full max-w-md rounded-[30px] border border-white/15 bg-white/10 p-4 backdrop-blur-sm sm:p-5">
+                                <label for="time-clock-station-pin" class="block text-center text-sm font-semibold text-white">${t('timeClock.station.pinTitle')}</label>
+                                <input
+                                    id="time-clock-station-pin"
+                                    name="pin"
+                                    type="password"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                    autocomplete="off"
+                                    minlength="${ATTENDANCE_PIN_MIN_LENGTH}"
+                                    maxlength="${ATTENDANCE_PIN_MAX_LENGTH}"
+                                    value="${this.escapeHtml(this.timeClockStationPin)}"
+                                    aria-describedby="time-clock-station-pin-progress"
+                                    autofocus
+                                    class="mt-3 w-full rounded-2xl border border-white/25 bg-slate-950/40 px-5 py-3 text-center text-3xl tracking-[0.4em] text-white outline-none transition focus:border-white/60 focus:bg-slate-950/55">
+                                <div id="time-clock-station-pin-progress" class="mt-2 min-h-5 text-center text-sm tracking-[0.18em] text-slate-300">
+                                    ${this.timeClockStationPin.length ? '●'.repeat(this.timeClockStationPin.length) : t('timeClock.station.pinWaiting')}
+                                </div>
+                                <div class="mt-3 grid grid-cols-3 gap-2" aria-label="${t('timeClock.station.pinKeypadLabel')}">
+                                    ${pinDigitButtons}
+                                    <button type="button" data-time-clock-pin-key="clear" class="time-clock-pin-key time-clock-pin-key--utility">${t('timeClock.station.pinClear')}</button>
+                                    <button type="button" data-time-clock-pin-key="0" class="time-clock-pin-key">0</button>
+                                    <button type="button" data-time-clock-pin-key="backspace" aria-label="${t('timeClock.station.pinBackspace')}" class="time-clock-pin-key time-clock-pin-key--utility">⌫</button>
+                                </div>
+                                <button
+                                    type="submit"
+                                    data-time-clock-station-identify
+                                    ${pinReady ? '' : 'disabled aria-disabled="true"'}
+                                    class="mt-3 w-full rounded-2xl bg-white px-5 py-3 text-lg font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35">
+                                    ${t('timeClock.station.identify')}
+                                </button>
+                                <p id="time-clock-feedback" class="mt-3 min-h-5 text-center text-sm ${feedbackClasses}" role="status" aria-live="polite">
+                                    ${this.timeClockStationFeedback || t('timeClock.station.pinPrivacyHint')}
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        `;
+    }
+
     renderTimeClockStationPage(container) {
         const now = new Date();
         const referenceDateTime = formatLocalDateTime(now);
-        const { employees, filteredEmployees, employeeDirectoryMarkup } = this.getTimeClockStationDirectoryView(now);
         const heroStatusMarkup = this.getTimeClockHeroStatusMarkup({ includeStationIdle: true });
         const noticeToneClasses = {
             warning: 'border-amber-200 bg-amber-50 text-amber-900',
@@ -1569,12 +1663,25 @@ export class UIManager {
                 </div>
             `
             : '';
-        const selectedEmployee = employees.find((employee) => employee.id === this.timeClockStationEmployeeId) || null;
+        const selectedEmployee = this.dataManager.getIdentifiedAttendanceStationEmployee?.()
+            || this.dataManager.resolveAttendanceEmployee?.(this.timeClockStationEmployeeId)
+            || null;
         if (this.timeClockStationEmployeeId && !selectedEmployee) {
             this.resetTimeClockStationState({ clearSearch: false });
         }
 
         const modeToggle = this.getTimeClockModeToggleMarkup('station');
+
+        if (!selectedEmployee) {
+            this.renderTimeClockStationIdentificationPage(container, now, {
+                heroStatusMarkup,
+                stationNoticeMarkup,
+                modeToggle
+            });
+            return;
+        }
+
+        const { employees, filteredEmployees, employeeDirectoryMarkup } = this.getTimeClockStationDirectoryView(now);
 
         if (!selectedEmployee) {
             container.innerHTML = `
@@ -1729,8 +1836,12 @@ export class UIManager {
                             <div id="time-clock-current-time" class="text-6xl font-semibold tracking-tight">${this.formatLocaleTime(now, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                             <div id="time-clock-current-date" class="mt-2 text-slate-300">${this.formatLocaleDate(now, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
                         </div>
+                        <div class="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-medium text-emerald-100">
+                            <span aria-hidden="true">✓</span>
+                            ${t('timeClock.station.pinConfirmed')}
+                        </div>
                         ${pinConfigured ? `
-                            <div class="mt-9 max-w-lg border-t border-white/12 pt-7">
+                            <div class="hidden" aria-hidden="true">
                                 <label for="time-clock-station-pin" class="block text-sm font-semibold text-white">${t('timeClock.station.pinTitle')}</label>
                                 <p class="mt-1 text-sm text-slate-400">${t('timeClock.station.pinDescription')}</p>
                                 <input

@@ -93,6 +93,7 @@ export class DataManager {
         this.unsubscribeVacationRecords = null;
         this.attendanceRecords = {};
         this.overtimeRecords = {};
+        this.stationIdentifiedEmployee = null;
         this.stationDirectorySyncSignature = null;
         this.hasLoadedVacationRecords = false;
         this.isSyncingLegacyVacationRecords = false;
@@ -155,6 +156,7 @@ export class DataManager {
         this.vacationRecords = [];
         this.attendanceRecords = {};
         this.overtimeRecords = {};
+        this.stationIdentifiedEmployee = null;
         this.dailyNotes = {};
         this.shiftPresets = [];
         this.minStaffThreshold = 0;
@@ -1485,6 +1487,10 @@ export class DataManager {
             return null;
         }
 
+        if (this.stationIdentifiedEmployee?.id === employeeId) {
+            return this.stationIdentifiedEmployee;
+        }
+
         const matchedEmployee = this.activeEmployees.find((entry) => entry.id === employeeId)
             || this.archivedEmployees.find((entry) => entry.id === employeeId);
 
@@ -1527,6 +1533,12 @@ export class DataManager {
             if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(rawCode)) {
                 throw new Error(t('timeClock.errors.pinInvalid'));
             }
+            if (rawCode === 'auth/email-already-in-use') {
+                throw new Error(t('timeClock.errors.pinAlreadyUsed'));
+            }
+            if (rawCode === 'attendance/invalid-pin') {
+                throw new Error(t('timeClock.errors.pinInvalid'));
+            }
             if (rawCode === 'auth/too-many-requests') {
                 throw new Error(t('timeClock.errors.pinLocked'));
             }
@@ -1562,6 +1574,22 @@ export class DataManager {
             this.notifyDataChange();
         }
         return result;
+    }
+
+    async identifyAttendanceStationEmployee(pin) {
+        const result = await this.invokeAttendanceApi('identifyStationEmployee', { pin });
+        const employee = result?.employee;
+        if (!employee?.id) throw new Error(t('timeClock.errors.pinInvalid'));
+        this.stationIdentifiedEmployee = employee;
+        return employee;
+    }
+
+    getIdentifiedAttendanceStationEmployee() {
+        return this.stationIdentifiedEmployee;
+    }
+
+    clearIdentifiedAttendanceStationEmployee() {
+        this.stationIdentifiedEmployee = null;
     }
 
     async setAttendancePin(employeeId, pin) {

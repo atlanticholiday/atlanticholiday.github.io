@@ -7,6 +7,7 @@ import {
   normalizeAttendancePin
 } from "../../../../js/features/scheduling/time-clock-station.js";
 import { UIManager } from "../../../../js/features/scheduling/ui-manager.js";
+import { deriveAttendanceCredentialEmail } from "../../../../js/features/scheduling/spark-attendance-api.js";
 import { resetDom } from "../../../test-utils.js";
 
 describe("Time clock station helpers", () => {
@@ -52,6 +53,17 @@ describe("Time clock station helpers", () => {
     assert.equal(applyAttendancePinKey("123456", "x"), "123456");
   });
 
+  test("derives a stable private authentication identity from each unique PIN", async () => {
+    const first = await deriveAttendanceCredentialEmail('123456');
+    const repeated = await deriveAttendanceCredentialEmail('123456');
+    const second = await deriveAttendanceCredentialEmail('654321');
+
+    assert.equal(first, repeated);
+    assert.notEqual(first, second);
+    assert.equal(first.includes('123456'), false);
+    assert.match(first, /^clock-[a-f0-9]{40}@my-work-schedule-4dc10\.firebaseapp\.com$/);
+  });
+
   test("filters the station directory without replacing the focused search input", () => {
     resetDom(`
       <input id="time-clock-station-search">
@@ -95,7 +107,7 @@ describe("Time clock station helpers", () => {
     }
   });
 
-  test("returns to the complete colleague list immediately after a saved punch", () => {
+  test("returns to the private PIN screen immediately after a saved punch", () => {
     const ui = Object.create(UIManager.prototype);
     let renderCount = 0;
     ui.timeClockStationEmployeeId = 'ana';
@@ -116,5 +128,49 @@ describe("Time clock station helpers", () => {
     assert.ok(ui.timeClockStationNotice);
     assert.equal(ui.timeClockStationNoticeTone, 'success');
     assert.equal(renderCount, 1);
+  });
+
+  test("opens only the authenticated colleague after PIN identification", () => {
+    const ui = Object.create(UIManager.prototype);
+    let renderCount = 0;
+    ui.timeClockStationEmployeeId = null;
+    ui.timeClockStationFeedback = 'old error';
+    ui.timeClockStationFeedbackTone = 'error';
+    ui.timeClockStationNotice = '';
+    ui.timeClockStationNoticeTone = 'info';
+    ui.registerTimeClockStationActivity = () => {};
+    ui.renderTimeClockPage = () => { renderCount += 1; };
+
+    ui.handleTimeClockStationEmployeeIdentified({ id: 'ana', name: 'Ana Silva' });
+
+    assert.equal(ui.timeClockStationEmployeeId, 'ana');
+    assert.equal(ui.timeClockStationFeedback, '');
+    assert.equal(renderCount, 1);
+  });
+
+  test("renders the PIN keypad before any colleague identity or directory", () => {
+    resetDom('<div id="station"></div>');
+    const ui = Object.create(UIManager.prototype);
+    ui.timeClockStationPin = '';
+    ui.timeClockStationFeedback = '';
+    ui.timeClockStationFeedbackTone = 'success';
+    ui.formatLocaleTime = () => '09:30:00';
+    ui.formatLocaleDate = () => 'quarta-feira, 9 de setembro';
+
+    try {
+      const container = document.getElementById('station');
+      ui.renderTimeClockStationIdentificationPage(container, new Date(), {
+        heroStatusMarkup: '',
+        stationNoticeMarkup: '',
+        modeToggle: ''
+      });
+
+      assert.ok(container.querySelector('#time-clock-station-pin'));
+      assert.ok(container.querySelector('[data-time-clock-station-identify]'));
+      assert.equal(Boolean(container.querySelector('#time-clock-station-search')), false);
+      assert.equal(Boolean(container.querySelector('[data-time-clock-station-employee-id]')), false);
+    } finally {
+      resetDom();
+    }
   });
 });

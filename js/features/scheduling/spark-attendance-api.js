@@ -12,6 +12,7 @@ import {
     collection,
     deleteField,
     doc,
+    getDoc,
     getFirestore,
     runTransaction,
     serverTimestamp,
@@ -274,10 +275,6 @@ async function recordPunchWithIdentity(db, user, employee, eventType, source) {
     return result;
 }
 
-function createCredentialEmail() {
-    return `clock-${createId().replaceAll('-', '')}@my-work-schedule-4dc10.firebaseapp.com`.toLowerCase();
-}
-
 function deriveCredentialPassword(pin) {
     return `Ponto!${String(pin || '')}!AtlanticHoliday#2026`;
 }
@@ -292,19 +289,74 @@ function requireValidPin(pin) {
     return normalizedPin;
 }
 
+export async function deriveAttendanceCredentialEmail(pin) {
+    const normalizedPin = requireValidPin(pin);
+    const digest = await globalThis.crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(`atlantic-holiday-attendance:${normalizedPin}`)
+    );
+    const hex = [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+    return `clock-${hex.slice(0, 40)}@my-work-schedule-4dc10.firebaseapp.com`;
+}
+
 export function createSparkAttendanceApi({ db, auth }) {
     const credentialApp = initializeApp(Config.firebaseConfig, CREDENTIAL_APP_NAME);
     const credentialAuth = getAuth(credentialApp);
     const credentialDb = getFirestore(credentialApp);
     const persistenceReady = setPersistence(credentialAuth, inMemoryPersistence);
 
-    function clearPreviousCredential(batch, employee) {
+    function clearPreviousCredential(batch, employee, replacementEmail = null) {
         const previousEmail = canonicalizeEmail(employee?.attendancePinLoginEmail || '');
-        if (!previousEmail) return;
+        if (!previousEmail || previousEmail === canonicalizeEmail(replacementEmail || '')) return;
         batch.delete(doc(db, 'attendance_credentials', previousEmail));
     }
 
     return {
+        async identifyStationEmployee({ pin }) {
+            const normalizedPin = requireValidPin(pin);
+            const credentialEmail = await deriveAttendanceCredentialEmail(normalizedPin);
+            await persistenceReady;
+            try {
+                await signInWithEmailAndPassword(
+                    credentialAuth,
+                    credentialEmail,
+                    deriveCredentialPassword(normalizedPin)
+                );
+                const credentialSnapshot = await getDoc(doc(credentialDb, 'attendance_credentials', credentialEmail));
+                if (!credentialSnapshot.exists() || credentialSnapshot.data()?.active !== true) {
+                    const error = new Error('attendance-invalid-pin');
+                    error.code = 'attendance/invalid-pin';
+                    throw error;
+                }
+                const credentialData = credentialSnapshot.data();
+                const employeeId = String(credentialData.employeeId || '');
+                const directorySnapshot = await getDoc(doc(credentialDb, 'attendance_station_directory', employeeId));
+                if (!directorySnapshot.exists() || directorySnapshot.data()?.isArchived === true) {
+                    const error = new Error('attendance-employee-not-found');
+                    error.code = 'attendance/employee-not-found';
+                    throw error;
+                }
+                const directoryData = directorySnapshot.data();
+                return {
+                    employee: {
+                        id: employeeId,
+                        employeeId,
+                        name: String(directoryData.name || credentialData.employeeName || '').slice(0, 200),
+                        attendancePinConfigured: true,
+                        attendancePinLoginEmail: credentialEmail,
+                        isArchived: false,
+                        status: directoryData.status || 'clocked-out',
+                        lastEventType: directoryData.lastEventType || null,
+                        lastOccurredAtEpochMs: directoryData.lastOccurredAtEpochMs || null
+                    }
+                };
+            } finally {
+                await signOut(credentialAuth).catch(() => {});
+            }
+        },
+
         async recordPunch({ employee, employeeId, eventType, source = 'web', pin = null }) {
             if (!employee?.id || employee.id !== employeeId) {
                 throw new Error('attendance-employee-not-found');
@@ -655,16 +707,26 @@ export function createSparkAttendanceApi({ db, auth }) {
             }
             const normalizedPin = requireValidPin(pin);
             await persistenceReady;
-            const credentialEmail = createCredentialEmail();
+            const credentialEmail = await deriveAttendanceCredentialEmail(normalizedPin);
             let credential = null;
+            let createdCredential = false;
             try {
-                credential = await createUserWithEmailAndPassword(
-                    credentialAuth,
-                    credentialEmail,
-                    deriveCredentialPassword(normalizedPin)
-                );
+                if (canonicalizeEmail(employee.attendancePinLoginEmail || '') === credentialEmail) {
+                    credential = await signInWithEmailAndPassword(
+                        credentialAuth,
+                        credentialEmail,
+                        deriveCredentialPassword(normalizedPin)
+                    );
+                } else {
+                    credential = await createUserWithEmailAndPassword(
+                        credentialAuth,
+                        credentialEmail,
+                        deriveCredentialPassword(normalizedPin)
+                    );
+                    createdCredential = true;
+                }
                 const batch = writeBatch(db);
-                clearPreviousCredential(batch, employee);
+                clearPreviousCredential(batch, employee, credentialEmail);
                 batch.set(doc(db, 'attendance_credentials', credentialEmail), {
                     email: credentialEmail,
                     employeeId: employee.id,
@@ -691,7 +753,7 @@ export function createSparkAttendanceApi({ db, auth }) {
                 await batch.commit();
                 return { employeeId, configured: true };
             } catch (error) {
-                if (credential?.user) await deleteUser(credential.user).catch(() => {});
+                if (createdCredential && credential?.user) await deleteUser(credential.user).catch(() => {});
                 throw error;
             } finally {
                 await signOut(credentialAuth).catch(() => {});

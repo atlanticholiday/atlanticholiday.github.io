@@ -1058,7 +1058,7 @@ function subscribeScheduleDataForCurrentUser() {
     const canUseSchedule = dataManager.canAccessWorkSchedule?.();
     const canUseVacationCenter = dataManager.canAccessApp?.('vacationCenter');
     const isTimeClockStation = dataManager.isTimeClockStationUser?.();
-    const needsTimeClockData = isTimeClockStation || dataManager.isClockOnlyUser?.();
+    const needsTimeClockData = !isTimeClockStation && dataManager.isClockOnlyUser?.();
     const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || canUseVacationCenter || needsTimeClockData;
 
     if (!shouldLoadEmployeeDirectory) {

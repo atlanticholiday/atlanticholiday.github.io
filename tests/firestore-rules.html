@@ -5,7 +5,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import {
-  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs,
+  connectFirestoreEmulator, deleteDoc, doc, getDoc,
   getFirestore, serverTimestamp, updateDoc, writeBatch
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
@@ -47,7 +47,6 @@ async function run() {
   try {
   const workerDb = client('worker', { sub: 'worker-uid', user_id: 'worker-uid', email: 'worker@example.com' });
   const adminDb = client('admin', { sub: 'admin-uid', user_id: 'admin-uid', email: 'admin@example.com' });
-  const stationDb = client('station', { sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com' });
   const credentialDb = client('credential', { sub: 'credential-uid', user_id: 'credential-uid', email: 'clock-test@example.com' });
   const recordId = `emp-1_${dateKey}`;
   const punchId = 'punch-clock-in-0001';
@@ -191,9 +190,10 @@ async function run() {
   await startBatch.commit();
   console.log('overtime start saved');
 
-  stage = 'station directory read';
+  stage = 'credential-private identity read';
   console.log(stage);
-  if ((await getDocs(collection(stationDb, 'attendance_station_directory'))).size !== 2) throw new Error('station directory not readable');
+  if (!(await getDoc(doc(credentialDb, 'attendance_credentials', 'clock-test@example.com'))).exists()) throw new Error('credential cannot read its own mapping');
+  if (!(await getDoc(doc(credentialDb, 'attendance_station_directory', 'emp-2'))).exists()) throw new Error('credential cannot read its own directory entry');
   stage = 'station restricted reads';
   console.log(stage);
   return { passed: true };

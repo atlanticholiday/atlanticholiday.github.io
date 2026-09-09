@@ -974,7 +974,6 @@ service cloud.firestore {
 
     match /attendance_station_directory/{employeeId} {
       allow read: if privileged()
-        || hasRole('time-clock-station')
         || isOwnAttendance(resource.data)
         || isCredentialOwnAttendance(resource.data)
         || isOwnAttendanceDirectoryId(employeeId)
@@ -1023,10 +1022,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Isolated Firebase Auth identities used only to validate a colleague's PIN
-    // on the shared tablet. Their mapping is invisible to browser clients.
+    // Isolated Firebase Auth identities used only to validate a colleague's PIN.
+    // A credential can read only its own mapping; listing is always forbidden.
     match /attendance_credentials/{credentialEmail} {
-      allow read: if false;
+      allow get: if signedIn()
+        && request.auth.token.email == credentialEmail
+        && resource.data.email == credentialEmail
+        && resource.data.active == true;
+      allow list: if false;
       allow create, update, delete: if privileged();
     }
 

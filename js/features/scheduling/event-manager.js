@@ -343,6 +343,24 @@ export class EventManager {
             });
 
             timeClockContent.addEventListener('submit', async (e) => {
+                if (e.target.id === 'time-clock-station-identification-form') {
+                    e.preventDefault();
+                    const submitButton = e.target.querySelector('[data-time-clock-station-identify]');
+                    if (submitButton) submitButton.disabled = true;
+                    try {
+                        const employee = await this.dataManager.identifyAttendanceStationEmployee(
+                            this.uiManager.getTimeClockStationPin()
+                        );
+                        this.uiManager.handleTimeClockStationEmployeeIdentified(employee);
+                    } catch (error) {
+                        this.uiManager.setTimeClockStationFeedback(
+                            error.message || t('timeClock.errors.pinInvalid'),
+                            'error'
+                        );
+                    }
+                    return;
+                }
+
                 if (e.target.matches('[data-overtime-review-form]')) {
                     e.preventDefault();
                     const feedback = e.target.querySelector('[data-overtime-review-feedback]');
