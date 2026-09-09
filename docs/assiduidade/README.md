@@ -11,6 +11,7 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 - revisão por responsável e trilho de auditoria;
 - retenção indicada por cinco anos, escrita incremental e proibição de apagar o registo pelo browser;
 - consulta limitada aos próprios registos para utilizadores ligados a um trabalhador;
+- separação documentada entre dados próprios, horário mínimo da equipa e dados reservados, conforme a [política de acesso dos colegas](POLITICA-ACESSO-COLEGAS.md);
 - estação de tablet com PIN individual validado pelo Firebase Authentication numa sessão isolada e limitação automática de tentativas abusivas;
 - exportação CSV e impressão semanal/mensal, incluindo trabalhadores arquivados;
 - mapa semanal com os campos estruturais do artigo 215.º;

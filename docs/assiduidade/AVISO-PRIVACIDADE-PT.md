@@ -2,6 +2,8 @@
 
 > Modelo a completar e validar antes de entregar aos trabalhadores.
 
+> A descrição da partilha mínima no horário da equipa só deve ser apresentada como medida implementada depois de concluídas e testadas as restrições técnicas previstas na política de acesso dos colegas.
+
 **Responsável pelo tratamento:** [NOME LEGAL, NIF, MORADA]
 
 **Contacto para privacidade:** [EMAIL / MORADA]
@@ -12,7 +14,9 @@ Tratamos identificação profissional, vínculo ao utilizador, horas de entrada 
 
 ## Dados, destinatários e alojamento
 
-Os dados são consultados apenas por pessoas autorizadas nas áreas de gestão/RH, prestadores estritamente necessários ao alojamento e suporte, e autoridades legalmente competentes. Completar: [FORNECEDOR CLOUD, REGIÃO DE ALOJAMENTO, SUBCONTRATANTES E TRANSFERÊNCIAS INTERNACIONAIS].
+Os registos individuais de assiduidade, trabalho suplementar, correções, justificações e detalhes de férias são consultados apenas pelo próprio trabalhador e por pessoas autorizadas nas áreas de gestão/RH. Para organização operacional do trabalho, os colegas autenticados podem consultar no horário da equipa apenas o nome profissional, departamento quando necessário, horário previsto e o estado genérico `Trabalha`, `Folga`, `Férias` ou `Ausente`. Não são partilhados com outros colegas contactos pessoais, motivos de ausência, marcações reais, totais trabalhados, trabalho suplementar ou notas privadas.
+
+Podem ainda receber dados os prestadores estritamente necessários ao alojamento e suporte e as autoridades legalmente competentes. Completar: [FORNECEDOR CLOUD, REGIÃO DE ALOJAMENTO, SUBCONTRATANTES E TRANSFERÊNCIAS INTERNACIONAIS].
 
 Não são recolhidos GPS, fotografia, impressão digital ou reconhecimento facial por esta aplicação. Se no futuro forem usados dados biométricos ou localização, é necessária uma avaliação jurídica e de proteção de dados separada antes da ativação.
 
