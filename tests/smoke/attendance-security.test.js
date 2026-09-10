@@ -63,13 +63,15 @@ describe('Attendance register security', () => {
     });
 
     test('keeps private schedule fields out of the colleague data path', async () => {
-        const [mainResponse, dataManagerResponse, uiResponse, eventManagerResponse, personalDataResponse] = await Promise.all([
+        const [indexResponse, mainResponse, dataManagerResponse, uiResponse, eventManagerResponse, personalDataResponse] = await Promise.all([
+            fetch('../index.html'),
             fetch('../js/app/main.js'),
             fetch('../js/features/scheduling/data-manager.js'),
             fetch('../js/features/scheduling/ui-manager.js'),
             fetch('../js/features/scheduling/event-manager.js'),
             fetch('../js/features/scheduling/personal-data-self-service.js')
         ]);
+        const indexHtml = await indexResponse.text();
         const mainSource = await mainResponse.text();
         const dataManagerSource = await dataManagerResponse.text();
         const uiSource = await uiResponse.text();
@@ -89,6 +91,8 @@ describe('Attendance register security', () => {
         assert.includes(uiSource, 'data-export-personal-data');
         assert.includes(uiSource, 'personal-data-correction-form');
         assert.includes(uiSource, 'data-personal-correction-review-form');
+        assert.includes(uiSource, 'name="privacyContact" type="text" inputmode="tel"');
+        assert.includes(indexHtml, 'id="edit-employee-shift" inputmode="numeric"');
         assert.includes(eventManagerSource, 'createSelfServiceCorrectionRequest');
         assert.includes(eventManagerSource, 'reviewSelfServiceCorrectionRequest');
         assert.includes(personalDataSource, 'record?.employeeId === employeeId');

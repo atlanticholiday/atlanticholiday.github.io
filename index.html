@@ -2362,9 +2362,9 @@ Mountain Villa, Sintra Hills, V4"
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Default Shift</label>
                     <div class="flex gap-2">
-                        <select id="edit-employee-shift" class="flex-1 p-3 border rounded-md focus-ring transition-all">
-                            <!-- Populated by JS -->
-                        </select>
+                        <input type="text" id="edit-employee-shift" inputmode="numeric"
+                            placeholder="e.g. 9:00-18:00" pattern="[0-9]{1,2}:[0-9]{2}-[0-9]{1,2}:[0-9]{2}"
+                            class="flex-1 p-3 border rounded-md focus-ring transition-all">
                         <button id="edit-add-shift-btn" type="button"
                             class="p-3 bg-gray-100 rounded-md hover:bg-gray-200" title="Add new shift preset">
                             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
