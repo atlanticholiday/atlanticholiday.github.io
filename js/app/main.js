@@ -427,6 +427,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         navigationManager = new NavigationManager({
             getDataManager: () => dataManager
         });
+        window.navigationManager = navigationManager;
+        window.appSwitcher = navigationManager.appSwitcher;
         taskManager = new TaskManager({
             db,
             dataManager,

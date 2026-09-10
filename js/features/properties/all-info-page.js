@@ -1662,13 +1662,22 @@ function createAsanaProjectHeader(documentRef, properties) {
         `;
         backContainer.appendChild(backBtn);
     }
-    backBtn.onclick = () => {
+    const goBackToLanding = (e) => {
+        e?.preventDefault?.();
         if (window.navigationManager?.showLandingPage) {
             window.navigationManager.showLandingPage();
-        } else if (window.history.length > 1) {
-            window.history.back();
+            return;
         }
+        const allInfoPage = documentRef.getElementById('allinfo-page');
+        const landingPage = documentRef.getElementById('landing-page');
+        if (allInfoPage && landingPage) {
+            allInfoPage.classList.add('hidden');
+            landingPage.classList.remove('hidden');
+            return;
+        }
+        window.location.href = 'index.html';
     };
+    backBtn.onclick = goBackToLanding;
 
     const actionsTarget = header.querySelector('.asana-header-actions');
     const headerRight = existingHeader?.querySelector('.header-right');
@@ -1676,7 +1685,39 @@ function createAsanaProjectHeader(documentRef, properties) {
         while (headerRight.firstChild) {
             actionsTarget.appendChild(headerRight.firstChild);
         }
-    } else if (!actionsTarget.querySelector('[data-lang-option]')) {
+    }
+
+    // Ensure App Switcher trigger is always present
+    let appTrigger = actionsTarget.querySelector('[data-app-switcher-trigger]');
+    if (!appTrigger) {
+        appTrigger = documentRef.createElement('button');
+        appTrigger.type = 'button';
+        appTrigger.className = 'app-switcher-trigger';
+        appTrigger.dataset.appSwitcherTrigger = '';
+        appTrigger.setAttribute('aria-controls', 'app-switcher-panel');
+        appTrigger.setAttribute('aria-expanded', 'false');
+        appTrigger.setAttribute('aria-label', 'Apps');
+        appTrigger.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1.5"></rect>
+                <rect x="14" y="4" width="6" height="6" rx="1.5"></rect>
+                <rect x="4" y="14" width="6" height="6" rx="1.5"></rect>
+                <rect x="14" y="14" width="6" height="6" rx="1.5"></rect>
+            </svg>
+            <span>Apps</span>
+        `;
+        actionsTarget.prepend(appTrigger);
+    }
+    appTrigger.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        if (switcher) {
+            switcher.toggle(appTrigger);
+        }
+    };
+
+    if (!actionsTarget.querySelector('[data-lang-option]')) {
         const langWrap = documentRef.createElement('div');
         langWrap.className = 'inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-sm asana-lang-switcher';
         langWrap.innerHTML = `
@@ -1720,8 +1761,9 @@ function createAsanaProjectHeader(documentRef, properties) {
     }
 
     try {
-        window.navigationManager?.appSwitcher?.installTriggers?.();
-        window.appSwitcher?.installTriggers?.();
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        switcher?.updateTriggerLabels?.();
+        switcher?.installTriggers?.();
     } catch (e) {
         // Non-browser or test environment
     }
@@ -2480,8 +2522,9 @@ export function initializeAllInfoPage({
     filterWrapper.appendChild(missingPanel);
 
     try {
-        window.navigationManager?.appSwitcher?.installTriggers?.();
-        window.appSwitcher?.installTriggers?.();
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        switcher?.updateTriggerLabels?.();
+        switcher?.installTriggers?.();
     } catch (e) {
         // no-op
     }
