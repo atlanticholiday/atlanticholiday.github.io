@@ -70,11 +70,42 @@ const COPY = {
         field: 'Field',
         allFields: 'All fields',
         searchCategories: 'Search categories...',
+        project: {
+            title: 'All Property Info',
+            subtitle: 'Atlantic Holiday property portfolio & operational database',
+            onTrack: 'On Track',
+            needsAttention: 'Needs Attention',
+            progress: '{{percent}}% complete ({{complete}} of {{total}} fields)'
+        },
         workspace: {
-            table: 'Table',
-            missing: 'Missing data',
-            compare: 'Alojamentos check',
-            edit: 'Edit tools'
+            table: 'List',
+            board: 'Board',
+            missing: 'Missing Queue',
+            compare: 'Excel Sync',
+            edit: 'Batch Tools'
+        },
+        board: {
+            needsInfo: 'Needs Info',
+            inProgress: 'In Progress',
+            complete: 'Complete',
+            cardsCount: '{{count}} properties',
+            emptyColumn: 'No properties in this section',
+            fieldsComplete: '{{complete}} of {{total}} fields',
+            openDrawer: 'Open details'
+        },
+        drawer: {
+            title: 'Property Details',
+            markComplete: 'Mark Complete',
+            completed: 'Completed',
+            close: 'Close',
+            fullSettings: 'Open in Settings',
+            overview: 'Property Overview',
+            categories: 'Category Details',
+            saved: 'Saved',
+            saving: 'Saving...',
+            saveChanges: 'Save Changes',
+            noMissing: 'All fields filled',
+            missingFieldsBadge: '{{count}} missing'
         },
         editToolsTitle: 'Choose an edit mode',
         editToolsBody: 'Use Bulk Edit for many properties, Sequential Edit for one-by-one review, or Accordion Edit for full category forms.',
@@ -170,11 +201,42 @@ const COPY = {
         field: 'Campo',
         allFields: 'Todos os campos',
         searchCategories: 'Pesquisar categorias...',
+        project: {
+            title: 'Toda a Informação',
+            subtitle: 'Base de dados e operações de alojamentos Atlantic Holiday',
+            onTrack: 'No Caminho Certo',
+            needsAttention: 'Requer Atenção',
+            progress: '{{percent}}% completo ({{complete}} de {{total}} campos)'
+        },
         workspace: {
-            table: 'Tabela',
-            missing: 'Dados em falta',
-            compare: 'Verificar Alojamentos',
-            edit: 'Ferramentas de edição'
+            table: 'Lista',
+            board: 'Quadro',
+            missing: 'Fila de Faltas',
+            compare: 'Verificar Excel',
+            edit: 'Ferramentas de Edição'
+        },
+        board: {
+            needsInfo: 'Com Falta',
+            inProgress: 'Em Progresso',
+            complete: 'Completo',
+            cardsCount: '{{count}} alojamentos',
+            emptyColumn: 'Sem alojamentos nesta secção',
+            fieldsComplete: '{{complete}} de {{total}} campos',
+            openDrawer: 'Abrir detalhes'
+        },
+        drawer: {
+            title: 'Detalhes do Alojamento',
+            markComplete: 'Marcar como Completo',
+            completed: 'Completo',
+            close: 'Fechar',
+            fullSettings: 'Abrir nas Definições',
+            overview: 'Visão Geral do Alojamento',
+            categories: 'Detalhes por Categoria',
+            saved: 'Guardado',
+            saving: 'A guardar...',
+            saveChanges: 'Guardar Alterações',
+            noMissing: 'Todos os campos preenchidos',
+            missingFieldsBadge: '{{count}} em falta'
         },
         editToolsTitle: 'Escolha um modo de edição',
         editToolsBody: 'Use Edição em massa para vários alojamentos, Edição sequencial para rever um a um, ou Acordeão para formulários completos da categoria.',
@@ -671,20 +733,21 @@ function sortTable(table, columnIndex, ascending) {
 
 function createSearchBars(documentRef) {
     const searchBarsContainer = documentRef.createElement('div');
-    searchBarsContainer.className = 'search-bars-container';
+    searchBarsContainer.className = 'search-bars-container asana-toolbar';
 
     const propertyFilterWrapper = documentRef.createElement('div');
     propertyFilterWrapper.className = 'allinfo-search-control flex-1';
 
     const propertyFilterLabel = documentRef.createElement('label');
     propertyFilterLabel.textContent = copy('filterProperties');
-    propertyFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    propertyFilterLabel.className = 'sr-only';
+    propertyFilterLabel.htmlFor = 'allinfo-filter';
 
     const propertyFilterInput = documentRef.createElement('input');
     propertyFilterInput.id = 'allinfo-filter';
     propertyFilterInput.type = 'text';
     propertyFilterInput.placeholder = copy('filterPlaceholder');
-    propertyFilterInput.className = 'px-3 py-2 border rounded-md w-full';
+    propertyFilterInput.className = 'px-3 py-1.5 border rounded-md w-full';
 
     propertyFilterWrapper.appendChild(propertyFilterLabel);
     propertyFilterWrapper.appendChild(propertyFilterInput);
@@ -693,12 +756,13 @@ function createSearchBars(documentRef) {
     dataFilterWrapper.className = 'allinfo-compact-control';
 
     const dataFilterLabel = documentRef.createElement('label');
-    dataFilterLabel.textContent = copy('rows');
-    dataFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    dataFilterLabel.innerHTML = `<i class="fas fa-filter"></i><span>${copy('rows')}:</span>`;
+    dataFilterLabel.className = 'allinfo-compact-label';
+    dataFilterLabel.htmlFor = 'allinfo-data-filter';
 
     const dataFilterSelect = documentRef.createElement('select');
     dataFilterSelect.id = 'allinfo-data-filter';
-    dataFilterSelect.className = 'px-3 py-2 border rounded-md w-full';
+    dataFilterSelect.className = 'px-2.5 py-1.5 border rounded-md';
     [
         ['all', copy('allRows')],
         ['missing', copy('needsInfo')],
@@ -717,12 +781,13 @@ function createSearchBars(documentRef) {
     fieldFilterWrapper.className = 'allinfo-compact-control';
 
     const fieldFilterLabel = documentRef.createElement('label');
-    fieldFilterLabel.textContent = copy('field');
-    fieldFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    fieldFilterLabel.innerHTML = `<i class="fas fa-columns"></i><span>${copy('field')}:</span>`;
+    fieldFilterLabel.className = 'allinfo-compact-label';
+    fieldFilterLabel.htmlFor = 'allinfo-field-filter';
 
     const fieldFilterSelect = documentRef.createElement('select');
     fieldFilterSelect.id = 'allinfo-field-filter';
-    fieldFilterSelect.className = 'px-3 py-2 border rounded-md w-full';
+    fieldFilterSelect.className = 'px-2.5 py-1.5 border rounded-md';
 
     fieldFilterWrapper.appendChild(fieldFilterLabel);
     fieldFilterWrapper.appendChild(fieldFilterSelect);
@@ -1542,6 +1607,566 @@ function createMissingWorkbench({
     return { panel, render };
 }
 
+function createAsanaProjectHeader(documentRef, properties) {
+    const header = documentRef.createElement('div');
+    header.className = 'asana-project-header dashboard-header';
+    header.innerHTML = `
+        <div class="asana-project-header-top">
+            <div class="asana-project-info">
+                <div class="asana-back-container"></div>
+                <div class="asana-project-avatar">
+                    <i class="fas fa-hotel"></i>
+                </div>
+                <div class="asana-project-titles">
+                    <div class="asana-project-title-row">
+                        <h1 class="asana-project-title">${copy('project.title')}</h1>
+                        <span class="asana-status-pill on-track">
+                            <span class="asana-status-dot"></span>
+                            <span>${copy('project.onTrack')}</span>
+                        </span>
+                    </div>
+                    <p class="asana-project-subtitle">${copy('project.subtitle')}</p>
+                </div>
+            </div>
+            <div class="asana-project-header-right">
+                <div class="asana-project-progress-wrap">
+                    <div class="asana-progress-meta">
+                        <span class="asana-progress-percent">100%</span>
+                        <span class="asana-progress-label">${copy('project.progress', { percent: 100, complete: 0, total: 0 })}</span>
+                    </div>
+                    <div class="asana-progress-track">
+                        <div class="asana-progress-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="asana-header-actions header-right"></div>
+            </div>
+        </div>
+    `;
+
+    // Adopt or instantiate back button and header actions
+    const existingHeader = documentRef.querySelector('#allinfo-page > header.dashboard-header');
+    const backContainer = header.querySelector('.asana-back-container');
+    let backBtn = existingHeader?.querySelector('#back-to-landing-from-allinfo-btn');
+    if (backBtn) {
+        backContainer.appendChild(backBtn);
+    } else {
+        backBtn = documentRef.createElement('button');
+        backBtn.id = 'back-to-landing-from-allinfo-btn';
+        backBtn.type = 'button';
+        backBtn.className = 'asana-back-btn p-1.5 text-gray-500 hover:text-brand transition-colors rounded-md hover:bg-gray-100';
+        backBtn.title = 'Back';
+        backBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        `;
+        backContainer.appendChild(backBtn);
+    }
+    const goBackToLanding = (e) => {
+        e?.preventDefault?.();
+        if (window.navigationManager?.showLandingPage) {
+            window.navigationManager.showLandingPage();
+            return;
+        }
+        const allInfoPage = documentRef.getElementById('allinfo-page');
+        const landingPage = documentRef.getElementById('landing-page');
+        if (allInfoPage && landingPage) {
+            allInfoPage.classList.add('hidden');
+            landingPage.classList.remove('hidden');
+            return;
+        }
+        window.location.href = 'index.html';
+    };
+    backBtn.onclick = goBackToLanding;
+
+    const actionsTarget = header.querySelector('.asana-header-actions');
+    const headerRight = existingHeader?.querySelector('.header-right');
+    if (headerRight && headerRight.children.length > 0) {
+        while (headerRight.firstChild) {
+            actionsTarget.appendChild(headerRight.firstChild);
+        }
+    }
+
+    // Ensure App Switcher trigger is always present
+    let appTrigger = actionsTarget.querySelector('[data-app-switcher-trigger]');
+    if (!appTrigger) {
+        appTrigger = documentRef.createElement('button');
+        appTrigger.type = 'button';
+        appTrigger.className = 'app-switcher-trigger';
+        appTrigger.dataset.appSwitcherTrigger = '';
+        appTrigger.setAttribute('aria-controls', 'app-switcher-panel');
+        appTrigger.setAttribute('aria-expanded', 'false');
+        appTrigger.setAttribute('aria-label', 'Apps');
+        appTrigger.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1.5"></rect>
+                <rect x="14" y="4" width="6" height="6" rx="1.5"></rect>
+                <rect x="4" y="14" width="6" height="6" rx="1.5"></rect>
+                <rect x="14" y="14" width="6" height="6" rx="1.5"></rect>
+            </svg>
+            <span>Apps</span>
+        `;
+        actionsTarget.prepend(appTrigger);
+    }
+    appTrigger.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        if (switcher) {
+            switcher.toggle(appTrigger);
+        }
+    };
+
+    if (!actionsTarget.querySelector('[data-lang-option]')) {
+        const langWrap = documentRef.createElement('div');
+        langWrap.className = 'inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-sm asana-lang-switcher';
+        langWrap.innerHTML = `
+            <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+            <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+        `;
+        actionsTarget.appendChild(langWrap);
+    }
+
+    if (existingHeader) {
+        existingHeader.remove();
+    }
+
+    const enBtn = actionsTarget.querySelector('[data-lang-option="en"]');
+    const ptBtn = actionsTarget.querySelector('[data-lang-option="pt"]');
+    if (enBtn && ptBtn) {
+        const current = activeLang();
+        enBtn.classList.toggle('active', current === 'en');
+        enBtn.setAttribute('aria-pressed', current === 'en' ? 'true' : 'false');
+        ptBtn.classList.toggle('active', current === 'pt');
+        ptBtn.setAttribute('aria-pressed', current === 'pt' ? 'true' : 'false');
+
+        enBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (i18n?.setLanguage) {
+                await i18n.setLanguage('en');
+            } else if (window.i18n?.setLanguage) {
+                await window.i18n.setLanguage('en');
+            }
+        };
+        ptBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (i18n?.setLanguage) {
+                await i18n.setLanguage('pt');
+            } else if (window.i18n?.setLanguage) {
+                await window.i18n.setLanguage('pt');
+            }
+        };
+    }
+
+    try {
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        switcher?.updateTriggerLabels?.();
+        switcher?.installTriggers?.();
+    } catch (e) {
+        // Non-browser or test environment
+    }
+
+    updateProjectHeader(header, properties);
+    return header;
+}
+
+function updateProjectHeader(projectHeader, properties) {
+    if (!projectHeader) return;
+    let totalAllFields = 0;
+    let totalMissingFields = 0;
+    ALL_INFO_CATEGORIES.forEach((cat) => {
+        const stats = getCategoryStats(properties, cat);
+        totalAllFields += stats.totalFields;
+        totalMissingFields += stats.missingFields;
+    });
+    const totalFilledFields = Math.max(totalAllFields - totalMissingFields, 0);
+    const overallCompletion = totalAllFields > 0 ? Math.round((totalFilledFields / totalAllFields) * 100) : 100;
+    const isGood = overallCompletion >= 80;
+
+    const pill = projectHeader.querySelector('.asana-status-pill');
+    if (pill) {
+        pill.className = `asana-status-pill ${isGood ? 'on-track' : 'needs-attention'}`;
+        pill.innerHTML = `<span class="asana-status-dot"></span><span>${isGood ? copy('project.onTrack') : copy('project.needsAttention')}</span>`;
+    }
+
+    const percentEl = projectHeader.querySelector('.asana-progress-percent');
+    if (percentEl) {
+        percentEl.textContent = `${overallCompletion}%`;
+    }
+
+    const labelEl = projectHeader.querySelector('.asana-progress-label');
+    if (labelEl) {
+        labelEl.textContent = copy('project.progress', { percent: overallCompletion, complete: totalFilledFields, total: totalAllFields });
+    }
+
+    const barEl = projectHeader.querySelector('.asana-progress-bar');
+    if (barEl) {
+        barEl.style.width = `${overallCompletion}%`;
+    }
+}
+
+function renderBoardView({
+    category,
+    categoryIndex,
+    properties,
+    allProperties,
+    documentRef,
+    contentElement,
+    onOpenDrawer
+}) {
+    const stats = getCategoryStats(allProperties, category);
+    const wrapper = documentRef.createElement('div');
+    wrapper.className = 'asana-board-shell';
+
+    const boardHeader = documentRef.createElement('div');
+    boardHeader.className = 'allinfo-category-header asana-board-header';
+    boardHeader.innerHTML = `
+        <div>
+            <div class="allinfo-category-eyebrow">${copy('table.visibleOf', { visible: properties.length, total: allProperties.length })}</div>
+            <h3>${getCategoryTitle(category)}</h3>
+        </div>
+        <div class="allinfo-category-kpis">
+            <div><strong>${stats.completion}%</strong><span>${copy('table.complete')}</span></div>
+            <div><strong>${stats.missingFields}</strong><span>${copy('table.missingFields')}</span></div>
+            <div><strong>${stats.completeProperties}</strong><span>${copy('table.completeRows')}</span></div>
+        </div>
+    `;
+    wrapper.appendChild(boardHeader);
+
+    const boardContainer = documentRef.createElement('div');
+    boardContainer.className = 'asana-board-container';
+
+    const fields = category.fields;
+    const columnsData = [
+        {
+            key: 'needs-info',
+            title: copy('board.needsInfo'),
+            tone: 'amber',
+            properties: []
+        },
+        {
+            key: 'in-progress',
+            title: copy('board.inProgress'),
+            tone: 'blue',
+            properties: []
+        },
+        {
+            key: 'complete',
+            title: copy('board.complete'),
+            tone: 'green',
+            properties: []
+        }
+    ];
+
+    properties.forEach((property) => {
+        const missingCount = fields.filter((field) => isMissingValue(property[field], field)).length;
+        if (missingCount === 0) {
+            columnsData[2].properties.push({ property, missingCount });
+        } else if (fields.length > 1 && missingCount < fields.length) {
+            columnsData[1].properties.push({ property, missingCount });
+        } else {
+            columnsData[0].properties.push({ property, missingCount });
+        }
+    });
+
+    columnsData.forEach((column) => {
+        const colEl = documentRef.createElement('div');
+        colEl.className = `asana-board-column asana-col-${column.key}`;
+
+        const colHeader = documentRef.createElement('div');
+        colHeader.className = 'asana-column-header';
+        colHeader.innerHTML = `
+            <div class="asana-column-title-wrap">
+                <span class="asana-column-dot asana-dot-${column.tone}"></span>
+                <span class="asana-column-title">${column.title}</span>
+                <span class="asana-column-count">${column.properties.length}</span>
+            </div>
+        `;
+        colEl.appendChild(colHeader);
+
+        const cardList = documentRef.createElement('div');
+        cardList.className = 'asana-column-cards';
+
+        if (column.properties.length === 0) {
+            const emptyEl = documentRef.createElement('div');
+            emptyEl.className = 'asana-empty-card-slot';
+            emptyEl.textContent = copy('board.emptyColumn');
+            cardList.appendChild(emptyEl);
+        } else {
+            column.properties.forEach(({ property, missingCount }) => {
+                const totalFields = fields.length;
+                const completedFields = totalFields - missingCount;
+                const percent = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 100;
+
+                const card = documentRef.createElement('div');
+                card.className = 'asana-card';
+                card.dataset.propertyId = property.id;
+
+                const missingChips = fields
+                    .filter((f) => isMissingValue(property[f], f))
+                    .slice(0, 3)
+                    .map((f) => `<span class="asana-chip-missing">${buildLabel(f)}</span>`)
+                    .join('');
+
+                card.innerHTML = `
+                    <div class="asana-card-top">
+                        <div class="asana-card-title-wrap">
+                            <span class="asana-card-check ${missingCount === 0 ? 'is-complete' : ''}">
+                                <i class="fas ${missingCount === 0 ? 'fa-check-circle' : 'fa-circle'}"></i>
+                            </span>
+                            <span class="asana-card-title">${property.name || 'Unnamed'}</span>
+                        </div>
+                        <button type="button" class="asana-card-open-btn" title="${copy('board.openDrawer')}">
+                            <i class="fas fa-expand-alt"></i>
+                        </button>
+                    </div>
+                    <div class="asana-card-tags">
+                        ${property.location ? `<span class="asana-tag asana-tag-location"><i class="fas fa-map-marker-alt"></i>${property.location}</span>` : ''}
+                        ${property.typology ? `<span class="asana-tag asana-tag-typology">${property.typology}</span>` : ''}
+                    </div>
+                    <div class="asana-card-progress">
+                        <div class="asana-card-progress-bar" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="asana-card-footer">
+                        <span class="asana-card-count-label">${copy('board.fieldsComplete', { complete: completedFields, total: totalFields })}</span>
+                    </div>
+                    ${missingChips ? `<div class="asana-card-missing-chips">${missingChips}</div>` : ''}
+                `;
+
+                card.addEventListener('click', () => {
+                    onOpenDrawer?.(property, categoryIndex);
+                });
+
+                cardList.appendChild(card);
+            });
+        }
+
+        colEl.appendChild(cardList);
+        boardContainer.appendChild(colEl);
+    });
+
+    wrapper.appendChild(boardContainer);
+    contentElement.appendChild(wrapper);
+}
+
+function createPropertyDetailDrawer({
+    documentRef,
+    mountTarget,
+    properties,
+    onEditProperty = () => {},
+    onSaved = () => {}
+}) {
+    let activeProperty = null;
+    let currentCategoryIndex = 0;
+
+    const container = mountTarget || documentRef.getElementById('allinfo-page') || documentRef.body;
+    container.querySelectorAll('.asana-drawer-root').forEach((el) => el.remove());
+
+    const root = documentRef.createElement('div');
+    root.className = 'asana-drawer-root hidden';
+
+    const backdrop = documentRef.createElement('div');
+    backdrop.className = 'asana-drawer-backdrop';
+
+    const panel = documentRef.createElement('aside');
+    panel.className = 'asana-drawer-panel';
+
+    root.appendChild(backdrop);
+    root.appendChild(panel);
+    container.appendChild(root);
+
+    const close = () => {
+        root.classList.add('hidden');
+        panel.classList.remove('open');
+        activeProperty = null;
+    };
+
+    backdrop.addEventListener('click', close);
+
+    const open = (property, categoryIdx = 0) => {
+        activeProperty = property;
+        currentCategoryIndex = categoryIdx;
+        render();
+        root.classList.remove('hidden');
+        setTimeout(() => panel.classList.add('open'), 10);
+    };
+
+    const render = () => {
+        if (!activeProperty) return;
+        panel.innerHTML = '';
+
+        const header = documentRef.createElement('div');
+        header.className = 'asana-drawer-header';
+
+        const isFullyComplete = ALL_INFO_CATEGORIES.every((cat) => (
+            cat.fields.every((f) => !isMissingValue(activeProperty[f], f))
+        ));
+
+        const checkBtn = documentRef.createElement('button');
+        checkBtn.type = 'button';
+        checkBtn.className = `asana-drawer-complete-btn ${isFullyComplete ? 'is-complete' : ''}`;
+        checkBtn.innerHTML = `<i class="fas fa-check"></i><span>${isFullyComplete ? copy('drawer.completed') : copy('drawer.markComplete')}</span>`;
+
+        const headerActions = documentRef.createElement('div');
+        headerActions.className = 'asana-drawer-header-actions';
+
+        const fullSettingsBtn = documentRef.createElement('button');
+        fullSettingsBtn.type = 'button';
+        fullSettingsBtn.className = 'asana-drawer-action-btn';
+        fullSettingsBtn.title = copy('drawer.fullSettings');
+        fullSettingsBtn.innerHTML = `<i class="fas fa-external-link-alt"></i><span>${copy('drawer.fullSettings')}</span>`;
+        fullSettingsBtn.onclick = () => {
+            const cat = ALL_INFO_CATEGORIES[currentCategoryIndex];
+            onEditProperty?.(activeProperty, cat);
+        };
+
+        const closeBtn = documentRef.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'asana-drawer-close-btn';
+        closeBtn.title = copy('drawer.close');
+        closeBtn.innerHTML = `<i class="fas fa-times"></i>`;
+        closeBtn.onclick = close;
+
+        headerActions.appendChild(fullSettingsBtn);
+        headerActions.appendChild(closeBtn);
+
+        header.appendChild(checkBtn);
+        header.appendChild(headerActions);
+        panel.appendChild(header);
+
+        const body = documentRef.createElement('div');
+        body.className = 'asana-drawer-body';
+
+        const hero = documentRef.createElement('div');
+        hero.className = 'asana-drawer-hero';
+        hero.innerHTML = `
+            <h2 class="asana-drawer-title">${activeProperty.name || 'Unnamed Property'}</h2>
+            <div class="asana-drawer-tags">
+                ${activeProperty.location ? `<span class="asana-tag asana-tag-location"><i class="fas fa-map-marker-alt"></i>${activeProperty.location}</span>` : ''}
+                ${activeProperty.typology ? `<span class="asana-tag asana-tag-typology">${activeProperty.typology}</span>` : ''}
+                ${activeProperty.type ? `<span class="asana-tag asana-tag-type">${activeProperty.type}</span>` : ''}
+            </div>
+        `;
+        body.appendChild(hero);
+
+        const catSelector = documentRef.createElement('div');
+        catSelector.className = 'asana-drawer-cat-selector';
+        const catSelect = documentRef.createElement('select');
+        catSelect.className = 'asana-drawer-cat-dropdown';
+        ALL_INFO_CATEGORIES.forEach((cat, idx) => {
+            const opt = documentRef.createElement('option');
+            opt.value = String(idx);
+            opt.textContent = getCategoryTitle(cat);
+            opt.selected = idx === currentCategoryIndex;
+            catSelect.appendChild(opt);
+        });
+        catSelect.addEventListener('change', () => {
+            currentCategoryIndex = Number(catSelect.value);
+            renderCategorySection();
+        });
+        catSelector.appendChild(catSelect);
+        body.appendChild(catSelector);
+
+        const fieldsContainer = documentRef.createElement('div');
+        fieldsContainer.className = 'asana-drawer-fields-container';
+        body.appendChild(fieldsContainer);
+
+        const renderCategorySection = () => {
+            fieldsContainer.innerHTML = '';
+            const category = ALL_INFO_CATEGORIES[currentCategoryIndex];
+            if (!category) return;
+
+            const catCard = documentRef.createElement('div');
+            catCard.className = 'asana-drawer-cat-card';
+
+            const catHeader = documentRef.createElement('div');
+            catHeader.className = 'asana-drawer-cat-card-header';
+            catHeader.innerHTML = `
+                <div class="asana-drawer-cat-card-title">
+                    <i class="${category.icon}"></i>
+                    <span>${getCategoryTitle(category)}</span>
+                </div>
+            `;
+            catCard.appendChild(catHeader);
+
+            const fieldsList = documentRef.createElement('div');
+            fieldsList.className = 'asana-drawer-fields-list';
+
+            category.fields.forEach((fieldKey) => {
+                const row = documentRef.createElement('div');
+                row.className = 'asana-drawer-field-row';
+
+                const labelCol = documentRef.createElement('div');
+                labelCol.className = 'asana-drawer-field-label';
+                const isMissing = isMissingValue(activeProperty[fieldKey], fieldKey);
+                labelCol.innerHTML = `
+                    <span>${buildLabel(fieldKey)}</span>
+                    ${isMissing ? `<span class="asana-missing-pill">${copy('board.needsInfo')}</span>` : ''}
+                `;
+
+                const inputCol = documentRef.createElement('div');
+                inputCol.className = 'asana-drawer-field-input';
+
+                const input = createInlineFieldControl(documentRef, fieldKey, activeProperty[fieldKey]);
+                input.dataset.drawerField = fieldKey;
+
+                const saveStatus = documentRef.createElement('span');
+                saveStatus.className = 'asana-drawer-save-status';
+
+                const handleFieldChange = async () => {
+                    const nextVal = normalizeInlineValue(input);
+                    if (activeProperty[fieldKey] === nextVal) return;
+
+                    saveStatus.textContent = copy('drawer.saving');
+                    saveStatus.className = 'asana-drawer-save-status saving';
+
+                    const manager = window.propertiesManager;
+                    try {
+                        if (manager?.updateProperty) {
+                            await manager.updateProperty(activeProperty.id, { [fieldKey]: nextVal });
+                        }
+                        activeProperty[fieldKey] = nextVal;
+                        saveStatus.textContent = copy('drawer.saved');
+                        saveStatus.className = 'asana-drawer-save-status saved';
+                        setTimeout(() => {
+                            saveStatus.textContent = '';
+                            saveStatus.className = 'asana-drawer-save-status';
+                        }, 2000);
+                        onSaved?.();
+                    } catch (err) {
+                        saveStatus.textContent = 'Error';
+                        saveStatus.className = 'asana-drawer-save-status error';
+                    }
+                };
+
+                input.addEventListener('change', handleFieldChange);
+                appendInlineFieldControl(documentRef, inputCol, input, fieldKey);
+                inputCol.appendChild(saveStatus);
+
+                row.appendChild(labelCol);
+                row.appendChild(inputCol);
+                fieldsList.appendChild(row);
+            });
+
+            catCard.appendChild(fieldsList);
+            fieldsContainer.appendChild(catCard);
+        };
+
+        renderCategorySection();
+        panel.appendChild(body);
+    };
+
+    return {
+        open,
+        close,
+        isOpen: () => !root.classList.contains('hidden'),
+        root,
+        panel
+    };
+}
+
 function renderCategoryTable({
     category,
     categoryIndex,
@@ -1550,7 +2175,8 @@ function renderCategoryTable({
     filterState,
     documentRef,
     contentElement,
-    onEditProperty
+    onEditProperty,
+    onOpenDrawer
 }) {
     const activeField = filterState.fieldKey || '';
     const categoryFields = activeField ? category.fields.filter((field) => field === activeField) : category.fields;
@@ -1581,7 +2207,13 @@ function renderCategoryTable({
     thead.className = 'bg-gray-900 text-white';
 
     const headerRow = documentRef.createElement('tr');
-    displayedFields.forEach((fieldKey, fieldIndex) => {
+
+    const checkTh = documentRef.createElement('th');
+    checkTh.className = 'asana-th-check sticky top-0 z-10 px-3 py-3 text-center bg-gray-900';
+    checkTh.innerHTML = `<i class="fas fa-check-circle text-gray-400"></i>`;
+    headerRow.appendChild(checkTh);
+
+    displayedFields.forEach((fieldKey) => {
         const th = documentRef.createElement('th');
         th.className = 'sticky top-0 z-10 px-6 py-3 text-left text-xs font-medium uppercase cursor-pointer bg-gray-900';
         th.innerHTML = `<span>${buildLabel(fieldKey)}</span> <i class="fas fa-sort ml-1 text-gray-400"></i>`;
@@ -1590,7 +2222,8 @@ function renderCategoryTable({
             th.asc = ascending;
             headerRow.querySelectorAll('th').forEach((cell) => cell.classList.remove('asc', 'desc'));
             th.classList.add(ascending ? 'asc' : 'desc');
-            sortTable(table, fieldIndex, ascending);
+            const colIdx = Array.from(headerRow.children).indexOf(th);
+            sortTable(table, colIdx, ascending);
         };
         headerRow.appendChild(th);
     });
@@ -1616,6 +2249,21 @@ function renderCategoryTable({
             updates: {}
         };
 
+        const checkTd = documentRef.createElement('td');
+        checkTd.className = 'asana-td-check px-3 py-4 whitespace-nowrap text-center';
+        const isRowComplete = category.fields.every((f) => !isMissingValue(property[f], f));
+        const checkBtn = documentRef.createElement('button');
+        checkBtn.type = 'button';
+        checkBtn.className = `asana-row-check ${isRowComplete ? 'is-complete' : ''}`;
+        checkBtn.title = isRowComplete ? copy('board.complete') : copy('board.needsInfo');
+        checkBtn.innerHTML = `<i class="fas ${isRowComplete ? 'fa-check-circle' : 'fa-circle'}"></i>`;
+        checkBtn.onclick = (e) => {
+            e.stopPropagation();
+            onOpenDrawer?.(property, categoryIndex);
+        };
+        checkTd.appendChild(checkBtn);
+        row.appendChild(checkTd);
+
         displayedFields.forEach((fieldKey) => {
             const td = documentRef.createElement('td');
             td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
@@ -1624,6 +2272,9 @@ function renderCategoryTable({
             if (fieldKey === 'name') {
                 td.classList.add('allinfo-property-cell');
                 td.textContent = property[fieldKey] ?? '';
+                td.style.cursor = 'pointer';
+                td.title = `${copy('board.openDrawer')} - ${property.name || ''}`;
+                td.onclick = () => onOpenDrawer?.(property, categoryIndex);
             } else if (fieldKey === 'cleaningCompanyPrice' || fieldKey === 'guestCleaningFee') {
                 const numericValue = Number.parseFloat(property[fieldKey]);
                 const isNumeric = Number.isFinite(numericValue);
@@ -1683,7 +2334,7 @@ function renderCategoryTable({
         });
 
         const actionsCell = documentRef.createElement('td');
-        actionsCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium';
+        actionsCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center gap-2';
 
         const saveButton = documentRef.createElement('button');
         saveButton.innerHTML = `<i class="fas fa-check"></i><span>${copy('table.saved')}</span>`;
@@ -1729,6 +2380,14 @@ function renderCategoryTable({
         };
         actionsCell.appendChild(saveButton);
 
+        const drawerButton = documentRef.createElement('button');
+        drawerButton.type = 'button';
+        drawerButton.innerHTML = `<i class="fas fa-columns"></i><span>${copy('board.openDrawer')}</span>`;
+        drawerButton.className = 'asana-row-drawer-btn allinfo-row-edit-btn';
+        drawerButton.title = copy('board.openDrawer');
+        drawerButton.onclick = () => onOpenDrawer?.(property, categoryIndex);
+        actionsCell.appendChild(drawerButton);
+
         const editButton = documentRef.createElement('button');
         editButton.innerHTML = `<i class="fas fa-external-link-alt"></i><span>${copy('table.fullPage')}</span>`;
         editButton.className = 'allinfo-row-edit-btn';
@@ -1757,11 +2416,26 @@ function renderCategoryTable({
     }
 }
 
+let lastInitOptions = null;
+let activePageFilterState = null;
+
+if (typeof window !== 'undefined' && !window.__allInfoLangListenerBound) {
+    window.__allInfoLangListenerBound = true;
+    window.addEventListener('languageChanged', () => {
+        const page = document.getElementById('allinfo-page');
+        if (page && !page.classList.contains('hidden') && lastInitOptions) {
+            initializeAllInfoPage({ ...lastInitOptions, preserveState: true });
+        }
+    });
+}
+
 export function initializeAllInfoPage({
     properties = [],
     documentRef = document,
-    onEditProperty = () => {}
+    onEditProperty = () => {},
+    preserveState = false
 } = {}) {
+    lastInitOptions = { properties, documentRef, onEditProperty };
     const navigationElement = documentRef.getElementById('allinfo-nav');
     const contentElement = documentRef.getElementById('allinfo-content');
     const filterWrapper = documentRef.getElementById('allinfo-filter-wrapper');
@@ -1778,6 +2452,19 @@ export function initializeAllInfoPage({
     contentElement.innerHTML = '';
     filterWrapper.innerHTML = '';
 
+    const detailDrawer = createPropertyDetailDrawer({
+        documentRef,
+        mountTarget: filterWrapper.parentElement || documentRef.body,
+        properties: sortedProperties,
+        onEditProperty,
+        onSaved: () => {
+            updateOverview();
+            renderActiveContent();
+        }
+    });
+
+    const projectHeader = createAsanaProjectHeader(documentRef, sortedProperties);
+
     const {
         searchBarsContainer,
         propertyFilterInput,
@@ -1789,19 +2476,20 @@ export function initializeAllInfoPage({
     overview.className = 'allinfo-overview';
 
     const workspaceMenu = documentRef.createElement('div');
-    workspaceMenu.className = 'allinfo-workspace-menu';
+    workspaceMenu.className = 'allinfo-workspace-menu asana-tabs';
     const workspaceItems = [
-        ['table', 'fas fa-table', copy('workspace.table')],
-        ['missing', 'fas fa-list-check', copy('workspace.missing')],
-        ['compare', 'fas fa-file-excel', copy('workspace.compare')],
-        ['edit', 'fas fa-pen-to-square', copy('workspace.edit')]
+        ['table', 'fas fa-list', copy('workspace.table')],
+        ['board', 'fas fa-columns', copy('workspace.board')],
+        ['missing', 'fas fa-tasks', copy('workspace.missing')],
+        ['compare', 'fas fa-file-excel', copy('workspace.compare')]
     ];
     workspaceItems.forEach(([key, icon, label]) => {
         const button = documentRef.createElement('button');
         button.type = 'button';
         button.dataset.workspace = key;
+        button.className = 'asana-tab';
         button.innerHTML = `<i class="${icon}"></i><span>${label}</span>`;
-        if (key === 'table') {
+        if (key === (preserveState ? (activePageFilterState?.workspace ?? 'table') : 'table')) {
             button.classList.add('active');
         }
         workspaceMenu.appendChild(button);
@@ -1821,30 +2509,34 @@ export function initializeAllInfoPage({
     const missingPanel = documentRef.createElement('div');
     missingPanel.className = 'allinfo-workspace-panel hidden';
 
-    const editToolsPanel = documentRef.createElement('div');
-    editToolsPanel.className = 'allinfo-workspace-panel hidden';
-    const editToolsIntro = documentRef.createElement('div');
-    editToolsIntro.className = 'allinfo-edit-tools-intro';
-    editToolsIntro.innerHTML = `
-        <strong>${copy('editToolsTitle')}</strong>
-        <span>${copy('editToolsBody')}</span>
-    `;
-    editToolsPanel.appendChild(editToolsIntro);
+    const toolbarRow = documentRef.createElement('div');
+    toolbarRow.className = 'asana-toolbar-row';
+    toolbarRow.appendChild(searchBarsContainer);
+    toolbarRow.appendChild(overview);
 
-    filterWrapper.appendChild(workspaceMenu);
-    filterWrapper.appendChild(searchBarsContainer);
-    filterWrapper.appendChild(overview);
+    projectHeader.appendChild(workspaceMenu);
+
+    filterWrapper.appendChild(projectHeader);
+    filterWrapper.appendChild(toolbarRow);
     filterWrapper.appendChild(comparePanel);
     filterWrapper.appendChild(missingPanel);
-    filterWrapper.appendChild(editToolsPanel);
+
+    try {
+        const switcher = window.appSwitcher || window.navigationManager?.appSwitcher;
+        switcher?.updateTriggerLabels?.();
+        switcher?.installTriggers?.();
+    } catch (e) {
+        // no-op
+    }
 
     const filterState = {
-        activeCategoryIndex: 0,
-        propertySearch: '',
-        dataMode: 'all',
-        fieldKey: '',
-        workspace: 'table'
+        activeCategoryIndex: preserveState ? (activePageFilterState?.activeCategoryIndex ?? 0) : 0,
+        propertySearch: preserveState ? (activePageFilterState?.propertySearch ?? '') : '',
+        dataMode: preserveState ? (activePageFilterState?.dataMode ?? 'all') : 'all',
+        fieldKey: preserveState ? (activePageFilterState?.fieldKey ?? '') : '',
+        workspace: (preserveState && activePageFilterState?.workspace && activePageFilterState.workspace !== 'edit') ? activePageFilterState.workspace : 'table'
     };
+    activePageFilterState = filterState;
 
     let missingWorkbench = null;
 
@@ -1865,32 +2557,94 @@ export function initializeAllInfoPage({
         }
     };
 
+    const renderActiveContent = () => {
+        const category = ALL_INFO_CATEGORIES[filterState.activeCategoryIndex];
+        populateFieldFilter(category);
+
+        const searchTerm = filterState.propertySearch.toLowerCase();
+        const visibleProperties = sortedProperties.filter((property) => {
+            const matchesText = !searchTerm || [
+                property.name,
+                property.location,
+                property.typology,
+                property.type,
+                ...category.fields.map((field) => property[field])
+            ].some((value) => String(value ?? '').toLowerCase().includes(searchTerm));
+
+            return matchesText && propertyMatchesCategoryFilter(
+                property,
+                category,
+                filterState.dataMode,
+                filterState.fieldKey
+            );
+        });
+
+        contentElement.innerHTML = '';
+        if (filterState.workspace === 'board') {
+            renderBoardView({
+                category,
+                categoryIndex: filterState.activeCategoryIndex,
+                properties: visibleProperties,
+                allProperties: sortedProperties,
+                documentRef,
+                contentElement,
+                onOpenDrawer: (property, catIdx) => {
+                    detailDrawer.open(property, catIdx ?? filterState.activeCategoryIndex);
+                }
+            });
+        } else {
+            renderCategoryTable({
+                category,
+                categoryIndex: filterState.activeCategoryIndex,
+                properties: visibleProperties,
+                allProperties: sortedProperties,
+                filterState,
+                documentRef,
+                contentElement,
+                onOpenDrawer: (property, catIdx) => {
+                    detailDrawer.open(property, catIdx ?? filterState.activeCategoryIndex);
+                },
+                onEditProperty: (property, cat) => {
+                    if (property && cat) {
+                        onEditProperty(property, cat);
+                    } else {
+                        updateOverview();
+                        const stats = getCategoryStats(sortedProperties, category);
+                        const kpiDivs = contentElement.querySelectorAll('.allinfo-category-kpis > div > strong');
+                        if (kpiDivs.length === 3) {
+                            kpiDivs[0].textContent = `${stats.completion}%`;
+                            kpiDivs[1].textContent = stats.missingFields;
+                            kpiDivs[2].textContent = stats.completeProperties;
+                        }
+                    }
+                }
+            });
+        }
+    };
+
     const updateWorkspace = () => {
         const active = filterState.workspace;
-        if (active !== 'edit') {
-            deactivateEditModes();
-        }
+        deactivateEditModes();
 
         workspaceMenu.querySelectorAll('button').forEach((button) => {
             button.classList.toggle('active', button.dataset.workspace === active);
         });
 
         const showCategoryControls = active !== 'compare';
+        toolbarRow.classList.toggle('hidden', !showCategoryControls);
         searchBarsContainer.classList.toggle('hidden', !showCategoryControls);
         navigationElement.classList.toggle('hidden', !showCategoryControls);
-        overview.classList.toggle('hidden', active !== 'table');
+        overview.classList.toggle('hidden', active !== 'table' && active !== 'board');
         contentElement.classList.toggle('hidden', active === 'missing' || active === 'compare');
         missingPanel.classList.toggle('hidden', active !== 'missing');
         comparePanel.classList.toggle('hidden', active !== 'compare');
-        editToolsPanel.classList.toggle('hidden', active !== 'edit');
 
         const actionsBar = documentRef.getElementById('allinfo-actions-bar');
-        if (actionsBar && actionsBar.parentElement !== editToolsPanel) {
-            editToolsPanel.appendChild(actionsBar);
-        }
-        actionsBar?.classList.toggle('hidden', active !== 'edit');
+        actionsBar?.classList.add('hidden');
 
-        if (active === 'missing') {
+        if (active === 'table' || active === 'board') {
+            renderActiveContent();
+        } else if (active === 'missing') {
             missingWorkbench?.render();
         }
     };
@@ -1911,6 +2665,7 @@ export function initializeAllInfoPage({
 
     const updateOverview = () => {
         updateBadges();
+        updateProjectHeader(projectHeader, sortedProperties);
         const categoriesWithMissing = ALL_INFO_CATEGORIES.filter((category) => (
             getCategoryStats(sortedProperties, category).missingFields > 0
         )).length;
@@ -1961,48 +2716,7 @@ export function initializeAllInfoPage({
 
     const renderCategory = (categoryIndex) => {
         filterState.activeCategoryIndex = categoryIndex;
-        const category = ALL_INFO_CATEGORIES[categoryIndex];
-        populateFieldFilter(category);
-
-        const searchTerm = filterState.propertySearch.toLowerCase();
-        const visibleProperties = sortedProperties.filter((property) => {
-            const matchesText = !searchTerm || [
-                property.name,
-                property.location,
-                property.typology,
-                property.type,
-                ...category.fields.map((field) => property[field])
-            ].some((value) => String(value ?? '').toLowerCase().includes(searchTerm));
-
-            return matchesText && propertyMatchesCategoryFilter(
-                property,
-                category,
-                filterState.dataMode,
-                filterState.fieldKey
-            );
-        });
-
-        contentElement.innerHTML = '';
-        renderCategoryTable({
-            category,
-            categoryIndex,
-            properties: visibleProperties,
-            allProperties: sortedProperties,
-            filterState,
-            documentRef,
-            contentElement,
-            onEditProperty: () => {
-                updateOverview();
-                const stats = getCategoryStats(sortedProperties, category);
-                const kpiDivs = contentElement.querySelectorAll('.allinfo-category-kpis > div > strong');
-                if (kpiDivs.length === 3) {
-                    kpiDivs[0].textContent = `${stats.completion}%`;
-                    kpiDivs[1].textContent = stats.missingFields;
-                    kpiDivs[2].textContent = stats.completeProperties;
-                }
-            }
-        });
-
+        renderActiveContent();
         missingWorkbench?.render();
         updateWorkspace();
     };
@@ -2014,7 +2728,7 @@ export function initializeAllInfoPage({
         getActiveField: () => filterState.fieldKey,
         onSaved: () => {
             updateOverview();
-            renderCategory(filterState.activeCategoryIndex);
+            renderActiveContent();
         }
     });
     missingPanel.appendChild(missingWorkbench.panel);
@@ -2033,11 +2747,11 @@ export function initializeAllInfoPage({
         const button = documentRef.createElement('button');
         const stats = getCategoryStats(sortedProperties, category);
         const badgeClass = stats.missingFields > 0 ? 'allinfo-cat-badge needs-attention' : 'allinfo-cat-badge';
-        button.innerHTML = `<i class="${category.icon}"></i><span>${getCategoryTitle(category)}</span><strong class="${badgeClass}">${stats.missingFields}</strong>`;
-        button.className = 'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100';
+        button.innerHTML = `<div><i class="${category.icon}"></i><span>${getCategoryTitle(category)}</span></div><strong class="${badgeClass}">${stats.missingFields}</strong>`;
+        button.className = 'flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100';
         button.dataset.idx = String(categoryIndex);
 
-        if (categoryIndex === 0) {
+        if (categoryIndex === filterState.activeCategoryIndex) {
             button.classList.add('bg-gray-100');
         }
 
@@ -2050,22 +2764,37 @@ export function initializeAllInfoPage({
         navigationElement.appendChild(button);
     });
 
+    propertyFilterInput.value = filterState.propertySearch;
+    dataFilterSelect.value = filterState.dataMode;
+
     propertyFilterInput.addEventListener('input', (event) => {
         filterState.propertySearch = event.target.value.trim();
-        renderCategory(filterState.activeCategoryIndex);
+        renderActiveContent();
     });
 
     dataFilterSelect.addEventListener('change', (event) => {
         filterState.dataMode = event.target.value;
-        renderCategory(filterState.activeCategoryIndex);
+        renderActiveContent();
     });
 
     fieldFilterSelect.addEventListener('change', (event) => {
         filterState.fieldKey = event.target.value;
-        renderCategory(filterState.activeCategoryIndex);
+        renderActiveContent();
     });
 
+    const handleKeyDown = (event) => {
+        if (event.key === 'Escape' && detailDrawer.isOpen()) {
+            detailDrawer.close();
+        }
+    };
+    documentRef.addEventListener('keydown', handleKeyDown);
+
     updateOverview();
-    renderCategory(0);
+    renderCategory(filterState.activeCategoryIndex);
     updateWorkspace();
+
+    return {
+        detailDrawer,
+        filterState
+    };
 }

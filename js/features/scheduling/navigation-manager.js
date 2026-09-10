@@ -14,6 +14,9 @@ export class NavigationManager {
         this.navigationStack = [];
         this.isHistoryNavigation = false;
         this.appSwitcher = null;
+        if (typeof window !== 'undefined') {
+            window.navigationManager = this;
+        }
         this.pages = {
             landing: 'landing-page',
             tasks: 'tasks-page',
@@ -910,6 +913,10 @@ export class NavigationManager {
             onNavigate: (pageName, buttonId) => this.navigateFromSwitcher(pageName, buttonId),
             onClearRecent: () => this.clearRecentPages()
         });
+        if (typeof window !== 'undefined') {
+            window.navigationManager = this;
+            window.appSwitcher = this.appSwitcher;
+        }
         this.appSwitcher.setup();
     }
 

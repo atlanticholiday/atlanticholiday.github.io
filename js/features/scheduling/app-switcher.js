@@ -38,6 +38,7 @@ const CATEGORIES = Object.freeze([
 
 const HEADER_ACTION_SELECTORS = [
     '.dashboard-header .header-right',
+    '.asana-header-actions',
     '.vacation-center-page-header__actions',
     '.build-planner-header-actions',
     '.staff-header-actions',
