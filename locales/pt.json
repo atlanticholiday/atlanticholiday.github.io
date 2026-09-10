@@ -3109,6 +3109,74 @@
             "vacationsDescription": "Apenas os seus próprios registos aparecem aqui. Observações internas da gestão não são incluídas.",
             "noVacations": "Ainda não existem férias ou ausências registadas.",
             "privateNote": "Por privacidade, esta área recebe uma cópia limitada e não o registo interno completo.",
+            "history": {
+                "title": "Resumo anual pessoal",
+                "description": "Consulte os totais de assiduidade, trabalho suplementar e ausências por ano.",
+                "yearLabel": "Ano do resumo",
+                "worked": "Tempo trabalhado",
+                "breaks": "Pausas",
+                "days": "Dias com registo",
+                "overtime": "Trabalho suplementar",
+                "leaveRecords": "Férias e ausências",
+                "openCorrections": "Correções em aberto"
+            },
+            "export": {
+                "action": "Exportar os meus dados",
+                "errors": {
+                    "notReady": "Os dados pessoais ainda não estão prontos para exportação.",
+                    "failed": "Não foi possível exportar os dados pessoais."
+                }
+            },
+            "corrections": {
+                "title": "Pedir correção dos meus dados",
+                "description": "Indique o que deve ser verificado. O pedido fica registado e pode acompanhar o respetivo estado aqui.",
+                "categoryLabel": "Tipo de informação",
+                "referenceDate": "Data relacionada, se aplicável",
+                "detailsLabel": "O que deve ser corrigido",
+                "detailsPlaceholder": "Explique claramente o dado incorreto e qual deveria ser o valor correto.",
+                "submit": "Enviar pedido",
+                "historyTitle": "Pedidos enviados",
+                "empty": "Ainda não enviou pedidos de correção.",
+                "saving": "A guardar…",
+                "categories": {
+                    "profile": "Ficha pessoal",
+                    "attendance": "Assiduidade",
+                    "vacation": "Férias ou ausência",
+                    "overtime": "Trabalho suplementar",
+                    "other": "Outro dado"
+                },
+                "status": {
+                    "submitted": "Enviado",
+                    "in-review": "Em análise",
+                    "resolved": "Resolvido",
+                    "rejected": "Não aceite"
+                },
+                "feedback": {
+                    "submitted": "Pedido enviado para análise.",
+                    "failed": "Não foi possível enviar o pedido."
+                },
+                "errors": {
+                    "linkRequired": "Esta conta não está ligada a um colega ativo.",
+                    "descriptionTooShort": "Descreva a correção com pelo menos 10 caracteres.",
+                    "invalidStatus": "O estado selecionado não é válido.",
+                    "resolutionRequired": "Indique uma resposta com pelo menos 3 caracteres."
+                },
+                "manager": {
+                    "kicker": "Pedidos pessoais",
+                    "title": "Correções solicitadas pelos colegas",
+                    "description": "Analise cada pedido e registe a resposta sem alterar o pedido original.",
+                    "openCount": "{{count}} em aberto",
+                    "empty": "Não existem pedidos de correção em aberto.",
+                    "statusLabel": "Novo estado",
+                    "responseLabel": "Resposta",
+                    "responsePlaceholder": "Resposta ou medida tomada",
+                    "save": "Guardar",
+                    "feedback": {
+                        "saved": "Pedido atualizado.",
+                        "failed": "Não foi possível atualizar o pedido."
+                    }
+                }
+            },
             "status": {
                 "approved": "Aprovado",
                 "pending": "Pendente",

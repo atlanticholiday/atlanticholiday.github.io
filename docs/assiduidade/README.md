@@ -11,6 +11,7 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 - revisão por responsável e trilho de auditoria;
 - retenção indicada por cinco anos, escrita incremental e proibição de apagar o registo pelo browser;
 - consulta limitada aos próprios registos para utilizadores ligados a um trabalhador;
+- área pessoal com resumo anual, exportação JSON dos dados próprios e pedidos de retificação acompanhados pela gestão;
 - separação documentada entre dados próprios, horário mínimo da equipa e dados reservados, conforme a [política de acesso dos colegas](POLITICA-ACESSO-COLEGAS.md);
 - estação de tablet com PIN individual validado pelo Firebase Authentication numa sessão isolada e limitação automática de tentativas abusivas;
 - exportação CSV e impressão semanal/mensal, incluindo trabalhadores arquivados;
@@ -23,7 +24,7 @@ Este diretório contém o dossier operacional para colocar o relógio de ponto e
 1. Fazer cópia de segurança/exportação do Firestore atual.
 2. Implantar as regras do Firestore.
 3. Implantar o site.
-4. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, correção, visto, trabalho suplementar, impressão e CSV.
+4. Criar um utilizador de teste ligado a um trabalhador e testar entrada, pausa, regresso, saída, correção, visto, trabalho suplementar, resumo anual, exportação pessoal, pedido de retificação, impressão e CSV.
 5. Criar a conta exclusiva do tablet com apenas a função `time-clock-station`, iniciar sessão no tablet e configurar um PIN de teste.
 6. Confirmar que o PIN errado é recusado, que o PIN correto regista a marcação e que a sessão principal do tablet continua ativa.
 7. Preencher “Configuração legal do registo” e descarregar o primeiro “Arquivo mensal verificável” na área de gestor.

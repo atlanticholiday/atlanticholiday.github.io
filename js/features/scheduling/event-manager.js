@@ -218,6 +218,16 @@ export class EventManager {
                     return;
                 }
 
+                const exportPersonalDataButton = e.target.closest('[data-export-personal-data]');
+                if (exportPersonalDataButton) {
+                    try {
+                        this.uiManager.exportCurrentUserPersonalData();
+                    } catch (error) {
+                        window.alert(error.message || t('timeClock.myData.export.errors.failed'));
+                    }
+                    return;
+                }
+
                 const feedback = document.getElementById('time-clock-feedback');
                 const actionButton = e.target.closest('[data-time-clock-action]');
                 if (actionButton) {
@@ -342,6 +352,12 @@ export class EventManager {
                 }
             });
 
+            timeClockContent.addEventListener('change', (e) => {
+                if (e.target.matches('[data-my-data-year]')) {
+                    this.uiManager.setMyDataYear(e.target.value);
+                }
+            });
+
             timeClockContent.addEventListener('submit', async (e) => {
                 if (e.target.id === 'time-clock-station-identification-form') {
                     e.preventDefault();
@@ -355,6 +371,50 @@ export class EventManager {
                     } catch (error) {
                         this.uiManager.setTimeClockStationFeedback(
                             error.message || t('timeClock.errors.pinInvalid'),
+                            'error'
+                        );
+                    }
+                    return;
+                }
+
+                if (e.target.id === 'personal-data-correction-form') {
+                    e.preventDefault();
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    try {
+                        const formData = new FormData(e.target);
+                        await this.dataManager.createSelfServiceCorrectionRequest({
+                            category: formData.get('category'),
+                            referenceDate: formData.get('referenceDate') || null,
+                            description: formData.get('description')
+                        });
+                        this.uiManager.setMyDataCorrectionFeedback(t('timeClock.myData.corrections.feedback.submitted'));
+                    } catch (error) {
+                        this.uiManager.setMyDataCorrectionFeedback(
+                            error.message || t('timeClock.myData.corrections.feedback.failed'),
+                            'error'
+                        );
+                    }
+                    return;
+                }
+
+                if (e.target.matches('[data-personal-correction-review-form]')) {
+                    e.preventDefault();
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    try {
+                        const formData = new FormData(e.target);
+                        await this.dataManager.reviewSelfServiceCorrectionRequest(
+                            e.target.dataset.requestId,
+                            {
+                                status: formData.get('status'),
+                                resolutionNote: formData.get('resolutionNote')
+                            }
+                        );
+                        this.uiManager.setMyDataManagementFeedback(t('timeClock.myData.corrections.manager.feedback.saved'));
+                    } catch (error) {
+                        this.uiManager.setMyDataManagementFeedback(
+                            error.message || t('timeClock.myData.corrections.manager.feedback.failed'),
                             'error'
                         );
                     }

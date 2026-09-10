@@ -5,6 +5,11 @@ import { getAttendancePrintRange, normalizeAttendancePrintMode } from './attenda
 import { SCHEDULE_VIEWS } from './schedule-view-config.js';
 import { getScheduleDayDetailsPolicy } from './schedule-data-access.js';
 import { getPaidShiftHours } from './shift-hours.js';
+import {
+    buildPersonalDataExport,
+    buildPersonalYearSummary,
+    getPersonalDataYears
+} from './personal-data-self-service.js';
 import { getAttendanceSyncStage, MANUAL_ATTENDANCE_NOTE_MIN_LENGTH } from './time-clock-controls.js';
 import {
     applyAttendancePinKey,
@@ -30,6 +35,11 @@ export class UIManager {
         this.currentTimesheetEmployeeId = null;
         this.currentTimesheetMode = 'week';
         this.currentTimeClockSection = 'today';
+        this.currentMyDataYear = new Date().getFullYear();
+        this.myDataCorrectionFeedback = '';
+        this.myDataCorrectionFeedbackTone = 'success';
+        this.myDataManagementFeedback = '';
+        this.myDataManagementFeedbackTone = 'success';
         this.timeClockStationPreviewEnabled = false;
         this.timeClockStationEmployeeId = null;
         this.timeClockStationSearch = '';
@@ -86,6 +96,26 @@ export class UIManager {
     setTimeClockSection(section) {
         const allowed = new Set(['today', 'history', 'myData', 'overtime', 'management', 'configuration']);
         this.currentTimeClockSection = allowed.has(section) ? section : 'today';
+        this.renderTimeClockPage();
+    }
+
+    setMyDataYear(year) {
+        const normalized = Number.parseInt(year, 10);
+        if (Number.isInteger(normalized) && normalized >= 1900 && normalized <= 9999) {
+            this.currentMyDataYear = normalized;
+            this.renderTimeClockPage();
+        }
+    }
+
+    setMyDataCorrectionFeedback(message = '', tone = 'success') {
+        this.myDataCorrectionFeedback = String(message || '');
+        this.myDataCorrectionFeedbackTone = tone === 'error' ? 'error' : 'success';
+        this.renderTimeClockPage();
+    }
+
+    setMyDataManagementFeedback(message = '', tone = 'success') {
+        this.myDataManagementFeedback = String(message || '');
+        this.myDataManagementFeedbackTone = tone === 'error' ? 'error' : 'success';
         this.renderTimeClockPage();
     }
 
@@ -2052,6 +2082,31 @@ export class UIManager {
         const actionableOvertime = todayOvertimeRecords.find((record) => ['authorized', 'in-progress', 'awaiting-worker-validation'].includes(record.status)) || null;
         const ownProfile = this.dataManager.getCurrentUserSelfServiceProfile?.() || null;
         const ownVacations = this.dataManager.getCurrentUserSelfServiceVacations?.() || [];
+        const ownCorrectionRequests = this.dataManager.getCurrentUserCorrectionRequests?.() || [];
+        const correctionRequestQueue = canManageAttendance
+            ? (this.dataManager.getSelfServiceCorrectionRequestQueue?.() || [])
+            : [];
+        const ownOvertimeRecords = employee
+            ? this.dataManager.getOvertimeRecordsForEmployee(employee.id)
+            : [];
+        const personalYears = getPersonalDataYears({
+            attendanceRecords: historyRecords,
+            overtimeRecords: ownOvertimeRecords,
+            vacations: ownVacations,
+            correctionRequests: ownCorrectionRequests,
+            currentYear: now.getFullYear()
+        });
+        if (!personalYears.includes(this.currentMyDataYear)) {
+            this.currentMyDataYear = personalYears[0] || now.getFullYear();
+        }
+        const personalYearSummary = employee ? buildPersonalYearSummary({
+            employeeId: employee.id,
+            year: this.currentMyDataYear,
+            attendanceRecords: historyRecords,
+            overtimeRecords: ownOvertimeRecords,
+            vacations: ownVacations,
+            correctionRequests: ownCorrectionRequests
+        }) : null;
         const ownVacationBalance = ownProfile?.vacationBalance?.schemaVersion === 1
             ? ownProfile.vacationBalance
             : null;
@@ -2142,6 +2197,67 @@ export class UIManager {
                 </article>
             `;
         }).join('') : `<p class="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">${t('timeClock.myData.noVacations')}</p>`;
+        const formatCorrectionDate = (value) => {
+            const date = value?.toDate?.() || (value ? new Date(value) : null);
+            return date && !Number.isNaN(date.getTime())
+                ? this.formatLocaleDate(date, { day: '2-digit', month: 'short', year: 'numeric' })
+                : t('timeClock.myData.corrections.saving');
+        };
+        const correctionStatusTone = (status) => ({
+            submitted: 'bg-amber-100 text-amber-800',
+            'in-review': 'bg-sky-100 text-sky-800',
+            resolved: 'bg-emerald-100 text-emerald-800',
+            rejected: 'bg-rose-100 text-rose-800'
+        }[status] || 'bg-slate-100 text-slate-700');
+        const ownCorrectionRequestsMarkup = ownCorrectionRequests.length
+            ? ownCorrectionRequests.map((request) => `
+                <article class="border-t border-slate-200 py-4 first:border-t-0 first:pt-0">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <div class="font-medium text-slate-900">${t(`timeClock.myData.corrections.categories.${request.category}`)}</div>
+                            <div class="mt-1 text-xs text-slate-500">${formatCorrectionDate(request.createdAtServer)}${request.referenceDate ? ` · ${this.escapeHtml(request.referenceDate)}` : ''}</div>
+                        </div>
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold ${correctionStatusTone(request.status)}">${t(`timeClock.myData.corrections.status.${request.status}`)}</span>
+                    </div>
+                    <p class="mt-3 text-sm text-slate-700">${this.escapeHtml(request.description)}</p>
+                    ${request.resolutionNote ? `<p class="mt-3 border-l-2 border-slate-300 pl-3 text-sm text-slate-600">${this.escapeHtml(request.resolutionNote)}</p>` : ''}
+                </article>
+            `).join('')
+            : `<p class="text-sm text-slate-500">${t('timeClock.myData.corrections.empty')}</p>`;
+        const correctionQueueMarkup = correctionRequestQueue
+            .filter((request) => ['submitted', 'in-review'].includes(request.status))
+            .slice(0, 20)
+            .map((request) => {
+                const requestEmployee = [...this.dataManager.getActiveEmployees(), ...this.dataManager.getArchivedEmployees()]
+                    .find((entry) => entry.id === request.employeeId);
+                return `
+                    <form data-personal-correction-review-form data-request-id="${this.escapeHtml(request.id)}" class="border-t border-slate-200 py-5 first:border-t-0 first:pt-0">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div class="font-semibold text-slate-900">${this.escapeHtml(requestEmployee?.name || request.employeeId)}</div>
+                                <div class="mt-1 text-xs text-slate-500">${t(`timeClock.myData.corrections.categories.${request.category}`)} · ${formatCorrectionDate(request.createdAtServer)}</div>
+                            </div>
+                            <span class="rounded-full px-3 py-1 text-xs font-semibold ${correctionStatusTone(request.status)}">${t(`timeClock.myData.corrections.status.${request.status}`)}</span>
+                        </div>
+                        <p class="mt-3 text-sm text-slate-700">${this.escapeHtml(request.description)}</p>
+                        <div class="mt-4 grid gap-3 md:grid-cols-[0.65fr_1fr_auto] md:items-end">
+                            <label class="block text-sm font-medium text-slate-700">
+                                <span class="mb-1.5 block">${t('timeClock.myData.corrections.manager.statusLabel')}</span>
+                                <select name="status" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="in-review" ${request.status === 'in-review' ? 'selected' : ''}>${t('timeClock.myData.corrections.status.in-review')}</option>
+                                    <option value="resolved">${t('timeClock.myData.corrections.status.resolved')}</option>
+                                    <option value="rejected">${t('timeClock.myData.corrections.status.rejected')}</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                <span class="mb-1.5 block">${t('timeClock.myData.corrections.manager.responseLabel')}</span>
+                                <input name="resolutionNote" maxlength="2000" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" placeholder="${t('timeClock.myData.corrections.manager.responsePlaceholder')}">
+                            </label>
+                            <button type="submit" class="rounded-full bg-slate-900 px-5 py-2.5 font-semibold text-white hover:bg-slate-800">${t('timeClock.myData.corrections.manager.save')}</button>
+                        </div>
+                    </form>
+                `;
+            }).join('');
         const adjustmentEmployeeOptions = this.dataManager.getActiveEmployees()
             .map((entry) => `<option value="${this.escapeHtml(entry.id)}">${this.escapeHtml(entry.name)}</option>`)
             .join('');
@@ -2349,6 +2465,20 @@ export class UIManager {
                         </div>
                     </div>
                 </div>
+                <section class="${activeTimeClockSection === 'management' ? '' : 'hidden'} mt-8 border-t border-slate-200 pt-7">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">${t('timeClock.myData.corrections.manager.kicker')}</div>
+                            <h4 class="mt-2 text-xl font-semibold text-slate-900">${t('timeClock.myData.corrections.manager.title')}</h4>
+                            <p class="mt-1 text-sm text-slate-600">${t('timeClock.myData.corrections.manager.description')}</p>
+                        </div>
+                        <span class="text-sm font-medium text-slate-600">${t('timeClock.myData.corrections.manager.openCount', { count: correctionRequestQueue.filter((request) => ['submitted', 'in-review'].includes(request.status)).length })}</span>
+                    </div>
+                    <div class="mt-6">
+                        ${correctionQueueMarkup || `<p class="text-sm text-slate-500">${t('timeClock.myData.corrections.manager.empty')}</p>`}
+                    </div>
+                    ${this.myDataManagementFeedback ? `<p class="mt-4 text-sm ${this.myDataManagementFeedbackTone === 'error' ? 'text-rose-700' : 'text-emerald-700'}">${this.escapeHtml(this.myDataManagementFeedback)}</p>` : ''}
+                </section>
                 ${canConfigureCompliance ? `
                     <div class="${activeTimeClockSection === 'configuration' ? '' : 'hidden'} rounded-3xl border ${missingComplianceFields.length ? 'border-amber-300 bg-amber-50/60' : 'border-emerald-200 bg-emerald-50/40'} p-5">
                         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -2657,10 +2787,13 @@ export class UIManager {
                 </section>
 
                 <section class="${sectionClass('myData')} rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-                    <div class="max-w-3xl">
-                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.myData.kicker')}</div>
-                        <h3 class="mt-2 text-3xl font-semibold text-slate-900">${t('timeClock.myData.title')}</h3>
-                        <p class="mt-2 text-sm text-slate-600">${t('timeClock.myData.description')}</p>
+                    <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="max-w-3xl">
+                            <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.myData.kicker')}</div>
+                            <h3 class="mt-2 text-3xl font-semibold text-slate-900">${t('timeClock.myData.title')}</h3>
+                            <p class="mt-2 text-sm text-slate-600">${t('timeClock.myData.description')}</p>
+                        </div>
+                        ${ownProfile ? `<button type="button" data-export-personal-data class="shrink-0 rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">${t('timeClock.myData.export.action')}</button>` : ''}
                     </div>
                     ${ownProfile ? `
                         <div class="mt-6 rounded-3xl bg-slate-900 p-6 text-white">
@@ -2680,6 +2813,62 @@ export class UIManager {
                         <div class="mt-4 grid gap-3 md:grid-cols-2">${ownVacationMarkup}</div>
                         <p class="mt-4 text-xs text-slate-500">${t('timeClock.myData.privateNote')}</p>
                     </div>
+                    ${personalYearSummary ? `
+                        <section class="mt-8 border-t border-slate-200 pt-6" aria-labelledby="personal-year-summary-title">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <h4 id="personal-year-summary-title" class="text-xl font-semibold text-slate-900">${t('timeClock.myData.history.title')}</h4>
+                                    <p class="mt-1 text-sm text-slate-600">${t('timeClock.myData.history.description')}</p>
+                                </div>
+                                <label class="block text-sm font-medium text-slate-700">
+                                    <span class="sr-only">${t('timeClock.myData.history.yearLabel')}</span>
+                                    <select data-my-data-year class="rounded-xl border border-slate-300 bg-white px-4 py-2.5">
+                                        ${personalYears.map((year) => `<option value="${year}" ${year === this.currentMyDataYear ? 'selected' : ''}>${year}</option>`).join('')}
+                                    </select>
+                                </label>
+                            </div>
+                            <dl class="mt-6 grid grid-cols-2 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
+                                <div><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.worked')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.formatMinutesAsDuration(personalYearSummary.attendance.workedMinutes)}</dd></div>
+                                <div class="border-l border-slate-200 pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.breaks')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.formatMinutesAsDuration(personalYearSummary.attendance.breakMinutes)}</dd></div>
+                                <div class="sm:border-l sm:border-slate-200 sm:pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.days')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.escapeHtml(personalYearSummary.attendance.daysWithRecords)}</dd></div>
+                                <div class="border-l border-slate-200 pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.overtime')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.formatMinutesAsDuration(personalYearSummary.overtime.completedMinutes)}</dd></div>
+                                <div class="sm:border-l sm:border-slate-200 sm:pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.leaveRecords')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.escapeHtml(personalYearSummary.leave.recordCount)}</dd></div>
+                                <div class="border-l border-slate-200 pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.history.openCorrections')}</dt><dd class="mt-1 text-lg font-semibold text-slate-900">${this.escapeHtml(personalYearSummary.corrections.open)}</dd></div>
+                            </dl>
+                        </section>
+                    ` : ''}
+                    ${employee ? `
+                        <section class="mt-8 border-t border-slate-200 pt-6" aria-labelledby="personal-correction-title">
+                            <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                                <div>
+                                    <h4 id="personal-correction-title" class="text-xl font-semibold text-slate-900">${t('timeClock.myData.corrections.title')}</h4>
+                                    <p class="mt-1 text-sm text-slate-600">${t('timeClock.myData.corrections.description')}</p>
+                                    <form id="personal-data-correction-form" class="mt-5 space-y-3">
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <span class="mb-1.5 block">${t('timeClock.myData.corrections.categoryLabel')}</span>
+                                            <select name="category" required class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3">
+                                                ${['profile', 'attendance', 'vacation', 'overtime', 'other'].map((category) => `<option value="${category}">${t(`timeClock.myData.corrections.categories.${category}`)}</option>`).join('')}
+                                            </select>
+                                        </label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <span class="mb-1.5 block">${t('timeClock.myData.corrections.referenceDate')}</span>
+                                            <input name="referenceDate" type="date" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3">
+                                        </label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <span class="mb-1.5 block">${t('timeClock.myData.corrections.detailsLabel')}</span>
+                                            <textarea name="description" required minlength="10" maxlength="2000" rows="4" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3" placeholder="${t('timeClock.myData.corrections.detailsPlaceholder')}"></textarea>
+                                        </label>
+                                        <button type="submit" class="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800">${t('timeClock.myData.corrections.submit')}</button>
+                                        ${this.myDataCorrectionFeedback ? `<p class="text-sm ${this.myDataCorrectionFeedbackTone === 'error' ? 'text-rose-700' : 'text-emerald-700'}">${this.escapeHtml(this.myDataCorrectionFeedback)}</p>` : ''}
+                                    </form>
+                                </div>
+                                <div class="border-t border-slate-200 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                                    <h5 class="font-semibold text-slate-900">${t('timeClock.myData.corrections.historyTitle')}</h5>
+                                    <div class="mt-4">${ownCorrectionRequestsMarkup}</div>
+                                </div>
+                            </div>
+                        </section>
+                    ` : ''}
                 </section>
 
                 ${overtimePanel}
@@ -3078,6 +3267,29 @@ export class UIManager {
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
+    }
+
+    exportCurrentUserPersonalData() {
+        const employee = this.dataManager.getCurrentUserEmployee();
+        const profile = this.dataManager.getCurrentUserSelfServiceProfile?.();
+        if (!employee?.id || !profile) {
+            throw new Error(t('timeClock.myData.export.errors.notReady'));
+        }
+        const correctionRequests = this.dataManager.getCurrentUserCorrectionRequests?.() || [];
+        const personalData = buildPersonalDataExport({
+            employeeId: employee.id,
+            profile,
+            vacations: this.dataManager.getCurrentUserSelfServiceVacations?.() || [],
+            attendanceRecords: Object.values(this.dataManager.attendanceRecords || {}),
+            overtimeRecords: Object.values(this.dataManager.overtimeRecords || {}),
+            correctionRequests,
+            generatedAt: new Date()
+        });
+        const safeEmployeeId = String(employee.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        this.downloadTextArtifact(
+            `dados-pessoais_${safeEmployeeId}_${this.dataManager.getDateKey(new Date())}.json`,
+            `${JSON.stringify(personalData, null, 2)}\n`
+        );
     }
 
     downloadTextArtifact(filename, content, type = 'application/json;charset=utf-8') {

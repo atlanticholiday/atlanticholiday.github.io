@@ -1,9 +1,9 @@
 # Política de acesso dos colegas — self-service e horário de equipa
 
-**Versão:** 1.4
+**Versão:** 1.5
 **Data da decisão:** 10 de setembro de 2026
 
-**Estado:** etapa 5 concluída e etapa 6 iniciada. As contas dos colegas usam `schedule_directory` para o horário mínimo da equipa e `employee_self_service/{employeeId}` para a sua ficha pessoal. Os documentos completos de `employees`, as notas diárias internas e os registos completos de férias/ausências ficam reservados a perfis autorizados de gestão.
+**Estado:** etapas 5 e 6 concluídas. As contas dos colegas usam `schedule_directory` para o horário mínimo da equipa e `employee_self_service/{employeeId}` para a sua ficha pessoal. Os documentos completos de `employees`, as notas diárias internas e os registos completos de férias/ausências ficam reservados a perfis autorizados de gestão.
 
 ## Objetivo
 
@@ -76,4 +76,6 @@ Estados detalhados como doença, ausência pessoal ou ausência injustificada s�
 
 A etapa 5 fica concluída com três fontes separadas: `schedule_directory` apresenta apenas o estado operacional genérico; `vacation_records` mantém o registo completo reservado; e `employee_self_service/{employeeId}/vacation_records` apresenta ao titular apenas datas, tipo, estado e modo de contagem, sem notas ou metadados de gestão.
 
-A etapa 6 continua na área de leitura **Os meus dados** no relógio de ponto. Esta versão apresenta a ficha profissional segura, as férias/ausências próprias e o saldo do ano atual calculado pelas mesmas regras usadas pela gestão. A projeção do saldo contém apenas o ano, direito anual, dias gozados, planeados, registados e disponíveis. A evolução seguinte pode acrescentar a exportação pessoal e o fluxo para pedir correção de dados.
+A etapa 6 fica concluída na área **Os meus dados** do relógio de ponto. O colega pode consultar a ficha profissional segura, férias/ausências próprias, saldo do ano atual e um resumo anual de assiduidade e trabalho suplementar. Pode ainda descarregar uma exportação JSON limitada ao seu `employeeId` e apresentar pedidos de correção de dados.
+
+Os pedidos são guardados em `employee_data_correction_requests`: o colega pode criar e acompanhar apenas os seus; a gestão autorizada pode colocá-los em análise, resolver ou rejeitar com resposta registada. A identidade do pedido, descrição original e data de criação são imutáveis, e os documentos não podem ser eliminados pelo cliente.

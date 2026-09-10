@@ -77,6 +77,16 @@ await seed('employee_self_service/emp-2/vacation_records', 'emp-2__2026-09-21__2
   startDate: '2026-09-21', endDate: '2026-09-25', type: 'sick', status: 'approved',
   dayCountMode: 'workdays', schemaVersion: 1, updatedAtServer: ''
 });
+await seed('employee_data_correction_requests', 'own-correction-seeded', {
+  employeeId: 'emp-1', requesterUid: 'worker-uid', category: 'profile', referenceDate: '2026-09-10',
+  description: 'My phone number is incorrect.', status: 'submitted', resolutionNote: null,
+  reviewedByUid: null, resolvedAtServer: null, createdAtServer: '', updatedAtServer: ''
+});
+await seed('employee_data_correction_requests', 'peer-correction-seeded', {
+  employeeId: 'emp-2', requesterUid: 'peer-uid', category: 'attendance', referenceDate: '2026-09-09',
+  description: 'A colleague correction request.', status: 'submitted', resolutionNote: null,
+  reviewedByUid: null, resolvedAtServer: null, createdAtServer: '', updatedAtServer: ''
+});
 await seed('overtime_records', 'peer-overtime-seeded', { employeeId: 'emp-2', employeeName: 'Station Worker' });
 await seed('vacation_records', 'own-vacation-seeded', {
   employeeId: 'emp-1', startDate: '2026-09-14', endDate: '2026-09-18',

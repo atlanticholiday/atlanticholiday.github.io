@@ -51,6 +51,10 @@ import { buildVerifiableAttendanceArchive, getArchivePeriodRange, normalizeArchi
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
 import { buildScheduleDirectoryEntries } from './schedule-directory.js';
 import { buildSelfServiceDirectoryEntries, buildSelfServiceProfileTombstone } from './self-service-directory.js';
+import {
+    CORRECTION_REQUEST_STATUSES,
+    normalizeCorrectionRequestInput
+} from './personal-data-self-service.js';
 import { getEmployeeDirectoryCollectionName } from './schedule-data-access.js';
 import {
     buildVacation2026UpdatePlan,
@@ -96,10 +100,12 @@ export class DataManager {
         this.unsubscribeVacationRecords = null;
         this.unsubscribeSelfServiceProfile = null;
         this.unsubscribeSelfServiceVacations = null;
+        this.unsubscribeSelfServiceCorrections = null;
         this.attendanceRecords = {};
         this.overtimeRecords = {};
         this.selfServiceProfile = null;
         this.selfServiceVacations = [];
+        this.selfServiceCorrectionRequests = [];
         this.stationIdentifiedEmployee = null;
         this.stationDirectorySyncSignature = null;
         this.scheduleDirectorySyncSignature = null;
@@ -169,6 +175,7 @@ export class DataManager {
         this.vacationRecords = [];
         this.selfServiceProfile = null;
         this.selfServiceVacations = [];
+        this.selfServiceCorrectionRequests = [];
         this.attendanceRecords = {};
         this.overtimeRecords = {};
         this.stationIdentifiedEmployee = null;
@@ -250,6 +257,13 @@ export class DataManager {
         return linkedEmployeeId
             ? collection(this.db, 'employee_self_service', linkedEmployeeId, 'vacation_records')
             : null;
+    }
+
+    getSelfServiceCorrectionRequestsReadRef() {
+        const collectionRef = collection(this.db, 'employee_data_correction_requests');
+        if (this.hasPrivilegedRole() || this.canAccessApp('staff')) return collectionRef;
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        return linkedEmployeeId ? query(collectionRef, where('employeeId', '==', linkedEmployeeId)) : null;
     }
 
     preloadHolidaysAroundYear(year) {
@@ -549,6 +563,86 @@ export class DataManager {
                 console.error('Error listening for own self-service vacations:', error);
             });
         }
+    }
+
+    listenForSelfServiceCorrectionRequests() {
+        if (this.unsubscribeSelfServiceCorrections || this.isTimeClockStationUser()) return;
+        const requestsRef = this.getSelfServiceCorrectionRequestsReadRef();
+        if (!requestsRef) return;
+
+        this.unsubscribeSelfServiceCorrections = onSnapshot(requestsRef, (snapshot) => {
+            const timestampValue = (value) => value?.toMillis?.() || Date.parse(value || '') || 0;
+            this.selfServiceCorrectionRequests = snapshot.docs
+                .map((requestDoc) => ({ id: requestDoc.id, ...requestDoc.data() }))
+                .sort((left, right) => timestampValue(right.createdAtServer) - timestampValue(left.createdAtServer));
+            this.notifyDataChange();
+        }, (error) => {
+            this.selfServiceCorrectionRequests = [];
+            this.notifyDataChange();
+            console.error('Error listening for personal data correction requests:', error);
+        });
+    }
+
+    getCurrentUserCorrectionRequests() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        if (!linkedEmployeeId) return [];
+        return this.selfServiceCorrectionRequests
+            .filter((entry) => entry.employeeId === linkedEmployeeId)
+            .map((entry) => ({ ...entry }));
+    }
+
+    getSelfServiceCorrectionRequestQueue() {
+        if (!this.hasPrivilegedRole() && !this.canAccessApp('staff')) return [];
+        return this.selfServiceCorrectionRequests.map((entry) => ({ ...entry }));
+    }
+
+    async createSelfServiceCorrectionRequest(input = {}) {
+        const employeeId = this.currentUserContext.linkedEmployee?.id;
+        const requesterUid = this.currentUserContext.uid;
+        if (!employeeId || !requesterUid || this.isTimeClockStationUser()) {
+            throw new Error(t('timeClock.myData.corrections.errors.linkRequired'));
+        }
+        let normalized;
+        try {
+            normalized = normalizeCorrectionRequestInput(input);
+        } catch (error) {
+            if (error?.code === 'correction-description-too-short') {
+                throw new Error(t('timeClock.myData.corrections.errors.descriptionTooShort'));
+            }
+            throw error;
+        }
+        return addDoc(collection(this.db, 'employee_data_correction_requests'), {
+            employeeId,
+            requesterUid,
+            ...normalized,
+            status: 'submitted',
+            resolutionNote: null,
+            reviewedByUid: null,
+            resolvedAtServer: null,
+            createdAtServer: serverTimestamp(),
+            updatedAtServer: serverTimestamp()
+        });
+    }
+
+    async reviewSelfServiceCorrectionRequest(requestId, { status, resolutionNote = '' } = {}) {
+        if (!this.hasPrivilegedRole() && !this.canAccessApp('staff')) {
+            throw new Error(t('timeClock.errors.managerRequired'));
+        }
+        const normalizedStatus = CORRECTION_REQUEST_STATUSES.includes(status) ? status : null;
+        if (!normalizedStatus || normalizedStatus === 'submitted') {
+            throw new Error(t('timeClock.myData.corrections.errors.invalidStatus'));
+        }
+        const cleanNote = typeof resolutionNote === 'string' ? resolutionNote.trim().slice(0, 2000) : '';
+        if (['resolved', 'rejected'].includes(normalizedStatus) && cleanNote.length < 3) {
+            throw new Error(t('timeClock.myData.corrections.errors.resolutionRequired'));
+        }
+        await updateDoc(doc(this.db, 'employee_data_correction_requests', requestId), {
+            status: normalizedStatus,
+            resolutionNote: cleanNote || null,
+            reviewedByUid: this.currentUserContext.uid,
+            resolvedAtServer: ['resolved', 'rejected'].includes(normalizedStatus) ? serverTimestamp() : null,
+            updatedAtServer: serverTimestamp()
+        });
     }
 
     listenForVacationRecordChanges() {
@@ -1426,7 +1520,8 @@ export class DataManager {
             this.unsubscribeOvertime,
             this.unsubscribeVacationRecords,
             this.unsubscribeSelfServiceProfile,
-            this.unsubscribeSelfServiceVacations
+            this.unsubscribeSelfServiceVacations,
+            this.unsubscribeSelfServiceCorrections
         ].forEach((unsubscribe) => {
             if (typeof unsubscribe === 'function') {
                 unsubscribe();
@@ -1442,6 +1537,7 @@ export class DataManager {
         this.unsubscribeVacationRecords = null;
         this.unsubscribeSelfServiceProfile = null;
         this.unsubscribeSelfServiceVacations = null;
+        this.unsubscribeSelfServiceCorrections = null;
     }
 
     getCurrentUserContext() {

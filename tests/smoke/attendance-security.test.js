@@ -52,6 +52,10 @@ describe('Attendance register security', () => {
         assert.includes(rules, 'isOwnEmployeeDocument(employeeId) && resource.data.active == true');
         assert.includes(rules, 'validSelfServiceVacationBalance(data.vacationBalance)');
         assert.includes(rules, 'balance.remainingDays == balance.allowanceDays - balance.recordedDays');
+        assert.includes(rules, 'match /employee_data_correction_requests/{requestId}');
+        assert.includes(rules, 'allow create: if validSelfServiceCorrectionCreate()');
+        assert.includes(rules, 'data.diff(resource.data).affectedKeys().hasOnly');
+        assert.includes(rules, 'allow delete: if false');
         assert.includes(rules, '// Archive by replacing the profile with an inactive, PII-free tombstone.');
         assert.includes(rules, "data.keys().hasOnly([\n          'startDate', 'endDate', 'type', 'status'");
         assert.includes(credentialRules, 'request.auth.token.email == credentialEmail');
@@ -59,14 +63,18 @@ describe('Attendance register security', () => {
     });
 
     test('keeps private schedule fields out of the colleague data path', async () => {
-        const [mainResponse, dataManagerResponse, uiResponse] = await Promise.all([
+        const [mainResponse, dataManagerResponse, uiResponse, eventManagerResponse, personalDataResponse] = await Promise.all([
             fetch('../js/app/main.js'),
             fetch('../js/features/scheduling/data-manager.js'),
-            fetch('../js/features/scheduling/ui-manager.js')
+            fetch('../js/features/scheduling/ui-manager.js'),
+            fetch('../js/features/scheduling/event-manager.js'),
+            fetch('../js/features/scheduling/personal-data-self-service.js')
         ]);
         const mainSource = await mainResponse.text();
         const dataManagerSource = await dataManagerResponse.text();
         const uiSource = await uiResponse.text();
+        const eventManagerSource = await eventManagerResponse.text();
+        const personalDataSource = await personalDataResponse.text();
 
         assert.includes(mainSource, 'getScheduleDataAccessPlan');
         assert.includes(dataManagerSource, 'getEmployeeDirectoryCollectionName');
@@ -75,6 +83,16 @@ describe('Attendance register security', () => {
         assert.includes(dataManagerSource, 'this.hasAuthoritativeEmployeeSnapshot && this.hasAuthoritativeVacationSnapshot');
         assert.includes(dataManagerSource, 'this.selfServiceProfile.active === true');
         assert.includes(dataManagerSource, 'this.selfServiceProfile?.active !== true');
+        assert.includes(dataManagerSource, 'createSelfServiceCorrectionRequest');
+        assert.includes(dataManagerSource, 'reviewSelfServiceCorrectionRequest');
+        assert.includes(mainSource, 'listenForSelfServiceCorrectionRequests');
+        assert.includes(uiSource, 'data-export-personal-data');
+        assert.includes(uiSource, 'personal-data-correction-form');
+        assert.includes(uiSource, 'data-personal-correction-review-form');
+        assert.includes(eventManagerSource, 'createSelfServiceCorrectionRequest');
+        assert.includes(eventManagerSource, 'reviewSelfServiceCorrectionRequest');
+        assert.includes(personalDataSource, 'record?.employeeId === employeeId');
+        assert.ok(!personalDataSource.includes('actorEmail: cleanText'));
         assert.includes(uiSource, 'dayDetailsPolicy.showDailyNote');
         assert.includes(uiSource, 'dayDetailsPolicy.showExtraHours');
     });

@@ -6,7 +6,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import {
   collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs,
-  getFirestore, serverTimestamp, updateDoc, writeBatch
+  getFirestore, query, serverTimestamp, updateDoc, where, writeBatch
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const projectId = 'demo-horario';
@@ -331,6 +331,57 @@ async function run() {
     dayCountMode: 'workdays', schemaVersion: 1, note: 'must stay private', updatedAtServer: serverTimestamp()
   });
   await expectDenied(() => forgedSafeVacation.commit(), 'private note in safe vacation projection');
+
+  stage = 'personal data correction requests';
+  console.log(stage);
+  const [workerCorrections, linkedCorrections, adminCorrections, staffCorrections] = await Promise.all([
+    getDocs(query(collection(workerDb, 'employee_data_correction_requests'), where('employeeId', '==', 'emp-1'))),
+    getDocs(query(collection(linkedDb, 'employee_data_correction_requests'), where('employeeId', '==', 'emp-1'))),
+    getDocs(collection(adminDb, 'employee_data_correction_requests')),
+    getDocs(collection(staffDb, 'employee_data_correction_requests')),
+    expectDenied(() => getDoc(doc(workerDb, 'employee_data_correction_requests', 'peer-correction-seeded')), 'peer correction request read'),
+    expectDenied(() => getDocs(collection(workerDb, 'employee_data_correction_requests')), 'unfiltered correction request list'),
+    expectDenied(() => getDoc(doc(stationDb, 'employee_data_correction_requests', 'own-correction-seeded')), 'station correction request read')
+  ]);
+  if (workerCorrections.size !== 1 || linkedCorrections.size !== 1) throw new Error('linked colleague cannot list own correction requests');
+  if (adminCorrections.size < 2 || staffCorrections.size < 2) throw new Error('management cannot list correction requests');
+
+  const createOwnCorrection = writeBatch(workerDb);
+  createOwnCorrection.set(doc(workerDb, 'employee_data_correction_requests', 'worker-created-correction'), {
+    employeeId: 'emp-1', requesterUid: 'worker-uid', category: 'attendance', referenceDate: dateKey,
+    description: 'The recorded arrival time should be reviewed.', status: 'submitted',
+    resolutionNote: null, reviewedByUid: null, resolvedAtServer: null,
+    createdAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+  });
+  await createOwnCorrection.commit();
+
+  const forgePeerCorrection = writeBatch(workerDb);
+  forgePeerCorrection.set(doc(workerDb, 'employee_data_correction_requests', 'forged-peer-correction'), {
+    employeeId: 'emp-2', requesterUid: 'worker-uid', category: 'profile', referenceDate: null,
+    description: 'Attempt to create a request for another colleague.', status: 'submitted',
+    resolutionNote: null, reviewedByUid: null, resolvedAtServer: null,
+    createdAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+  });
+  await expectDenied(() => forgePeerCorrection.commit(), 'correction request for another employee');
+  await expectDenied(() => updateDoc(doc(workerDb, 'employee_data_correction_requests', 'own-correction-seeded'), {
+    status: 'resolved', resolutionNote: 'Forged', reviewedByUid: 'worker-uid',
+    resolvedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+  }), 'worker correction request review');
+
+  await updateDoc(doc(staffDb, 'employee_data_correction_requests', 'own-correction-seeded'), {
+    status: 'in-review', resolutionNote: null, reviewedByUid: 'staff-uid',
+    resolvedAtServer: null, updatedAtServer: serverTimestamp()
+  });
+  await updateDoc(doc(adminDb, 'employee_data_correction_requests', 'own-correction-seeded'), {
+    status: 'resolved', resolutionNote: 'The profile was corrected.', reviewedByUid: 'admin-uid',
+    resolvedAtServer: serverTimestamp(), updatedAtServer: serverTimestamp()
+  });
+  await expectDenied(() => updateDoc(doc(staffDb, 'employee_data_correction_requests', 'peer-correction-seeded'), {
+    description: 'Management must not rewrite the original request.', status: 'in-review',
+    resolutionNote: null, reviewedByUid: 'staff-uid', resolvedAtServer: null,
+    updatedAtServer: serverTimestamp()
+  }), 'management correction request content rewrite');
+  await expectDenied(() => deleteDoc(doc(adminDb, 'employee_data_correction_requests', 'own-correction-seeded')), 'correction request deletion');
 
   stage = 'limited schedule directory';
   console.log(stage);

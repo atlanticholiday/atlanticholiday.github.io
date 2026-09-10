@@ -4,6 +4,8 @@
 
 - [ ] Cada trabalhador tem conta própria, email único e ligação ao respetivo perfil.
 - [ ] Contas de gestores, estação partilhada e antigos trabalhadores estão revistas.
+- [ ] Com uma conta real de colega, foi confirmado que a área “Os meus dados”, a exportação pessoal e os pedidos de retificação mostram apenas o trabalhador ligado à conta.
+- [ ] Um pedido de retificação de teste foi recebido, tratado pela gestão e a resposta ficou visível na conta do colega.
 - [ ] A configuração legal tem empregador, atividade, sede, local, período de funcionamento, pausas, descanso semanal e IRCT/regime especial quando aplicável.
 - [ ] A comissão de trabalhadores/estrutura sindical foi consultada quando a lei e a situação concreta o exigem, e a prova foi arquivada.
 - [ ] O mapa de horário foi conferido, impresso e afixado em local visível.

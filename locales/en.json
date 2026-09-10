@@ -3103,6 +3103,74 @@
       "vacationsDescription": "Only your own records appear here. Internal management notes are not included.",
       "noVacations": "No leave or absences have been recorded yet.",
       "privateNote": "For privacy, this area receives a limited copy rather than the complete internal record.",
+      "history": {
+        "title": "Personal yearly summary",
+        "description": "Review attendance, overtime, and leave totals for each year.",
+        "yearLabel": "Summary year",
+        "worked": "Worked time",
+        "breaks": "Breaks",
+        "days": "Days recorded",
+        "overtime": "Overtime",
+        "leaveRecords": "Leave and absences",
+        "openCorrections": "Open corrections"
+      },
+      "export": {
+        "action": "Export my data",
+        "errors": {
+          "notReady": "Your personal data is not ready for export yet.",
+          "failed": "Your personal data could not be exported."
+        }
+      },
+      "corrections": {
+        "title": "Request a correction",
+        "description": "Tell us what should be checked. The request is recorded and its status remains visible here.",
+        "categoryLabel": "Information type",
+        "referenceDate": "Related date, if applicable",
+        "detailsLabel": "What should be corrected",
+        "detailsPlaceholder": "Clearly explain the incorrect data and what the correct value should be.",
+        "submit": "Send request",
+        "historyTitle": "Submitted requests",
+        "empty": "You have not submitted any correction requests yet.",
+        "saving": "Saving…",
+        "categories": {
+          "profile": "Personal profile",
+          "attendance": "Attendance",
+          "vacation": "Leave or absence",
+          "overtime": "Overtime",
+          "other": "Other data"
+        },
+        "status": {
+          "submitted": "Submitted",
+          "in-review": "In review",
+          "resolved": "Resolved",
+          "rejected": "Not accepted"
+        },
+        "feedback": {
+          "submitted": "Request submitted for review.",
+          "failed": "The request could not be submitted."
+        },
+        "errors": {
+          "linkRequired": "This account is not linked to an active colleague.",
+          "descriptionTooShort": "Describe the correction using at least 10 characters.",
+          "invalidStatus": "The selected status is invalid.",
+          "resolutionRequired": "Enter a response using at least 3 characters."
+        },
+        "manager": {
+          "kicker": "Personal requests",
+          "title": "Corrections requested by colleagues",
+          "description": "Review each request and record the response without changing the original request.",
+          "openCount": "{{count}} open",
+          "empty": "There are no open correction requests.",
+          "statusLabel": "New status",
+          "responseLabel": "Response",
+          "responsePlaceholder": "Response or action taken",
+          "save": "Save",
+          "feedback": {
+            "saved": "Request updated.",
+            "failed": "The request could not be updated."
+          }
+        }
+      },
       "status": {
         "approved": "Approved",
         "pending": "Pending",

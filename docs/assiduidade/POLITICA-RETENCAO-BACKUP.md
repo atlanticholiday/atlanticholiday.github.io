@@ -4,6 +4,8 @@
 
 Os documentos `attendance_records` e `overtime_records`, os seus eventos, correções, revisões e comprovativos são conservados por cinco anos. O campo `retainUntil` sinaliza a data mínima; não autoriza eliminação automática sem revisão.
 
+Os pedidos em `employee_data_correction_requests` integram o histórico de exercício e retificação de dados do trabalhador. Permanecem imutáveis no cliente e devem ser incluídos na tabela geral de retenção de RH antes de ser criada qualquer rotina de eliminação.
+
 ## Arquivo verificável e cópias de segurança
 
 - no primeiro dia útil de cada mês, um responsável descarrega em **Relógio de Ponto → Configuração → Arquivo mensal verificável** o JSON e o respetivo manifesto SHA-256 do mês anterior;

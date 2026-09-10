@@ -161,6 +161,63 @@ service cloud.firestore {
         && data.updatedAtServer == request.time;
     }
 
+    function validSelfServiceCorrectionCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'employeeId', 'requesterUid', 'category', 'referenceDate', 'description',
+          'status', 'resolutionNote', 'reviewedByUid', 'resolvedAtServer',
+          'createdAtServer', 'updatedAtServer'
+        ])
+        && data.keys().hasOnly([
+          'employeeId', 'requesterUid', 'category', 'referenceDate', 'description',
+          'status', 'resolutionNote', 'reviewedByUid', 'resolvedAtServer',
+          'createdAtServer', 'updatedAtServer'
+        ])
+        && isOwnEmployeeDocument(data.employeeId)
+        && !hasRole('time-clock-station')
+        && data.requesterUid == request.auth.uid
+        && data.category in ['profile', 'attendance', 'vacation', 'overtime', 'other']
+        && (data.referenceDate == null || (
+          data.referenceDate is string
+          && data.referenceDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        ))
+        && data.description is string
+        && data.description.size() >= 10
+        && data.description.size() <= 2000
+        && data.status == 'submitted'
+        && data.resolutionNote == null
+        && data.reviewedByUid == null
+        && data.resolvedAtServer == null
+        && data.createdAtServer == request.time
+        && data.updatedAtServer == request.time;
+    }
+
+    function validSelfServiceCorrectionReview() {
+      let data = request.resource.data;
+      return data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'resolutionNote', 'reviewedByUid', 'resolvedAtServer', 'updatedAtServer'
+        ])
+        && data.status in ['in-review', 'resolved', 'rejected']
+        && data.reviewedByUid == request.auth.uid
+        && data.updatedAtServer == request.time
+        && (
+          (
+            data.status == 'in-review'
+            && data.resolvedAtServer == null
+            && (data.resolutionNote == null || (
+              data.resolutionNote is string && data.resolutionNote.size() <= 2000
+            ))
+          )
+          || (
+            data.status in ['resolved', 'rejected']
+            && data.resolutionNote is string
+            && data.resolutionNote.size() >= 3
+            && data.resolutionNote.size() <= 2000
+            && data.resolvedAtServer == request.time
+          )
+        );
+    }
+
     function attendanceCredentialPath() {
       return /databases/$(database)/documents/attendance_credentials/$(request.auth.token.email);
     }
@@ -1094,6 +1151,16 @@ service cloud.firestore {
           && validSelfServiceVacation();
         allow delete: if privileged() || hasApp('staff');
       }
+    }
+
+    match /employee_data_correction_requests/{requestId} {
+      allow get, list: if privileged()
+        || hasApp('staff')
+        || isOwnAttendance(resource.data);
+      allow create: if validSelfServiceCorrectionCreate();
+      allow update: if (privileged() || hasApp('staff'))
+        && validSelfServiceCorrectionReview();
+      allow delete: if false;
     }
 
     // Minimum operational projection for the read-only team schedule. Private
