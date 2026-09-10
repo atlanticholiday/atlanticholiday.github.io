@@ -1690,9 +1690,36 @@ function createAsanaProjectHeader(documentRef, properties) {
         existingHeader.remove();
     }
 
+    const enBtn = actionsTarget.querySelector('[data-lang-option="en"]');
+    const ptBtn = actionsTarget.querySelector('[data-lang-option="pt"]');
+    if (enBtn && ptBtn) {
+        const current = activeLang();
+        enBtn.classList.toggle('active', current === 'en');
+        enBtn.setAttribute('aria-pressed', current === 'en' ? 'true' : 'false');
+        ptBtn.classList.toggle('active', current === 'pt');
+        ptBtn.setAttribute('aria-pressed', current === 'pt' ? 'true' : 'false');
+
+        enBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (i18n?.setLanguage) {
+                await i18n.setLanguage('en');
+            } else if (window.i18n?.setLanguage) {
+                await window.i18n.setLanguage('en');
+            }
+        };
+        ptBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (i18n?.setLanguage) {
+                await i18n.setLanguage('pt');
+            } else if (window.i18n?.setLanguage) {
+                await window.i18n.setLanguage('pt');
+            }
+        };
+    }
+
     try {
-        window.i18n?.setupLanguageSwitcher?.();
-        window.i18n?.updateLanguageSwitcher?.();
         window.navigationManager?.appSwitcher?.installTriggers?.();
     } catch (e) {
         // Non-browser or test environment
@@ -2346,11 +2373,26 @@ function renderCategoryTable({
     }
 }
 
+let lastInitOptions = null;
+let activePageFilterState = null;
+
+if (typeof window !== 'undefined' && !window.__allInfoLangListenerBound) {
+    window.__allInfoLangListenerBound = true;
+    window.addEventListener('languageChanged', () => {
+        const page = document.getElementById('allinfo-page');
+        if (page && !page.classList.contains('hidden') && lastInitOptions) {
+            initializeAllInfoPage({ ...lastInitOptions, preserveState: true });
+        }
+    });
+}
+
 export function initializeAllInfoPage({
     properties = [],
     documentRef = document,
-    onEditProperty = () => {}
+    onEditProperty = () => {},
+    preserveState = false
 } = {}) {
+    lastInitOptions = { properties, documentRef, onEditProperty };
     const navigationElement = documentRef.getElementById('allinfo-nav');
     const contentElement = documentRef.getElementById('allinfo-content');
     const filterWrapper = documentRef.getElementById('allinfo-filter-wrapper');
@@ -2405,7 +2447,7 @@ export function initializeAllInfoPage({
         button.dataset.workspace = key;
         button.className = 'asana-tab';
         button.innerHTML = `<i class="${icon}"></i><span>${label}</span>`;
-        if (key === 'table') {
+        if (key === (preserveState ? (activePageFilterState?.workspace ?? 'table') : 'table')) {
             button.classList.add('active');
         }
         workspaceMenu.appendChild(button);
@@ -2449,12 +2491,13 @@ export function initializeAllInfoPage({
     filterWrapper.appendChild(editToolsPanel);
 
     const filterState = {
-        activeCategoryIndex: 0,
-        propertySearch: '',
-        dataMode: 'all',
-        fieldKey: '',
-        workspace: 'table'
+        activeCategoryIndex: preserveState ? (activePageFilterState?.activeCategoryIndex ?? 0) : 0,
+        propertySearch: preserveState ? (activePageFilterState?.propertySearch ?? '') : '',
+        dataMode: preserveState ? (activePageFilterState?.dataMode ?? 'all') : 'all',
+        fieldKey: preserveState ? (activePageFilterState?.fieldKey ?? '') : '',
+        workspace: preserveState ? (activePageFilterState?.workspace ?? 'table') : 'table'
     };
+    activePageFilterState = filterState;
 
     let missingWorkbench = null;
 
@@ -2675,7 +2718,7 @@ export function initializeAllInfoPage({
         button.className = 'flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100';
         button.dataset.idx = String(categoryIndex);
 
-        if (categoryIndex === 0) {
+        if (categoryIndex === filterState.activeCategoryIndex) {
             button.classList.add('bg-gray-100');
         }
 
@@ -2687,6 +2730,9 @@ export function initializeAllInfoPage({
 
         navigationElement.appendChild(button);
     });
+
+    propertyFilterInput.value = filterState.propertySearch;
+    dataFilterSelect.value = filterState.dataMode;
 
     propertyFilterInput.addEventListener('input', (event) => {
         filterState.propertySearch = event.target.value.trim();
@@ -2711,7 +2757,7 @@ export function initializeAllInfoPage({
     documentRef.addEventListener('keydown', handleKeyDown);
 
     updateOverview();
-    renderCategory(0);
+    renderCategory(filterState.activeCategoryIndex);
     updateWorkspace();
 
     return {
