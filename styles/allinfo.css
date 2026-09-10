@@ -1619,26 +1619,9 @@
     font-size: 0.875rem;
 }
 
-/* Edit Tools Bar & Panels */
+/* Legacy Edit Tools Bar - Hidden in Asana workspace */
 #allinfo-actions-bar {
-    background: #ffffff;
-    border: 1px solid var(--asana-border);
-    border-radius: 8px;
-    padding: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-#allinfo-actions-bar::before {
-    content: "Edit Modes";
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--asana-text-muted);
-    letter-spacing: 0.05em;
-    margin-right: 0.5rem;
+    display: none !important;
 }
 
 .allinfo-edit-tools-intro {

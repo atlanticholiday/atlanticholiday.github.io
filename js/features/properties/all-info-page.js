@@ -2439,8 +2439,7 @@ export function initializeAllInfoPage({
         ['table', 'fas fa-list', copy('workspace.table')],
         ['board', 'fas fa-columns', copy('workspace.board')],
         ['missing', 'fas fa-tasks', copy('workspace.missing')],
-        ['compare', 'fas fa-file-excel', copy('workspace.compare')],
-        ['edit', 'fas fa-layer-group', copy('workspace.edit')]
+        ['compare', 'fas fa-file-excel', copy('workspace.compare')]
     ];
     workspaceItems.forEach(([key, icon, label]) => {
         const button = documentRef.createElement('button');
@@ -2468,16 +2467,6 @@ export function initializeAllInfoPage({
     const missingPanel = documentRef.createElement('div');
     missingPanel.className = 'allinfo-workspace-panel hidden';
 
-    const editToolsPanel = documentRef.createElement('div');
-    editToolsPanel.className = 'allinfo-workspace-panel hidden';
-    const editToolsIntro = documentRef.createElement('div');
-    editToolsIntro.className = 'allinfo-edit-tools-intro';
-    editToolsIntro.innerHTML = `
-        <strong>${copy('editToolsTitle')}</strong>
-        <span>${copy('editToolsBody')}</span>
-    `;
-    editToolsPanel.appendChild(editToolsIntro);
-
     const toolbarRow = documentRef.createElement('div');
     toolbarRow.className = 'asana-toolbar-row';
     toolbarRow.appendChild(searchBarsContainer);
@@ -2489,7 +2478,6 @@ export function initializeAllInfoPage({
     filterWrapper.appendChild(toolbarRow);
     filterWrapper.appendChild(comparePanel);
     filterWrapper.appendChild(missingPanel);
-    filterWrapper.appendChild(editToolsPanel);
 
     try {
         window.navigationManager?.appSwitcher?.installTriggers?.();
@@ -2503,7 +2491,7 @@ export function initializeAllInfoPage({
         propertySearch: preserveState ? (activePageFilterState?.propertySearch ?? '') : '',
         dataMode: preserveState ? (activePageFilterState?.dataMode ?? 'all') : 'all',
         fieldKey: preserveState ? (activePageFilterState?.fieldKey ?? '') : '',
-        workspace: preserveState ? (activePageFilterState?.workspace ?? 'table') : 'table'
+        workspace: (preserveState && activePageFilterState?.workspace && activePageFilterState.workspace !== 'edit') ? activePageFilterState.workspace : 'table'
     };
     activePageFilterState = filterState;
 
@@ -2593,9 +2581,7 @@ export function initializeAllInfoPage({
 
     const updateWorkspace = () => {
         const active = filterState.workspace;
-        if (active !== 'edit') {
-            deactivateEditModes();
-        }
+        deactivateEditModes();
 
         workspaceMenu.querySelectorAll('button').forEach((button) => {
             button.classList.toggle('active', button.dataset.workspace === active);
@@ -2606,16 +2592,12 @@ export function initializeAllInfoPage({
         searchBarsContainer.classList.toggle('hidden', !showCategoryControls);
         navigationElement.classList.toggle('hidden', !showCategoryControls);
         overview.classList.toggle('hidden', active !== 'table' && active !== 'board');
-        contentElement.classList.toggle('hidden', active === 'missing' || active === 'compare' || active === 'edit');
+        contentElement.classList.toggle('hidden', active === 'missing' || active === 'compare');
         missingPanel.classList.toggle('hidden', active !== 'missing');
         comparePanel.classList.toggle('hidden', active !== 'compare');
-        editToolsPanel.classList.toggle('hidden', active !== 'edit');
 
         const actionsBar = documentRef.getElementById('allinfo-actions-bar');
-        if (actionsBar && actionsBar.parentElement !== editToolsPanel) {
-            editToolsPanel.appendChild(actionsBar);
-        }
-        actionsBar?.classList.toggle('hidden', active !== 'edit');
+        actionsBar?.classList.add('hidden');
 
         if (active === 'table' || active === 'board') {
             renderActiveContent();
