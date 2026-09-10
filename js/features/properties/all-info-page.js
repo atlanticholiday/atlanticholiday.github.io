@@ -1721,6 +1721,7 @@ function createAsanaProjectHeader(documentRef, properties) {
 
     try {
         window.navigationManager?.appSwitcher?.installTriggers?.();
+        window.appSwitcher?.installTriggers?.();
     } catch (e) {
         // Non-browser or test environment
     }
@@ -2489,6 +2490,13 @@ export function initializeAllInfoPage({
     filterWrapper.appendChild(comparePanel);
     filterWrapper.appendChild(missingPanel);
     filterWrapper.appendChild(editToolsPanel);
+
+    try {
+        window.navigationManager?.appSwitcher?.installTriggers?.();
+        window.appSwitcher?.installTriggers?.();
+    } catch (e) {
+        // no-op
+    }
 
     const filterState = {
         activeCategoryIndex: preserveState ? (activePageFilterState?.activeCategoryIndex ?? 0) : 0,
