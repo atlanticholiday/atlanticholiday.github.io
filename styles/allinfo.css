@@ -40,70 +40,127 @@
 #allinfo-page header.dashboard-header {
     background: #ffffff;
     border-bottom: 1px solid var(--asana-border);
-    box-shadow: var(--asana-shadow-sm);
+    box-shadow: none;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+#allinfo-page header.dashboard-header .container {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    align-items: center !important;
+    gap: 0.875rem !important;
+    padding: 0.45rem 1.5rem !important;
+    max-width: 100% !important;
+}
+
+#allinfo-page .dashboard-header .header-left {
+    display: flex !important;
+    align-items: center !important;
+}
+
+#allinfo-page .dashboard-header .header-brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.65rem !important;
+    justify-self: start !important;
+    text-align: left !important;
+}
+
+#allinfo-page .dashboard-header .dashboard-logo--xl {
+    width: 28px !important;
+    height: 28px !important;
+}
+
+#allinfo-page .dashboard-header .header-title {
+    font-size: 0.9375rem !important;
+    font-weight: 700 !important;
+    color: var(--asana-text-main) !important;
+    letter-spacing: -0.01em !important;
+}
+
+#allinfo-page .dashboard-header .header-sub {
+    display: none !important;
 }
 
 #allinfo-page .allinfo-shell {
     display: grid;
-    grid-template-columns: 17rem minmax(0, 1fr);
-    gap: 1.25rem;
+    grid-template-columns: 16.5rem minmax(0, 1fr);
+    grid-template-areas:
+        "header  header"
+        "sidebar content";
+    gap: 0.875rem;
     max-width: 100%;
-    padding: 1.25rem 1.5rem;
+    padding: 0.875rem 1.5rem 2rem 1.5rem;
     align-items: start;
 }
 
+#allinfo-page .allinfo-shell:has(#allinfo-nav.hidden) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "header"
+        "content";
+}
+
 /* ==========================================================================
-   Asana Project Header Bar
+   Asana Project Header Bar (Unified Header + Integrated Tabs)
    ========================================================================== */
 .asana-project-header {
     background: #ffffff;
     border: 1px solid var(--asana-border);
     border-radius: var(--asana-radius);
-    padding: 1.125rem 1.25rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    box-shadow: var(--asana-shadow-sm);
+    overflow: hidden;
+    grid-area: header;
+}
+
+.asana-project-header-top {
+    padding: 0.75rem 1.125rem;
+    display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    box-shadow: var(--asana-shadow-sm);
-    grid-column: 1 / -1;
+    flex-wrap: wrap;
 }
 
 .asana-project-info {
     display: flex;
     align-items: center;
-    gap: 0.875rem;
+    gap: 0.75rem;
 }
 
 .asana-project-avatar {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 10px;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
     background: linear-gradient(135deg, #e94b5a 0%, #f43f5e 100%);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    box-shadow: 0 4px 10px rgba(233, 75, 90, 0.25);
+    font-size: 1rem;
+    box-shadow: 0 2px 6px rgba(233, 75, 90, 0.22);
     flex-shrink: 0;
 }
 
 .asana-project-titles {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.15rem;
 }
 
 .asana-project-title-row {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
 .asana-project-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--asana-text-main);
     margin: 0;
@@ -112,7 +169,7 @@
 }
 
 .asana-project-subtitle {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: var(--asana-text-muted);
     margin: 0;
 }
@@ -121,12 +178,13 @@
 .asana-status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    padding: 0.2rem 0.625rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 9999px;
     border: 1px solid transparent;
+    line-height: 1.2;
 }
 
 .asana-status-pill.on-track {
@@ -142,8 +200,8 @@
 }
 
 .asana-status-dot {
-    width: 0.5rem;
-    height: 0.5rem;
+    width: 0.45rem;
+    height: 0.45rem;
     border-radius: 50%;
 }
 
@@ -160,26 +218,27 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.35rem;
-    min-width: 220px;
+    gap: 0.25rem;
+    min-width: 190px;
 }
 
 .asana-progress-meta {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.75rem;
+    gap: 0.4rem;
+    font-size: 0.6875rem;
     color: var(--asana-text-muted);
 }
 
 .asana-progress-percent {
     font-weight: 700;
+    font-size: 0.75rem;
     color: var(--asana-text-main);
 }
 
 .asana-progress-track {
     width: 100%;
-    height: 6px;
+    height: 5px;
     background: #e2e8f0;
     border-radius: 9999px;
     overflow: hidden;
@@ -193,18 +252,21 @@
 }
 
 /* ==========================================================================
-   Asana Workspace Navigation Tabs
+   Asana Workspace Navigation Tabs (Docked Flush inside Project Header)
    ========================================================================== */
 .allinfo-workspace-menu,
 .asana-tabs {
     background: #ffffff;
-    border: 1px solid var(--asana-border);
-    border-radius: var(--asana-radius);
-    padding: 0.375rem;
+    border-top: 1px solid var(--asana-border-subtle);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    padding: 0 0.875rem;
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    box-shadow: var(--asana-shadow-sm);
+    gap: 0.25rem;
+    box-shadow: none;
     overflow-x: auto;
     scrollbar-width: thin;
 }
@@ -213,32 +275,51 @@
 .asana-tab {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border-radius: 6px;
+    gap: 0.45rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0;
     font-size: 0.8125rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--asana-text-muted);
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
     cursor: pointer;
     transition: all 0.15s ease;
     white-space: nowrap;
     text-decoration: none;
 }
 
+.allinfo-workspace-menu button i,
+.asana-tab i {
+    font-size: 0.8125rem;
+    color: var(--asana-text-subtle);
+    transition: color 0.15s ease;
+}
+
 .allinfo-workspace-menu button:hover,
 .asana-tab:hover {
     color: var(--asana-text-main);
-    background: #f1f5f9;
+    background: transparent;
+}
+
+.allinfo-workspace-menu button:hover i,
+.asana-tab:hover i {
+    color: var(--asana-text-muted);
 }
 
 .allinfo-workspace-menu button.active,
 .asana-tab.active {
-    background: #0f172a;
-    color: #ffffff;
-    border-color: #0f172a;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+    background: transparent;
+    color: var(--asana-brand);
+    font-weight: 600;
+    border-bottom: 2px solid var(--asana-brand);
+    box-shadow: none;
+}
+
+.allinfo-workspace-menu button.active i,
+.asana-tab.active i {
+    color: var(--asana-brand);
 }
 
 .asana-tab-badge {
@@ -252,8 +333,8 @@
 }
 
 .allinfo-workspace-menu button.active .asana-tab-badge {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
+    background: rgba(233, 75, 90, 0.15);
+    color: var(--asana-brand);
 }
 
 /* ==========================================================================
@@ -362,51 +443,56 @@
    Asana Toolbar (Search, Filters, KPI stats)
    ========================================================================== */
 #allinfo-filter-wrapper {
-    grid-column: 2;
+    grid-area: header;
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: 0.625rem;
+    width: 100%;
+}
+
+.asana-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 .search-bars-container {
-    background: #ffffff;
-    border: 1px solid var(--asana-border);
-    border-radius: var(--asana-radius);
-    padding: 0.625rem 0.875rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.625rem;
     flex-wrap: wrap;
-    box-shadow: var(--asana-shadow-sm);
+    box-shadow: none;
 }
 
 .allinfo-search-control {
     flex: 1;
-    min-width: 220px;
+    min-width: 200px;
+    max-width: 340px;
     position: relative;
 }
 
-.allinfo-search-control label,
-.allinfo-compact-control label {
-    display: block;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--asana-text-muted);
-    letter-spacing: 0.04em;
-    margin-bottom: 0.25rem;
+.allinfo-search-control label {
+    display: none;
 }
 
 #allinfo-filter {
     width: 100%;
-    padding: 0.45rem 0.75rem 0.45rem 2.25rem;
-    background: #f8fafc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 0.75rem center;
+    padding: 0.35rem 0.75rem 0.35rem 2.1rem;
+    background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 0.65rem center;
     border: 1px solid var(--asana-border);
     border-radius: 6px;
     font-size: 0.8125rem;
     color: var(--asana-text-main);
     transition: all 0.15s ease;
-    height: 2.375rem;
+    height: 2.125rem;
+    box-shadow: var(--asana-shadow-sm);
 }
 
 #allinfo-filter:focus {
@@ -417,20 +503,43 @@
 }
 
 .allinfo-compact-control {
-    min-width: 140px;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.allinfo-compact-control label,
+.allinfo-compact-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: none;
+    color: var(--asana-text-muted);
+    letter-spacing: 0;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.allinfo-compact-label i {
+    color: #94a3b8;
+    font-size: 0.6875rem;
 }
 
 #allinfo-data-filter,
 #allinfo-field-filter {
-    width: 100%;
-    padding: 0.45rem 0.65rem;
-    background: #f8fafc;
+    padding: 0.3rem 0.55rem;
+    background: #ffffff;
     border: 1px solid var(--asana-border);
     border-radius: 6px;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--asana-text-main);
-    height: 2.375rem;
+    height: 2.125rem;
     transition: all 0.15s ease;
+    cursor: pointer;
+    box-shadow: var(--asana-shadow-sm);
 }
 
 #allinfo-data-filter:focus,
@@ -441,57 +550,67 @@
     box-shadow: 0 0 0 3px rgba(233, 75, 90, 0.12);
 }
 
-/* Overview KPI ribbon */
+/* Overview KPI ribbon - Clean compact chips */
 .allinfo-overview {
-    background: #ffffff;
-    border: 1px solid var(--asana-border);
-    border-radius: var(--asana-radius);
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    box-shadow: var(--asana-shadow-sm);
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
 }
 
 .allinfo-overview-item {
-    padding: 0.75rem 1rem;
-    border-right: 1px solid var(--asana-border);
-}
-
-.allinfo-overview-item:last-child {
-    border-right: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid var(--asana-border);
+    font-size: 0.75rem;
+    color: var(--asana-text-muted);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: all 0.15s ease;
 }
 
 .allinfo-overview-item strong {
-    display: block;
-    font-size: 1.25rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     color: var(--asana-text-main);
-    line-height: 1.1;
+    line-height: 1;
 }
 
 .allinfo-overview-item span {
-    display: block;
     font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
+    font-weight: 500;
+    text-transform: none;
     color: var(--asana-text-muted);
-    letter-spacing: 0.03em;
-    margin-top: 0.2rem;
+    letter-spacing: 0;
+    line-height: 1;
 }
 
 .allinfo-overview-item.needs-attention {
-    background: #fffbfb;
+    background: var(--asana-amber-soft);
+    border-color: #fde68a;
+    color: #92400e;
 }
 
 .allinfo-overview-item.needs-attention strong {
-    color: #e11d48;
+    color: #b45309;
+}
+
+.allinfo-overview-item.needs-attention span {
+    color: #92400e;
 }
 
 /* ==========================================================================
    Asana List View (Table Surface)
    ========================================================================== */
 #allinfo-content {
-    grid-column: 2;
+    grid-area: content;
     min-width: 0;
 }
 
@@ -1473,27 +1592,31 @@
 @media (max-width: 1100px) {
     #allinfo-page .allinfo-shell {
         grid-template-columns: 1fr;
+        grid-template-areas:
+            "header"
+            "sidebar"
+            "content";
     }
 
     #allinfo-filter-wrapper {
-        grid-column: 1;
+        grid-area: header;
     }
 
     #allinfo-nav {
         display: grid !important;
-        grid-column: 1;
+        grid-area: sidebar;
         grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
         position: static;
         max-height: none;
     }
 
     #allinfo-content {
-        grid-column: 1;
+        grid-area: content;
     }
 }
 
 @media (max-width: 768px) {
-    .asana-project-header {
+    .asana-project-header-top {
         flex-direction: column;
         align-items: flex-start;
     }
@@ -1503,25 +1626,22 @@
         align-items: flex-start;
     }
 
-    .allinfo-overview {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .allinfo-overview-item:nth-child(2) {
-        border-right: none;
-    }
-
-    .allinfo-overview-item:nth-child(-n+2) {
-        border-bottom: 1px solid var(--asana-border);
-    }
-
     .search-bars-container {
         flex-direction: column;
         align-items: stretch;
     }
 
+    .allinfo-search-control {
+        max-width: 100%;
+    }
+
     .allinfo-compact-control {
         min-width: 100%;
+        justify-content: space-between;
+    }
+
+    .allinfo-compact-control select {
+        flex: 1;
     }
 
     .asana-drawer-panel {

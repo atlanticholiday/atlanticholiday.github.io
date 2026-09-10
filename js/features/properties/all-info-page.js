@@ -733,20 +733,21 @@ function sortTable(table, columnIndex, ascending) {
 
 function createSearchBars(documentRef) {
     const searchBarsContainer = documentRef.createElement('div');
-    searchBarsContainer.className = 'search-bars-container';
+    searchBarsContainer.className = 'search-bars-container asana-toolbar';
 
     const propertyFilterWrapper = documentRef.createElement('div');
     propertyFilterWrapper.className = 'allinfo-search-control flex-1';
 
     const propertyFilterLabel = documentRef.createElement('label');
     propertyFilterLabel.textContent = copy('filterProperties');
-    propertyFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    propertyFilterLabel.className = 'sr-only';
+    propertyFilterLabel.htmlFor = 'allinfo-filter';
 
     const propertyFilterInput = documentRef.createElement('input');
     propertyFilterInput.id = 'allinfo-filter';
     propertyFilterInput.type = 'text';
     propertyFilterInput.placeholder = copy('filterPlaceholder');
-    propertyFilterInput.className = 'px-3 py-2 border rounded-md w-full';
+    propertyFilterInput.className = 'px-3 py-1.5 border rounded-md w-full';
 
     propertyFilterWrapper.appendChild(propertyFilterLabel);
     propertyFilterWrapper.appendChild(propertyFilterInput);
@@ -755,12 +756,13 @@ function createSearchBars(documentRef) {
     dataFilterWrapper.className = 'allinfo-compact-control';
 
     const dataFilterLabel = documentRef.createElement('label');
-    dataFilterLabel.textContent = copy('rows');
-    dataFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    dataFilterLabel.innerHTML = `<i class="fas fa-filter"></i><span>${copy('rows')}:</span>`;
+    dataFilterLabel.className = 'allinfo-compact-label';
+    dataFilterLabel.htmlFor = 'allinfo-data-filter';
 
     const dataFilterSelect = documentRef.createElement('select');
     dataFilterSelect.id = 'allinfo-data-filter';
-    dataFilterSelect.className = 'px-3 py-2 border rounded-md w-full';
+    dataFilterSelect.className = 'px-2.5 py-1.5 border rounded-md';
     [
         ['all', copy('allRows')],
         ['missing', copy('needsInfo')],
@@ -779,12 +781,13 @@ function createSearchBars(documentRef) {
     fieldFilterWrapper.className = 'allinfo-compact-control';
 
     const fieldFilterLabel = documentRef.createElement('label');
-    fieldFilterLabel.textContent = copy('field');
-    fieldFilterLabel.className = 'block text-xs font-semibold uppercase text-gray-500 mb-1';
+    fieldFilterLabel.innerHTML = `<i class="fas fa-columns"></i><span>${copy('field')}:</span>`;
+    fieldFilterLabel.className = 'allinfo-compact-label';
+    fieldFilterLabel.htmlFor = 'allinfo-field-filter';
 
     const fieldFilterSelect = documentRef.createElement('select');
     fieldFilterSelect.id = 'allinfo-field-filter';
-    fieldFilterSelect.className = 'px-3 py-2 border rounded-md w-full';
+    fieldFilterSelect.className = 'px-2.5 py-1.5 border rounded-md';
 
     fieldFilterWrapper.appendChild(fieldFilterLabel);
     fieldFilterWrapper.appendChild(fieldFilterSelect);
@@ -1608,28 +1611,30 @@ function createAsanaProjectHeader(documentRef, properties) {
     const header = documentRef.createElement('div');
     header.className = 'asana-project-header';
     header.innerHTML = `
-        <div class="asana-project-info">
-            <div class="asana-project-avatar">
-                <i class="fas fa-hotel"></i>
-            </div>
-            <div class="asana-project-titles">
-                <div class="asana-project-title-row">
-                    <h1 class="asana-project-title">${copy('project.title')}</h1>
-                    <span class="asana-status-pill on-track">
-                        <span class="asana-status-dot"></span>
-                        <span>${copy('project.onTrack')}</span>
-                    </span>
+        <div class="asana-project-header-top">
+            <div class="asana-project-info">
+                <div class="asana-project-avatar">
+                    <i class="fas fa-hotel"></i>
                 </div>
-                <p class="asana-project-subtitle">${copy('project.subtitle')}</p>
+                <div class="asana-project-titles">
+                    <div class="asana-project-title-row">
+                        <h1 class="asana-project-title">${copy('project.title')}</h1>
+                        <span class="asana-status-pill on-track">
+                            <span class="asana-status-dot"></span>
+                            <span>${copy('project.onTrack')}</span>
+                        </span>
+                    </div>
+                    <p class="asana-project-subtitle">${copy('project.subtitle')}</p>
+                </div>
             </div>
-        </div>
-        <div class="asana-project-progress-wrap">
-            <div class="asana-progress-meta">
-                <span class="asana-progress-percent">100%</span>
-                <span class="asana-progress-label">${copy('project.progress', { percent: 100, complete: 0, total: 0 })}</span>
-            </div>
-            <div class="asana-progress-track">
-                <div class="asana-progress-bar" style="width: 100%"></div>
+            <div class="asana-project-progress-wrap">
+                <div class="asana-progress-meta">
+                    <span class="asana-progress-percent">100%</span>
+                    <span class="asana-progress-label">${copy('project.progress', { percent: 100, complete: 0, total: 0 })}</span>
+                </div>
+                <div class="asana-progress-track">
+                    <div class="asana-progress-bar" style="width: 100%"></div>
+                </div>
             </div>
         </div>
     `;
@@ -2370,10 +2375,15 @@ export function initializeAllInfoPage({
     `;
     editToolsPanel.appendChild(editToolsIntro);
 
+    const toolbarRow = documentRef.createElement('div');
+    toolbarRow.className = 'asana-toolbar-row';
+    toolbarRow.appendChild(searchBarsContainer);
+    toolbarRow.appendChild(overview);
+
+    projectHeader.appendChild(workspaceMenu);
+
     filterWrapper.appendChild(projectHeader);
-    filterWrapper.appendChild(workspaceMenu);
-    filterWrapper.appendChild(searchBarsContainer);
-    filterWrapper.appendChild(overview);
+    filterWrapper.appendChild(toolbarRow);
     filterWrapper.appendChild(comparePanel);
     filterWrapper.appendChild(missingPanel);
     filterWrapper.appendChild(editToolsPanel);
@@ -2481,6 +2491,7 @@ export function initializeAllInfoPage({
         });
 
         const showCategoryControls = active !== 'compare';
+        toolbarRow.classList.toggle('hidden', !showCategoryControls);
         searchBarsContainer.classList.toggle('hidden', !showCategoryControls);
         navigationElement.classList.toggle('hidden', !showCategoryControls);
         overview.classList.toggle('hidden', active !== 'table' && active !== 'board');
