@@ -42,10 +42,16 @@ describe('Attendance register security', () => {
         assert.includes(scheduleDirectoryRules, 'request.resource.data.keys().hasOnly');
         assert.includes(scheduleDirectoryRules, 'request.resource.data.updatedAtServer == request.time');
         assert.includes(scheduleDirectoryRules, "privileged() || hasApp('staff')");
-        assert.includes(employeeRules, 'isOwnEmployeeDocument(employeeId)');
+        assert.ok(!employeeRules.includes('isOwnEmployeeDocument(employeeId)'));
         assert.includes(employeeRules, 'allow list: if privileged()');
         assert.ok(!employeeRules.includes("|| hasRole('employee')"));
         assert.ok(!dailyNoteRules.includes("hasRole('employee')"));
+        assert.includes(rules, 'match /employee_self_service/{employeeId}');
+        assert.includes(rules, 'match /vacation_records/{recordId}');
+        assert.includes(rules, 'get(selfServiceProfilePath(employeeId)).data.active == true');
+        assert.includes(rules, 'isOwnEmployeeDocument(employeeId) && resource.data.active == true');
+        assert.includes(rules, '// Archive by replacing the profile with an inactive, PII-free tombstone.');
+        assert.includes(rules, "data.keys().hasOnly([\n          'startDate', 'endDate', 'type', 'status'");
         assert.includes(credentialRules, 'request.auth.token.email == credentialEmail');
         assert.includes(credentialRules, 'allow list: if false');
     });
@@ -62,6 +68,11 @@ describe('Attendance register security', () => {
 
         assert.includes(mainSource, 'getScheduleDataAccessPlan');
         assert.includes(dataManagerSource, 'getEmployeeDirectoryCollectionName');
+        assert.includes(dataManagerSource, 'getDocsFromServer(profileCollectionRef)');
+        assert.includes(dataManagerSource, '!snapshot.metadata.hasPendingWrites');
+        assert.includes(dataManagerSource, 'this.hasAuthoritativeEmployeeSnapshot && this.hasAuthoritativeVacationSnapshot');
+        assert.includes(dataManagerSource, 'this.selfServiceProfile.active === true');
+        assert.includes(dataManagerSource, 'this.selfServiceProfile?.active !== true');
         assert.includes(uiSource, 'dayDetailsPolicy.showDailyNote');
         assert.includes(uiSource, 'dayDetailsPolicy.showExtraHours');
     });
@@ -110,12 +121,14 @@ describe('Attendance register security', () => {
 
         assert.includes(source, "'today',");
         assert.includes(source, "'history',");
+        assert.includes(source, "['myData']");
         assert.includes(source, "['overtime']");
         assert.includes(source, "['management']");
         assert.includes(source, "['configuration']");
         assert.includes(source, 'data-time-clock-section');
         assert.includes(source, "sectionClass('today')");
         assert.includes(source, "sectionClass('history')");
+        assert.includes(source, "sectionClass('myData')");
         assert.includes(source, "sectionClass('overtime')");
     });
 });

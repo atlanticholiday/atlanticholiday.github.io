@@ -2893,6 +2893,7 @@
       "label": "Time clock areas",
       "today": "Today",
       "history": "History",
+      "myData": "My data",
       "overtime": "Overtime",
       "management": "Management",
       "configuration": "Settings"
@@ -3074,6 +3075,32 @@
       "voidRecentDescription": "The original event is not deleted: it is marked void and the reason is added to the history.",
       "voidReasonPrompt": "Enter the reason for voiding this punch (at least 8 characters):",
       "noRecentEvents": "There are no recent punches to void."
+    },
+    "myData": {
+      "kicker": "Personal self-service",
+      "title": "My data",
+      "description": "Review the professional information linked to your account. This area never shows other colleagues' details.",
+      "profile": "Personal profile",
+      "staffNumber": "Staff number",
+      "department": "Department",
+      "position": "Position",
+      "hireDate": "Hire date",
+      "employmentType": "Employment type",
+      "email": "Email",
+      "phone": "Phone",
+      "notProvided": "Not provided",
+      "preparingProfile": "Your safe personal profile is still being prepared. Ask a manager to open the app and complete the initial synchronization.",
+      "vacationsTitle": "Leave and absences",
+      "vacationsDescription": "Only your own records appear here. Internal management notes are not included.",
+      "noVacations": "No leave or absences have been recorded yet.",
+      "privateNote": "For privacy, this area receives a limited copy rather than the complete internal record.",
+      "status": {
+        "approved": "Approved",
+        "pending": "Pending",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled",
+        "recorded": "Recorded"
+      }
     },
     "compliance": {
       "title": "Legal register settings",

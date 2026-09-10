@@ -51,6 +51,7 @@ async function run() {
   const staffDb = client('staff', { sub: 'staff-uid', user_id: 'staff-uid', email: 'staff@example.com' });
   const vacationDb = client('vacation', { sub: 'vacation-uid', user_id: 'vacation-uid', email: 'vacation@example.com' });
   const linkedDb = client('linked', { sub: 'linked-uid', user_id: 'linked-uid', email: 'linked@example.com' });
+  const stationDb = client('station', { sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com' });
   const credentialDb = client('credential', { sub: 'credential-uid', user_id: 'credential-uid', email: 'clock-test@example.com' });
   const recordId = `emp-1_${dateKey}`;
   const punchId = 'punch-clock-in-0001';
@@ -77,17 +78,15 @@ async function run() {
   console.log(stage);
   await batch.commit();
   if (!(await getDoc(doc(workerDb, 'attendance_records', recordId))).exists()) throw new Error('worker punch was not saved');
-  const [workerEmployee, linkedEmployee, staffEmployees] = await Promise.all([
-    getDoc(doc(workerDb, 'employees', 'emp-1')),
-    getDoc(doc(linkedDb, 'employees', 'emp-1')),
+  const [staffEmployees] = await Promise.all([
     getDocs(collection(staffDb, 'employees')),
+    expectDenied(() => getDoc(doc(workerDb, 'employees', 'emp-1')), 'ordinary employee raw own document read'),
     expectDenied(() => getDoc(doc(workerDb, 'employees', 'emp-2')), 'other employee private document read'),
     expectDenied(() => getDocs(collection(workerDb, 'employees')), 'employee directory list'),
+    expectDenied(() => getDoc(doc(linkedDb, 'employees', 'emp-1')), 'linked account raw own document read'),
     expectDenied(() => getDoc(doc(linkedDb, 'employees', 'emp-2')), 'linked account other employee private document read'),
     expectDenied(() => getDocs(collection(linkedDb, 'employees')), 'linked account employee directory list')
   ]);
-  if (!workerEmployee.exists()) throw new Error('worker cannot read own employee document');
-  if (!linkedEmployee.exists()) throw new Error('linked self-service account cannot read own employee document');
   if (staffEmployees.size < 2) throw new Error('authorized staff cannot read employee directory');
   await expectDenied(() => updateDoc(doc(workerDb, 'attendance_events', canonicalId), { reason: 'tampered' }), 'canonical update');
   await expectDenied(() => deleteDoc(doc(workerDb, 'attendance_records', recordId)), 'attendance delete');
@@ -263,6 +262,73 @@ async function run() {
   if (staffVacations.size < 2) throw new Error('authorized staff cannot read detailed vacation records');
   if (vacationCenterVacations.size < 2) throw new Error('Vacation Center account cannot read detailed vacation records');
 
+  stage = 'safe employee self-service records';
+  console.log(stage);
+  const ownVacationPath = ['employee_self_service', 'emp-1', 'vacation_records', 'emp-1__2026-09-14__2026-09-18'];
+  const peerVacationPath = ['employee_self_service', 'emp-2', 'vacation_records', 'emp-2__2026-09-21__2026-09-25'];
+  const [workerProfile, linkedProfile, workerVacations, linkedVacations, adminProfiles, staffProfiles] = await Promise.all([
+    getDoc(doc(workerDb, 'employee_self_service', 'emp-1')),
+    getDoc(doc(linkedDb, 'employee_self_service', 'emp-1')),
+    getDocs(collection(workerDb, 'employee_self_service', 'emp-1', 'vacation_records')),
+    getDocs(collection(linkedDb, 'employee_self_service', 'emp-1', 'vacation_records')),
+    getDocs(collection(adminDb, 'employee_self_service')),
+    getDocs(collection(staffDb, 'employee_self_service')),
+    expectDenied(() => getDoc(doc(workerDb, 'employee_self_service', 'emp-2')), 'other employee self-service profile read'),
+    expectDenied(() => getDocs(collection(workerDb, 'employee_self_service')), 'self-service profile list'),
+    expectDenied(() => getDoc(doc(workerDb, ...peerVacationPath)), 'other employee safe vacation read'),
+    expectDenied(() => getDocs(collection(workerDb, 'employee_self_service', 'emp-2', 'vacation_records')), 'other employee safe vacation list'),
+    expectDenied(() => getDoc(doc(stationDb, 'employee_self_service', 'emp-1')), 'station self-service profile read'),
+    expectDenied(() => getDoc(doc(stationDb, ...ownVacationPath)), 'station self-service vacation read')
+  ]);
+  if (!workerProfile.exists() || !linkedProfile.exists()) throw new Error('linked account cannot read its safe profile');
+  if (workerVacations.size !== 1 || linkedVacations.size !== 1) throw new Error('linked account cannot list its safe vacations');
+  if (adminProfiles.size < 2 || staffProfiles.size < 2) throw new Error('management cannot read self-service profiles');
+  if (Object.hasOwn(workerVacations.docs[0].data(), 'note')) throw new Error('safe vacation unexpectedly contains a private note');
+
+  await updateDoc(doc(staffDb, 'employee_self_service', 'emp-1'), {
+    name: 'Worker safe profile', updatedAtServer: serverTimestamp()
+  });
+  await updateDoc(doc(staffDb, ...ownVacationPath), {
+    status: 'approved', updatedAtServer: serverTimestamp()
+  });
+
+  stage = 'archived self-service lifecycle';
+  console.log(stage);
+  await updateDoc(doc(adminDb, 'employee_self_service', 'emp-1'), {
+    name: 'Inactive profile', staffNumber: null, email: null, phone: null,
+    department: null, position: null, hireDate: null, employmentType: null,
+    workDays: [], shifts: {}, active: false, updatedAtServer: serverTimestamp()
+  });
+  await Promise.all([
+    expectDenied(() => getDoc(doc(workerDb, 'employee_self_service', 'emp-1')), 'inactive own profile read'),
+    expectDenied(() => getDoc(doc(workerDb, ...ownVacationPath)), 'inactive own vacation read'),
+    expectDenied(() => getDocs(collection(workerDb, 'employee_self_service', 'emp-1', 'vacation_records')), 'inactive own vacation list'),
+    expectDenied(() => deleteDoc(doc(adminDb, 'employee_self_service', 'emp-1')), 'self-service parent deletion')
+  ]);
+  await updateDoc(doc(adminDb, 'employee_self_service', 'emp-1'), {
+    name: 'Worker safe profile', staffNumber: 1, email: 'worker@example.com',
+    department: 'Operations', position: 'Host', hireDate: '2024-01-08',
+    employmentType: 'Permanent', workDays: [1, 2, 3, 4, 5],
+    shifts: { default: '09:00-18:00' }, active: true, updatedAtServer: serverTimestamp()
+  });
+  if (!(await getDoc(doc(workerDb, 'employee_self_service', 'emp-1'))).exists()) {
+    throw new Error('reactivated linked account cannot read its safe profile');
+  }
+  if (!(await getDoc(doc(workerDb, ...ownVacationPath))).exists()) {
+    throw new Error('reactivated linked account cannot read its safe vacation');
+  }
+
+  const workerProfileWrite = writeBatch(workerDb);
+  workerProfileWrite.update(doc(workerDb, 'employee_self_service', 'emp-1'), { name: 'Forged worker name' });
+  await expectDenied(() => workerProfileWrite.commit(), 'worker self-service profile write');
+
+  const forgedSafeVacation = writeBatch(adminDb);
+  forgedSafeVacation.set(doc(adminDb, 'employee_self_service', 'emp-1', 'vacation_records', 'forged-private-note'), {
+    startDate: '2026-10-01', endDate: '2026-10-02', type: 'vacation', status: 'approved',
+    dayCountMode: 'workdays', schemaVersion: 1, note: 'must stay private', updatedAtServer: serverTimestamp()
+  });
+  await expectDenied(() => forgedSafeVacation.commit(), 'private note in safe vacation projection');
+
   stage = 'limited schedule directory';
   console.log(stage);
   const scheduleEntry = {
@@ -278,9 +344,7 @@ async function run() {
   await updateDoc(doc(staffDb, 'schedule_directory', 'emp-1'), {
     name: 'Worker updated by staff', updatedAtServer: serverTimestamp()
   });
-  await expectDenied(() => getDoc(doc(client('station-schedule', {
-    sub: 'station-uid', user_id: 'station-uid', email: 'station@example.com'
-  }), 'schedule_directory', 'emp-1')), 'station schedule directory read');
+  await expectDenied(() => getDoc(doc(stationDb, 'schedule_directory', 'emp-1')), 'station schedule directory read');
 
   const workerScheduleWrite = writeBatch(workerDb);
   workerScheduleWrite.set(doc(workerDb, 'schedule_directory', 'forged-worker'), scheduleEntry);

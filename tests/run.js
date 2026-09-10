@@ -46,6 +46,7 @@ import "./unit/features/scheduling/holiday-calculator.test.js";
 import "./unit/features/scheduling/monthly-schedule-view.test.js";
 import "./unit/features/scheduling/navigation-manager.test.js";
 import "./unit/features/scheduling/schedule-directory.test.js";
+import "./unit/features/scheduling/self-service-directory.test.js";
 import "./unit/features/scheduling/schedule-data-access.test.js";
 import "./unit/features/scheduling/schedule-day-details.test.js";
 import "./unit/features/scheduling/schedule-view-config.test.js";

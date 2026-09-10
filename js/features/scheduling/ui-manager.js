@@ -84,7 +84,7 @@ export class UIManager {
     }
 
     setTimeClockSection(section) {
-        const allowed = new Set(['today', 'history', 'overtime', 'management', 'configuration']);
+        const allowed = new Set(['today', 'history', 'myData', 'overtime', 'management', 'configuration']);
         this.currentTimeClockSection = allowed.has(section) ? section : 'today';
         this.renderTimeClockPage();
     }
@@ -2012,6 +2012,7 @@ export class UIManager {
         const availableTimeClockSections = [
             'today',
             'history',
+            ...(employee ? ['myData'] : []),
             ...(employee || canManageAttendance ? ['overtime'] : []),
             ...(canManageAttendance ? ['management'] : []),
             ...(canConfigureCompliance ? ['configuration'] : [])
@@ -2049,6 +2050,48 @@ export class UIManager {
             ? this.dataManager.getOvertimeRecordsForEmployee(employee.id, todayDateKey)
             : [];
         const actionableOvertime = todayOvertimeRecords.find((record) => ['authorized', 'in-progress', 'awaiting-worker-validation'].includes(record.status)) || null;
+        const ownProfile = this.dataManager.getCurrentUserSelfServiceProfile?.() || null;
+        const ownVacations = this.dataManager.getCurrentUserSelfServiceVacations?.() || [];
+        const profileFields = ownProfile ? [
+            [t('timeClock.myData.staffNumber'), ownProfile.staffNumber],
+            [t('timeClock.myData.department'), ownProfile.department],
+            [t('timeClock.myData.position'), ownProfile.position],
+            [t('timeClock.myData.hireDate'), ownProfile.hireDate
+                ? this.formatLocaleDate(new Date(`${ownProfile.hireDate}T00:00:00`), { day: '2-digit', month: 'long', year: 'numeric' })
+                : null],
+            [t('timeClock.myData.employmentType'), ownProfile.employmentType],
+            [t('timeClock.myData.email'), ownProfile.email],
+            [t('timeClock.myData.phone'), ownProfile.phone]
+        ] : [];
+        const profileMarkup = profileFields.map(([label, value]) => `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">${this.escapeHtml(label)}</dt>
+                <dd class="mt-2 text-base font-semibold text-slate-900">${this.escapeHtml(value ?? t('timeClock.myData.notProvided'))}</dd>
+            </div>
+        `).join('');
+        const ownVacationMarkup = ownVacations.length ? ownVacations.map((vacation) => {
+            const startDate = new Date(`${vacation.startDate}T00:00:00`);
+            const endDate = new Date(`${vacation.endDate}T00:00:00`);
+            const statusKey = ['approved', 'pending', 'rejected', 'cancelled'].includes(vacation.status)
+                ? vacation.status
+                : 'recorded';
+            return `
+                <article class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-900">${t(`schedule.vacation.types.${vacation.type}`)}</div>
+                            <div class="mt-1 text-sm text-slate-600">
+                                ${this.formatLocaleDate(startDate, { day: '2-digit', month: 'long', year: 'numeric' })}
+                                — ${this.formatLocaleDate(endDate, { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </div>
+                        </div>
+                        <span class="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            ${t(`timeClock.myData.status.${statusKey}`)}
+                        </span>
+                    </div>
+                </article>
+            `;
+        }).join('') : `<p class="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">${t('timeClock.myData.noVacations')}</p>`;
         const adjustmentEmployeeOptions = this.dataManager.getActiveEmployees()
             .map((entry) => `<option value="${this.escapeHtml(entry.id)}">${this.escapeHtml(entry.name)}</option>`)
             .join('');
@@ -2561,6 +2604,31 @@ export class UIManager {
                     <div class="font-semibold text-slate-900">${t('timeClock.privacy.title')}</div>
                     <p class="mt-2">${t('timeClock.privacy.summary')}</p>
                     <p class="mt-2">${t('timeClock.privacy.contact')}: ${this.escapeHtml(compliance.privacyContact || t('timeClock.compliance.missingValue'))}</p>
+                </section>
+
+                <section class="${sectionClass('myData')} rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+                    <div class="max-w-3xl">
+                        <div class="text-xs uppercase tracking-[0.24em] text-slate-400">${t('timeClock.myData.kicker')}</div>
+                        <h3 class="mt-2 text-3xl font-semibold text-slate-900">${t('timeClock.myData.title')}</h3>
+                        <p class="mt-2 text-sm text-slate-600">${t('timeClock.myData.description')}</p>
+                    </div>
+                    ${ownProfile ? `
+                        <div class="mt-6 rounded-3xl bg-slate-900 p-6 text-white">
+                            <div class="text-sm text-slate-300">${t('timeClock.myData.profile')}</div>
+                            <div class="mt-2 text-2xl font-semibold">${this.escapeHtml(ownProfile.name)}</div>
+                        </div>
+                        <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">${profileMarkup}</dl>
+                    ` : `
+                        <div class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+                            ${t('timeClock.myData.preparingProfile')}
+                        </div>
+                    `}
+                    <div class="mt-8 border-t border-slate-200 pt-6">
+                        <h4 class="text-xl font-semibold text-slate-900">${t('timeClock.myData.vacationsTitle')}</h4>
+                        <p class="mt-1 text-sm text-slate-600">${t('timeClock.myData.vacationsDescription')}</p>
+                        <div class="mt-4 grid gap-3 md:grid-cols-2">${ownVacationMarkup}</div>
+                        <p class="mt-4 text-xs text-slate-500">${t('timeClock.myData.privateNote')}</p>
+                    </div>
                 </section>
 
                 ${overtimePanel}

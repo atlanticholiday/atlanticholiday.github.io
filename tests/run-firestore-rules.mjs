@@ -27,8 +27,13 @@ function startServer() {
 }
 
 function firestoreValue(value) {
+  if (value === null) return { nullValue: null };
   if (typeof value === 'boolean') return { booleanValue: value };
+  if (Number.isInteger(value)) return { integerValue: String(value) };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(firestoreValue) } };
+  if (value && typeof value === 'object') {
+    return { mapValue: { fields: Object.fromEntries(Object.entries(value).map(([key, item]) => [key, firestoreValue(item)])) } };
+  }
   return { stringValue: String(value) };
 }
 
@@ -50,6 +55,24 @@ await seed('userAccess', 'linked-uid', { active: true, roles: [], allowedApps: [
 await seed('userAccess', 'station-uid', { active: true, roles: ['time-clock-station'], allowedApps: [], linkedEmployeeId: '' });
 await seed('employees', 'emp-1', { name: 'Worker', isArchived: false });
 await seed('employees', 'emp-2', { name: 'Station Worker', isArchived: false });
+await seed('employee_self_service', 'emp-1', {
+  employeeId: 'emp-1', name: 'Worker', staffNumber: 1, email: 'worker@example.com', phone: null,
+  department: 'Operations', position: 'Host', hireDate: '2024-01-08', employmentType: 'Permanent',
+  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' }, active: true, schemaVersion: 1, updatedAtServer: ''
+});
+await seed('employee_self_service', 'emp-2', {
+  employeeId: 'emp-2', name: 'Station Worker', staffNumber: 2, email: 'peer@example.com', phone: null,
+  department: 'Operations', position: 'Host', hireDate: '2024-02-01', employmentType: 'Permanent',
+  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' }, active: true, schemaVersion: 1, updatedAtServer: ''
+});
+await seed('employee_self_service/emp-1/vacation_records', 'emp-1__2026-09-14__2026-09-18', {
+  startDate: '2026-09-14', endDate: '2026-09-18', type: 'vacation', status: 'approved',
+  dayCountMode: 'workdays', schemaVersion: 1, updatedAtServer: ''
+});
+await seed('employee_self_service/emp-2/vacation_records', 'emp-2__2026-09-21__2026-09-25', {
+  startDate: '2026-09-21', endDate: '2026-09-25', type: 'sick', status: 'approved',
+  dayCountMode: 'workdays', schemaVersion: 1, updatedAtServer: ''
+});
 await seed('overtime_records', 'peer-overtime-seeded', { employeeId: 'emp-2', employeeName: 'Station Worker' });
 await seed('vacation_records', 'own-vacation-seeded', {
   employeeId: 'emp-1', startDate: '2026-09-14', endDate: '2026-09-18',
@@ -81,7 +104,7 @@ try {
   page.on('console', (message) => console.log(`Browser ${message.type()}: ${message.text()}`));
   page.on('pageerror', (error) => console.error(`Browser page error: ${error.message}`));
   await page.goto(`http://127.0.0.1:${port}/tests/firestore-rules.html?firestorePort=${emulatorPort}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 300000 });
+  await page.waitForFunction(() => Boolean(window.__firestoreRulesResult), null, { timeout: 420000 });
   const result = await page.evaluate(() => window.__firestoreRulesResult);
   await browser.close();
   if (!result.passed) throw new Error(result.error);

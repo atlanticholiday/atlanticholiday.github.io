@@ -2899,6 +2899,7 @@
             "label": "Áreas do relógio de ponto",
             "today": "Hoje",
             "history": "Histórico",
+            "myData": "Os meus dados",
             "overtime": "Trabalho suplementar",
             "management": "Gestão",
             "configuration": "Configuração"
@@ -3080,6 +3081,32 @@
             "noRecentEvents": "Não existem marcações recentes para anular.",
             "openSchedule": "Abrir horário de trabalho",
             "scheduleHint": "Consulte o horário de trabalho em modo só de leitura."
+        },
+        "myData": {
+            "kicker": "Autoatendimento pessoal",
+            "title": "Os meus dados",
+            "description": "Consulte a informação profissional associada à sua conta. Esta área não mostra dados dos restantes colegas.",
+            "profile": "Ficha pessoal",
+            "staffNumber": "Número de funcionário",
+            "department": "Departamento",
+            "position": "Cargo",
+            "hireDate": "Data de contratação",
+            "employmentType": "Tipo de contrato",
+            "email": "Email",
+            "phone": "Telefone",
+            "notProvided": "Não indicado",
+            "preparingProfile": "A ficha pessoal segura ainda está a ser preparada. Peça a um responsável para abrir a aplicação e concluir a sincronização inicial.",
+            "vacationsTitle": "Férias e ausências",
+            "vacationsDescription": "Apenas os seus próprios registos aparecem aqui. Observações internas da gestão não são incluídas.",
+            "noVacations": "Ainda não existem férias ou ausências registadas.",
+            "privateNote": "Por privacidade, esta área recebe uma cópia limitada e não o registo interno completo.",
+            "status": {
+                "approved": "Aprovado",
+                "pending": "Pendente",
+                "rejected": "Recusado",
+                "cancelled": "Cancelado",
+                "recorded": "Registado"
+            }
         },
         "compliance": {
             "title": "Configuração legal do registo",

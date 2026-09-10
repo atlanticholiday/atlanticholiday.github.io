@@ -1,9 +1,9 @@
 # Política de acesso dos colegas — self-service e horário de equipa
 
-**Versão:** 1.1
-**Data da decisão:** 9 de setembro de 2026
+**Versão:** 1.3
+**Data da decisão:** 10 de setembro de 2026
 
-**Estado:** etapa 4 concluída e etapa 5 iniciada. As contas dos colegas usam a projeção mínima `schedule_directory`; os documentos completos de `employees` só podem ser lidos pelo próprio titular ou por perfis de gestão autorizados. As notas diárias internas e os registos detalhados de férias/ausências deixaram de poder ser consultados por contas comuns de colegas.
+**Estado:** etapa 5 concluída e etapa 6 iniciada. As contas dos colegas usam `schedule_directory` para o horário mínimo da equipa e `employee_self_service/{employeeId}` para a sua ficha pessoal. Os documentos completos de `employees`, as notas diárias internas e os registos completos de férias/ausências ficam reservados a perfis autorizados de gestão.
 
 ## Objetivo
 
@@ -65,13 +65,15 @@ Estados detalhados como doença, ausência pessoal ou ausência injustificada s�
 ## Regras para a implementação
 
 - O horário de equipa deve usar uma coleção/projeção própria com os campos mínimos acima, em vez dos documentos completos de `employees`.
-- O documento completo de cada trabalhador deve ser legível apenas pelo próprio trabalhador ligado e por perfis de gestão autorizados.
+- O documento completo de cada trabalhador é reservado a perfis de gestão autorizados. O próprio trabalhador consulta uma projeção pessoal limitada, sem notas internas, dados de autenticação ou detalhes de outros colegas.
 - Férias, ausências, assiduidade e trabalho suplementar devem manter detalhes privados separados do estado operacional partilhado.
 - A interface e as regras do Firestore devem aplicar a mesma limitação; esconder elementos apenas no ecrã não é controlo de acesso suficiente.
 - Qualquer novo campo deve ser privado por defeito. A partilha com a equipa exige finalidade operacional documentada.
+- As projeções só podem ser reconciliadas depois de os dados de origem e destino serem confirmados pelo servidor, sem escritas locais pendentes.
+- Um perfil pessoal arquivado é substituído por um marcador inativo sem dados pessoais; o documento-pai não é eliminado pelo cliente, para não deixar férias antigas órfãs e acessíveis numa futura reutilização do identificador.
 
-## Próxima etapa
+## Estado das etapas 5 e 6
 
-O estado operacional genérico de férias/ausências já é partilhado através de `schedule_directory`, sem motivo, nota ou dados de aprovação. A coleção detalhada `vacation_records` fica reservada à gestão, ao Staff autorizado e a contas com acesso ao Centro de Férias.
+A etapa 5 fica concluída com três fontes separadas: `schedule_directory` apresenta apenas o estado operacional genérico; `vacation_records` mantém o registo completo reservado; e `employee_self_service/{employeeId}/vacation_records` apresenta ao titular apenas datas, tipo, estado e modo de contagem, sem notas ou metadados de gestão.
 
-Para concluir a etapa 5, falta criar uma projeção individual segura para o self-service. Essa projeção permitirá ao colega consultar apenas as suas próprias férias/ausências e respetivo estado, sem receber notas internas de gestão.
+A etapa 6 começa com a nova área de leitura **Os meus dados** no relógio de ponto. Esta primeira versão apresenta a ficha profissional segura e as férias/ausências próprias. A evolução seguinte pode consolidar nessa área os saldos de férias, exportações pessoais e o fluxo para pedir correção de dados.

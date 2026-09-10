@@ -77,6 +77,64 @@ service cloud.firestore {
         && accessData().linkedEmployeeId.size() > 0;
     }
 
+    function validSelfServiceProfile(employeeId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'employeeId', 'name', 'staffNumber', 'email', 'phone', 'department',
+          'position', 'hireDate', 'employmentType', 'workDays', 'shifts',
+          'active', 'schemaVersion', 'updatedAtServer'
+        ])
+        && data.keys().hasOnly([
+          'employeeId', 'name', 'staffNumber', 'email', 'phone', 'department',
+          'position', 'hireDate', 'employmentType', 'workDays', 'shifts',
+          'active', 'schemaVersion', 'updatedAtServer'
+        ])
+        && data.employeeId == employeeId
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 200
+        && (data.staffNumber == null || data.staffNumber is int)
+        && (data.email == null || (data.email is string && data.email.size() <= 254))
+        && (data.phone == null || (data.phone is string && data.phone.size() <= 80))
+        && (data.department == null || (data.department is string && data.department.size() <= 120))
+        && (data.position == null || (data.position is string && data.position.size() <= 120))
+        && (data.hireDate == null || (data.hireDate is string && data.hireDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+        && (data.employmentType == null || (data.employmentType is string && data.employmentType.size() <= 120))
+        && data.workDays is list
+        && data.shifts is map
+        && data.active is bool
+        && data.schemaVersion == 1
+        && data.updatedAtServer == request.time;
+    }
+
+    function selfServiceProfilePath(employeeId) {
+      return /databases/$(database)/documents/employee_self_service/$(employeeId);
+    }
+
+    function validSelfServiceVacation() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'startDate', 'endDate', 'type', 'status',
+          'dayCountMode', 'schemaVersion', 'updatedAtServer'
+        ])
+        && data.keys().hasOnly([
+          'startDate', 'endDate', 'type', 'status',
+          'dayCountMode', 'schemaVersion', 'updatedAtServer'
+        ])
+        && data.startDate is string
+        && data.startDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && data.endDate is string
+        && data.endDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && data.endDate >= data.startDate
+        && data.type in ['vacation', 'sick', 'unpaid', 'parental', 'training', 'compensatory']
+        && data.status is string
+        && data.status.size() > 0
+        && data.status.size() <= 40
+        && data.dayCountMode in ['workdays', 'calendar']
+        && data.schemaVersion == 1
+        && data.updatedAtServer == request.time;
+    }
+
     function attendanceCredentialPath() {
       return /databases/$(database)/documents/attendance_credentials/$(request.auth.token.email);
     }
@@ -978,11 +1036,38 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow get: if privileged()
-        || hasApp('staff')
-        || isOwnEmployeeDocument(employeeId);
+      allow get: if privileged() || hasApp('staff');
       allow list: if privileged() || hasApp('staff');
       allow write: if privileged() || hasApp('staff');
+    }
+
+    // Personal self-service projection. It deliberately omits internal notes,
+    // PIN data, overtime details and management-only profile fields.
+    match /employee_self_service/{employeeId} {
+      allow get: if privileged()
+        || hasApp('staff')
+        || (isOwnEmployeeDocument(employeeId) && resource.data.active == true);
+      allow list: if privileged() || hasApp('staff');
+      allow create, update: if (privileged() || hasApp('staff'))
+        && validSelfServiceProfile(employeeId);
+      // Client-side deletion would leave nested vacation records orphaned.
+      // Archive by replacing the profile with an inactive, PII-free tombstone.
+      allow delete: if false;
+
+      // Detailed leave projection for the record owner, without the source
+      // record's free-text note or management metadata.
+      match /vacation_records/{recordId} {
+        allow read: if privileged()
+          || hasApp('staff')
+          || (
+            isOwnEmployeeDocument(employeeId)
+            && exists(selfServiceProfilePath(employeeId))
+            && get(selfServiceProfilePath(employeeId)).data.active == true
+          );
+        allow create, update: if (privileged() || hasApp('staff'))
+          && validSelfServiceVacation();
+        allow delete: if privileged() || hasApp('staff');
+      }
     }
 
     // Minimum operational projection for the read-only team schedule. Private

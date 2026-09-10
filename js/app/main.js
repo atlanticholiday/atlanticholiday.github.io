@@ -1061,6 +1061,7 @@ function subscribeScheduleDataForCurrentUser() {
     const isTimeClockStation = dataManager.isTimeClockStationUser?.();
     const isLimitedScheduleUser = dataManager.usesLimitedScheduleData?.()
         ?? dataManager.isScheduleOnlyUser?.();
+    const hasLinkedEmployee = Boolean(dataManager.getCurrentUserContext?.()?.linkedEmployee?.id);
     const needsTimeClockData = !isTimeClockStation && dataManager.isClockOnlyUser?.();
     const shouldLoadEmployeeDirectory = hasPrivilegedScheduleAccess || canUseSchedule || canUseVacationCenter || needsTimeClockData;
     const scheduleDataAccess = getScheduleDataAccessPlan({
@@ -1074,6 +1075,10 @@ function subscribeScheduleDataForCurrentUser() {
     }
 
     dataManager.listenForEmployeeChanges();
+
+    if (!isTimeClockStation && hasLinkedEmployee) {
+        dataManager.listenForSelfServiceChanges();
+    }
 
     if (scheduleDataAccess.loadVacationRecords) {
         dataManager.listenForVacationRecordChanges();

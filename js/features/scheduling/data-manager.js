@@ -50,6 +50,7 @@ import { normalizeManualAttendanceNote } from './time-clock-controls.js';
 import { buildVerifiableAttendanceArchive, getArchivePeriodRange, normalizeArchivePeriod } from './attendance-archive.js';
 import { buildVacationYearClosePlan } from './vacation-policy-utils.js';
 import { buildScheduleDirectoryEntries } from './schedule-directory.js';
+import { buildSelfServiceDirectoryEntries, buildSelfServiceProfileTombstone } from './self-service-directory.js';
 import { getEmployeeDirectoryCollectionName } from './schedule-data-access.js';
 import {
     buildVacation2026UpdatePlan,
@@ -93,13 +94,21 @@ export class DataManager {
         this.unsubscribeAttendance = null;
         this.unsubscribeOvertime = null;
         this.unsubscribeVacationRecords = null;
+        this.unsubscribeSelfServiceProfile = null;
+        this.unsubscribeSelfServiceVacations = null;
         this.attendanceRecords = {};
         this.overtimeRecords = {};
+        this.selfServiceProfile = null;
+        this.selfServiceVacations = [];
         this.stationIdentifiedEmployee = null;
         this.stationDirectorySyncSignature = null;
         this.scheduleDirectorySyncSignature = null;
         this.scheduleDirectorySyncPromise = Promise.resolve();
+        this.selfServiceDirectorySyncSignature = null;
+        this.selfServiceDirectorySyncPromise = Promise.resolve();
         this.hasLoadedVacationRecords = false;
+        this.hasAuthoritativeEmployeeSnapshot = false;
+        this.hasAuthoritativeVacationSnapshot = false;
         this.isSyncingLegacyVacationRecords = false;
         this.attendanceSyncState = {
             online: this.getBrowserOnlineStatus(),
@@ -158,6 +167,8 @@ export class DataManager {
         this.hasLoadedEmployees = false;
         this.employeeLoadError = null;
         this.vacationRecords = [];
+        this.selfServiceProfile = null;
+        this.selfServiceVacations = [];
         this.attendanceRecords = {};
         this.overtimeRecords = {};
         this.stationIdentifiedEmployee = null;
@@ -173,7 +184,10 @@ export class DataManager {
         this.vacation2026UpdateError = null;
         this.selectedDateKey = null;
         this.hasLoadedVacationRecords = false;
+        this.hasAuthoritativeEmployeeSnapshot = false;
+        this.hasAuthoritativeVacationSnapshot = false;
         this.scheduleDirectorySyncSignature = null;
+        this.selfServiceDirectorySyncSignature = null;
         this.attendanceSyncState = {
             online: this.getBrowserOnlineStatus(),
             fromCache: false,
@@ -224,6 +238,18 @@ export class DataManager {
 
     getVacationRecordsCollectionRef() {
         return collection(this.db, "vacation_records");
+    }
+
+    getSelfServiceProfileRef() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        return linkedEmployeeId ? doc(this.db, 'employee_self_service', linkedEmployeeId) : null;
+    }
+
+    getSelfServiceVacationsReadRef() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        return linkedEmployeeId
+            ? collection(this.db, 'employee_self_service', linkedEmployeeId, 'vacation_records')
+            : null;
     }
 
     preloadHolidaysAroundYear(year) {
@@ -288,7 +314,7 @@ export class DataManager {
         }
 
         this.employeeLoadError = null;
-        this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), (snapshot) => {
+        this.unsubscribe = onSnapshot(this.getEmployeesCollectionRef(), { includeMetadataChanges: true }, (snapshot) => {
             const readCount = snapshot.docs.length || 1;
             console.log(`👥 [FIRESTORE READ] Employee listener triggered - ${readCount} reads from employees collection`);
             console.log(`👥 [FIRESTORE READ] Employee snapshot metadata:`, {
@@ -305,6 +331,8 @@ export class DataManager {
             console.log(`👥 [FIRESTORE READ] Processed ${allEmployees.length} employees (filtered out metadata doc)`);
 
             this.hasLoadedEmployees = true;
+            this.hasAuthoritativeEmployeeSnapshot = !snapshot.metadata.fromCache
+                && !snapshot.metadata.hasPendingWrites;
             this.employeeLoadError = null;
 
             if (allEmployees.length === 0 && snapshot.docs.length <= 1) {
@@ -397,7 +425,7 @@ export class DataManager {
 
     async commitScheduleDirectory(entries = []) {
         const directoryRef = collection(this.db, 'schedule_directory');
-        const currentSnapshot = await getDocsFresh(directoryRef);
+        const currentSnapshot = await getDocsFromServer(directoryRef);
         const targetIds = new Set(entries.map((entry) => entry.id));
         const operations = [
             ...currentSnapshot.docs
@@ -420,16 +448,115 @@ export class DataManager {
         }
     }
 
+    syncSelfServiceDirectory(employees = []) {
+        if ((!this.hasPrivilegedRole() && !this.canAccessApp('staff')) || this.isTimeClockStationUser()) return Promise.resolve();
+        const entries = buildSelfServiceDirectoryEntries(employees);
+        const signature = JSON.stringify(entries);
+        if (signature === this.selfServiceDirectorySyncSignature) return this.selfServiceDirectorySyncPromise;
+        this.selfServiceDirectorySyncSignature = signature;
+
+        const pendingSync = this.selfServiceDirectorySyncPromise
+            .catch(() => undefined)
+            .then(() => this.commitSelfServiceDirectory(entries))
+            .catch((error) => {
+                if (this.selfServiceDirectorySyncSignature === signature) {
+                    this.selfServiceDirectorySyncSignature = null;
+                }
+                throw error;
+            });
+        this.selfServiceDirectorySyncPromise = pendingSync;
+        return pendingSync;
+    }
+
+    async commitSelfServiceDirectory({ profiles = [], vacations = [] } = {}) {
+        const profileCollectionRef = collection(this.db, 'employee_self_service');
+        const profileSnapshot = await getDocsFromServer(profileCollectionRef);
+        const vacationSnapshots = await Promise.all(profileSnapshot.docs.map(async (profileDoc) => ({
+            employeeId: profileDoc.id,
+            snapshot: await getDocsFromServer(collection(this.db, 'employee_self_service', profileDoc.id, 'vacation_records'))
+        })));
+        const profileIds = new Set(profiles.map((entry) => entry.id));
+        const vacationIds = new Set(vacations.map((entry) => `${entry.employeeId}/${entry.id}`));
+        const operations = [
+            ...vacationSnapshots.flatMap(({ employeeId, snapshot }) => snapshot.docs
+                .filter((entryDoc) => !vacationIds.has(`${employeeId}/${entryDoc.id}`))
+                .map((entryDoc) => ({ type: 'delete', ref: entryDoc.ref }))),
+            ...profileSnapshot.docs
+                .filter((entryDoc) => !profileIds.has(entryDoc.id))
+                .map((entryDoc) => ({
+                    type: 'set',
+                    ref: entryDoc.ref,
+                    data: { ...buildSelfServiceProfileTombstone(entryDoc.id), updatedAtServer: serverTimestamp() }
+                })),
+            ...profiles.map((entry) => ({
+                type: 'set',
+                ref: doc(this.db, 'employee_self_service', entry.id),
+                data: { ...entry.data, updatedAtServer: serverTimestamp() }
+            })),
+            ...vacations.map((entry) => ({
+                type: 'set',
+                ref: doc(this.db, 'employee_self_service', entry.employeeId, 'vacation_records', entry.id),
+                data: { ...entry.data, updatedAtServer: serverTimestamp() }
+            }))
+        ];
+
+        for (let index = 0; index < operations.length; index += 400) {
+            const batch = writeBatch(this.db);
+            operations.slice(index, index + 400).forEach((operation) => {
+                if (operation.type === 'delete') batch.delete(operation.ref);
+                else batch.set(operation.ref, operation.data);
+            });
+            await batch.commit();
+        }
+    }
+
+    listenForSelfServiceChanges() {
+        const profileRef = this.getSelfServiceProfileRef();
+        const vacationsRef = this.getSelfServiceVacationsReadRef();
+        if (!profileRef || !vacationsRef || this.isTimeClockStationUser()) return;
+
+        if (!this.unsubscribeSelfServiceProfile) {
+            this.unsubscribeSelfServiceProfile = onSnapshot(profileRef, (snapshot) => {
+                this.selfServiceProfile = snapshot.exists()
+                    ? { id: snapshot.id, ...snapshot.data() }
+                    : null;
+                this.notifyDataChange();
+            }, (error) => {
+                this.selfServiceProfile = null;
+                this.notifyDataChange();
+                console.error('Error listening for own self-service profile:', error);
+            });
+        }
+
+        if (!this.unsubscribeSelfServiceVacations) {
+            this.unsubscribeSelfServiceVacations = onSnapshot(vacationsRef, (snapshot) => {
+                this.selfServiceVacations = snapshot.docs
+                    .map((vacationDoc) => ({ id: vacationDoc.id, ...vacationDoc.data() }))
+                    .sort((left, right) => (
+                        String(right.startDate || '').localeCompare(String(left.startDate || ''))
+                        || String(right.endDate || '').localeCompare(String(left.endDate || ''))
+                    ));
+                this.notifyDataChange();
+            }, (error) => {
+                this.selfServiceVacations = [];
+                this.notifyDataChange();
+                console.error('Error listening for own self-service vacations:', error);
+            });
+        }
+    }
+
     listenForVacationRecordChanges() {
         if (this.unsubscribeVacationRecords) {
             return;
         }
 
-        this.unsubscribeVacationRecords = onSnapshot(this.getVacationRecordsCollectionRef(), (snapshot) => {
+        this.unsubscribeVacationRecords = onSnapshot(this.getVacationRecordsCollectionRef(), { includeMetadataChanges: true }, (snapshot) => {
             this.vacationRecords = snapshot.docs
                 .map((recordDoc) => normalizeVacationEntry({ id: recordDoc.id, ...recordDoc.data() }))
                 .filter(Boolean);
             this.hasLoadedVacationRecords = true;
+            this.hasAuthoritativeVacationSnapshot = !snapshot.metadata.fromCache
+                && !snapshot.metadata.hasPendingWrites;
             this.rebuildEmployeesFromSources();
             this.syncLegacyVacationRecords().catch((error) => console.error("Failed to sync legacy vacation records", error));
             this.ensureVacation2026UpdateApplied().catch((error) => console.error("Failed to apply the 2026 vacation update", error));
@@ -777,9 +904,14 @@ export class DataManager {
 
         this.activeEmployees = this.rawActiveEmployees.map(mergeEmployee);
         this.archivedEmployees = this.rawArchivedEmployees.map(mergeEmployee);
-        this.syncScheduleDirectory(this.activeEmployees).catch((error) => {
-            console.error('Failed to synchronize the limited schedule directory:', error);
-        });
+        if (this.hasAuthoritativeEmployeeSnapshot && this.hasAuthoritativeVacationSnapshot) {
+            this.syncScheduleDirectory(this.activeEmployees).catch((error) => {
+                console.error('Failed to synchronize the limited schedule directory:', error);
+            });
+            this.syncSelfServiceDirectory(this.activeEmployees).catch((error) => {
+                console.error('Failed to synchronize the self-service directory:', error);
+            });
+        }
         this.preloadHolidaysAroundYear(this.currentDate.getFullYear());
         this.notifyDataChange();
     }
@@ -1286,7 +1418,9 @@ export class DataManager {
             this.unsubscribeSettings,
             this.unsubscribeAttendance,
             this.unsubscribeOvertime,
-            this.unsubscribeVacationRecords
+            this.unsubscribeVacationRecords,
+            this.unsubscribeSelfServiceProfile,
+            this.unsubscribeSelfServiceVacations
         ].forEach((unsubscribe) => {
             if (typeof unsubscribe === 'function') {
                 unsubscribe();
@@ -1300,10 +1434,26 @@ export class DataManager {
         this.unsubscribeAttendance = null;
         this.unsubscribeOvertime = null;
         this.unsubscribeVacationRecords = null;
+        this.unsubscribeSelfServiceProfile = null;
+        this.unsubscribeSelfServiceVacations = null;
     }
 
     getCurrentUserContext() {
         return this.currentUserContext;
+    }
+
+    getCurrentUserSelfServiceProfile() {
+        const linkedEmployeeId = this.currentUserContext.linkedEmployee?.id;
+        return linkedEmployeeId
+            && this.selfServiceProfile?.employeeId === linkedEmployeeId
+            && this.selfServiceProfile.active === true
+            ? { ...this.selfServiceProfile }
+            : null;
+    }
+
+    getCurrentUserSelfServiceVacations() {
+        if (!this.currentUserContext.linkedEmployee?.id || this.selfServiceProfile?.active !== true) return [];
+        return this.selfServiceVacations.map((vacation) => ({ ...vacation }));
     }
 
     getCurrentUserRoles() {
