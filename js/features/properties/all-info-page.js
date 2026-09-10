@@ -1609,10 +1609,11 @@ function createMissingWorkbench({
 
 function createAsanaProjectHeader(documentRef, properties) {
     const header = documentRef.createElement('div');
-    header.className = 'asana-project-header';
+    header.className = 'asana-project-header dashboard-header';
     header.innerHTML = `
         <div class="asana-project-header-top">
             <div class="asana-project-info">
+                <div class="asana-back-container"></div>
                 <div class="asana-project-avatar">
                     <i class="fas fa-hotel"></i>
                 </div>
@@ -1627,17 +1628,76 @@ function createAsanaProjectHeader(documentRef, properties) {
                     <p class="asana-project-subtitle">${copy('project.subtitle')}</p>
                 </div>
             </div>
-            <div class="asana-project-progress-wrap">
-                <div class="asana-progress-meta">
-                    <span class="asana-progress-percent">100%</span>
-                    <span class="asana-progress-label">${copy('project.progress', { percent: 100, complete: 0, total: 0 })}</span>
+            <div class="asana-project-header-right">
+                <div class="asana-project-progress-wrap">
+                    <div class="asana-progress-meta">
+                        <span class="asana-progress-percent">100%</span>
+                        <span class="asana-progress-label">${copy('project.progress', { percent: 100, complete: 0, total: 0 })}</span>
+                    </div>
+                    <div class="asana-progress-track">
+                        <div class="asana-progress-bar" style="width: 100%"></div>
+                    </div>
                 </div>
-                <div class="asana-progress-track">
-                    <div class="asana-progress-bar" style="width: 100%"></div>
-                </div>
+                <div class="asana-header-actions header-right"></div>
             </div>
         </div>
     `;
+
+    // Adopt or instantiate back button and header actions
+    const existingHeader = documentRef.querySelector('#allinfo-page > header.dashboard-header');
+    const backContainer = header.querySelector('.asana-back-container');
+    let backBtn = existingHeader?.querySelector('#back-to-landing-from-allinfo-btn');
+    if (backBtn) {
+        backContainer.appendChild(backBtn);
+    } else {
+        backBtn = documentRef.createElement('button');
+        backBtn.id = 'back-to-landing-from-allinfo-btn';
+        backBtn.type = 'button';
+        backBtn.className = 'asana-back-btn p-1.5 text-gray-500 hover:text-brand transition-colors rounded-md hover:bg-gray-100';
+        backBtn.title = 'Back';
+        backBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        `;
+        backContainer.appendChild(backBtn);
+    }
+    backBtn.onclick = () => {
+        if (window.navigationManager?.showLandingPage) {
+            window.navigationManager.showLandingPage();
+        } else if (window.history.length > 1) {
+            window.history.back();
+        }
+    };
+
+    const actionsTarget = header.querySelector('.asana-header-actions');
+    const headerRight = existingHeader?.querySelector('.header-right');
+    if (headerRight && headerRight.children.length > 0) {
+        while (headerRight.firstChild) {
+            actionsTarget.appendChild(headerRight.firstChild);
+        }
+    } else if (!actionsTarget.querySelector('[data-lang-option]')) {
+        const langWrap = documentRef.createElement('div');
+        langWrap.className = 'inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-sm asana-lang-switcher';
+        langWrap.innerHTML = `
+            <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="en" title="English">EN</button>
+            <button type="button" class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100" data-lang-option="pt" title="Português">PT</button>
+        `;
+        actionsTarget.appendChild(langWrap);
+    }
+
+    if (existingHeader) {
+        existingHeader.remove();
+    }
+
+    try {
+        window.i18n?.setupLanguageSwitcher?.();
+        window.i18n?.updateLanguageSwitcher?.();
+        window.navigationManager?.appSwitcher?.installTriggers?.();
+    } catch (e) {
+        // Non-browser or test environment
+    }
+
     updateProjectHeader(header, properties);
     return header;
 }
