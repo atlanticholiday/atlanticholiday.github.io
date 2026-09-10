@@ -2052,6 +2052,9 @@ export class UIManager {
         const actionableOvertime = todayOvertimeRecords.find((record) => ['authorized', 'in-progress', 'awaiting-worker-validation'].includes(record.status)) || null;
         const ownProfile = this.dataManager.getCurrentUserSelfServiceProfile?.() || null;
         const ownVacations = this.dataManager.getCurrentUserSelfServiceVacations?.() || [];
+        const ownVacationBalance = ownProfile?.vacationBalance?.schemaVersion === 1
+            ? ownProfile.vacationBalance
+            : null;
         const profileFields = ownProfile ? [
             [t('timeClock.myData.staffNumber'), ownProfile.staffNumber],
             [t('timeClock.myData.department'), ownProfile.department],
@@ -2069,6 +2072,53 @@ export class UIManager {
                 <dd class="mt-2 text-base font-semibold text-slate-900">${this.escapeHtml(value ?? t('timeClock.myData.notProvided'))}</dd>
             </div>
         `).join('');
+        const vacationBalanceMarkup = ownVacationBalance ? (() => {
+            const remainingDays = Number(ownVacationBalance.remainingDays) || 0;
+            const allowanceDays = Math.max(Number(ownVacationBalance.allowanceDays) || 0, 0);
+            const recordedDays = Math.max(Number(ownVacationBalance.recordedDays) || 0, 0);
+            const progress = allowanceDays > 0
+                ? Math.min(Math.max((recordedDays / allowanceDays) * 100, 0), 100)
+                : 0;
+            const balanceTone = remainingDays < 0
+                ? 'text-rose-700'
+                : remainingDays <= 5
+                    ? 'text-amber-700'
+                    : 'text-emerald-700';
+            const progressTone = remainingDays < 0
+                ? 'bg-rose-500'
+                : remainingDays <= 5
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500';
+
+            return `
+                <section class="mt-8 border-y border-slate-200 py-6" aria-labelledby="my-vacation-balance-title">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <div class="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">${t('timeClock.myData.balanceYear', { year: ownVacationBalance.year })}</div>
+                            <h4 id="my-vacation-balance-title" class="mt-2 text-xl font-semibold text-slate-900">${t('timeClock.myData.balanceTitle')}</h4>
+                            <p class="mt-1 max-w-xl text-sm text-slate-600">${t('timeClock.myData.balanceDescription')}</p>
+                        </div>
+                        <div class="lg:text-right">
+                            <div class="text-sm text-slate-500">${t('timeClock.myData.remainingDays')}</div>
+                            <div class="mt-1 text-5xl font-semibold tracking-tight ${balanceTone}">${this.escapeHtml(remainingDays)}</div>
+                        </div>
+                    </div>
+                    <div class="mt-6 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin="0" aria-valuemax="${this.escapeHtml(allowanceDays)}" aria-valuenow="${this.escapeHtml(Math.min(recordedDays, allowanceDays))}">
+                        <div class="h-full rounded-full ${progressTone}" style="width: ${progress.toFixed(2)}%"></div>
+                    </div>
+                    <dl class="mt-6 grid grid-cols-2 gap-y-5 sm:grid-cols-4">
+                        <div><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.allowanceDays')}</dt><dd class="mt-1 text-xl font-semibold text-slate-900">${this.escapeHtml(allowanceDays)}</dd></div>
+                        <div class="border-l border-slate-200 pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.takenDays')}</dt><dd class="mt-1 text-xl font-semibold text-slate-900">${this.escapeHtml(ownVacationBalance.takenDays)}</dd></div>
+                        <div class="sm:border-l sm:border-slate-200 sm:pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.plannedDays')}</dt><dd class="mt-1 text-xl font-semibold text-slate-900">${this.escapeHtml(ownVacationBalance.plannedDays)}</dd></div>
+                        <div class="border-l border-slate-200 pl-4"><dt class="text-xs uppercase tracking-wide text-slate-500">${t('timeClock.myData.recordedDays')}</dt><dd class="mt-1 text-xl font-semibold text-slate-900">${this.escapeHtml(recordedDays)}</dd></div>
+                    </dl>
+                </section>
+            `;
+        })() : (ownProfile ? `
+            <div class="mt-8 border-y border-slate-200 py-5 text-sm text-slate-600">
+                ${t('timeClock.myData.preparingBalance')}
+            </div>
+        ` : '');
         const ownVacationMarkup = ownVacations.length ? ownVacations.map((vacation) => {
             const startDate = new Date(`${vacation.startDate}T00:00:00`);
             const endDate = new Date(`${vacation.endDate}T00:00:00`);
@@ -2618,6 +2668,7 @@ export class UIManager {
                             <div class="mt-2 text-2xl font-semibold">${this.escapeHtml(ownProfile.name)}</div>
                         </div>
                         <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">${profileMarkup}</dl>
+                        ${vacationBalanceMarkup}
                     ` : `
                         <div class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
                             ${t('timeClock.myData.preparingProfile')}

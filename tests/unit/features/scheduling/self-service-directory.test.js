@@ -3,6 +3,7 @@ import {
   buildSelfServiceDirectoryEntries,
   buildSelfServiceProfileEntry,
   buildSelfServiceProfileTombstone,
+  buildSelfServiceVacationBalance,
   buildSelfServiceVacationEntries
 } from '../../../../js/features/scheduling/self-service-directory.js';
 
@@ -39,6 +40,7 @@ describe('Self-service directory', () => {
         employmentType: 'Permanent',
         workDays: [1, 5],
         shifts: { 1: '10:00-19:00', default: '09:00-18:00' },
+        vacationBalance: null,
         active: true,
         schemaVersion: 1
       }
@@ -58,9 +60,44 @@ describe('Self-service directory', () => {
       employmentType: null,
       workDays: [],
       shifts: {},
+      vacationBalance: null,
       active: false,
       schemaVersion: 1
     });
+  });
+
+  test('uses the canonical vacation calculation for the personal yearly balance', () => {
+    const employee = {
+      id: 'employee-1',
+      name: 'Ana Silva',
+      workDays: [1, 2, 3, 4, 5],
+      vacationAllowancesByYear: { 2026: 25 },
+      vacations: [{
+        startDate: '2026-09-01',
+        endDate: '2026-09-05',
+        type: 'vacation',
+        dayCountMode: 'workdays'
+      }]
+    };
+    const options = {
+      year: 2026,
+      referenceDate: new Date('2026-09-02T12:00:00'),
+      holidays: { '2026-09-04': 'Municipal holiday' }
+    };
+
+    assert.deepEqual(buildSelfServiceVacationBalance(employee, options), {
+      year: 2026,
+      allowanceDays: 25,
+      takenDays: 2,
+      plannedDays: 1,
+      recordedDays: 3,
+      remainingDays: 22,
+      schemaVersion: 1
+    });
+    assert.deepEqual(
+      buildSelfServiceDirectoryEntries([employee], options).profiles[0].data.vacationBalance,
+      buildSelfServiceVacationBalance(employee, options)
+    );
   });
 
   test('projects own leave details without notes or management metadata', () => {

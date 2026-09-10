@@ -4,9 +4,14 @@ import {
     normalizeVacationDayCountMode,
     normalizeVacationEntry
 } from './vacation-records.js';
+import {
+    calculateEmployeeVacationUsageForYear,
+    getEffectiveAnnualVacationAllowance
+} from './views/schedule-view-helpers.js';
 
 export const SELF_SERVICE_PROFILE_SCHEMA_VERSION = 1;
 export const SELF_SERVICE_VACATION_SCHEMA_VERSION = 1;
+export const SELF_SERVICE_VACATION_BALANCE_SCHEMA_VERSION = 1;
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SHIFT_PATTERN = /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/;
@@ -39,6 +44,47 @@ function normalizeShifts(shifts = {}) {
         .sort(([left], [right]) => left.localeCompare(right)));
 }
 
+function normalizeWholeDays(value) {
+    const normalized = Number(value);
+    return Number.isFinite(normalized) ? Math.trunc(normalized) : 0;
+}
+
+export function buildSelfServiceVacationBalance(employee = {}, {
+    year = new Date().getFullYear(),
+    holidays = {},
+    referenceDate = new Date()
+} = {}) {
+    const normalizedYear = Number.parseInt(year, 10);
+    if (!Number.isInteger(normalizedYear) || normalizedYear < 1900 || normalizedYear > 9999) return null;
+
+    const usage = calculateEmployeeVacationUsageForYear(
+        employee,
+        normalizedYear,
+        referenceDate,
+        holidays
+    );
+    const allowance = getEffectiveAnnualVacationAllowance(
+        employee,
+        normalizedYear,
+        referenceDate,
+        holidays
+    );
+    const allowanceDays = normalizeWholeDays(allowance.vacationAllowance);
+    const takenDays = normalizeWholeDays(usage.takenDays);
+    const plannedDays = normalizeWholeDays(usage.plannedDays);
+    const recordedDays = normalizeWholeDays(usage.recordedDays);
+
+    return {
+        year: normalizedYear,
+        allowanceDays,
+        takenDays,
+        plannedDays,
+        recordedDays,
+        remainingDays: allowanceDays - recordedDays,
+        schemaVersion: SELF_SERVICE_VACATION_BALANCE_SCHEMA_VERSION
+    };
+}
+
 export function buildSelfServiceProfileEntry(employee = {}) {
     const employeeId = normalizeText(employee.id, 300);
     const name = normalizeText(employee.name, 200);
@@ -59,6 +105,7 @@ export function buildSelfServiceProfileEntry(employee = {}) {
             employmentType: normalizeText(employee.employmentType, 120),
             workDays: normalizeWorkDays(employee.workDays),
             shifts: normalizeShifts(employee.shifts),
+            vacationBalance: null,
             active: true,
             schemaVersion: SELF_SERVICE_PROFILE_SCHEMA_VERSION
         }
@@ -80,6 +127,7 @@ export function buildSelfServiceProfileTombstone(employeeId) {
         employmentType: null,
         workDays: [],
         shifts: {},
+        vacationBalance: null,
         active: false,
         schemaVersion: SELF_SERVICE_PROFILE_SCHEMA_VERSION
     };
@@ -114,10 +162,20 @@ export function buildSelfServiceVacationEntries(employees = []) {
         ));
 }
 
-export function buildSelfServiceDirectoryEntries(employees = []) {
+export function buildSelfServiceDirectoryEntries(employees = [], balanceOptions = {}) {
     return {
         profiles: employees
-            .map(buildSelfServiceProfileEntry)
+            .map((employee) => {
+                const profile = buildSelfServiceProfileEntry(employee);
+                if (!profile) return null;
+                return {
+                    ...profile,
+                    data: {
+                        ...profile.data,
+                        vacationBalance: buildSelfServiceVacationBalance(employee, balanceOptions)
+                    }
+                };
+            })
             .filter(Boolean)
             .sort((left, right) => left.id.localeCompare(right.id)),
         vacations: buildSelfServiceVacationEntries(employees)

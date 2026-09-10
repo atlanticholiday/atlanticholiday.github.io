@@ -81,12 +81,12 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasAll([
           'employeeId', 'name', 'staffNumber', 'email', 'phone', 'department',
-          'position', 'hireDate', 'employmentType', 'workDays', 'shifts',
+          'position', 'hireDate', 'employmentType', 'workDays', 'shifts', 'vacationBalance',
           'active', 'schemaVersion', 'updatedAtServer'
         ])
         && data.keys().hasOnly([
           'employeeId', 'name', 'staffNumber', 'email', 'phone', 'department',
-          'position', 'hireDate', 'employmentType', 'workDays', 'shifts',
+          'position', 'hireDate', 'employmentType', 'workDays', 'shifts', 'vacationBalance',
           'active', 'schemaVersion', 'updatedAtServer'
         ])
         && data.employeeId == employeeId
@@ -102,9 +102,35 @@ service cloud.firestore {
         && (data.employmentType == null || (data.employmentType is string && data.employmentType.size() <= 120))
         && data.workDays is list
         && data.shifts is map
+        && validSelfServiceVacationBalance(data.vacationBalance)
         && data.active is bool
         && data.schemaVersion == 1
         && data.updatedAtServer == request.time;
+    }
+
+    function validSelfServiceVacationBalance(balance) {
+      return balance == null || (
+        balance is map
+        && balance.keys().hasAll([
+          'year', 'allowanceDays', 'takenDays', 'plannedDays',
+          'recordedDays', 'remainingDays', 'schemaVersion'
+        ])
+        && balance.keys().hasOnly([
+          'year', 'allowanceDays', 'takenDays', 'plannedDays',
+          'recordedDays', 'remainingDays', 'schemaVersion'
+        ])
+        && balance.year is int
+        && balance.year >= 1900
+        && balance.year <= 9999
+        && balance.allowanceDays is int
+        && balance.takenDays is int
+        && balance.plannedDays is int
+        && balance.recordedDays is int
+        && balance.remainingDays is int
+        && balance.recordedDays == balance.takenDays + balance.plannedDays
+        && balance.remainingDays == balance.allowanceDays - balance.recordedDays
+        && balance.schemaVersion == 1
+      );
     }
 
     function selfServiceProfilePath(employeeId) {

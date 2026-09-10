@@ -284,6 +284,7 @@ async function run() {
   if (workerVacations.size !== 1 || linkedVacations.size !== 1) throw new Error('linked account cannot list its safe vacations');
   if (adminProfiles.size < 2 || staffProfiles.size < 2) throw new Error('management cannot read self-service profiles');
   if (Object.hasOwn(workerVacations.docs[0].data(), 'note')) throw new Error('safe vacation unexpectedly contains a private note');
+  if (workerProfile.data()?.vacationBalance?.remainingDays !== 14) throw new Error('worker cannot read own vacation balance');
 
   await updateDoc(doc(staffDb, 'employee_self_service', 'emp-1'), {
     name: 'Worker safe profile', updatedAtServer: serverTimestamp()
@@ -297,7 +298,7 @@ async function run() {
   await updateDoc(doc(adminDb, 'employee_self_service', 'emp-1'), {
     name: 'Inactive profile', staffNumber: null, email: null, phone: null,
     department: null, position: null, hireDate: null, employmentType: null,
-    workDays: [], shifts: {}, active: false, updatedAtServer: serverTimestamp()
+    workDays: [], shifts: {}, vacationBalance: null, active: false, updatedAtServer: serverTimestamp()
   });
   await Promise.all([
     expectDenied(() => getDoc(doc(workerDb, 'employee_self_service', 'emp-1')), 'inactive own profile read'),
@@ -309,7 +310,9 @@ async function run() {
     name: 'Worker safe profile', staffNumber: 1, email: 'worker@example.com',
     department: 'Operations', position: 'Host', hireDate: '2024-01-08',
     employmentType: 'Permanent', workDays: [1, 2, 3, 4, 5],
-    shifts: { default: '09:00-18:00' }, active: true, updatedAtServer: serverTimestamp()
+    shifts: { default: '09:00-18:00' },
+    vacationBalance: { year: 2026, allowanceDays: 22, takenDays: 5, plannedDays: 3, recordedDays: 8, remainingDays: 14, schemaVersion: 1 },
+    active: true, updatedAtServer: serverTimestamp()
   });
   if (!(await getDoc(doc(workerDb, 'employee_self_service', 'emp-1'))).exists()) {
     throw new Error('reactivated linked account cannot read its safe profile');

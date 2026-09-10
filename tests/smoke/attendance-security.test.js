@@ -50,6 +50,8 @@ describe('Attendance register security', () => {
         assert.includes(rules, 'match /vacation_records/{recordId}');
         assert.includes(rules, 'get(selfServiceProfilePath(employeeId)).data.active == true');
         assert.includes(rules, 'isOwnEmployeeDocument(employeeId) && resource.data.active == true');
+        assert.includes(rules, 'validSelfServiceVacationBalance(data.vacationBalance)');
+        assert.includes(rules, 'balance.remainingDays == balance.allowanceDays - balance.recordedDays');
         assert.includes(rules, '// Archive by replacing the profile with an inactive, PII-free tombstone.');
         assert.includes(rules, "data.keys().hasOnly([\n          'startDate', 'endDate', 'type', 'status'");
         assert.includes(credentialRules, 'request.auth.token.email == credentialEmail');
@@ -129,6 +131,8 @@ describe('Attendance register security', () => {
         assert.includes(source, "sectionClass('today')");
         assert.includes(source, "sectionClass('history')");
         assert.includes(source, "sectionClass('myData')");
+        assert.includes(source, "ownProfile?.vacationBalance?.schemaVersion === 1");
+        assert.includes(source, "t('timeClock.myData.balanceTitle')");
         assert.includes(source, "sectionClass('overtime')");
     });
 });

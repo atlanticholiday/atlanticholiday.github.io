@@ -58,12 +58,16 @@ await seed('employees', 'emp-2', { name: 'Station Worker', isArchived: false });
 await seed('employee_self_service', 'emp-1', {
   employeeId: 'emp-1', name: 'Worker', staffNumber: 1, email: 'worker@example.com', phone: null,
   department: 'Operations', position: 'Host', hireDate: '2024-01-08', employmentType: 'Permanent',
-  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' }, active: true, schemaVersion: 1, updatedAtServer: ''
+  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' },
+  vacationBalance: { year: 2026, allowanceDays: 22, takenDays: 5, plannedDays: 3, recordedDays: 8, remainingDays: 14, schemaVersion: 1 },
+  active: true, schemaVersion: 1, updatedAtServer: ''
 });
 await seed('employee_self_service', 'emp-2', {
   employeeId: 'emp-2', name: 'Station Worker', staffNumber: 2, email: 'peer@example.com', phone: null,
   department: 'Operations', position: 'Host', hireDate: '2024-02-01', employmentType: 'Permanent',
-  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' }, active: true, schemaVersion: 1, updatedAtServer: ''
+  workDays: [1, 2, 3, 4, 5], shifts: { default: '09:00-18:00' },
+  vacationBalance: { year: 2026, allowanceDays: 22, takenDays: 2, plannedDays: 0, recordedDays: 2, remainingDays: 20, schemaVersion: 1 },
+  active: true, schemaVersion: 1, updatedAtServer: ''
 });
 await seed('employee_self_service/emp-1/vacation_records', 'emp-1__2026-09-14__2026-09-18', {
   startDate: '2026-09-14', endDate: '2026-09-18', type: 'vacation', status: 'approved',

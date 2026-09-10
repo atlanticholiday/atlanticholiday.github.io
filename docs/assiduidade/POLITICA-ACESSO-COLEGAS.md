@@ -1,6 +1,6 @@
 # Política de acesso dos colegas — self-service e horário de equipa
 
-**Versão:** 1.3
+**Versão:** 1.4
 **Data da decisão:** 10 de setembro de 2026
 
 **Estado:** etapa 5 concluída e etapa 6 iniciada. As contas dos colegas usam `schedule_directory` para o horário mínimo da equipa e `employee_self_service/{employeeId}` para a sua ficha pessoal. Os documentos completos de `employees`, as notas diárias internas e os registos completos de férias/ausências ficam reservados a perfis autorizados de gestão.
@@ -76,4 +76,4 @@ Estados detalhados como doença, ausência pessoal ou ausência injustificada s�
 
 A etapa 5 fica concluída com três fontes separadas: `schedule_directory` apresenta apenas o estado operacional genérico; `vacation_records` mantém o registo completo reservado; e `employee_self_service/{employeeId}/vacation_records` apresenta ao titular apenas datas, tipo, estado e modo de contagem, sem notas ou metadados de gestão.
 
-A etapa 6 começa com a nova área de leitura **Os meus dados** no relógio de ponto. Esta primeira versão apresenta a ficha profissional segura e as férias/ausências próprias. A evolução seguinte pode consolidar nessa área os saldos de férias, exportações pessoais e o fluxo para pedir correção de dados.
+A etapa 6 continua na área de leitura **Os meus dados** no relógio de ponto. Esta versão apresenta a ficha profissional segura, as férias/ausências próprias e o saldo do ano atual calculado pelas mesmas regras usadas pela gestão. A projeção do saldo contém apenas o ano, direito anual, dias gozados, planeados, registados e disponíveis. A evolução seguinte pode acrescentar a exportação pessoal e o fluxo para pedir correção de dados.

@@ -450,7 +450,13 @@ export class DataManager {
 
     syncSelfServiceDirectory(employees = []) {
         if ((!this.hasPrivilegedRole() && !this.canAccessApp('staff')) || this.isTimeClockStationUser()) return Promise.resolve();
-        const entries = buildSelfServiceDirectoryEntries(employees);
+        const referenceDate = new Date();
+        const balanceYear = referenceDate.getFullYear();
+        const entries = buildSelfServiceDirectoryEntries(employees, {
+            year: balanceYear,
+            referenceDate,
+            holidays: this.getHolidaysForYear(balanceYear)
+        });
         const signature = JSON.stringify(entries);
         if (signature === this.selfServiceDirectorySyncSignature) return this.selfServiceDirectorySyncPromise;
         this.selfServiceDirectorySyncSignature = signature;
