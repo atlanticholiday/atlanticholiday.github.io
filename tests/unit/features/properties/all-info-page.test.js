@@ -235,4 +235,172 @@ describe("all-info-page", () => {
       restoreBulkApi();
     }
   });
+
+  test("renders Asana project header with progress meter and status pill", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    initializeAllInfoPage({
+      documentRef: document,
+      properties: [
+        { id: "p-1", name: "Acanto", location: "Funchal", type: "apartment", typology: "T1", rooms: 1, bathrooms: 1, floor: 2 }
+      ]
+    });
+
+    const projectHeader = document.querySelector(".asana-project-header");
+    assert.ok(projectHeader);
+
+    const title = projectHeader.querySelector(".asana-project-title");
+    assert.ok(title);
+    assert.equal(title.textContent, "All Property Info");
+
+    const pill = projectHeader.querySelector(".asana-status-pill");
+    assert.ok(pill);
+
+    const progressBar = projectHeader.querySelector(".asana-progress-bar");
+    assert.ok(progressBar);
+  });
+
+  test("switches to Asana Kanban board view and displays columns", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    initializeAllInfoPage({
+      documentRef: document,
+      properties: [
+        { id: "p-1", name: "Acanto", location: "Funchal", type: "apartment", typology: "T1", rooms: 1, bathrooms: 1, floor: 2 },
+        { id: "p-2", name: "Bravo Villa", location: "Calheta", type: "villa", typology: "T3" }
+      ]
+    });
+
+    const boardTab = document.querySelector('[data-workspace="board"]');
+    assert.ok(boardTab);
+
+    boardTab.click();
+
+    const boardContainer = document.querySelector(".asana-board-container");
+    assert.ok(boardContainer);
+
+    const columns = document.querySelectorAll(".asana-board-column");
+    assert.equal(columns.length, 3);
+
+    const cards = document.querySelectorAll(".asana-card");
+    assert.ok(cards.length >= 2);
+  });
+
+  test("opens Asana property detail drawer on row inspect and saves edits", async () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    const saved = [];
+    const restoreManager = installGlobalProperty("propertiesManager", {
+      async updateProperty(id, updates) {
+        saved.push({ id, updates });
+      }
+    });
+
+    const property = {
+      id: "p-drawer",
+      name: "Ocean View",
+      location: "Funchal",
+      type: "apartment",
+      typology: "T2",
+      rooms: 2,
+      bathrooms: 1
+    };
+
+    try {
+      initializeAllInfoPage({
+        documentRef: document,
+        properties: [property]
+      });
+
+      const drawerRoot = document.querySelector(".asana-drawer-root");
+      assert.ok(drawerRoot);
+      assert.ok(drawerRoot.classList.contains("hidden"));
+
+      const propertyCell = document.querySelector(".allinfo-property-cell");
+      assert.ok(propertyCell);
+      propertyCell.click();
+
+      assert.equal(drawerRoot.classList.contains("hidden"), false);
+
+      const drawerTitle = drawerRoot.querySelector(".asana-drawer-title");
+      assert.equal(drawerTitle.textContent, "Ocean View");
+
+      const drawerInput = drawerRoot.querySelector('[data-drawer-field="rooms"]');
+      assert.ok(drawerInput);
+      drawerInput.value = "3";
+      drawerInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0].id, "p-drawer");
+      assert.deepEqual(saved[0].updates, { rooms: 3 });
+      assert.equal(property.rooms, 3);
+
+      const closeBtn = drawerRoot.querySelector(".asana-drawer-close-btn");
+      assert.ok(closeBtn);
+      closeBtn.click();
+
+      assert.equal(drawerRoot.classList.contains("hidden"), true);
+
+      // Re-open and verify Escape key closes the drawer
+      propertyCell.click();
+      assert.equal(drawerRoot.classList.contains("hidden"), false);
+
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      assert.equal(drawerRoot.classList.contains("hidden"), true);
+    } finally {
+      restoreManager();
+    }
+  });
+
+  test("opens Asana property detail drawer from Kanban board card", () => {
+    resetDom(`
+      <div id="allinfo-filter-wrapper"></div>
+      <nav id="allinfo-nav"></nav>
+      <div id="allinfo-content"></div>
+    `);
+
+    const property = {
+      id: "p-card-test",
+      name: "Mountain Sunset",
+      location: "Calheta",
+      type: "house",
+      typology: "T3"
+    };
+
+    initializeAllInfoPage({
+      documentRef: document,
+      properties: [property]
+    });
+
+    const boardTab = document.querySelector('[data-workspace="board"]');
+    boardTab.click();
+
+    const card = document.querySelector('.asana-card[data-property-id="p-card-test"]');
+    assert.ok(card);
+
+    const drawerRoot = document.querySelector(".asana-drawer-root");
+    assert.ok(drawerRoot);
+    assert.ok(drawerRoot.classList.contains("hidden"));
+
+    card.click();
+    assert.equal(drawerRoot.classList.contains("hidden"), false);
+
+    const drawerTitle = drawerRoot.querySelector(".asana-drawer-title");
+    assert.equal(drawerTitle.textContent, "Mountain Sunset");
+  });
 });
