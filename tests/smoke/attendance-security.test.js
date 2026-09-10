@@ -4,7 +4,7 @@ describe('Attendance register security', () => {
     test('allows only fresh append-only attendance writes by the linked identity', async () => {
         const response = await fetch('../firestore.rules');
         assert.ok(response.ok, 'Failed to fetch firestore.rules');
-        const rules = await response.text();
+        const rules = (await response.text()).replace(/\r\n/g, '\n');
         const attendanceRules = rules.match(/match \/attendance_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const overtimeRules = rules.match(/match \/overtime_records\/\{recordId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
         const employeeRules = rules.match(/match \/employees\/\{employeeId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
