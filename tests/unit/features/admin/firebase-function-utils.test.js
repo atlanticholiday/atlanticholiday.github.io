@@ -1,6 +1,7 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
   isCallableUnavailableError,
+  isRecoverableCallableBackendError,
   requestFirebasePasswordReset,
   shouldFallbackToClientPasswordReset
 } from "../../../../js/features/admin/firebase-function-utils.js";
@@ -16,6 +17,14 @@ describe("Firebase function fallback", () => {
     assert.equal(isCallableUnavailableError({ code: "functions/permission-denied" }), false);
     assert.equal(isCallableUnavailableError({ code: "functions/invalid-argument" }), false);
     assert.equal(isCallableUnavailableError({ code: "functions/internal" }), false);
+  });
+
+  test("recognizes the internal code returned for a missing callable on Spark", () => {
+    assert.equal(isRecoverableCallableBackendError({ code: "functions/internal" }), true);
+    assert.equal(isRecoverableCallableBackendError({ code: "internal" }), true);
+    assert.equal(isRecoverableCallableBackendError({ code: "functions/unavailable" }), true);
+    assert.equal(isRecoverableCallableBackendError({ code: "functions/permission-denied" }), false);
+    assert.equal(isRecoverableCallableBackendError({ code: "functions/invalid-argument" }), false);
   });
 
   test("falls back to the standard reset email for reset-link service failures", () => {

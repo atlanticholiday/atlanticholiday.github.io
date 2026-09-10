@@ -18,13 +18,12 @@ import {
     isProductionAccessEmail
 } from "../../shared/email.js";
 import { normalizeAllowedApps } from "../../shared/app-access.js";
-import { isCallableUnavailableError } from "./firebase-function-utils.js";
+import {
+    isRecoverableCallableBackendError
+} from "./firebase-function-utils.js";
 
 function isRecoverableAccessMutationError(error) {
-    const code = String(error?.code || '').trim().toLowerCase();
-    return isCallableUnavailableError(error)
-        || code === 'functions/internal'
-        || code === 'internal';
+    return isRecoverableCallableBackendError(error);
 }
 
 export class AccessManager {
@@ -53,10 +52,12 @@ export class AccessManager {
             const result = await this.callProtectedFunction('getMyAccess');
             return result.authorized ? result.access || null : null;
         } catch (error) {
-            console.warn(
-                'Protected access verification is unavailable; checking the signed-in user allowlist record.',
-                error
-            );
+            const message = 'Protected access verification is unavailable; checking the signed-in user allowlist record.';
+            if (isRecoverableCallableBackendError(error)) {
+                console.info(message);
+            } else {
+                console.warn(message, error);
+            }
             return this.getAccessEntry(normalizedEmail, { exact: true });
         }
     }
@@ -102,13 +103,18 @@ export class AccessManager {
                 allowedApps: normalizedAllowedApps || []
             });
         } catch (error) {
-            if (!isCallableUnavailableError(error)) throw error;
-            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
-                displayEmail: normalizedEmail,
-                allowedApps: normalizedAllowedApps || [],
-                addedAt: serverTimestamp()
-            }, { merge: true });
+            if (!isRecoverableAccessMutationError(error)) throw error;
+            await this.addEmailDirectly(normalizedEmail, normalizedAllowedApps || []);
         }
+    }
+
+    async addEmailDirectly(email, allowedApps = []) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+            displayEmail: normalizedEmail,
+            allowedApps,
+            addedAt: serverTimestamp()
+        }, { merge: true });
     }
 
     async removeEmail(email) {
@@ -231,24 +237,28 @@ export class AccessManager {
                 employee: normalizedEmployee
             });
         } catch (error) {
-            if (!isCallableUnavailableError(error)) throw error;
-
-            const employeeLinkPatch = normalizedEmployee ? {
-                linkedEmployeeId: normalizedEmployee.id,
-                linkedEmployeeName: normalizedEmployee.name,
-                linkedEmployeeEmail: normalizedEmployee.email,
-                linkedEmployeeArchived: normalizedEmployee.isArchived
-            } : {
-                linkedEmployeeId: deleteField(),
-                linkedEmployeeName: deleteField(),
-                linkedEmployeeEmail: deleteField(),
-                linkedEmployeeArchived: deleteField()
-            };
-
-            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
-                displayEmail: normalizedEmail,
-                ...employeeLinkPatch
-            }, { merge: true });
+            if (!isRecoverableAccessMutationError(error)) throw error;
+            await this.syncEmployeeLinkDirectly(normalizedEmail, normalizedEmployee);
         }
+    }
+
+    async syncEmployeeLinkDirectly(email, employee = null) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const employeeLinkPatch = employee ? {
+            linkedEmployeeId: employee.id,
+            linkedEmployeeName: employee.name,
+            linkedEmployeeEmail: employee.email,
+            linkedEmployeeArchived: employee.isArchived
+        } : {
+            linkedEmployeeId: deleteField(),
+            linkedEmployeeName: deleteField(),
+            linkedEmployeeEmail: deleteField(),
+            linkedEmployeeArchived: deleteField()
+        };
+
+        await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+            displayEmail: normalizedEmail,
+            ...employeeLinkPatch
+        }, { merge: true });
     }
 }

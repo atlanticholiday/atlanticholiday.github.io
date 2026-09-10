@@ -10,7 +10,10 @@ import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
 import { InteractiveAccessPreviewSession } from '../features/admin/interactive-access-preview-session.js';
-import { isCallableUnavailableError, requestFirebasePasswordReset } from '../features/admin/firebase-function-utils.js';
+import {
+    isRecoverableCallableBackendError,
+    requestFirebasePasswordReset
+} from '../features/admin/firebase-function-utils.js';
 import { AirbnbReservationInvoicesManager } from '../features/operations/airbnb-reservation-invoices-manager.js';
 import { ChecklistsManager } from '../features/operations/checklists-manager.js';
 import { CleaningAhManager } from '../features/operations/cleaning-ah-manager.js';
@@ -651,7 +654,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const result = await httpsCallable(functionsInstance, 'adminCreateAuthUser')({ email, password });
                     return result.data || {};
                 } catch (error) {
-                    if (!isCallableUnavailableError(error)) throw error;
+                    if (!isRecoverableCallableBackendError(error)) throw error;
                     return createAuthUserWithoutCallable(email, password);
                 }
             },

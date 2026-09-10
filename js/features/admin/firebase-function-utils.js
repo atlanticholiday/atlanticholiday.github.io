@@ -10,6 +10,17 @@ export function isCallableUnavailableError(error) {
         || message.includes('functions are unavailable');
 }
 
+// On Spark projects with no deployed callable backend, the Functions SDK can
+// surface a missing callable as `internal` instead of `not-found`. Only use
+// this broader predicate where the fallback is independently protected by
+// Firebase Auth or Firestore rules.
+export function isRecoverableCallableBackendError(error) {
+    const code = String(error?.code || '').trim().toLowerCase();
+    return isCallableUnavailableError(error)
+        || code === 'functions/internal'
+        || code === 'internal';
+}
+
 export function shouldFallbackToClientPasswordReset(error) {
     const code = String(error?.code || '').trim().toLowerCase();
     const message = String(error?.message || '').trim().toLowerCase();
