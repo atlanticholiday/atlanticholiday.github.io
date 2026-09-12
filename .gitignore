@@ -40,6 +40,10 @@ backups/
 # Temporary files
 *.tmp
 *.temp 
+tmp/
+
+# Generated document render previews
+output/rendered/
 
 # Local browser automation artifacts
 .airbnb-playwright/

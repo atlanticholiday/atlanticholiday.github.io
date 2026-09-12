@@ -289,6 +289,30 @@ async function run() {
   if (staffVacations.size < 2) throw new Error('authorized staff cannot read detailed vacation records');
   if (vacationCenterVacations.size < 2) throw new Error('Vacation Center account cannot read detailed vacation records');
 
+  stage = 'vacation migration backup';
+  console.log(stage);
+  const migrationBackup = writeBatch(adminDb);
+  migrationBackup.set(doc(adminDb, 'vacation_migration_backups', 'calendar-2026-v2'), {
+    schemaVersion: 1,
+    updateId: 'calendar-2026-v2',
+    year: 2026,
+    createdAt: now.toISOString(),
+    employeeCount: 2,
+    vacationRecordCount: 2,
+    previousUpdateRecord: null,
+    employees: [],
+    vacationRecords: []
+  });
+  await migrationBackup.commit();
+  if (!(await getDoc(doc(adminDb, 'vacation_migration_backups', 'calendar-2026-v2'))).exists()) {
+    throw new Error('admin cannot create or read the migration rollback snapshot');
+  }
+  await Promise.all([
+    expectDenied(() => getDoc(doc(workerDb, 'vacation_migration_backups', 'calendar-2026-v2')), 'worker migration backup read'),
+    expectDenied(() => getDoc(doc(staffDb, 'vacation_migration_backups', 'calendar-2026-v2')), 'staff app migration backup read'),
+    expectDenied(() => getDoc(doc(vacationDb, 'vacation_migration_backups', 'calendar-2026-v2')), 'Vacation Center migration backup read')
+  ]);
+
   stage = 'safe employee self-service records';
   console.log(stage);
   const ownVacationPath = ['employee_self_service', 'emp-1', 'vacation_records', 'emp-1__2026-09-14__2026-09-18'];

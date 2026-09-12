@@ -57,6 +57,7 @@ import {
 } from './personal-data-self-service.js';
 import { getEmployeeDirectoryCollectionName } from './schedule-data-access.js';
 import {
+    buildVacation2026BackupSnapshot,
     buildVacation2026UpdatePlan,
     VACATION_2026_SOURCE_ROWS,
     VACATION_2026_UPDATE_ID,
@@ -1170,7 +1171,7 @@ export class DataManager {
                 importedRecords.forEach((record) => replacementRecords.set(record.id, record));
             });
 
-            const estimatedWrites = recordsToReplace.length + replacementRecords.size + plan.items.length + 1;
+            const estimatedWrites = recordsToReplace.length + replacementRecords.size + plan.items.length + 2;
             if (estimatedWrites > 500) {
                 const error = new Error(`The 2026 vacation update needs ${estimatedWrites} writes; the safe limit is 500.`);
                 error.code = 'vacation-2026-update-too-large';
@@ -1178,6 +1179,15 @@ export class DataManager {
             }
 
             const batch = writeBatch(this.db);
+            const backupSnapshot = buildVacation2026BackupSnapshot({
+                plan,
+                recordsToReplace,
+                previousUpdateRecord: this.vacationDataUpdates?.[VACATION_2026_UPDATE_ID] || null
+            });
+            batch.set(
+                doc(this.db, 'vacation_migration_backups', VACATION_2026_UPDATE_ID),
+                backupSnapshot
+            );
             recordsToReplace.forEach((record) => {
                 batch.delete(doc(this.db, 'vacation_records', record.id));
             });

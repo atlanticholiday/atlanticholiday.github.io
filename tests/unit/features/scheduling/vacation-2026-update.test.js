@@ -1,5 +1,6 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
+  buildVacation2026BackupSnapshot,
   buildVacation2026UpdatePlan,
   countCalendarDaysInRanges,
   VACATION_2026_SOURCE_ROWS
@@ -91,5 +92,37 @@ describe("Vacation 2026 update", () => {
 
     assert.equal(plan.items.length, 0);
     assert.equal(plan.unmatched.length, 18);
+  });
+
+  test("builds a minimal rollback snapshot before changing production data", () => {
+    const employee = {
+      id: "employee-30",
+      name: "Sofia Beatriz Cardoso Gonçalves",
+      staffNumber: 30,
+      vacations: [{ startDate: "2025-12-29", endDate: "2026-01-02" }],
+      vacationAllowancesByYear: { "2026": 22 },
+      vacationUsageAdjustmentsByYear: { "2026": 1 },
+      vacationLifetimeBaseline: { throughYear: 2025, totalEntitlement: 44 }
+    };
+    const snapshot = buildVacation2026BackupSnapshot({
+      plan: { items: [{ employee }] },
+      recordsToReplace: [{
+        id: "record-1",
+        employeeId: employee.id,
+        startDate: "2026-01-01",
+        endDate: "2026-01-02",
+        type: "vacation",
+        note: "Existing approved leave"
+      }],
+      previousUpdateRecord: { applied: false },
+      createdAt: "2026-09-12T09:00:00.000Z"
+    });
+
+    assert.equal(snapshot.updateId, "calendar-2026-v2");
+    assert.equal(snapshot.employeeCount, 1);
+    assert.equal(snapshot.vacationRecordCount, 1);
+    assert.equal(snapshot.employees[0].vacationAllowancesByYear["2026"], 22);
+    assert.equal(snapshot.vacationRecords[0].note, "Existing approved leave");
+    assert.deepEqual(snapshot.previousUpdateRecord, { applied: false });
   });
 });

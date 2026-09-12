@@ -1286,6 +1286,12 @@ service cloud.firestore {
       allow write: if privileged() || hasApp('staff');
     }
 
+    // Rollback evidence created atomically before a controlled vacation import.
+    // It may contain historical leave details and is therefore management-only.
+    match /vacation_migration_backups/{updateId} {
+      allow read, write: if privileged();
+    }
+
     match /settings/{settingId} {
       allow read: if approved();
       allow write: if privileged();

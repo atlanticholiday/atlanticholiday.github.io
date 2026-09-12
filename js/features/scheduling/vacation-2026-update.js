@@ -131,3 +131,43 @@ export function buildVacation2026UpdatePlan(employees = []) {
 
     return { items, unmatched, ambiguous };
 }
+
+export function buildVacation2026BackupSnapshot({
+    plan,
+    recordsToReplace = [],
+    previousUpdateRecord = null,
+    createdAt = new Date().toISOString()
+} = {}) {
+    const items = Array.isArray(plan?.items) ? plan.items : [];
+    const records = Array.isArray(recordsToReplace) ? recordsToReplace : [];
+    return {
+        schemaVersion: 1,
+        updateId: VACATION_2026_UPDATE_ID,
+        year: VACATION_2026_UPDATE_YEAR,
+        createdAt,
+        employeeCount: items.length,
+        vacationRecordCount: records.length,
+        previousUpdateRecord: previousUpdateRecord || null,
+        employees: items.map(({ employee }) => ({
+            id: employee.id,
+            name: String(employee.name || ''),
+            staffNumber: employee.staffNumber ?? null,
+            vacations: Array.isArray(employee.vacations) ? employee.vacations : [],
+            vacationAllowancesByYear: employee.vacationAllowancesByYear || {},
+            vacationUsageAdjustmentsByYear: employee.vacationUsageAdjustmentsByYear || {},
+            vacationLifetimeBaseline: employee.vacationLifetimeBaseline || null
+        })),
+        vacationRecords: records.map((record) => ({
+            id: String(record.id || ''),
+            employeeId: String(record.employeeId || ''),
+            startDate: String(record.startDate || ''),
+            endDate: String(record.endDate || ''),
+            type: String(record.type || 'vacation'),
+            status: record.status ?? null,
+            note: record.note ?? null,
+            visibility: record.visibility ?? null,
+            dayCountMode: record.dayCountMode ?? null,
+            source: record.source ?? null
+        }))
+    };
+}
