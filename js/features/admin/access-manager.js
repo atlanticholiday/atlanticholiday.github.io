@@ -91,7 +91,9 @@ export class AccessManager {
                 lastLoginIp: data.lastLoginIp || null,
                 lastLoginAt: data.lastLoginAt ? (typeof data.lastLoginAt.toDate === 'function' ? data.lastLoginAt.toDate().toISOString() : data.lastLoginAt) : null,
                 lastUserAgent: data.lastUserAgent || null,
-                recentLogins: Array.isArray(data.recentLogins) ? data.recentLogins : []
+                recentLogins: Array.isArray(data.recentLogins) ? data.recentLogins : [],
+                twoFactorEnabled: Boolean(data.twoFactorEnabled),
+                twoFactorEnrolled: Boolean(data.twoFactorEnrolled)
             };
         }
 
@@ -264,5 +266,39 @@ export class AccessManager {
             displayEmail: normalizedEmail,
             ...employeeLinkPatch
         }, { merge: true });
+    }
+
+    async setTwoFactorState(email, enabled) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        const boolEnabled = Boolean(enabled);
+        try {
+            await this.callProtectedFunction('adminSetTwoFactorState', {
+                email: normalizedEmail,
+                enabled: boolEnabled
+            });
+        } catch (error) {
+            if (!isRecoverableAccessMutationError(error)) throw error;
+            await setDoc(doc(this.db, this.collectionPath, canonicalizeEmail(normalizedEmail)), {
+                twoFactorEnabled: boolEnabled,
+                ...(!boolEnabled ? { twoFactorEnrolled: false } : {})
+            }, { merge: true });
+        }
+    }
+
+    async getTwoFactorSetup(email, { regenerate = false } = {}) {
+        const normalizedEmail = getNormalizedEmailDisplay(email);
+        return this.callProtectedFunction('adminGetTwoFactorSetup', {
+            email: normalizedEmail,
+            regenerate: Boolean(regenerate)
+        });
+    }
+
+    async verifyTwoFactorChallenge(code, { email = null, isEnrollment = false } = {}) {
+        const normalizedEmail = email ? getNormalizedEmailDisplay(email) : null;
+        return this.callProtectedFunction('verifyTwoFactorChallenge', {
+            code: String(code || '').trim(),
+            email: normalizedEmail,
+            isEnrollment: Boolean(isEnrollment)
+        });
     }
 }

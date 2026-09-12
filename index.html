@@ -114,6 +114,36 @@
         </div>
     </div>
 
+    <div id="login-two-factor-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="login-two-factor-title">
+        <div class="login-two-factor-card">
+            <div class="login-two-factor-icon">
+                <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            </div>
+            <div>
+                <h2 id="login-two-factor-title" class="text-xl font-bold text-gray-900" data-i18n="login.twoFactorTitle">Two-Factor Verification</h2>
+                <p class="mt-1 text-sm text-gray-600" data-i18n="login.twoFactorPrompt">Enter the 6-digit code from your Google Authenticator app to continue.</p>
+                <div class="mt-2 inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800" id="login-two-factor-email"></div>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label for="login-two-factor-code" class="sr-only" data-i18n="login.twoFactorCode">6-Digit Code</label>
+                    <input type="text" id="login-two-factor-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="000000" class="login-two-factor-input" autofocus>
+                </div>
+                <p id="login-two-factor-error" class="text-red-500 text-sm h-5 font-medium"></p>
+                <div class="flex flex-col gap-2">
+                    <button id="login-two-factor-verify-btn" type="button" class="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white btn-primary hover-lift">
+                        <span data-i18n="login.twoFactorVerify">Verify Code</span>
+                    </button>
+                    <button id="login-two-factor-cancel-btn" type="button" class="w-full py-2 px-4 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors">
+                        <span data-i18n="login.twoFactorSignOut">Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="setup-screen"
         class="hidden min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-xl w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center modal-content">
@@ -712,6 +742,52 @@
                             <footer class="user-management-dialog-actions">
                                 <button id="cancel-set-password-btn" type="button" class="user-management-secondary-action" data-i18n="common.cancel">Cancel</button>
                                 <button id="save-user-password-btn" type="button" class="user-management-primary-action" data-i18n="userManagement.password.save">Set password</button>
+                            </footer>
+                        </section>
+                    </div>
+
+                    <div id="two-factor-setup-modal" class="user-management-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="two-factor-setup-dialog-title" aria-hidden="true">
+                        <button id="two-factor-setup-backdrop" type="button" class="user-management-dialog-backdrop" aria-label="Close 2FA dialog"></button>
+                        <section class="user-management-dialog-panel">
+                            <header class="user-management-dialog-header">
+                                <div>
+                                    <p class="user-management-eyebrow" data-i18n="userManagement.security.twoFactorTitle">TWO-FACTOR AUTHENTICATION</p>
+                                    <h2 id="two-factor-setup-dialog-title" data-i18n="userManagement.security.twoFactorSetupTitle">Google Authenticator Setup</h2>
+                                    <p><span data-i18n="userManagement.security.twoFactorDescription">Protect this account with Google Authenticator (TOTP).</span> <strong id="two-factor-setup-account-email"></strong></p>
+                                </div>
+                                <button id="close-two-factor-setup-btn" type="button" class="user-management-icon-button" aria-label="Close">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </header>
+                            <div class="user-management-dialog-body user-management-2fa-setup-body">
+                                <p class="user-management-dialog-help" data-i18n="userManagement.security.twoFactorSetupInstructions">Scan this QR code with Google Authenticator or enter the key manually into your app.</p>
+                                <div class="user-management-2fa-qr-wrap">
+                                    <img id="two-factor-qr-image" src="" alt="2FA QR Code" width="180" height="180">
+                                </div>
+                                <div class="user-management-2fa-secret-box">
+                                    <div style="display:flex;flex-direction:column;align-items:flex-start;">
+                                        <span class="user-management-security-label" data-i18n="userManagement.security.twoFactorSecretLabel">Secret Key</span>
+                                        <code id="two-factor-secret-key" class="user-management-2fa-secret-key">---</code>
+                                    </div>
+                                    <button id="copy-two-factor-secret-btn" type="button" class="user-management-secondary-action text-xs" data-i18n="userManagement.security.copySecret">Copy Key</button>
+                                </div>
+                                <span id="two-factor-copy-status" class="text-xs text-emerald-600 font-medium"></span>
+                                <div class="w-full">
+                                    <label class="user-management-dialog-field" for="two-factor-test-code">
+                                        <span data-i18n="userManagement.security.testCodeLabel">Test 6-Digit Code</span>
+                                        <div class="user-management-2fa-test-box">
+                                            <input type="text" id="two-factor-test-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="000000" autocomplete="one-time-code">
+                                            <button id="verify-test-two-factor-btn" type="button" class="user-management-primary-action" data-i18n="userManagement.security.verifyAndConfirm">Verify &amp; Save</button>
+                                        </div>
+                                    </label>
+                                </div>
+                                <p id="two-factor-setup-error" class="user-management-dialog-error" aria-live="polite"></p>
+                                <p id="two-factor-setup-success" class="text-xs text-emerald-600 font-medium" aria-live="polite"></p>
+                            </div>
+                            <footer class="user-management-dialog-actions">
+                                <button id="done-two-factor-setup-btn" type="button" class="user-management-secondary-action" data-i18n="common.close">Close</button>
                             </footer>
                         </section>
                     </div>

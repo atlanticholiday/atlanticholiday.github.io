@@ -955,6 +955,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /userTwoFactorSecrets/{emailKey} {
+      allow read, write: if false;
+    }
+
     match /guestDataAccessAudit/{entryId} {
       allow read: if adminOnly();
       allow write: if false;

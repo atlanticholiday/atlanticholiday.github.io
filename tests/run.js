@@ -15,6 +15,7 @@ import "./unit/features/admin/firebase-function-utils.test.js";
 import "./unit/features/admin/interactive-access-preview-session.test.js";
 import "./unit/features/admin/user-management-controller.test.js";
 import "./unit/features/admin/user-security-ip.test.js";
+import "./unit/features/admin/user-security-2fa.test.js";
 import "./unit/features/operations/cleaning-ah-manager.test.js";
 import "./unit/features/operations/cleaning-ah-utils.test.js";
 import "./unit/features/operations/airbnb-reservation-invoices-manager.test.js";
