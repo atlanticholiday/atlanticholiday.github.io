@@ -8,9 +8,10 @@ describe('Task workspace security rules', () => {
         const taskRules = rules.match(/match \/tasks\/\{taskId\} \{([\s\S]*?)\n    \}/)?.[1] || '';
 
         assert.includes(rules, 'taskAssignedToCurrentUser');
-        assert.includes(rules, 'accessData().linkedEmployeeId in data.assigneeIds');
+        assert.includes(rules, 'data.assigneeAccess[request.auth.token.email] == true');
         assert.includes(rules, 'colleagueTaskUpdateAllowed');
         assert.includes(rules, 'request.resource.data.assigneeIds == resource.data.assigneeIds');
+        assert.includes(rules, 'request.resource.data.assigneeAccess == resource.data.assigneeAccess');
         assert.includes(rules, 'request.resource.data.departmentId == resource.data.departmentId');
         assert.includes(taskRules, 'allow read: if canReadTaskData(resource.data)');
         assert.includes(taskRules, 'allow delete: if privileged()');

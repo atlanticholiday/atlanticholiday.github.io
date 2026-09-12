@@ -12,6 +12,10 @@ function stringValue(value, fallback = '') {
     return typeof value === 'string' ? value.trim() : fallback;
 }
 
+function emailValue(value) {
+    return stringValue(value).toLocaleLowerCase();
+}
+
 export function normalizeTaskRecord(task = {}) {
     const assigneeIds = Array.isArray(task.assigneeIds)
         ? [...new Set(task.assigneeIds.map((id) => stringValue(id)).filter(Boolean))]
@@ -25,6 +29,11 @@ export function normalizeTaskRecord(task = {}) {
             }))
             .filter((assignee) => assignee.id)
         : [];
+    const assigneeAccess = task.assigneeAccess && typeof task.assigneeAccess === 'object' && !Array.isArray(task.assigneeAccess)
+        ? Object.fromEntries(Object.entries(task.assigneeAccess)
+            .map(([email, allowed]) => [emailValue(email), allowed === true])
+            .filter(([email, allowed]) => email && allowed))
+        : {};
     const status = Object.values(TASK_STATUS).includes(task.status) ? task.status : TASK_STATUS.TODO;
     const priority = TASK_PRIORITIES.includes(task.priority) ? task.priority : 'normal';
 
@@ -40,6 +49,7 @@ export function normalizeTaskRecord(task = {}) {
         dueDate: stringValue(task.dueDate),
         assigneeIds,
         assignees,
+        assigneeAccess,
         attachments: Array.isArray(task.attachments) ? task.attachments.filter(Boolean) : [],
         createdAt: stringValue(task.createdAt),
         updatedAt: stringValue(task.updatedAt)

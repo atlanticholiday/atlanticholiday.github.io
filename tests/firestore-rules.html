@@ -5,7 +5,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import {
-  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs,
+  collection, connectFirestoreEmulator, deleteDoc, doc, FieldPath, getDoc, getDocs,
   getFirestore, query, serverTimestamp, updateDoc, where, writeBatch
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
@@ -62,6 +62,33 @@ async function run() {
     actorUid: 'worker-uid', actorEmail: 'worker@example.com', note: null, trustedServerTime: true,
     canonicalEventId: canonicalId
   };
+
+  stage = 'personal task reads';
+  console.log(stage);
+  const [workerTasks, linkedTasks, taskDepartments] = await Promise.all([
+    getDocs(query(collection(workerDb, 'tasks'), where(new FieldPath('assigneeAccess', 'worker@example.com'), '==', true))),
+    getDocs(query(collection(linkedDb, 'tasks'), where(new FieldPath('assigneeAccess', 'linked@example.com'), '==', true))),
+    getDocs(collection(linkedDb, 'taskDepartments')),
+    expectDenied(() => getDoc(doc(workerDb, 'tasks', 'peer-task')), 'peer task read'),
+    expectDenied(() => getDocs(collection(workerDb, 'tasks')), 'unfiltered task list')
+  ]);
+  if (workerTasks.size !== 1 || linkedTasks.size !== 1) throw new Error('linked colleague cannot query assigned tasks');
+  if (taskDepartments.size !== 1) throw new Error('linked colleague cannot read task departments');
+  const selfTaskCreate = writeBatch(workerDb);
+  selfTaskCreate.set(doc(workerDb, 'tasks', 'worker-self-task'), {
+    title: 'Personal follow-up', assigneeIds: ['emp-1'], assigneeAccess: { 'worker@example.com': true },
+    assignees: [{ id: 'emp-1', name: 'Worker' }],
+    createdBy: { uid: 'worker-uid', email: 'worker@example.com' }
+  });
+  await selfTaskCreate.commit();
+  const forgedTaskCreate = writeBatch(workerDb);
+  forgedTaskCreate.set(doc(workerDb, 'tasks', 'worker-forged-task'), {
+    title: 'Forged assignment', assigneeIds: ['emp-1', 'emp-2'],
+    assigneeAccess: { 'worker@example.com': true, 'peer@example.com': true },
+    assignees: [{ id: 'emp-1', name: 'Worker' }, { id: 'emp-2', name: 'Station Worker' }],
+    createdBy: { uid: 'worker-uid', email: 'worker@example.com' }
+  });
+  await expectDenied(() => forgedTaskCreate.commit(), 'task assignment to another colleague');
 
   const batch = writeBatch(workerDb);
   batch.set(doc(workerDb, 'attendance_events', canonicalId), canonicalData({

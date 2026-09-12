@@ -755,9 +755,9 @@ service cloud.firestore {
 
     function taskAssignedToCurrentUser(data) {
       return approved()
-        && accessData().linkedEmployeeId is string
-        && data.assigneeIds is list
-        && accessData().linkedEmployeeId in data.assigneeIds;
+        && request.auth.token.email is string
+        && data.assigneeAccess is map
+        && data.assigneeAccess[request.auth.token.email] == true;
     }
 
     function canReadTaskData(data) {
@@ -766,6 +766,12 @@ service cloud.firestore {
 
     function colleagueTaskCreateAllowed() {
       return taskAssignedToCurrentUser(request.resource.data)
+        && accessData().linkedEmployeeId is string
+        && request.resource.data.assigneeIds is list
+        && request.resource.data.assigneeIds.size() == 1
+        && accessData().linkedEmployeeId in request.resource.data.assigneeIds
+        && request.resource.data.assigneeAccess is map
+        && request.resource.data.assigneeAccess.size() == 1
         && request.resource.data.createdBy is map
         && request.resource.data.createdBy.uid == request.auth.uid;
     }
@@ -775,6 +781,7 @@ service cloud.firestore {
         && taskAssignedToCurrentUser(request.resource.data)
         && request.resource.data.assigneeIds == resource.data.assigneeIds
         && request.resource.data.assignees == resource.data.assignees
+        && request.resource.data.assigneeAccess == resource.data.assigneeAccess
         && request.resource.data.departmentId == resource.data.departmentId
         && request.resource.data.departmentName == resource.data.departmentName
         && request.resource.data.createdAt == resource.data.createdAt

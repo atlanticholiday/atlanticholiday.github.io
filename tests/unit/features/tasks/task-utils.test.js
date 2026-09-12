@@ -13,11 +13,13 @@ describe('Task utils', () => {
         const task = normalizeTaskRecord({
             title: '  Inspect apartment  ',
             assigneeIds: ['ana', 'ana', '', null],
+            assigneeAccess: { 'ANA@EXAMPLE.COM': true, '': true, 'blocked@example.com': false },
             priority: 'unknown'
         });
 
         assert.equal(task.title, 'Inspect apartment');
         assert.deepEqual(task.assigneeIds, ['ana']);
+        assert.deepEqual(task.assigneeAccess, { 'ana@example.com': true });
         assert.equal(task.departmentId, 'general');
         assert.equal(task.status, TASK_STATUS.TODO);
         assert.equal(task.priority, 'normal');

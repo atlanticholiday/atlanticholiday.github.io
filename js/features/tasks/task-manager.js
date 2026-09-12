@@ -3,6 +3,7 @@ import {
     collection,
     deleteDoc,
     doc,
+    FieldPath,
     onSnapshot,
     query,
     updateDoc,
@@ -39,6 +40,17 @@ function escapeHtml(value = '') {
 
 function nowIso() {
     return new Date().toISOString();
+}
+
+function canonicalEmail(value = '') {
+    return typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
+}
+
+function sameAccessMap(left = {}, right = {}) {
+    const leftKeys = Object.keys(left).filter((key) => left[key] === true).sort();
+    const rightKeys = Object.keys(right).filter((key) => right[key] === true).sort();
+    return leftKeys.length === rightKeys.length
+        && leftKeys.every((value, index) => value === rightKeys[index]);
 }
 
 function formatFileSize(size = 0) {
@@ -102,6 +114,7 @@ export class TaskManager {
         this.unsubscribeDepartments = null;
         this.unsubscribeComments = null;
         this.unsubscribeData = null;
+        this.taskAccessBackfillInFlight = new Set();
         this.started = false;
         this.bound = false;
     }
@@ -129,6 +142,7 @@ export class TaskManager {
         this.selectedTaskId = null;
         this.pendingFiles = [];
         this.started = false;
+        this.taskAccessBackfillInFlight.clear();
         this.render();
     }
 
@@ -170,11 +184,18 @@ export class TaskManager {
             this.render();
             return;
         }
+        const currentUserEmail = canonicalEmail(this.user?.email);
+        if (!this.isManager() && !currentUserEmail) {
+            this.tasks = [];
+            this.render();
+            return;
+        }
         const taskQuery = this.isManager()
             ? taskCollection
-            : query(taskCollection, where('assigneeIds', 'array-contains', employee.id));
+            : query(taskCollection, where(new FieldPath('assigneeAccess', currentUserEmail), '==', true));
         this.unsubscribeTasks = onSnapshot(taskQuery, (snapshot) => {
             this.tasks = snapshot.docs.map((entry) => normalizeTaskRecord({ id: entry.id, ...entry.data() }));
+            this.backfillTaskAssigneeAccess(this.tasks);
             this.render();
             if (this.selectedTaskId && !this.tasks.some((task) => task.id === this.selectedTaskId)) {
                 this.closeTask();
@@ -197,6 +218,35 @@ export class TaskManager {
     canEditTask(task) {
         const employeeId = this.getCurrentEmployee()?.id;
         return this.isManager() || Boolean(employeeId && task?.assigneeIds?.includes(employeeId));
+    }
+
+    getAssigneeAccess(assigneeIds = []) {
+        const employeeEmails = (this.dataManager?.getActiveEmployees?.() || [])
+            .filter((employee) => assigneeIds.includes(employee.id))
+            .map((employee) => canonicalEmail(employee.email))
+            .filter(Boolean);
+        const currentEmployeeId = this.getCurrentEmployee()?.id;
+        if (currentEmployeeId && assigneeIds.includes(currentEmployeeId)) {
+            employeeEmails.push(canonicalEmail(this.user?.email));
+        }
+        return Object.fromEntries([...new Set(employeeEmails.filter(Boolean))].map((email) => [email, true]));
+    }
+
+    backfillTaskAssigneeAccess(tasks = []) {
+        if (!this.isManager()) return;
+        tasks.forEach((task) => {
+            const expectedAccess = this.getAssigneeAccess(task.assigneeIds);
+            if (
+                sameAccessMap(task.assigneeAccess, expectedAccess)
+                || this.taskAccessBackfillInFlight.has(task.id)
+            ) {
+                return;
+            }
+            this.taskAccessBackfillInFlight.add(task.id);
+            updateDoc(doc(this.db, 'tasks', task.id), { assigneeAccess: expectedAccess })
+                .catch((error) => this.showError(error))
+                .finally(() => this.taskAccessBackfillInFlight.delete(task.id));
+        });
     }
 
     shellTemplate() {
@@ -580,6 +630,7 @@ export class TaskManager {
         const employees = this.dataManager?.getActiveEmployees?.() || [];
         const assigneeIds = Array.from(panel.querySelectorAll('[data-task-assignee]:checked')).map((input) => input.value);
         const assignees = employees.filter((employee) => assigneeIds.includes(employee.id)).map((employee) => ({ id: employee.id, name: employee.name }));
+        const assigneeAccess = this.getAssigneeAccess(assigneeIds);
         const status = panel.querySelector('[data-task-field="status"]')?.value || TASK_STATUS.TODO;
         const payload = {
             title,
@@ -592,6 +643,7 @@ export class TaskManager {
             status,
             assigneeIds,
             assignees,
+            assigneeAccess,
             updatedAt: nowIso(),
             updatedBy: this.actor(),
             completedAt: status === TASK_STATUS.DONE ? (current?.completedAt || nowIso()) : ''

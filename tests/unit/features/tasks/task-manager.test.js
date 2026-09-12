@@ -3,6 +3,22 @@ import { resetDom } from '../../../test-utils.js';
 import { TaskManager } from '../../../../js/features/tasks/task-manager.js';
 
 describe('TaskManager', () => {
+    test('builds queryable access from employee and authenticated emails', () => {
+        const manager = new TaskManager({
+            db: null,
+            dataManager: {
+                hasPrivilegedRole: () => false,
+                getCurrentUserEmployee: () => ({ id: 'barbara', name: 'Bárbara' }),
+                getActiveEmployees: () => [{ id: 'barbara', name: 'Bárbara', email: 'MARKETING@ATLANTICHOLIDAY.NET' }]
+            }
+        });
+        manager.user = { uid: 'barbara-uid', email: 'marketing@atlanticholiday.net' };
+
+        assert.deepEqual(manager.getAssigneeAccess(['barbara']), {
+            'marketing@atlanticholiday.net': true
+        });
+    });
+
     test('collapses the assignee picker after selecting a colleague', () => {
         resetDom('<div id="tasks-page"></div>');
         const employees = [

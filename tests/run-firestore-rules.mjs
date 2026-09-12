@@ -109,6 +109,15 @@ await seed('attendance_station_directory', 'emp-2', {
   attendancePinLoginEmail: 'clock-test@example.com', isArchived: false,
   status: 'clocked-out', lastEventType: '', lastOccurredAtEpochMs: '', updatedAtServer: ''
 });
+await seed('taskDepartments', 'general', { name: 'General', order: 0 });
+await seed('tasks', 'own-task', {
+  title: 'Own task', assigneeIds: ['emp-1'], assigneeAccess: { 'worker@example.com': true, 'linked@example.com': true },
+  assignees: [{ id: 'emp-1', name: 'Worker' }]
+});
+await seed('tasks', 'peer-task', {
+  title: 'Peer task', assigneeIds: ['emp-2'], assigneeAccess: { 'peer@example.com': true },
+  assignees: [{ id: 'emp-2', name: 'Station Worker' }]
+});
 
 const { chromium } = await import('playwright-core');
 const { server, port } = await startServer();
