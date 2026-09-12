@@ -204,6 +204,12 @@ export class NewPropertiesManager {
     render() {
         if (!this.container) return;
 
+        // Preserve scroll position of drawer and canvas during render cycles
+        const prevDrawerBody = this.container.querySelector('.asana-drawer__body');
+        const savedDrawerScrollTop = prevDrawerBody ? prevDrawerBody.scrollTop : null;
+        const prevCanvas = this.container.querySelector('.asana-canvas');
+        const savedCanvasScrollTop = prevCanvas ? prevCanvas.scrollTop : null;
+
         const isPt = this.lang === 'pt';
         const filtered = this.getFilteredProperties();
         const selected = this.getSelectedProperty();
@@ -293,6 +299,7 @@ export class NewPropertiesManager {
                         </a>
                     </div>
                 </aside>
+                ${this.sidebarMobileOpen ? '<div class="asana-sidebar-backdrop md:hidden" data-action="toggle-mobile-sidebar"></div>' : ''}
 
                 <!-- WORKSPACE -->
                 <main class="asana-workspace">
@@ -466,6 +473,16 @@ export class NewPropertiesManager {
         `;
 
         this.bindDynamicEvents();
+
+        // Restore saved scroll positions
+        if (savedDrawerScrollTop !== null) {
+            const newDrawerBody = this.container.querySelector('.asana-drawer__body');
+            if (newDrawerBody) newDrawerBody.scrollTop = savedDrawerScrollTop;
+        }
+        if (savedCanvasScrollTop !== null) {
+            const newCanvas = this.container.querySelector('.asana-canvas');
+            if (newCanvas) newCanvas.scrollTop = savedCanvasScrollTop;
+        }
 
         if (typeof document !== 'undefined') {
             document.querySelectorAll('.theme-toggle-floating').forEach((el) => el.remove());
@@ -963,7 +980,7 @@ export class NewPropertiesManager {
                                     </button>
 
                                     <div class="asana-checklist-item__content">
-                                        <div class="asana-checklist-item__title">${this.escapeHtml(task.title)}</div>
+                                        <div class="asana-checklist-item__title" data-action="toggle-task" data-id="${property.id}" data-task="${task.id}" role="button" tabindex="0">${this.escapeHtml(task.title)}</div>
                                         <div class="asana-checklist-item__meta">
                                             <span class="asana-checklist-item__resp">${this.escapeHtml(task.responsible || 'Equipa')}</span>
                                             <input type="text" class="asana-checklist-item__notes" value="${this.escapeHtml(task.notes || '')}" placeholder="${isPt ? '+ Adicionar observações...' : '+ Add notes...'}" data-action="update-task-notes" data-id="${property.id}" data-task="${task.id}" />
@@ -995,60 +1012,176 @@ export class NewPropertiesManager {
                     </div>
                 </div>
 
-                ${inv.categories.map(cat => `
-                    <div class="border border-gray-200 rounded-xl overflow-hidden shadow-xs">
+                ${inv.categories.map(cat => {
+                    const verifiedCount = cat.items.filter(item => {
+                        const rec = custom[item.id] || {};
+                        return rec.status === 'ok' || rec.status === 'missing' || rec.status === 'damaged' || rec.status === 'na' || rec.verifiedQty !== undefined;
+                    }).length;
+                    const allDone = verifiedCount === cat.items.length && cat.items.length > 0;
+
+                    return `
+                    <div class="border border-gray-200 rounded-xl overflow-hidden shadow-xs bg-white">
                         <div class="asana-inventory-category-title flex items-center justify-between">
                             <span>${isPt ? (cat.namePt || cat.name) : cat.name}</span>
-                            <span class="text-xs font-semibold text-gray-500">${cat.items.length} ${isPt ? 'itens' : 'items'}</span>
+                            <span class="asana-cat-badge ${allDone ? 'all-verified' : ''}">${verifiedCount}/${cat.items.length} ${isPt ? 'verificados' : 'checked'}</span>
                         </div>
 
-                        <table class="asana-inventory-table">
-                            <thead>
-                                <tr>
-                                    <th>${isPt ? 'Item' : 'Item'}</th>
-                                    <th class="text-center w-24">${isPt ? 'Qtd AH' : 'AH Qty'}</th>
-                                    <th class="text-center w-28">${isPt ? 'Qtd Real' : 'Actual Qty'}</th>
-                                    <th class="w-32">${isPt ? 'Marca' : 'Brand'}</th>
-                                    <th class="w-28">${isPt ? 'Estado' : 'Status'}</th>
-                                    <th>${isPt ? 'Observações' : 'Comments'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${cat.items.map(item => {
-                                    const rec = custom[item.id] || {};
-                                    return `
-                                        <tr>
-                                            <td>
-                                                <div class="font-semibold text-gray-900">${isPt ? item.namePt : item.name}</div>
-                                                ${item.rule ? `<div class="text-[10px] text-gray-400 italic">${item.rule}</div>` : ''}
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="asana-qty-badge">${item.qty}</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <input type="number" min="0" value="${rec.verifiedQty !== undefined ? rec.verifiedQty : item.qty}" class="w-16 px-2 py-1 text-center border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="verifiedQty" />
-                                            </td>
-                                            <td>
-                                                <input type="text" value="${this.escapeHtml(rec.brand || '')}" placeholder="—" class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="brand" />
-                                            </td>
-                                            <td>
-                                                <select class="w-full px-1 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none bg-white" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="status">
-                                                    <option value="ok" ${rec.status === 'ok' ? 'selected' : ''}>OK</option>
-                                                    <option value="missing" ${rec.status === 'missing' ? 'selected' : ''}>${isPt ? 'Em Falta' : 'Missing'}</option>
-                                                    <option value="damaged" ${rec.status === 'damaged' ? 'selected' : ''}>${isPt ? 'Danificado' : 'Damaged'}</option>
-                                                    <option value="na" ${rec.status === 'na' ? 'selected' : ''}>N/A</option>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input type="text" value="${this.escapeHtml(rec.comments || item.comments || '')}" placeholder="${isPt ? 'Comentários...' : 'Comments...'}" class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="comments" />
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                        <!-- DESKTOP TABLE VIEW (>768px) -->
+                        <div class="asana-inv-desktop-table">
+                            <table class="asana-inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>${isPt ? 'Item' : 'Item'}</th>
+                                        <th class="text-center w-24">${isPt ? 'Qtd AH' : 'AH Qty'}</th>
+                                        <th class="text-center w-28">${isPt ? 'Qtd Real' : 'Actual Qty'}</th>
+                                        <th class="w-32">${isPt ? 'Marca' : 'Brand'}</th>
+                                        <th class="w-28">${isPt ? 'Estado' : 'Status'}</th>
+                                        <th>${isPt ? 'Observações' : 'Comments'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${cat.items.map(item => {
+                                        const rec = custom[item.id] || {};
+                                        return `
+                                            <tr>
+                                                <td>
+                                                    <div class="font-semibold text-gray-900">${isPt ? item.namePt : item.name}</div>
+                                                    ${item.rule ? `<div class="text-[10px] text-gray-400 italic">${item.rule}</div>` : ''}
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="asana-qty-badge">${item.qty}</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="number" min="0" value="${rec.verifiedQty !== undefined ? rec.verifiedQty : item.qty}" class="w-16 px-2 py-1 text-center border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="verifiedQty" />
+                                                </td>
+                                                <td>
+                                                    <input type="text" value="${this.escapeHtml(rec.brand || '')}" placeholder="—" class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="brand" />
+                                                </td>
+                                                <td>
+                                                    <select class="w-full px-1 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none bg-white" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="status">
+                                                        <option value="ok" ${rec.status === 'ok' ? 'selected' : ''}>OK</option>
+                                                        <option value="missing" ${rec.status === 'missing' ? 'selected' : ''}>${isPt ? 'Em Falta' : 'Missing'}</option>
+                                                        <option value="damaged" ${rec.status === 'damaged' ? 'selected' : ''}>${isPt ? 'Danificado' : 'Damaged'}</option>
+                                                        <option value="na" ${rec.status === 'na' ? 'selected' : ''}>N/A</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="text" value="${this.escapeHtml(rec.comments || item.comments || '')}" placeholder="${isPt ? 'Comentários...' : 'Comments...'}" class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:border-brand outline-none" data-action="update-inv-rec" data-id="${property.id}" data-item="${item.id}" data-field="comments" />
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- MOBILE LIST VIEW (<=768px) -->
+                        <div class="asana-inv-mobile-list">
+                            ${cat.items.map(item => {
+                                const rec = custom[item.id] || {};
+                                const currentQty = rec.verifiedQty !== undefined ? rec.verifiedQty : item.qty;
+                                const currentStatus = rec.status || (rec.verifiedQty !== undefined ? 'ok' : '');
+                                return `
+                                    <div class="asana-inv-mobile-card ${currentStatus ? `status-${currentStatus}` : ''}" data-item-id="${item.id}">
+                                        <!-- Card Header: Title & Expected Qty -->
+                                        <div class="asana-inv-mobile-card__header">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="asana-inv-mobile-card__title">${isPt ? item.namePt : item.name}</div>
+                                                ${item.rule ? `<div class="asana-inv-mobile-card__rule">${this.escapeHtml(item.rule)}</div>` : ''}
+                                            </div>
+                                            <div class="asana-inv-mobile-card__expected" title="${isPt ? 'Quantidade Padrão Atlantic Holiday' : 'Atlantic Holiday Standard Qty'}">
+                                                <span class="expected-label">AH</span>
+                                                <span class="expected-val">${item.qty}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Verification Controls: Stepper & 1-Tap AH Match -->
+                                        <div class="asana-inv-mobile-card__actions">
+                                            <div class="asana-inv-mobile-stepper">
+                                                <button type="button" class="inv-step-btn" data-action="step-inv-qty" data-id="${property.id}" data-item="${item.id}" data-delta="-1" title="${isPt ? 'Diminuir' : 'Decrease'}">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    inputmode="numeric"
+                                                    min="0"
+                                                    class="inv-qty-input"
+                                                    value="${currentQty}"
+                                                    data-action="update-inv-rec"
+                                                    data-id="${property.id}"
+                                                    data-item="${item.id}"
+                                                    data-field="verifiedQty"
+                                                    aria-label="${isPt ? 'Quantidade verificada' : 'Verified quantity'}"
+                                                />
+                                                <button type="button" class="inv-step-btn" data-action="step-inv-qty" data-id="${property.id}" data-item="${item.id}" data-delta="1" title="${isPt ? 'Aumentar' : 'Increase'}">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                class="inv-match-btn ${currentQty === item.qty && currentStatus === 'ok' ? 'matched' : ''}"
+                                                data-action="match-inv-qty"
+                                                data-id="${property.id}"
+                                                data-item="${item.id}"
+                                                data-qty="${item.qty}"
+                                                title="${isPt ? 'Confirmar quantidade padrão e marcar OK com 1 toque' : 'Confirm standard AH qty and mark OK with 1 tap'}"
+                                            >
+                                                <i class="fas fa-check"></i>
+                                                <span>= AH (${item.qty})</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Quick Status Pills -->
+                                        <div class="asana-inv-mobile-card__statuses">
+                                            <button type="button" class="inv-status-pill ${currentStatus === 'ok' ? 'active-ok' : ''}" data-action="set-inv-status" data-id="${property.id}" data-item="${item.id}" data-status="ok">
+                                                <i class="fas fa-check-circle"></i> OK
+                                            </button>
+                                            <button type="button" class="inv-status-pill ${currentStatus === 'missing' ? 'active-missing' : ''}" data-action="set-inv-status" data-id="${property.id}" data-item="${item.id}" data-status="missing">
+                                                <i class="fas fa-exclamation-triangle"></i> ${isPt ? 'Falta' : 'Missing'}
+                                            </button>
+                                            <button type="button" class="inv-status-pill ${currentStatus === 'damaged' ? 'active-damaged' : ''}" data-action="set-inv-status" data-id="${property.id}" data-item="${item.id}" data-status="damaged">
+                                                <i class="fas fa-heart-crack"></i> ${isPt ? 'Danif.' : 'Damaged'}
+                                            </button>
+                                            <button type="button" class="inv-status-pill ${currentStatus === 'na' ? 'active-na' : ''}" data-action="set-inv-status" data-id="${property.id}" data-item="${item.id}" data-status="na">
+                                                N/A
+                                            </button>
+                                        </div>
+
+                                        <!-- Details: Brand & Notes -->
+                                        <div class="asana-inv-mobile-card__meta">
+                                            <div class="flex-1">
+                                                <input
+                                                    type="text"
+                                                    class="inv-meta-input"
+                                                    value="${this.escapeHtml(rec.brand || '')}"
+                                                    placeholder="${isPt ? 'Marca (ex: Ikea)...' : 'Brand...'}"
+                                                    data-action="update-inv-rec"
+                                                    data-id="${property.id}"
+                                                    data-item="${item.id}"
+                                                    data-field="brand"
+                                                />
+                                            </div>
+                                            <div class="flex-1">
+                                                <input
+                                                    type="text"
+                                                    class="inv-meta-input"
+                                                    value="${this.escapeHtml(rec.comments || item.comments || '')}"
+                                                    placeholder="${isPt ? 'Observações...' : 'Notes...'}"
+                                                    data-action="update-inv-rec"
+                                                    data-id="${property.id}"
+                                                    data-item="${item.id}"
+                                                    data-field="comments"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
-                `).join('')}
+                `;
+                }).join('')}
             </div>
         `;
     }
@@ -1347,6 +1480,24 @@ export class NewPropertiesManager {
                     this.toggleTask(id, taskId);
                     break;
                 }
+                case 'step-inv-qty': {
+                    const itemId = target.dataset.item;
+                    const delta = parseInt(target.dataset.delta, 10) || 0;
+                    this.stepInventoryQty(id, itemId, delta);
+                    break;
+                }
+                case 'match-inv-qty': {
+                    const itemId = target.dataset.item;
+                    const qty = parseInt(target.dataset.qty, 10) || 0;
+                    this.matchInventoryQty(id, itemId, qty);
+                    break;
+                }
+                case 'set-inv-status': {
+                    const itemId = target.dataset.item;
+                    const status = target.dataset.status;
+                    this.setInventoryStatus(id, itemId, status);
+                    break;
+                }
                 case 'toggle-complete-property':
                     this.toggleCompleteProperty(id);
                     break;
@@ -1534,6 +1685,75 @@ export class NewPropertiesManager {
 
         prop.inventoryCustom[itemId][field] = value;
         this.saveProperties();
+    }
+
+    stepInventoryQty(propertyId, itemId, delta) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        if (!prop.inventoryCustom) prop.inventoryCustom = {};
+        if (!prop.inventoryCustom[itemId]) prop.inventoryCustom[itemId] = {};
+
+        const inv = calculatePropertyInventory(prop);
+        let defaultQty = 1;
+        for (const cat of inv.categories) {
+            const found = cat.items.find(i => i.id === itemId);
+            if (found) {
+                defaultQty = found.qty;
+                break;
+            }
+        }
+
+        const rec = prop.inventoryCustom[itemId];
+        const current = rec.verifiedQty !== undefined ? parseInt(rec.verifiedQty, 10) : defaultQty;
+        const updated = Math.max(0, current + delta);
+        rec.verifiedQty = updated;
+        if (!rec.status) {
+            rec.status = 'ok';
+        }
+
+        this.saveProperties();
+        this.render();
+    }
+
+    matchInventoryQty(propertyId, itemId, qty) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        if (!prop.inventoryCustom) prop.inventoryCustom = {};
+        if (!prop.inventoryCustom[itemId]) prop.inventoryCustom[itemId] = {};
+
+        const rec = prop.inventoryCustom[itemId];
+        rec.verifiedQty = qty;
+        rec.status = 'ok';
+
+        this.saveProperties();
+        this.render();
+    }
+
+    setInventoryStatus(propertyId, itemId, status) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        if (!prop.inventoryCustom) prop.inventoryCustom = {};
+        if (!prop.inventoryCustom[itemId]) prop.inventoryCustom[itemId] = {};
+
+        const rec = prop.inventoryCustom[itemId];
+        rec.status = rec.status === status ? '' : status;
+
+        if (rec.status === 'ok' && rec.verifiedQty === undefined) {
+            const inv = calculatePropertyInventory(prop);
+            for (const cat of inv.categories) {
+                const found = cat.items.find(i => i.id === itemId);
+                if (found) {
+                    rec.verifiedQty = found.qty;
+                    break;
+                }
+            }
+        }
+
+        this.saveProperties();
+        this.render();
     }
 
     toggleCompleteProperty(propertyId) {

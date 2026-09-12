@@ -1143,6 +1143,296 @@ body.asana-theme textarea:focus {
     font-size: 12px;
 }
 
+/* Dual Layout: Desktop Table vs Mobile List */
+.asana-inv-desktop-table {
+    display: block;
+}
+
+.asana-inv-mobile-list {
+    display: none;
+}
+
+.asana-cat-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background-color: #e2e8f0;
+    color: #475569;
+}
+
+.asana-cat-badge.all-verified {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+/* Mobile Field Inventory Cards */
+.asana-inv-mobile-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: all 0.15s ease;
+}
+
+.asana-inv-mobile-card.status-ok {
+    border-color: #86efac;
+    background-color: #f0fdf4;
+}
+
+.asana-inv-mobile-card.status-missing {
+    border-color: #fde047;
+    background-color: #fefce8;
+}
+
+.asana-inv-mobile-card.status-damaged {
+    border-color: #fca5a5;
+    background-color: #fff1f2;
+}
+
+.asana-inv-mobile-card.status-na {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+    opacity: 0.75;
+}
+
+.asana-inv-mobile-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.asana-inv-mobile-card__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.asana-inv-mobile-card__rule {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+.asana-inv-mobile-card__expected {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1d4ed8;
+    flex-shrink: 0;
+}
+
+.asana-inv-mobile-card__expected .expected-label {
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+.asana-inv-mobile-card__expected .expected-val {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+/* Stepper & 1-Tap Match Row */
+.asana-inv-mobile-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.asana-inv-mobile-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #ffffff;
+    height: 40px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.inv-step-btn {
+    width: 40px;
+    height: 100%;
+    border: none;
+    background-color: transparent;
+    color: #334155;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+    touch-action: manipulation;
+}
+
+.inv-step-btn:active {
+    background-color: #e2e8f0;
+}
+
+.inv-qty-input {
+    width: 48px;
+    height: 100%;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 16px; /* Prevents iOS Safari auto-zoom */
+    font-weight: 700;
+    color: #0f172a;
+    background-color: transparent;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* 1-Tap AH Match Button */
+.inv-match-btn {
+    flex: 1;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+}
+
+.inv-match-btn:active {
+    transform: scale(0.97);
+    background-color: #f1f5f9;
+}
+
+.inv-match-btn.matched {
+    border-color: #86efac;
+    background-color: #ecfdf5;
+    color: #047857;
+}
+
+/* Quick Status Pill Buttons */
+.asana-inv-mobile-card__statuses {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.inv-status-pill {
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    padding: 0 4px;
+    touch-action: manipulation;
+    white-space: nowrap;
+}
+
+.inv-status-pill:active {
+    transform: scale(0.96);
+}
+
+.inv-status-pill.active-ok {
+    background-color: #10b981;
+    border-color: #059669;
+    color: #ffffff;
+}
+
+.inv-status-pill.active-missing {
+    background-color: #f59e0b;
+    border-color: #d97706;
+    color: #ffffff;
+}
+
+.inv-status-pill.active-damaged {
+    background-color: #ef4444;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.inv-status-pill.active-na {
+    background-color: #64748b;
+    border-color: #475569;
+    color: #ffffff;
+}
+
+/* Brand & Notes Inputs */
+.asana-inv-mobile-card__meta {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.inv-meta-input {
+    width: 100%;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    font-size: 12px;
+    color: #334155;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.inv-meta-input:focus {
+    border-color: var(--asana-accent);
+    background-color: #ffffff;
+}
+
+/* Checklist Item Title Clickable */
+.asana-checklist-item__title[role="button"] {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.asana-checklist-item__title[role="button"]:active {
+    opacity: 0.7;
+}
+
+/* Mobile Sidebar Backdrop */
+.asana-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 29;
+    cursor: pointer;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
     .asana-layout {
@@ -1168,6 +1458,116 @@ body.asana-theme textarea:focus {
 
     .asana-drawer {
         width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .asana-inv-desktop-table {
+        display: none !important;
+    }
+
+    .asana-inv-mobile-list {
+        display: flex !important;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    /* Full-screen native sheet on mobile */
+    .asana-drawer {
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        border-radius: 0;
+    }
+
+    /* Sticky Drawer Toolbar */
+    .asana-drawer__toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding: 10px 14px;
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--asana-line);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Sticky Drawer Tabs */
+    .asana-drawer-tabs {
+        position: sticky;
+        top: 57px;
+        z-index: 19;
+        background-color: #ffffff;
+        padding: 4px 12px 0 12px;
+        margin: -14px -14px 10px -14px;
+        border-bottom: 1px solid var(--asana-line);
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .asana-drawer-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .asana-drawer-tab {
+        padding: 8px 10px 10px 10px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    /* Drawer body safe padding */
+    .asana-drawer__body {
+        padding: 14px;
+        padding-bottom: max(env(safe-area-inset-bottom, 16px), 24px);
+        gap: 16px;
+    }
+
+    /* Checklist Mobile Optimization */
+    .asana-checklist-item {
+        padding: 10px 12px;
+        min-height: 46px;
+        border-radius: 10px;
+        border: 1px solid #f1f5f9;
+        margin-bottom: 4px;
+        background-color: #ffffff;
+        cursor: pointer;
+    }
+
+    .asana-checklist-item:active {
+        background-color: #f8fafc;
+    }
+
+    .asana-check-btn {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        font-size: 13px;
+        margin-top: 0;
+    }
+
+    .asana-checklist-item__title {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .asana-checklist-item__notes {
+        font-size: 16px !important; /* Prevents iOS auto-zoom */
+        padding: 4px 6px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background-color: #f8fafc;
+        margin-top: 4px;
+    }
+
+    /* Prevent auto-zoom on mobile inputs */
+    .asana-collab-input,
+    .asana-date-input,
+    .inv-meta-input,
+    .asana-bed-select {
+        font-size: 16px !important;
     }
 }
 
@@ -1456,4 +1856,122 @@ html[data-theme="dark"] .asana-inventory-category-title {
     background-color: #202024;
     color: #f4f4f5;
 }
+
+html[data-theme="dark"] .asana-cat-badge {
+    background-color: #27272a;
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-cat-badge.all-verified {
+    background-color: #064e3b;
+    color: #a7f3d0;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card {
+    background-color: #18181b;
+    border-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card.status-ok {
+    border-color: #059669;
+    background-color: #06281e;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card.status-missing {
+    border-color: #d97706;
+    background-color: #281e06;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card.status-damaged {
+    border-color: #dc2626;
+    background-color: #280a0a;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card.status-na {
+    border-color: #3f3f46;
+    background-color: #121215;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card__title {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-card__expected {
+    background-color: #1e293b;
+    border-color: #3b82f6;
+    color: #93c5fd;
+}
+
+html[data-theme="dark"] .asana-inv-mobile-stepper {
+    background-color: #202024;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .inv-step-btn {
+    color: #e4e4e7;
+}
+
+html[data-theme="dark"] .inv-step-btn:active {
+    background-color: #27272a;
+}
+
+html[data-theme="dark"] .inv-qty-input {
+    color: #f4f4f5;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .inv-match-btn {
+    background-color: #202024;
+    border-color: #3f3f46;
+    color: #e4e4e7;
+}
+
+html[data-theme="dark"] .inv-match-btn.matched {
+    border-color: #059669;
+    background-color: #064e3b;
+    color: #a7f3d0;
+}
+
+html[data-theme="dark"] .inv-status-pill {
+    background-color: #202024;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+}
+
+html[data-theme="dark"] .inv-meta-input {
+    background-color: #202024;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .inv-meta-input:focus {
+    background-color: #18181b;
+}
+
+html[data-theme="dark"] .asana-checklist-item {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-checklist-item__title {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-checklist-item__notes {
+    background-color: #202024;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-drawer-tabs {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-drawer__toolbar {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
 

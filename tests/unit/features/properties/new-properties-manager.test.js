@@ -488,6 +488,106 @@ describe("New Properties Manager", () => {
             container.remove();
         }
     });
+
+    test("supports mobile field onboarding: tap-on-title checklist toggle, sidebar backdrop, and 1-tap mobile inventory verification", () => {
+        const container = document.createElement("div");
+        container.id = "test-mobile-field";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-mobile-field", storage });
+            manager.init();
+
+            // 1. Test mobile sidebar backdrop
+            manager.sidebarMobileOpen = true;
+            manager.render();
+            const backdrop = container.querySelector(".asana-sidebar-backdrop");
+            assert.ok(backdrop, "Mobile sidebar backdrop is rendered when sidebar is open");
+
+            // Clicking backdrop closes sidebar
+            backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(manager.sidebarMobileOpen, false, "Clicking backdrop closes mobile sidebar");
+
+            // 2. Open drawer and test mobile checklist title tapping
+            const prop = manager.properties[0];
+            manager.selectedPropertyId = prop.id;
+            manager.activeDrawerTab = "checklist";
+            manager.render();
+
+            const firstTask = prop.checklist[0].tasks[0];
+            const initialDone = firstTask.done;
+            const taskTitle = container.querySelector(".asana-checklist-item__title");
+            assert.ok(taskTitle, "Checklist item title exists");
+            assert.equal(taskTitle.getAttribute("role"), "button", "Task title has button role for mobile accessibility");
+
+            // Tap task title
+            taskTitle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(firstTask.done, !initialDone, "Tapping task title toggles checklist item completion");
+
+            // 3. Switch to inventory tab and test mobile cards & 1-tap controls
+            manager.activeDrawerTab = "inventory";
+            manager.render();
+
+            const desktopTable = container.querySelector(".asana-inv-desktop-table");
+            const mobileList = container.querySelector(".asana-inv-mobile-list");
+            assert.ok(desktopTable, "Desktop table container exists");
+            assert.ok(mobileList, "Mobile list container exists for phone view");
+
+            const mobileCards = container.querySelectorAll(".asana-inv-mobile-card");
+            assert.ok(mobileCards.length > 0, "Mobile cards are rendered for items");
+
+            // Find a specific item card, e.g. cabides
+            const firstCard = container.querySelector(".asana-inv-mobile-card[data-item-id='cabides']");
+            assert.ok(firstCard, "Mobile card for hangers (cabides) exists");
+
+            // Expected AH badge
+            const expectedBadge = firstCard.querySelector(".asana-inv-mobile-card__expected");
+            assert.ok(expectedBadge, "Expected AH badge exists on card");
+            const expectedQty = parseInt(expectedBadge.querySelector(".expected-val").textContent.trim(), 10);
+            assert.ok(expectedQty > 0, "AH expected quantity is displayed");
+
+            // 4. Test 1-Tap Match Button (= AH)
+            const matchBtn = firstCard.querySelector(".inv-match-btn");
+            assert.ok(matchBtn, "1-tap match button exists");
+
+            matchBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+            // Card should now be matched with status 'ok' and verifiedQty equal to AH qty
+            const updatedCard = container.querySelector(".asana-inv-mobile-card[data-item-id='cabides']");
+            assert.ok(updatedCard.classList.contains("status-ok"), "Card has status-ok after 1-tap match");
+            assert.equal(prop.inventoryCustom['cabides'].verifiedQty, expectedQty, "Verified quantity equals expected AH qty");
+            assert.equal(prop.inventoryCustom['cabides'].status, "ok", "Status set to ok");
+
+            // 5. Test Steppers: decrement by 1
+            const minusBtn = updatedCard.querySelector(".inv-step-btn[data-delta='-1']");
+            assert.ok(minusBtn, "Minus stepper button exists");
+            minusBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+            assert.equal(prop.inventoryCustom['cabides'].verifiedQty, expectedQty - 1, "Stepper decremented verified quantity by 1");
+
+            // Test Stepper: increment by 1
+            const plusBtn = container.querySelector(".asana-inv-mobile-card[data-item-id='cabides'] .inv-step-btn[data-delta='1']");
+            plusBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(prop.inventoryCustom['cabides'].verifiedQty, expectedQty, "Stepper incremented verified quantity back");
+
+            // 6. Test 1-Tap Status Pills: toggle to 'missing'
+            const missingPill = container.querySelector(".asana-inv-mobile-card[data-item-id='cabides'] .inv-status-pill[data-status='missing']");
+            assert.ok(missingPill, "Missing status pill exists");
+            missingPill.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+            assert.equal(prop.inventoryCustom['cabides'].status, "missing", "Status toggled to missing");
+            const missingCard = container.querySelector(".asana-inv-mobile-card[data-item-id='cabides']");
+            assert.ok(missingCard.classList.contains("status-missing"), "Card has status-missing class");
+
+            // 7. Verify category progress counter updates
+            const catBadge = container.querySelector(".asana-cat-badge");
+            assert.ok(catBadge, "Category verified progress badge exists");
+            assert.ok(catBadge.textContent.includes("/"), "Badge displays verified / total counts");
+        } finally {
+            container.remove();
+        }
+    });
 });
 
 
