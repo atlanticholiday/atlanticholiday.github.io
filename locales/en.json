@@ -213,6 +213,8 @@
     "cleaningAhDesc": "Cleanings and revenue.",
     "reservations": "Weekly Reservations",
     "reservationsDesc": "Weekly guest work.",
+    "propertyCalendar": "Property Calendar",
+    "propertyCalendarDesc": "PMS tape chart & availability.",
     "operationalGuidelines": "Operational Guide",
     "operationalGuidelinesDesc": "Approved protocols.",
     "heatedPools": "Heated Pools",
@@ -2237,6 +2239,18 @@
       "linkedStatus": "Linked to a colleague record.",
       "standaloneStatus": "Standalone login; no matching colleague email."
     },
+    "security": {
+      "title": "Security & Activity",
+      "description": "Verify IP addresses and recent session entries for this account.",
+      "lastIp": "Last Login IP",
+      "noIp": "No IP recorded yet",
+      "lastLogin": "Last Activity",
+      "device": "Device",
+      "verifyIp": "Check IP",
+      "ipLookupTitle": "Check IP location and details",
+      "recentLogins": "Recent Login Sessions",
+      "noLogins": "No login activity recorded yet."
+    },
     "preview": {
       "button": "View as user",
       "eyebrow": "User view",
@@ -2435,6 +2449,7 @@
         "owners": "Owners",
         "safety": "Safety",
         "reservations": "Weekly Reservations",
+        "propertyCalendar": "Property Calendar",
         "buildPlanner": "Build Planner",
         "inventory": "Inventory",
         "cleaningAh": "Cleaning AH",
@@ -2813,6 +2828,14 @@
     "position": "Position",
     "hireDate": "Hire Date",
     "employmentType": "Employment Type",
+    "companyPhone": "Company Phone",
+    "personalPhone": "Personal Phone",
+    "phoneTypes": {
+      "company": "Company",
+      "companyShort": "Work",
+      "personal": "Personal",
+      "personalShort": "Personal"
+    },
     "staffNumber": "Staff Number",
     "vacationAdjustment": "Vacation Adjustment",
     "editEmployeeTitle": "Edit Colleague Information - {{name}}",

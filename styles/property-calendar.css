@@ -1,0 +1,480 @@
+/* ==========================================================================
+   Property Calendar (PMS Tape Chart) Styles
+   ========================================================================== */
+
+.pms-calendar-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    background-color: #f8fafc;
+}
+
+/* Header & Controls */
+.pms-header-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    z-index: 50;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pms-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pms-title-group h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.pms-badge-count {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+}
+
+/* Controls Toolbar */
+.pms-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pms-search-box {
+    position: relative;
+    min-width: 200px;
+}
+
+.pms-search-box input {
+    width: 100%;
+    padding: 0.45rem 0.75rem 0.45rem 2rem;
+    font-size: 0.85rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    transition: all 0.15s ease;
+}
+
+.pms-search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.pms-search-icon {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+    font-size: 0.85rem;
+}
+
+.pms-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pms-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.pms-btn--primary {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+}
+
+.pms-btn--primary:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+    color: #ffffff;
+}
+
+.pms-nav-group {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.pms-nav-group button {
+    padding: 0.45rem 0.65rem;
+    border: none;
+    background: transparent;
+    color: #334155;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s ease;
+}
+
+.pms-nav-group button:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.pms-nav-group button:not(:last-child) {
+    border-right: 1px solid #e2e8f0;
+}
+
+.pms-current-date-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1e293b;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+}
+
+/* Legend bar */
+.pms-legend-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.4rem 1.25rem;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.pms-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+    color: #475569;
+    font-weight: 500;
+}
+
+.pms-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Tape Chart Viewport */
+.pms-chart-container {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: #ffffff;
+}
+
+.pms-chart-table {
+    display: grid;
+    min-width: fit-content;
+    position: relative;
+}
+
+/* Sticky Accommodations Column */
+.pms-col-prop-header,
+.pms-col-prop-cell {
+    position: sticky;
+    left: 0;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    background: #ffffff;
+    border-right: 2px solid #cbd5e1;
+    padding: 0 0.75rem;
+    display: flex;
+    align-items: center;
+    z-index: 20;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.03);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pms-col-prop-header {
+    top: 0;
+    z-index: 40;
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #cbd5e1;
+    height: 56px;
+}
+
+.pms-col-prop-cell {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    height: 44px;
+}
+
+.pms-prop-row:hover .pms-col-prop-cell {
+    background: #f8fafc;
+    color: #0284c7;
+}
+
+/* Header Timeline */
+.pms-timeline-header-wrap {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #f8fafc;
+    border-bottom: 2px solid #cbd5e1;
+    height: 56px;
+}
+
+.pms-day-header {
+    width: 44px;
+    min-width: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #e2e8f0;
+    font-size: 0.72rem;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.pms-day-header--weekend {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.pms-day-header--today {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+}
+
+.pms-day-header__letter {
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+}
+
+.pms-day-header__num {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+/* Row Grid */
+.pms-prop-row {
+    display: flex;
+    position: relative;
+    height: 44px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pms-prop-row:hover {
+    background: #fbfcfe;
+}
+
+.pms-days-track {
+    display: flex;
+    position: relative;
+}
+
+.pms-day-cell {
+    width: 44px;
+    min-width: 44px;
+    border-right: 1px solid #f1f5f9;
+    height: 100%;
+}
+
+.pms-day-cell--weekend {
+    background: #fafbfc;
+}
+
+.pms-day-cell--today {
+    background: #f0f9ff;
+    border-right-color: #bae6fd;
+    border-left: 1px solid #bae6fd;
+}
+
+/* Reservation Bars */
+.pms-bar {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #ffffff;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+    z-index: 10;
+}
+
+.pms-bar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.06);
+    z-index: 15;
+}
+
+.pms-bar-guest {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Bar Colors matching Avantio & Modern standards */
+.pms-bar--confirmed {
+    background: #22c55e;
+    color: #ffffff;
+}
+
+.pms-bar--paid {
+    background: #15803d;
+    color: #ffffff;
+}
+
+.pms-bar--prebooking {
+    background: #f97316;
+    color: #ffffff;
+}
+
+.pms-bar--owner {
+    background: #0284c7;
+    color: #ffffff;
+}
+
+.pms-bar--blocked {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.pms-bar--stopsales {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.pms-bar--request {
+    background: #eab308;
+    color: #ffffff;
+}
+
+.pms-bar--default {
+    background: #64748b;
+    color: #ffffff;
+}
+
+/* Detail Popover / Modal */
+.pms-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+}
+
+.pms-modal {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 450px;
+    width: 100%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.pms-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
+}
+
+.pms-modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.pms-modal-close {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.pms-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.45rem 0;
+    font-size: 0.875rem;
+    border-bottom: 1px dashed #f1f5f9;
+}
+
+.pms-detail-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.pms-detail-value {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* Empty State */
+.pms-empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #64748b;
+}
+
+.pms-empty-state i {
+    font-size: 3rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+}

@@ -4904,6 +4904,152 @@ header h1, header h2, header h3 {
     font-size: 0.7rem;
 }
 
+.user-management-security-section {
+    background: #ffffff;
+}
+
+.user-management-security-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    padding: 0.75rem 0.85rem;
+    background: #f8fafc;
+}
+
+.user-management-security-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 0.5rem;
+}
+
+.user-management-security-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.user-management-security-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.user-management-security-ip {
+    font-size: 0.88rem;
+    font-weight: 750;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #0f172a;
+}
+
+.user-management-ip-lookup-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 0.3rem 0.55rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 120ms ease;
+}
+
+.user-management-ip-lookup-btn:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.user-management-security-subitems {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 0.55rem;
+}
+
+.user-management-security-subitem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.73rem;
+}
+
+.user-management-security-sublabel {
+    color: #64748b;
+}
+
+.user-management-security-subvalue {
+    color: #334155;
+    font-weight: 600;
+}
+
+.user-management-recent-logins {
+    margin-top: 0.85rem;
+}
+
+.user-management-recent-logins-title {
+    font-size: 0.72rem;
+    font-weight: 750;
+    color: #475569;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.user-management-recent-logins-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.user-management-login-session-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.5rem;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 0.7rem;
+}
+
+.user-management-session-ip {
+    color: #0f172a;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.user-management-session-device {
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-management-session-time {
+    color: #64748b;
+    font-size: 0.67rem;
+    white-space: nowrap;
+}
+
+.user-management-session-lookup {
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.user-management-ip-inline {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+    color: #64748b;
+}
+
 .user-management-dialog {
     position: fixed;
     inset: 0;

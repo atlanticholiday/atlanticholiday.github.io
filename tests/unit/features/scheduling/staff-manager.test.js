@@ -127,6 +127,10 @@ function installStaffTranslations() {
         validation: {
           nameRequired: "Please enter a name.",
           workDaysRequired: "Please select at least one day."
+        },
+        phoneTypes: {
+          companyShort: "Work",
+          personalShort: "Personal"
         }
       }
     },
@@ -164,6 +168,10 @@ function installStaffTranslations() {
         validation: {
           nameRequired: "Introduza um nome.",
           workDaysRequired: "Selecione pelo menos um dia."
+        },
+        phoneTypes: {
+          companyShort: "Empresa",
+          personalShort: "Pessoal"
         }
       }
     }
@@ -363,6 +371,50 @@ describe("StaffManager", () => {
     sortSelect.value = "newest";
     sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
     assert.deepEqual(renderedNames(), ["Bruno", "Carla", "Ana"]);
+
+    restoreI18n();
+  });
+
+  test("renders company and personal phones and filters by personal phone", () => {
+    const restoreI18n = installStaffTranslations();
+    createFixture();
+
+    const manager = new StaffManager(
+      createDataManager({
+        activeEmployees: [
+          {
+            id: "emp-1",
+            name: "Ana Silva",
+            phone: "+351 912 345 678",
+            personalPhone: "+351 987 654 321",
+            workDays: [1, 2]
+          },
+          {
+            id: "emp-2",
+            name: "Bruno Costa",
+            personalPhone: "+351 966 111 222",
+            workDays: [3, 4]
+          }
+        ]
+      }),
+      createUiManager()
+    );
+
+    manager.render();
+
+    const container = document.getElementById("staff-list-container");
+    assert.includes(container.textContent, "+351 912 345 678");
+    assert.includes(container.textContent, "(Work)");
+    assert.includes(container.textContent, "+351 987 654 321");
+    assert.includes(container.textContent, "(Personal)");
+    assert.includes(container.textContent, "+351 966 111 222");
+
+    const searchInput = document.getElementById("staff-search-input");
+    searchInput.value = "966 111";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.includes(container.textContent, "Bruno Costa");
+    assert.ok(!container.textContent.includes("Ana Silva"));
 
     restoreI18n();
   });

@@ -213,6 +213,8 @@
         "cleaningAhDesc": "Limpezas e receitas.",
         "reservations": "Reservas Semanais",
         "reservationsDesc": "Operação semanal.",
+        "propertyCalendar": "Calendário de Alojamentos",
+        "propertyCalendarDesc": "Tape chart e disponibilidade do PMS.",
         "operationalGuidelines": "Guia Operacional",
         "operationalGuidelinesDesc": "Protocolos aprovados.",
         "heatedPools": "Piscinas Aquecidas",
@@ -2242,6 +2244,18 @@
             "linkedStatus": "Ligado a uma ficha de colega.",
             "standaloneStatus": "Login independente; sem email de colega correspondente."
         },
+        "security": {
+            "title": "Segurança e Atividade de Sessão",
+            "description": "Verifique os endereços IP e as sessões recentes desta conta.",
+            "lastIp": "Último IP de Início de Sessão",
+            "noIp": "Nenhum IP registado",
+            "lastLogin": "Última Atividade",
+            "device": "Dispositivo",
+            "verifyIp": "Verificar IP",
+            "ipLookupTitle": "Verificar localização e detalhes do IP",
+            "recentLogins": "Sessões Recentes",
+            "noLogins": "Nenhuma atividade de sessão registada."
+        },
         "preview": {
             "button": "Ver como utilizador",
             "eyebrow": "Vista do utilizador",
@@ -2440,6 +2454,7 @@
                 "owners": "Owners",
                 "safety": "Safety",
                 "reservations": "Reservas Semanais",
+                "propertyCalendar": "Calendário de Alojamentos",
                 "buildPlanner": "Build Planner",
                 "inventory": "Inventory",
                 "cleaningAh": "Limpeza AH",
@@ -2818,6 +2833,14 @@
         "position": "Cargo",
         "hireDate": "Data de Contratação",
         "employmentType": "Tipo de Contrato",
+        "companyPhone": "Telefone da Empresa",
+        "personalPhone": "Telefone Pessoal",
+        "phoneTypes": {
+            "company": "Empresa",
+            "companyShort": "Empresa",
+            "personal": "Pessoal",
+            "personalShort": "Pessoal"
+        },
         "editEmployeeTitle": "Editar informação do colega - {{name}}",
         "editWorkingDaysTitle": "Editar dias de trabalho - {{name}}",
         "views": {

@@ -87,7 +87,11 @@ export class AccessManager {
                 linkedEmployeeId: data.linkedEmployeeId || null,
                 linkedEmployeeName: data.linkedEmployeeName || null,
                 linkedEmployeeEmail: data.linkedEmployeeEmail || null,
-                linkedEmployeeArchived: Boolean(data.linkedEmployeeArchived)
+                linkedEmployeeArchived: Boolean(data.linkedEmployeeArchived),
+                lastLoginIp: data.lastLoginIp || null,
+                lastLoginAt: data.lastLoginAt ? (typeof data.lastLoginAt.toDate === 'function' ? data.lastLoginAt.toDate().toISOString() : data.lastLoginAt) : null,
+                lastUserAgent: data.lastUserAgent || null,
+                recentLogins: Array.isArray(data.recentLogins) ? data.recentLogins : []
             };
         }
 

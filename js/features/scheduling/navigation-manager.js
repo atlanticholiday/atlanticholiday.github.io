@@ -47,6 +47,7 @@ export class NavigationManager {
             buildPlanner: 'build-planner-page',
             vacationCenter: 'vacation-center-page',
             staff: 'staff-page',
+            propertyCalendar: 'property-calendar-page',
         };
         this.recentPages = this.loadRecentPages();
     }
@@ -254,6 +255,12 @@ export class NavigationManager {
 
     showReservationsPage() {
         this.showPage('reservations');
+    }
+
+    showPropertyCalendarPage() {
+        this.showPage('propertyCalendar');
+        const event = new CustomEvent('propertyCalendarPageOpened');
+        document.dispatchEvent(event);
     }
 
     showLoginPage() {
@@ -544,6 +551,14 @@ export class NavigationManager {
                 this.showReservationsPage();
                 const event = new CustomEvent('reservationsPageOpened');
                 document.dispatchEvent(event);
+            });
+        }
+
+        // Property Calendar navigation
+        const goToPropertyCalendarBtn = document.getElementById('go-to-property-calendar-btn');
+        if (goToPropertyCalendarBtn) {
+            goToPropertyCalendarBtn.addEventListener('click', () => {
+                this.showPropertyCalendarPage();
             });
         }
         // User Management navigation

@@ -396,7 +396,8 @@ export class StaffManager {
                 employee.position,
                 employee.employmentType,
                 employee.email,
-                employee.phone
+                employee.phone,
+                employee.personalPhone
             ].filter(Boolean).join(' ');
 
             return this.normalizeSearchValue(searchableProfile).includes(query);
@@ -536,8 +537,16 @@ export class StaffManager {
         if (employee.email) {
             contacts.push(this.escapeHtml(employee.email));
         }
-        if (employee.phone) {
+        if (employee.phone && employee.personalPhone) {
+            const companyTag = this.translate('staff.phoneTypes.companyShort', 'Work');
+            const personalTag = this.translate('staff.phoneTypes.personalShort', 'Personal');
+            contacts.push(`${this.escapeHtml(employee.phone)} <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(companyTag)})</span>`);
+            contacts.push(`${this.escapeHtml(employee.personalPhone)} <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(personalTag)})</span>`);
+        } else if (employee.phone) {
             contacts.push(this.escapeHtml(employee.phone));
+        } else if (employee.personalPhone) {
+            const personalTag = this.translate('staff.phoneTypes.personalShort', 'Personal');
+            contacts.push(`${this.escapeHtml(employee.personalPhone)} <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(personalTag)})</span>`);
         }
 
         const contactMarkup = contacts.length

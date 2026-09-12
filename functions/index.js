@@ -513,6 +513,29 @@ exports.reviewOvertimeRecord = onCall(async (request) => {
   return { ok: true };
 });
 
+function extractClientIp(request) {
+  const forwarded = request.rawRequest?.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    const firstIp = forwarded.split(",")[0].trim();
+    if (firstIp) return firstIp;
+  }
+  const realIp = request.rawRequest?.headers?.["x-real-ip"]
+    || request.rawRequest?.headers?.["fastly-client-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim();
+  }
+  const ip = request.rawRequest?.ip || request.rawRequest?.socket?.remoteAddress;
+  if (typeof ip === "string" && ip.trim()) {
+    return ip.replace(/^::ffff:/, "").trim();
+  }
+  return "Unknown";
+}
+
+function extractUserAgent(request) {
+  const ua = request.rawRequest?.headers?.["user-agent"];
+  return typeof ua === "string" ? ua.trim().slice(0, 300) : "";
+}
+
 exports.getMyAccess = onCall(async (request) => {
   const uid = request.auth?.uid;
   const email = normalizeRawEmail(request.auth?.token?.email);
@@ -531,7 +554,48 @@ exports.getMyAccess = onCall(async (request) => {
     return { authorized: false };
   }
 
-  const access = sanitizeAccessEntry(accessEntry, email);
+  const clientIp = extractClientIp(request);
+  const userAgent = extractUserAgent(request);
+  const now = new Date();
+  const occurredAt = formatPortugalLocalDateTime(now);
+
+  const existingRecent = Array.isArray(accessEntry.recentLogins) ? accessEntry.recentLogins : [];
+  const newLoginRecord = {
+    ip: clientIp,
+    userAgent,
+    occurredAt
+  };
+  const filteredRecent = existingRecent.filter((item) => {
+    return !(item?.ip === clientIp && item?.occurredAt === occurredAt);
+  });
+  const recentLogins = [newLoginRecord, ...filteredRecent].slice(0, 10);
+
+  const loginPatch = {
+    lastLoginIp: clientIp,
+    lastLoginAt: occurredAt,
+    lastUserAgent: userAgent,
+    recentLogins
+  };
+
+  await writeAccessEntry(email, loginPatch).catch((err) => {
+    console.warn("Failed to record login IP in allowedEmails:", err);
+  });
+
+  await writeAudit({
+    email,
+    uid,
+    event: "user_session_entry",
+    ip: clientIp,
+    userAgent,
+    occurredAt
+  });
+
+  const updatedEntry = {
+    ...accessEntry,
+    ...loginPatch
+  };
+
+  const access = sanitizeAccessEntry(updatedEntry, email);
   await materializeUserAccess(uid, email, access);
   return { authorized: true, access };
 });
@@ -1163,7 +1227,11 @@ function sanitizeAccessEntry(entry, fallbackEmail) {
     linkedEmployeeId: entry?.linkedEmployeeId ? String(entry.linkedEmployeeId).slice(0, 160) : null,
     linkedEmployeeName: entry?.linkedEmployeeName ? String(entry.linkedEmployeeName).slice(0, 200) : null,
     linkedEmployeeEmail: normalizeRawEmail(entry?.linkedEmployeeEmail),
-    linkedEmployeeArchived: Boolean(entry?.linkedEmployeeArchived)
+    linkedEmployeeArchived: Boolean(entry?.linkedEmployeeArchived),
+    lastLoginIp: typeof entry?.lastLoginIp === "string" ? entry.lastLoginIp : null,
+    lastLoginAt: typeof entry?.lastLoginAt === "string" ? entry.lastLoginAt : null,
+    lastUserAgent: typeof entry?.lastUserAgent === "string" ? entry.lastUserAgent : null,
+    recentLogins: Array.isArray(entry?.recentLogins) ? entry.recentLogins.slice(0, 10) : []
   };
   return access;
 }

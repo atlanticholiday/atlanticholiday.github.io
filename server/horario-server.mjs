@@ -411,6 +411,29 @@ async function handleFiles(request, response, requestUrl, user) {
     return false;
 }
 
+async function handlePmsCalendar(request, response, requestUrl, user) {
+    if (requestUrl.pathname === '/api/pms-calendar') {
+        const calendarFile = path.join(dataDir, 'pms-calendar.json');
+        if (request.method === 'GET') {
+            if (!fs.existsSync(calendarFile)) {
+                return json(response, 200, { ok: true, data: { properties: [] } });
+            }
+            try {
+                const content = fs.readFileSync(calendarFile, 'utf8');
+                return json(response, 200, { ok: true, data: JSON.parse(content) });
+            } catch {
+                return json(response, 200, { ok: true, data: { properties: [] } });
+            }
+        }
+        if (request.method === 'POST') {
+            const body = await readJson(request, 10 * 1024 * 1024);
+            fs.writeFileSync(calendarFile, JSON.stringify(body, null, 2), 'utf8');
+            return json(response, 200, { ok: true, savedAt: nowIso() });
+        }
+    }
+    return false;
+}
+
 function serveStatic(request, response, requestUrl) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return false;
     const decoded = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname);
@@ -438,6 +461,7 @@ const server = createServer(async (request, response) => {
             if (await handleDepartments(request, response, requestUrl, user) !== false) return;
             if (await handleTasks(request, response, requestUrl, user) !== false) return;
             if (await handleFiles(request, response, requestUrl, user) !== false) return;
+            if (await handlePmsCalendar(request, response, requestUrl, user) !== false) return;
             return apiError(response, 404, 'API endpoint not found.', 'not-found');
         }
         serveStatic(request, response, requestUrl);

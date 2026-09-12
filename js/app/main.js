@@ -27,6 +27,7 @@ import { OwnersManager } from '../features/operations/owners-manager.js';
 import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
 import { BuildPlannerManager } from '../features/planning/build-planner-manager.js';
 import { ReservationsManager } from '../features/operations/reservations-manager.js';
+import { PropertyCalendarManager } from '../features/operations/property-calendar-manager.js';
 import { RnalManager } from '../features/operations/rnal-manager.js';
 import { SafetyManager } from '../features/operations/safety-manager.js';
 import { VehiclesManager } from '../features/operations/vehicles-manager.js';
@@ -84,7 +85,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, propertyCalendarManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -465,6 +466,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         operationsManager = new OperationsManager(db);
         reservationsManager = new ReservationsManager(db);
+        propertyCalendarManager = new PropertyCalendarManager(db, null, navigationManager);
         rnalManager = new RnalManager(db);
         safetyManager = new SafetyManager(db);
 
@@ -770,6 +772,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
                 console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
                 reservationsManager = new ReservationsManager(db, userId);
+                console.log(`📅 [INITIALIZATION] Creating PropertyCalendarManager...`);
+                propertyCalendarManager = new PropertyCalendarManager(db, userId, navigationManager);
 
                 console.log(`🔥 [INITIALIZATION] Creating SafetyManager...`);
                 safetyManager = new SafetyManager(db, propertiesManager);
@@ -1024,6 +1028,14 @@ function setupGlobalEventListeners() {
         if (reservationsManager) {
             console.log('Reservations page opened, initializing...');
             reservationsManager.initializeEventListeners();
+        }
+    });
+
+    document.addEventListener('propertyCalendarPageOpened', () => {
+        if (propertyCalendarManager) {
+            console.log('Property Calendar page opened, initializing...');
+            propertyCalendarManager.setNavigationManager(navigationManager);
+            propertyCalendarManager.init();
         }
     });
 
