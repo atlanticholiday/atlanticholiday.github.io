@@ -455,6 +455,16 @@
       "newReservation": "New reservation",
       "heatingRequested": "heating requested"
     },
+    "reminders": {
+      "title": "Checkout reminder emails",
+      "description": "Sent at 09:00 one day before check-out to ask whether the pool should be turned off or kept on.",
+      "addRecipient": "Add recipient",
+      "add": "Add",
+      "removeRecipient": "Remove {{email}}",
+      "awaitingFirstRun": "Awaiting the first scheduled check.",
+      "lastRunSuccess": "Last checked {{date}} · {{count}} email(s) sent",
+      "lastRunFailed": "Last checked {{date}} · {{count}} email(s) failed"
+    },
     "messages": {
       "loadError": "Could not load heated pool records.",
       "propertyAssociationError": "Could not associate heated pools with listings.",
@@ -480,6 +490,12 @@
       "endDateInvalid": "End date must be after the start date.",
       "guestPaidRequired": "Enter the total amount paid by the guest.",
       "pricingRequired": "Configure the guest and owner rates before switching the pool on.",
+      "invalidReminderEmail": "Enter a valid email address.",
+      "reminderRecipientRequired": "Keep at least one reminder recipient.",
+      "reminderRecipientAdded": "Reminder recipient added.",
+      "reminderRecipientRemoved": "Reminder recipient removed.",
+      "reminderSettingsLoadError": "Could not load reminder recipients.",
+      "reminderSettingsSaveError": "Could not save reminder recipients.",
       "taskCompleted": "{{property}} {{state}} task completed for {{reservation}}.",
       "alreadyState": "{{property}} is already {{state}}.",
       "markedState": "{{property}} marked {{state}}{{reservation}}.",

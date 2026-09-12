@@ -10,6 +10,25 @@ Deploy with an authorized Firebase administrator account:
 firebase deploy --only functions
 ```
 
+## Heated-pool checkout reminder email
+
+`sendHeatedPoolCheckoutReminders` runs every day at 09:00 in the `Europe/Lisbon`
+time zone. It emails the recipients configured in the Heated Pools Settings page
+for active pools whose heated-pool reservation checks out the following day.
+Each reservation reminder is claimed and recorded in Firestore so retries do not
+send it twice.
+
+Configure an SMTP connection URL as a Firebase secret before the first deploy:
+
+```powershell
+firebase functions:secrets:set HEATED_POOL_SMTP_URL --project my-work-schedule-4dc10
+firebase deploy --only functions:sendHeatedPoolCheckoutReminders --project my-work-schedule-4dc10
+```
+
+The URL uses Nodemailer's standard `smtp://` or `smtps://` connection format.
+The sender defaults to `Atlantic Holiday <info@atlanticholiday.net>` and can be
+overridden during deployment with the `HEATED_POOL_EMAIL_FROM` parameter.
+
 ## Retired door integration
 
 The Nuki Doors app and its backend handlers have been removed. Source changes alone do not remove previously deployed resources. When releasing this change:

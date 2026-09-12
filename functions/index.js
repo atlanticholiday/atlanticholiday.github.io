@@ -2,8 +2,17 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
-const { createHmac, randomBytes, randomUUID, scrypt: scryptCallback, timingSafeEqual } = require("node:crypto");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { defineSecret, defineString } = require("firebase-functions/params");
+const nodemailer = require("nodemailer");
+const { createHash, createHmac, randomBytes, randomUUID, scrypt: scryptCallback, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
+const {
+  collectCheckoutReminders,
+  createCheckoutReminderEmail,
+  getPortugalDateKey,
+  normalizeReminderRecipients
+} = require("./heated-pool-reminders");
 
 initializeApp();
 const auth = getAuth();
@@ -21,6 +30,11 @@ const ATTENDANCE_PIN_MAX_LENGTH = 10;
 const ATTENDANCE_PIN_MAX_ATTEMPTS = 5;
 const ATTENDANCE_PIN_LOCK_MS = 5 * 60 * 1000;
 const ATTENDANCE_PIN_KEY_LENGTH = 64;
+const HEATED_POOL_SMTP_URL = defineSecret("HEATED_POOL_SMTP_URL");
+const HEATED_POOL_EMAIL_FROM = defineString("HEATED_POOL_EMAIL_FROM", {
+  default: "Atlantic Holiday <info@atlanticholiday.net>",
+  description: "Sender used for heated-pool checkout reminders."
+});
 const APP_ACCESS_KEYS = new Set([
   "vehicles",
   "staff",
@@ -42,6 +56,83 @@ const APP_ACCESS_KEYS = new Set([
   "inventory",
   "cleaningAh"
 ]);
+
+exports.sendHeatedPoolCheckoutReminders = onSchedule({
+  schedule: "0 9 * * *",
+  timeZone: PORTUGAL_TIME_ZONE,
+  region: "europe-west1",
+  retryCount: 3,
+  minBackoffSeconds: 60,
+  secrets: [HEATED_POOL_SMTP_URL]
+}, async () => {
+  const targetDate = getPortugalDateKey(new Date(), 1);
+  const settingsRef = firestore.collection("heatedPoolSettings").doc("notifications");
+  const [settingsSnapshot, poolsSnapshot] = await Promise.all([
+    settingsRef.get(),
+    firestore.collection("heatedPools").get()
+  ]);
+  const settings = settingsSnapshot.exists ? settingsSnapshot.data() || {} : {};
+  const recipients = normalizeReminderRecipients(settings.recipients);
+  const properties = poolsSnapshot.docs.map((document) => ({ id: document.id, ...document.data() }));
+  const reminders = collectCheckoutReminders(properties, targetDate);
+  let sentCount = 0;
+  let failedCount = 0;
+  const failures = [];
+
+  if (reminders.length) {
+    const smtpUrl = HEATED_POOL_SMTP_URL.value();
+    if (!smtpUrl) throw new Error("HEATED_POOL_SMTP_URL is not configured.");
+    const transporter = nodemailer.createTransport(smtpUrl, {
+      from: HEATED_POOL_EMAIL_FROM.value()
+    });
+
+    try {
+      for (const reminder of reminders) {
+        const deliveryId = createHash("sha256")
+          .update(`${reminder.propertyId}|${reminder.reservationId}|${reminder.endDate}`)
+          .digest("hex");
+        const deliveryRef = firestore.collection("heatedPoolReminderDeliveries").doc(deliveryId);
+        const claimed = await claimHeatedPoolReminder(deliveryRef, reminder, recipients);
+        if (!claimed) continue;
+
+        try {
+          const email = createCheckoutReminderEmail(reminder, recipients);
+          const result = await transporter.sendMail(email);
+          await deliveryRef.set({
+            status: "sent",
+            sentAt: FieldValue.serverTimestamp(),
+            messageId: typeof result?.messageId === "string" ? result.messageId.slice(0, 500) : ""
+          }, { merge: true });
+          sentCount += 1;
+        } catch (error) {
+          failedCount += 1;
+          failures.push(`${reminder.propertyName}: ${error?.message || "email delivery failed"}`);
+          await deliveryRef.set({
+            status: "failed",
+            failedAt: FieldValue.serverTimestamp(),
+            error: String(error?.message || error).slice(0, 1000)
+          }, { merge: true });
+        }
+      }
+    } finally {
+      transporter.close();
+    }
+  }
+
+  await settingsRef.set({
+    recipients,
+    reminderHour: 9,
+    timeZone: PORTUGAL_TIME_ZONE,
+    lastRunAt: FieldValue.serverTimestamp(),
+    lastRunTargetDate: targetDate,
+    lastSentCount: sentCount,
+    lastFailedCount: failedCount
+  }, { merge: true });
+
+  if (failures.length) {
+    throw new Error(`Heated-pool reminder failures: ${failures.join("; ")}`);
+  }
+});
 
 exports.recordAttendancePunch = onCall(async (request) => {
   const employeeId = requireDocumentId(request.data?.employeeId, "A valid colleague is required.");
@@ -1600,6 +1691,31 @@ function getPasswordResetLinkError(error) {
     code: "internal",
     message: "Firebase Auth could not create a password reset link. Check the function logs for the exact Admin SDK error."
   };
+}
+
+async function claimHeatedPoolReminder(deliveryRef, reminder, recipients) {
+  const now = new Date();
+  return firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(deliveryRef);
+    const delivery = snapshot.exists ? snapshot.data() || {} : {};
+    if (delivery.status === "sent") return false;
+    const claimedAt = typeof delivery.claimedAt === "string" ? Date.parse(delivery.claimedAt) : NaN;
+    if (delivery.status === "sending" && Number.isFinite(claimedAt) && now.getTime() - claimedAt < 60 * 60 * 1000) {
+      return false;
+    }
+    transaction.set(deliveryRef, {
+      propertyId: reminder.propertyId,
+      propertyName: reminder.propertyName,
+      reservationId: reminder.reservationId,
+      checkOutDate: reminder.endDate,
+      recipients,
+      status: "sending",
+      claimedAt: now.toISOString(),
+      attemptCount: Number(delivery.attemptCount || 0) + 1,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    return true;
+  });
 }
 
 async function writeAudit(entry) {

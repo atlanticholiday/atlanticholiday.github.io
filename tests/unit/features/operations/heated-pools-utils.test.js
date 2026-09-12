@@ -6,11 +6,14 @@ import {
   buildHeatedPoolPlan,
   calculateHeatedPoolCommission,
   calculateHeatedPoolSettlement,
+  DEFAULT_HEATED_POOL_REMINDER_RECIPIENT,
   getHeatedPoolPropertyConfig,
   HEATED_POOL_CATALOG_VERSION,
   HEATED_POOL_PROPERTY_CATALOG,
   HEATED_POOL_PROPERTY_NAMES,
   inferRemoteControlAvailable,
+  isValidHeatedPoolReminderEmail,
+  normalizeHeatedPoolReminderRecipients,
   parseHeatedPoolsCsv
 } from "../../../../js/features/operations/heated-pools-utils.js";
 
@@ -315,6 +318,19 @@ describe("Heated pools utils", () => {
     assert.equal(customTotal.matchesStayLength, false);
     assert.equal(calculateHeatedPoolSettlement({ guestPaidAmount: 0, chargeAmount: 45, ownerCostAmount: 35, startDate: "2026-10-01", endDate: "2026-10-02" }), null);
     assert.equal(calculateHeatedPoolSettlement({ guestPaidAmount: 45, chargeAmount: 45, ownerCostAmount: 35, startDate: "2026-10-02", endDate: "2026-10-01" }), null);
+  });
+
+  test("normalizes configurable reminder recipients with a safe default", () => {
+    assert.deepEqual(normalizeHeatedPoolReminderRecipients([]), [DEFAULT_HEATED_POOL_REMINDER_RECIPIENT]);
+    assert.deepEqual(normalizeHeatedPoolReminderRecipients([
+      " INFO@AtlanticHoliday.net ",
+      "operations@example.com",
+      "operations@example.com",
+      "not-an-email"
+    ]), ["info@atlanticholiday.net", "operations@example.com"]);
+    assert.deepEqual(normalizeHeatedPoolReminderRecipients([], { useDefault: false }), []);
+    assert.equal(isValidHeatedPoolReminderEmail("pool.team@example.com"), true);
+    assert.equal(isValidHeatedPoolReminderEmail("missing-domain"), false);
   });
 
   test("associates matched listings and preserves records already migrated", () => {

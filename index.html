@@ -37,7 +37,7 @@
     <link rel="stylesheet" href="styles/app-switcher.css">
     <link rel="stylesheet" href="styles/tasks.css">
     <link rel="stylesheet" href="styles/cleaning-ah.css">
-    <link rel="stylesheet" href="styles/heated-pools.css?v=20260912-avantio-calculator">
+    <link rel="stylesheet" href="styles/heated-pools.css?v=20260912-checkout-reminders">
     <link rel="stylesheet" href="styles/staff.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/properties.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
@@ -2787,6 +2787,20 @@
                     <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.views.settings.eyebrow">Configuration</p><h3 data-i18n="heatedPools.views.settings.title">Settings</h3><p data-i18n="heatedPools.views.settings.description">Heated-pool properties, costs, lead times, and operational notes.</p></div>
                     <button type="button" class="heated-pools-primary-action" data-open-pool-dialog="property"><i class="fas fa-plus"></i> <span data-i18n="heatedPools.views.settings.add">Add property</span></button>
                 </div>
+                <section class="heated-pools-reminder-settings" aria-labelledby="heated-pools-reminder-title">
+                    <div class="heated-pools-reminder-settings__copy">
+                        <div class="heated-pools-reminder-settings__title"><i class="far fa-envelope" aria-hidden="true"></i><h4 id="heated-pools-reminder-title" data-i18n="heatedPools.reminders.title">Checkout reminder emails</h4></div>
+                        <p data-i18n="heatedPools.reminders.description">Sent at 09:00 one day before check-out to ask whether the pool should be turned off or kept on.</p>
+                        <small id="heated-pools-reminder-delivery-status" data-i18n="heatedPools.reminders.awaitingFirstRun">Awaiting the first scheduled check.</small>
+                    </div>
+                    <form id="heated-pools-recipient-form" class="heated-pools-recipient-form">
+                        <div id="heated-pools-recipient-list" class="heated-pools-recipient-list"></div>
+                        <div class="heated-pools-recipient-form__add">
+                            <label><span data-i18n="heatedPools.reminders.addRecipient">Add recipient</span><input id="heated-pools-recipient-input" name="recipientEmail" type="email" autocomplete="email" placeholder="operations@example.com"></label>
+                            <button type="submit" class="heated-pools-small-action"><i class="fas fa-plus" aria-hidden="true"></i><span data-i18n="heatedPools.reminders.add">Add</span></button>
+                        </div>
+                    </form>
+                </section>
                 <div id="heated-pools-settings-list" class="heated-pools-settings-list"></div>
                 <div class="heated-pools-approved-directory"><h4 data-i18n="heatedPools.directory.title">Approved heated-pool properties</h4><p data-i18n="heatedPools.directory.description">Only approved property names from the protected directory can be added.</p><div id="heated-pools-approved-list"></div></div>
             </section>

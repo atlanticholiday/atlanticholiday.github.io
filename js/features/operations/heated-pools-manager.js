@@ -15,8 +15,11 @@ import {
     buildHeatedPoolPlan,
     calculateHeatedPoolCommission,
     calculateHeatedPoolSettlement,
+    DEFAULT_HEATED_POOL_REMINDER_RECIPIENT,
     HEATED_POOL_PROPERTY_NAMES,
     inferRemoteControlAvailable,
+    isValidHeatedPoolReminderEmail,
+    normalizeHeatedPoolReminderRecipients,
     summarizePoolProperties
 } from './heated-pools-utils.js';
 import { i18n, t } from '../../core/i18n.js';
@@ -39,6 +42,14 @@ export class HeatedPoolsManager {
         this.historyPropertyId = '';
         this.today = formatLocalDate(new Date());
         this.unsubscribe = null;
+        this.settingsUnsubscribe = null;
+        this.notificationSettings = {
+            recipients: [DEFAULT_HEATED_POOL_REMINDER_RECIPIENT],
+            lastRunAt: '',
+            lastRunTargetDate: '',
+            lastSentCount: 0,
+            lastFailedCount: 0
+        };
         this.initialized = false;
         this.directoryAssociationPromise = null;
         this.directoryAssociationPending = false;
@@ -65,6 +76,10 @@ export class HeatedPoolsManager {
             this.unsubscribe();
             this.unsubscribe = null;
         }
+        if (this.settingsUnsubscribe) {
+            this.settingsUnsubscribe();
+            this.settingsUnsubscribe = null;
+        }
     }
 
     getCollectionRef() {
@@ -73,6 +88,7 @@ export class HeatedPoolsManager {
     }
 
     startListening() {
+        this.startNotificationSettingsListening();
         const ref = this.getCollectionRef();
         if (!ref || this.unsubscribe) {
             return;
@@ -92,6 +108,30 @@ export class HeatedPoolsManager {
         });
     }
 
+    getNotificationSettingsRef() {
+        if (!this.db) return null;
+        return doc(this.db, 'heatedPoolSettings', 'notifications');
+    }
+
+    startNotificationSettingsListening() {
+        const ref = this.getNotificationSettingsRef();
+        if (!ref || this.settingsUnsubscribe) return;
+        this.settingsUnsubscribe = onSnapshot(ref, (snapshot) => {
+            const data = snapshot.exists() ? snapshot.data() : {};
+            this.notificationSettings = {
+                recipients: normalizeHeatedPoolReminderRecipients(data.recipients),
+                lastRunAt: normalizeDateTime(data.lastRunAt),
+                lastRunTargetDate: cleanText(data.lastRunTargetDate),
+                lastSentCount: Number.isFinite(Number(data.lastSentCount)) ? Number(data.lastSentCount) : 0,
+                lastFailedCount: Number.isFinite(Number(data.lastFailedCount)) ? Number(data.lastFailedCount) : 0
+            };
+            this.renderNotificationSettings();
+        }, (error) => {
+            console.error('[HeatedPools] notification settings listener failed:', error);
+            this.showMessage(hp('messages.reminderSettingsLoadError', 'Could not load reminder recipients.'), 'error');
+        });
+    }
+
     bindEvents() {
         const todayInput = document.getElementById('heated-pools-today');
         const searchInput = document.getElementById('heated-pools-search');
@@ -99,6 +139,7 @@ export class HeatedPoolsManager {
         const reservationForm = document.getElementById('heated-pools-reservation-form');
         const stateForm = document.getElementById('heated-pools-state-form');
         const historyProperty = document.getElementById('heated-pools-history-property');
+        const recipientForm = document.getElementById('heated-pools-recipient-form');
 
         if (todayInput) {
             todayInput.value = this.today;
@@ -172,6 +213,30 @@ export class HeatedPoolsManager {
             });
         }
 
+        if (recipientForm) {
+            recipientForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const input = recipientForm.elements.recipientEmail;
+                const email = cleanText(input?.value).toLowerCase();
+                if (!isValidHeatedPoolReminderEmail(email)) {
+                    this.showMessage(hp('messages.invalidReminderEmail', 'Enter a valid email address.'), 'error');
+                    input?.focus();
+                    return;
+                }
+                const recipients = normalizeHeatedPoolReminderRecipients(
+                    [...this.notificationSettings.recipients, email],
+                    { useDefault: false }
+                );
+                this.saveNotificationRecipients(recipients).then(() => {
+                    recipientForm.reset();
+                    this.showMessage(hp('messages.reminderRecipientAdded', 'Reminder recipient added.'), 'success');
+                }).catch((error) => {
+                    console.error('[HeatedPools] add reminder recipient failed:', error);
+                    this.showMessage(error.message || hp('messages.reminderSettingsSaveError', 'Could not save reminder recipients.'), 'error');
+                });
+            });
+        }
+
         if (historyProperty) {
             historyProperty.addEventListener('change', () => {
                 this.historyPropertyId = historyProperty.value;
@@ -206,6 +271,63 @@ export class HeatedPoolsManager {
             this.render();
             this.showMessage(hp('autosave', 'Records save automatically.'), 'info');
         });
+    }
+
+    async saveNotificationRecipients(recipients) {
+        const normalized = normalizeHeatedPoolReminderRecipients(recipients, { useDefault: false });
+        if (!normalized.length) {
+            throw new Error(hp('messages.reminderRecipientRequired', 'Keep at least one reminder recipient.'));
+        }
+        const ref = this.getNotificationSettingsRef();
+        if (!ref) throw new Error(hp('messages.databaseNotReady', 'Database is not ready.'));
+        await setDoc(ref, {
+            recipients: normalized,
+            reminderHour: 9,
+            timeZone: 'Europe/Lisbon',
+            updatedAt: serverTimestamp(),
+            updatedBy: this.getCurrentActor()
+        }, { merge: true });
+    }
+
+    renderNotificationSettings() {
+        const list = document.getElementById('heated-pools-recipient-list');
+        const status = document.getElementById('heated-pools-reminder-delivery-status');
+        if (!list || !status) return;
+        const recipients = normalizeHeatedPoolReminderRecipients(this.notificationSettings.recipients);
+        list.innerHTML = recipients.map((email) => `
+            <span class="heated-pools-recipient">
+                <span>${escapeHtml(email)}</span>
+                <button type="button" data-remove-reminder-email="${escapeHtml(email)}" aria-label="${escapeHtml(hp('reminders.removeRecipient', 'Remove {{email}}', { email }))}"><i class="fas fa-times" aria-hidden="true"></i></button>
+            </span>
+        `).join('');
+        list.querySelectorAll('[data-remove-reminder-email]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const next = recipients.filter((email) => email !== button.dataset.removeReminderEmail);
+                this.saveNotificationRecipients(next).then(() => {
+                    this.showMessage(hp('messages.reminderRecipientRemoved', 'Reminder recipient removed.'), 'success');
+                }).catch((error) => {
+                    console.error('[HeatedPools] remove reminder recipient failed:', error);
+                    this.showMessage(error.message || hp('messages.reminderSettingsSaveError', 'Could not save reminder recipients.'), 'error');
+                });
+            });
+        });
+
+        if (!this.notificationSettings.lastRunAt) {
+            status.textContent = hp('reminders.awaitingFirstRun', 'Awaiting the first scheduled check.');
+            status.dataset.tone = 'muted';
+            return;
+        }
+        const failed = this.notificationSettings.lastFailedCount;
+        status.textContent = failed
+            ? hp('reminders.lastRunFailed', 'Last checked {{date}} · {{count}} email(s) failed', {
+                date: formatHistoryTime(this.notificationSettings.lastRunAt),
+                count: failed
+            })
+            : hp('reminders.lastRunSuccess', 'Last checked {{date}} · {{count}} email(s) sent', {
+                date: formatHistoryTime(this.notificationSettings.lastRunAt),
+                count: this.notificationSettings.lastSentCount
+            });
+        status.dataset.tone = failed ? 'error' : 'success';
     }
 
     switchView(view) {
@@ -753,6 +875,8 @@ export class HeatedPoolsManager {
     render() {
         const emptyState = document.getElementById('heated-pools-empty');
         const propertySelect = document.getElementById('heated-pools-reservation-property');
+
+        this.renderNotificationSettings();
 
         if (propertySelect) {
             propertySelect.innerHTML = [

@@ -455,6 +455,16 @@
             "newReservation": "Nova reserva",
             "heatingRequested": "aquecimento solicitado"
         },
+        "reminders": {
+            "title": "Emails de aviso de saída",
+            "description": "Enviado às 09:00, um dia antes da saída, para confirmar se a piscina deve ser desligada ou permanecer ligada.",
+            "addRecipient": "Adicionar destinatário",
+            "add": "Adicionar",
+            "removeRecipient": "Remover {{email}}",
+            "awaitingFirstRun": "A aguardar a primeira verificação agendada.",
+            "lastRunSuccess": "Última verificação em {{date}} · {{count}} email(s) enviado(s)",
+            "lastRunFailed": "Última verificação em {{date}} · {{count}} email(s) com erro"
+        },
         "messages": {
             "loadError": "Não foi possível carregar os registos das piscinas aquecidas.",
             "propertyAssociationError": "Não foi possível associar as piscinas aquecidas aos alojamentos.",
@@ -480,6 +490,12 @@
             "endDateInvalid": "A data de saída tem de ser posterior à data de entrada.",
             "guestPaidRequired": "Introduza o valor total pago pelo hóspede.",
             "pricingRequired": "Configure as tarifas do hóspede e do proprietário antes de ligar a piscina.",
+            "invalidReminderEmail": "Introduza um endereço de email válido.",
+            "reminderRecipientRequired": "Mantenha pelo menos um destinatário para os avisos.",
+            "reminderRecipientAdded": "Destinatário do aviso adicionado.",
+            "reminderRecipientRemoved": "Destinatário do aviso removido.",
+            "reminderSettingsLoadError": "Não foi possível carregar os destinatários dos avisos.",
+            "reminderSettingsSaveError": "Não foi possível guardar os destinatários dos avisos.",
             "taskCompleted": "Tarefa de {{property}} concluída para a reserva {{reservation}} — {{state}}.",
             "alreadyState": "A piscina de {{property}} já está {{state}}.",
             "markedState": "Piscina de {{property}} marcada como {{state}}{{reservation}}.",

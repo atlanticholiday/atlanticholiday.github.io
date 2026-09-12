@@ -5,6 +5,7 @@ const YES_VALUES = new Set(['sim', 'yes', 'y']);
 const NO_VALUES = new Set(['nao', 'não', 'no', 'n']);
 
 export const HEATED_POOL_CATALOG_VERSION = '2026-09-12-pricing';
+export const DEFAULT_HEATED_POOL_REMINDER_RECIPIENT = 'info@atlanticholiday.net';
 
 const STANDARD_POOL_PRICING = Object.freeze({ chargeAmount: 45, ownerCostAmount: 35 });
 
@@ -115,6 +116,22 @@ function parseSettlementDate(value) {
 
 function roundCurrency(value) {
     return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+export function normalizeHeatedPoolReminderRecipients(values = [], { useDefault = true } = {}) {
+    const source = Array.isArray(values) ? values : [values];
+    const recipients = [...new Set(source
+        .map((value) => String(value || '').trim().toLowerCase())
+        .filter(isValidHeatedPoolReminderEmail))]
+        .slice(0, 20);
+    return recipients.length || !useDefault
+        ? recipients
+        : [DEFAULT_HEATED_POOL_REMINDER_RECIPIENT];
+}
+
+export function isValidHeatedPoolReminderEmail(value = '') {
+    const email = String(value || '').trim().toLowerCase();
+    return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export function getHeatedPoolPropertyConfig(propertyName = '') {

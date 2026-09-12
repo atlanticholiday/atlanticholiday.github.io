@@ -1044,6 +1044,15 @@ service cloud.firestore {
       allow read, write: if privileged() || hasApp('heatedPools') || hasApp('reservations');
     }
 
+    match /heatedPoolSettings/{settingId} {
+      allow read, write: if privileged() || hasApp('heatedPools') || hasApp('reservations');
+    }
+
+    match /heatedPoolReminderDeliveries/{deliveryId} {
+      allow read: if privileged() || hasApp('heatedPools') || hasApp('reservations');
+      allow write: if false;
+    }
+
     match /taskDepartments/{departmentId} {
       allow read: if approved();
       allow create, update, delete: if privileged();

@@ -1160,6 +1160,148 @@
     font-size: 11px;
 }
 
+.heated-pools-reminder-settings {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.8fr) minmax(420px, 1.2fr);
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 24px;
+    border-bottom: 1px solid var(--pool-line);
+    padding: 12px 10px 14px;
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-reminder-settings__copy {
+    min-width: 0;
+}
+
+.heated-pools-reminder-settings__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heated-pools-reminder-settings__title i {
+    color: var(--pool-accent);
+    font-size: 13px;
+}
+
+.heated-pools-reminder-settings h4,
+.heated-pools-reminder-settings p {
+    margin: 0;
+}
+
+.heated-pools-reminder-settings h4 {
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.heated-pools-reminder-settings p {
+    margin-top: 4px;
+    color: var(--pool-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.heated-pools-reminder-settings__copy > small {
+    display: block;
+    margin-top: 5px;
+    color: var(--pool-subtle);
+    font-size: 10px;
+}
+
+.heated-pools-reminder-settings__copy > small[data-tone="success"] {
+    color: var(--pool-green);
+}
+
+.heated-pools-reminder-settings__copy > small[data-tone="error"] {
+    color: #cf222e;
+}
+
+.heated-pools-recipient-form {
+    display: grid;
+    gap: 8px;
+}
+
+.heated-pools-recipient-list {
+    display: flex;
+    min-height: 26px;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.heated-pools-recipient {
+    display: inline-flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--pool-line);
+    border-radius: 999px;
+    padding: 3px 4px 3px 9px;
+    color: var(--pool-ink);
+    background: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.heated-pools-recipient > button {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    padding: 0;
+    color: var(--pool-muted);
+    background: transparent;
+    font-size: 9px;
+}
+
+.heated-pools-recipient > button:hover {
+    color: #cf222e;
+    background: #ffebe9;
+}
+
+.heated-pools-recipient-form__add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+}
+
+.heated-pools-recipient-form__add label {
+    display: grid;
+    gap: 4px;
+    color: var(--pool-muted);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.heated-pools-recipient-form__add input {
+    width: 100%;
+    min-height: 32px;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 6px 9px;
+    color: var(--pool-ink);
+    background: #ffffff;
+    font-size: 12px;
+    outline: none;
+}
+
+.heated-pools-recipient-form__add input:focus {
+    border-color: var(--pool-accent);
+    box-shadow: 0 0 0 3px var(--pool-accent-soft);
+}
+
+.heated-pools-recipient-form__add .heated-pools-small-action {
+    min-height: 32px;
+}
+
 .heated-pools-setting-row {
     display: grid;
     grid-template-columns: minmax(180px, 1.05fr) repeat(5, minmax(105px, 0.6fr)) minmax(230px, 1.4fr) 56px;
@@ -1651,6 +1793,11 @@ body:has(.heated-pools-dialog:not(.hidden)) .quick-search-trigger {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .heated-pools-reminder-settings {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
     .heated-pools-settings-header {
         display: none;
     }
@@ -1761,6 +1908,20 @@ body:has(.heated-pools-dialog:not(.hidden)) .quick-search-trigger {
         grid-template-columns: 1fr;
         gap: 10px;
         padding: 14px 4px;
+    }
+
+    .heated-pools-reminder-settings {
+        margin: 0 -4px;
+        padding: 14px 4px;
+        background: transparent;
+    }
+
+    .heated-pools-recipient-form__add {
+        grid-template-columns: 1fr;
+    }
+
+    .heated-pools-recipient-form__add .heated-pools-small-action {
+        width: 100%;
     }
 
     .heated-pools-property-list,
@@ -1886,6 +2047,20 @@ html[data-theme="dark"] #heated-pools-page :is(
     border-color: var(--pool-line) !important;
     color: var(--pool-ink);
     background: var(--pool-surface) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page :is(
+    .heated-pools-reminder-settings,
+    .heated-pools-recipient
+) {
+    border-color: var(--pool-line);
+    background: var(--pool-surface-subtle);
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-recipient-form__add input {
+    border-color: var(--pool-line);
+    color: var(--pool-ink);
+    background: var(--pool-input);
 }
 
 html[data-theme="dark"] #heated-pools-page .heated-pools-task--complete {
