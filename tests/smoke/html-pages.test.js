@@ -66,7 +66,8 @@ describe("HTML smoke", () => {
     const pages = [
       { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "schedule-vacation-center-btn", "schedule-access-banner", "go-to-tasks-btn", "tasks-page", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page"] },
       { path: "../property-settings.html", markers: ["property-settings-form", "save-settings"] },
-      { path: "../inventory.html", markers: ["inventory"] }
+      { path: "../inventory.html", markers: ["inventory"] },
+      { path: "../new-properties.html", markers: ["new-properties-app"] }
     ];
 
     for (const page of pages) {

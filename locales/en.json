@@ -242,7 +242,9 @@
     "cleaningBills": "Cleaning Bills",
     "cleaningBillsDesc": "Cleaning fees.",
     "commissionCalculator": "Commission Calculator",
-    "commissionCalculatorDesc": "Fees and VAT."
+    "commissionCalculatorDesc": "Fees and VAT.",
+    "newProperties": "New Properties",
+    "newPropertiesDesc": "Onboarding & inventory."
   },
   "allInfo": {
     "header": {

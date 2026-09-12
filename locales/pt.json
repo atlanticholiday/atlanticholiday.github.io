@@ -242,7 +242,9 @@
         "cleaningBills": "Contas de Limpeza",
         "cleaningBillsDesc": "Taxas de limpeza.",
         "commissionCalculator": "Calculadora de Comissões",
-        "commissionCalculatorDesc": "Comissões e IVA."
+        "commissionCalculatorDesc": "Comissões e IVA.",
+        "newProperties": "Novos Alojamentos",
+        "newPropertiesDesc": "Checklist e inventário."
     },
     "allInfo": {
         "header": {
