@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="styles/tasks.css">
     <link rel="stylesheet" href="styles/cleaning-ah.css">
     <link rel="stylesheet" href="styles/heated-pools.css?v=20260903-asana-workspace">
+    <link rel="stylesheet" href="styles/staff.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
 </head>
 
@@ -1791,148 +1792,140 @@ Mountain Villa, Sintra Hills, V4"
     </div>
 
     <!-- Staff Page -->
-    <div id="staff-page" class="staff-page-shell hidden min-h-screen bg-slate-100">
-        <header class="dashboard-header staff-header">
-            <div
-                class="container staff-shell-container mx-auto flex flex-col gap-6 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex items-center gap-3">
-                    <button id="back-to-landing-from-staff-btn"
-                        class="p-2 text-gray-600 hover:text-brand transition-colors hover-lift">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Staff Page -->
+    <div id="staff-page" class="staff-page-shell hidden min-h-screen">
+        <header class="staff-topbar">
+            <div class="staff-topbar__inner">
+                <div class="staff-topbar__project">
+                    <button id="back-to-landing-from-staff-btn" class="staff-back-btn" aria-label="Back to dashboard" data-i18n-aria-label="common.back">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
+                        <span data-i18n="common.back">Back</span>
                     </button>
-                    <img src="assets/atlantic-holiday-logo.png"
-                        onerror="this.onerror=null;this.src='assets/atlantic-holiday-logo.svg';" alt="Atlantic Holiday"
-                        class="dashboard-logo" />
-                    <div class="leading-tight">
-                        <div class="brand-name brand-red" data-i18n="staff.title">Staff Management</div>
-                        <div class="page-mini" data-i18n="staff.subtitle">Manage team members</div>
+                    <span class="staff-topbar__divider" aria-hidden="true"></span>
+                    <span class="staff-project-icon" aria-hidden="true"><i class="fas fa-users"></i></span>
+                    <div class="staff-topbar__copy">
+                        <p class="staff-eyebrow" data-i18n="staff.workspaceEyebrow">Directory</p>
+                        <h1 class="staff-topbar__title" data-i18n="staff.title">Staff Management</h1>
+                        <span class="staff-topbar__subtitle" data-i18n="staff.subtitle">Manage team members, roles, and default schedules</span>
                     </div>
                 </div>
                 <div class="staff-header-actions">
-                    <div
-                        class="language-switcher staff-language-switcher flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">
-                        <button type="button"
-                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
-                            data-lang-option="en" title="English">EN</button>
-                        <button type="button"
-                            class="lang-btn px-2 py-1 rounded text-sm font-medium transition-all hover:bg-gray-100"
-                            data-lang-option="pt" title="Portuguese">PT</button>
+                    <div class="language-switcher staff-language-switcher" aria-label="Language" data-i18n-aria-label="common.language">
+                        <button type="button" class="lang-btn" data-lang-option="en" title="English">EN</button>
+                        <button type="button" class="lang-btn" data-lang-option="pt" title="Português">PT</button>
                     </div>
-                    <button id="staff-sign-out-btn"
-                        class="staff-signout text-sm text-gray-700 hover:text-brand transition-colors hover-lift">
-                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
-                        </svg>
+                    <button id="staff-sign-out-btn" class="staff-signout">
+                        <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i>
                         <span data-i18n="common.signOut">Sign Out</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <div class="container staff-shell-container mx-auto px-4 py-8">
-            <div class="staff-workspace">
-                <section class="staff-directory-surface modal-content">
-                    <div class="staff-directory-header">
-                        <div class="staff-toolbar-copy">
-                            <p class="staff-eyebrow" data-i18n="staff.workspaceEyebrow">Directory</p>
-                            <h2 class="staff-directory-title" data-i18n="staff.teamMembers">Team Members</h2>
-                            <p class="staff-toolbar-description" data-i18n="staff.description">Keep colleague profiles,
-                                working days, and archive history aligned from one workspace.</p>
-                        </div>
-                        <button id="open-add-employee-modal-btn" type="button"
-                            class="btn-primary staff-add-button px-5 py-3 rounded-xl transition-all hover-lift">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4"></path>
+        <section class="staff-appbar">
+            <div class="staff-appbar__inner">
+                <nav class="staff-view-toggle staff-tabs" role="tablist" aria-label="Staff list views">
+                    <button type="button" id="staff-active-view-btn"
+                        class="staff-view-tab staff-view-tab-active" data-staff-view-target="active"
+                        aria-selected="true">
+                        <i class="fas fa-user-check text-xs mr-1.5" aria-hidden="true"></i>
+                        <span data-i18n="staff.views.active">Active</span>
+                        <span id="staff-active-tab-count" class="staff-tab-count">0</span>
+                    </button>
+                    <button type="button" id="staff-history-view-btn" class="staff-view-tab"
+                        data-staff-view-target="history" aria-selected="false">
+                        <i class="fas fa-box-archive text-xs mr-1.5" aria-hidden="true"></i>
+                        <span data-i18n="staff.views.archive">Archive</span>
+                        <span id="staff-archived-tab-count" class="staff-tab-count">0</span>
+                    </button>
+                </nav>
+            </div>
+        </section>
+
+        <main class="staff-main">
+            <div class="staff-toolbar">
+                <div class="staff-toolbar-left">
+                    <button id="open-add-employee-modal-btn" type="button" class="staff-add-button">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span data-i18n="staff.addColleague">Add Colleague</span>
+                    </button>
+                    <span class="staff-toolbar-divider" aria-hidden="true"></span>
+                    <div class="staff-search" role="search">
+                        <label class="sr-only" for="staff-search-input" data-i18n="staff.search.label">Search colleagues</label>
+                        <svg class="staff-search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
+                        </svg>
+                        <input id="staff-search-input" type="search" autocomplete="off"
+                            placeholder="Search colleagues..." data-i18n="staff.search.placeholder"
+                            data-i18n-attr="placeholder">
+                        <button id="staff-search-clear" type="button" class="staff-search-clear hidden" aria-label="Clear search" data-i18n-aria-label="staff.search.clear">
+                            <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"></path>
                             </svg>
-                            <span data-i18n="staff.addColleague">Add Colleague</span>
                         </button>
                     </div>
 
-                    <div class="staff-toolbar-summary" aria-label="Directory totals">
-                        <div class="staff-stat">
-                            <strong id="staff-active-count" class="staff-stat-value">0</strong>
-                            <span class="staff-stat-label" data-i18n="staff.stats.active">Active colleagues</span>
+                    <label class="staff-sort" for="staff-sort-select">
+                        <span class="sr-only" data-i18n="staff.sort.label">Sort colleagues</span>
+                        <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12M8 12h8M8 17h4M4 5v14m0 0-2-2m2 2 2-2"></path>
+                        </svg>
+                        <select id="staff-sort-select">
+                            <option value="nameAsc" data-i18n="staff.sort.nameAsc">A–Z</option>
+                            <option value="nameDesc" data-i18n="staff.sort.nameDesc">Z–A</option>
+                            <option value="oldest" data-i18n="staff.sort.oldest">Oldest first</option>
+                            <option value="newest" data-i18n="staff.sort.newest">Newest first</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="staff-toolbar-right">
+                    <div class="staff-stat-pills" aria-label="Directory totals">
+                        <div class="staff-stat-pill">
+                            <span data-i18n="staff.stats.active">Active</span>:
+                            <strong id="staff-active-count">0</strong>
                         </div>
-                        <div class="staff-stat">
-                            <strong id="staff-archived-count" class="staff-stat-value">0</strong>
-                            <span class="staff-stat-label" data-i18n="staff.stats.archived">Archived colleagues</span>
+                        <div class="staff-stat-pill">
+                            <span data-i18n="staff.stats.archived">Archived</span>:
+                            <strong id="staff-archived-count">0</strong>
                         </div>
-                        <div class="staff-stat">
-                            <strong id="staff-total-count" class="staff-stat-value">0</strong>
-                            <span class="staff-stat-label" data-i18n="staff.stats.total">Total records</span>
+                        <div class="staff-stat-pill">
+                            <span data-i18n="staff.stats.total">Total</span>:
+                            <strong id="staff-total-count">0</strong>
                         </div>
                     </div>
 
-                    <div class="staff-directory-controls">
-                        <div class="staff-view-toggle" role="tablist" aria-label="Staff list views">
-                            <button type="button" id="staff-active-view-btn"
-                                class="staff-view-tab staff-view-tab-active" data-staff-view-target="active"
-                                aria-selected="true" data-i18n="staff.views.active">Active</button>
-                            <button type="button" id="staff-history-view-btn" class="staff-view-tab"
-                                data-staff-view-target="history" aria-selected="false"
-                                data-i18n="staff.views.archive">Archive</button>
-                        </div>
-
-                        <div class="staff-directory-tools">
-                            <label class="staff-sort" for="staff-sort-select">
-                                <span class="sr-only" data-i18n="staff.sort.label">Sort colleagues</span>
-                                <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7h12M8 12h8M8 17h4M4 5v14m0 0-2-2m2 2 2-2"></path>
-                                </svg>
-                                <select id="staff-sort-select">
-                                    <option value="nameAsc" data-i18n="staff.sort.nameAsc">A–Z</option>
-                                    <option value="nameDesc" data-i18n="staff.sort.nameDesc">Z–A</option>
-                                    <option value="oldest" data-i18n="staff.sort.oldest">Oldest first</option>
-                                    <option value="newest" data-i18n="staff.sort.newest">Newest first</option>
-                                </select>
-                            </label>
-
-                            <div class="staff-search" role="search">
-                                <label class="sr-only" for="staff-search-input" data-i18n="staff.search.label">Search colleagues</label>
-                                <svg class="staff-search-icon" aria-hidden="true" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>
-                                </svg>
-                                <input id="staff-search-input" type="search" autocomplete="off"
-                                    placeholder="Search colleagues" data-i18n="staff.search.placeholder"
-                                    data-i18n-attr="placeholder">
-                                <button id="staff-search-clear" type="button" class="staff-search-clear hidden">
-                                    <span class="sr-only" data-i18n="staff.search.clear">Clear search</span>
-                                    <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18 18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+                    <div class="staff-view-switcher" role="group" aria-label="Layout view">
+                        <button type="button" id="staff-view-grid-btn" class="staff-layout-btn is-active" title="Cards View" aria-pressed="true">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        </button>
+                        <button type="button" id="staff-view-table-btn" class="staff-layout-btn" title="List View" aria-pressed="false">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
                     </div>
-
-                    <div class="staff-panel-head">
-                        <div>
-                            <p id="staff-panel-eyebrow" class="staff-eyebrow">Live directory</p>
-                            <h3 id="staff-panel-title" class="staff-panel-title">Active colleagues
-                            </h3>
-                            <p id="staff-panel-description" class="staff-panel-description">Review default schedules and
-                                update colleague profiles before changing the live roster.</p>
-                        </div>
-                        <div id="staff-panel-chip" class="staff-panel-chip">Active</div>
-                    </div>
-
-                    <div id="staff-list-container" class="staff-list staff-scroll-region">
-                        <!-- Staff list will be inserted here -->
-                    </div>
-                    <div id="history-list-container" class="staff-list staff-scroll-region hidden">
-                        <!-- History list will be inserted here -->
-                    </div>
-                </section>
+                </div>
             </div>
-        </div>
+
+            <div class="staff-panel-head">
+                <div>
+                    <p id="staff-panel-eyebrow" class="staff-eyebrow">Live directory</p>
+                    <h3 id="staff-panel-title" class="staff-panel-title">Active colleagues</h3>
+                    <p id="staff-panel-description" class="staff-panel-description">Review default schedules and update colleague profiles before changing the live roster.</p>
+                </div>
+                <div id="staff-panel-chip" class="staff-panel-chip">Active</div>
+            </div>
+
+            <div id="staff-list-container" class="staff-list staff-scroll-region">
+                <!-- Staff list will be inserted here -->
+            </div>
+            <div id="history-list-container" class="staff-list staff-scroll-region hidden">
+                <!-- History list will be inserted here -->
+            </div>
+        </main>
     </div>
 
     <!-- Modals -->
