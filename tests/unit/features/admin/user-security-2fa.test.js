@@ -188,7 +188,7 @@ describe("UserManagementController - Two-Factor Authentication (2FA)", () => {
     const modal = document.getElementById("two-factor-setup-modal");
     assert.ok(!modal.classList.contains("hidden"), "Setup modal is opened");
     assert.equal(document.getElementById("two-factor-secret-key").textContent, "JBSWY3DPEHPK3PXP", "Secret key displayed");
-    assert.equal(document.getElementById("two-factor-qr-image").src, "https://api.qrserver.com/v1/create-qr-code/?size=220x220", "QR image src updated");
+    assert.equal(document.getElementById("two-factor-qr-image").src, "data:image/svg+xml;utf8,<svg></svg>", "QR image src updated");
   });
 
   test("verifying a 6-digit test code in the setup modal confirms activation", async () => {
