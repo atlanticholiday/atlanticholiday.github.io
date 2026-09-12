@@ -898,7 +898,7 @@ export class HeatedPoolsManager {
     renderSettings() {
         const list = document.getElementById('heated-pools-settings-list');
         if (!list) return;
-        list.innerHTML = this.properties.length ? this.properties.map((property) => `
+        const rows = this.properties.map((property) => `
             <article class="heated-pools-setting-row" data-property-id="${escapeHtml(property.id)}">
                 <div><strong>${escapeHtml(property.propertyName)}</strong><span>${escapeHtml(poolStateLabel(property.poolState))}</span></div>
                 <label><span>${escapeHtml(hp('fields.heatUpDays', 'Heat-up days'))}</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
@@ -909,7 +909,20 @@ export class HeatedPoolsManager {
                 <label class="heated-pools-setting-row__note"><span>${escapeHtml(hp('fields.taskInstructions', 'Task instructions'))}</span><input data-setting-field="poolNote" value="${escapeHtml(localizeSystemNote(property.poolNote || property.notes.join('; ')))}" placeholder="${escapeHtml(hp('fields.taskInstructionsPlaceholder', 'Remote control, access steps, owner contact...'))}"></label>
                 <button type="button" data-action="delete-property" class="heated-pools-danger-link">${escapeHtml(hp('settings.remove', 'Remove'))}</button>
             </article>
-        `).join('') : `<p class="heated-pools-empty-row">${escapeHtml(hp('settings.empty', 'No heated-pool properties configured yet.'))}</p>`;
+        `).join('');
+        list.innerHTML = this.properties.length ? `
+            <div class="heated-pools-settings-header" aria-hidden="true">
+                <span>${escapeHtml(hp('columns.property', 'Property'))}</span>
+                <span>${escapeHtml(hp('fields.heatUpDays', 'Heat-up days'))}</span>
+                <span>${escapeHtml(hp('fields.guestCharge', 'Guest charge EUR'))}</span>
+                <span>${escapeHtml(hp('fields.ownerCost', 'Owner cost EUR'))}</span>
+                <span>${escapeHtml(hp('fields.commission', 'Commission EUR'))}</span>
+                <span>${escapeHtml(hp('fields.remoteControl', 'Remote on/off'))}</span>
+                <span>${escapeHtml(hp('fields.taskInstructions', 'Task instructions'))}</span>
+                <span></span>
+            </div>
+            ${rows}
+        ` : `<p class="heated-pools-empty-row">${escapeHtml(hp('settings.empty', 'No heated-pool properties configured yet.'))}</p>`;
 
         list.querySelectorAll('[data-setting-field]').forEach((input) => {
             input.addEventListener('change', () => {
