@@ -5,12 +5,15 @@ import {
     doc,
     onSnapshot,
     serverTimestamp,
+    setDoc,
     updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import {
     appendPoolStatusHistory,
+    buildHeatedPoolDirectoryAssociations,
     buildHeatedPoolPropertyDirectory,
     buildHeatedPoolPlan,
+    calculateHeatedPoolCommission,
     HEATED_POOL_PROPERTY_NAMES,
     inferRemoteControlAvailable,
     summarizePoolProperties
@@ -36,6 +39,8 @@ export class HeatedPoolsManager {
         this.today = formatLocalDate(new Date());
         this.unsubscribe = null;
         this.initialized = false;
+        this.directoryAssociationPromise = null;
+        this.directoryAssociationPending = false;
     }
 
     init() {
@@ -77,6 +82,7 @@ export class HeatedPoolsManager {
             this.properties = snapshot.docs
                 .map((entry) => this.normalizeProperty({ id: entry.id, ...entry.data() }))
                 .sort((a, b) => a.propertyName.localeCompare(b.propertyName));
+            this.syncDirectoryAssociations();
             this.rebuildPlan();
             this.render();
         }, (error) => {
@@ -180,7 +186,10 @@ export class HeatedPoolsManager {
             if (event.key === 'Escape') this.closeDialogs();
         });
 
-        document.addEventListener('propertiesDataUpdated', () => this.render());
+        document.addEventListener('propertiesDataUpdated', () => {
+            this.syncDirectoryAssociations();
+            this.render();
+        });
         window.addEventListener('languageChanged', () => {
             this.render();
             this.showMessage(hp('autosave', 'Records save automatically.'), 'info');
@@ -310,6 +319,38 @@ export class HeatedPoolsManager {
 
     getApprovedPropertyDirectory() {
         return buildHeatedPoolPropertyDirectory(this.getProperties(), HEATED_POOL_PROPERTY_NAMES);
+    }
+
+    async syncDirectoryAssociations() {
+        if (!this.db || !this.hasReceivedSnapshot) return null;
+
+        this.directoryAssociationPending = true;
+        if (this.directoryAssociationPromise) return this.directoryAssociationPromise;
+
+        this.directoryAssociationPromise = (async () => {
+            while (this.directoryAssociationPending) {
+                this.directoryAssociationPending = false;
+                const operations = buildHeatedPoolDirectoryAssociations(
+                    this.getApprovedPropertyDirectory(),
+                    this.properties
+                );
+
+                for (const operation of operations) {
+                    await setDoc(doc(this.db, 'heatedPools', operation.id), {
+                        ...operation.data,
+                        ...(operation.type === 'create' ? { createdAt: serverTimestamp() } : {}),
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                }
+            }
+        })().catch((error) => {
+            console.error('[HeatedPools] property association failed:', error);
+            this.showMessage(hp('messages.propertyAssociationError', 'Could not associate heated pools with listings.'), 'error');
+        }).finally(() => {
+            this.directoryAssociationPromise = null;
+        });
+
+        return this.directoryAssociationPromise;
     }
 
     async setPoolState(propertyId, state, { reservationId = '', source = 'manual', note = '' } = {}) {
@@ -534,6 +575,7 @@ export class HeatedPoolsManager {
             id: property.id,
             propertyName: cleanText(property.propertyName || property.name),
             propertyDirectoryId: cleanText(property.propertyDirectoryId),
+            catalogVersion: cleanText(property.catalogVersion),
             poolState: property.poolState || 'unknown',
             poolNote: cleanText(property.poolNote),
             lastChangeDate: property.lastChangeDate || null,
@@ -718,6 +760,7 @@ export class HeatedPoolsManager {
                                     <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
                                     ${escapeHtml(property.remoteControlAvailable ? hp('status.remote', 'Remote on/off') : hp('status.onsite', 'On-site only'))}
                                 </span>
+                                ${renderPricingSummary(property)}
                             </div>
                             <span class="heated-pools-live-state heated-pools-live-state--${escapeHtml(property.poolState)}">
                                 <i aria-hidden="true"></i>${escapeHtml(poolStateLabel(property.poolState))}
@@ -861,6 +904,7 @@ export class HeatedPoolsManager {
                 <label><span>${escapeHtml(hp('fields.heatUpDays', 'Heat-up days'))}</span><input data-setting-field="heatUpDays" type="number" min="1" max="5" value="${escapeHtml(property.heatUpDays)}"></label>
                 <label><span>${escapeHtml(hp('fields.guestCharge', 'Guest charge EUR'))}</span><input data-setting-field="chargeAmount" type="number" step="0.01" value="${escapeHtml(property.chargeAmount ?? '')}"></label>
                 <label><span>${escapeHtml(hp('fields.ownerCost', 'Owner cost EUR'))}</span><input data-setting-field="ownerCostAmount" type="number" step="0.01" value="${escapeHtml(property.ownerCostAmount ?? '')}"></label>
+                <label class="heated-pools-setting-row__commission"><span>${escapeHtml(hp('fields.commission', 'Commission EUR'))}</span><output>${escapeHtml(formatCurrency(calculateHeatedPoolCommission(property.chargeAmount, property.ownerCostAmount)))}</output></label>
                 <label><span>${escapeHtml(hp('fields.remoteControl', 'Remote on/off'))}</span><select data-setting-field="remoteControlAvailable">${remoteControlOptions(property.remoteControlAvailable)}</select></label>
                 <label class="heated-pools-setting-row__note"><span>${escapeHtml(hp('fields.taskInstructions', 'Task instructions'))}</span><input data-setting-field="poolNote" value="${escapeHtml(localizeSystemNote(property.poolNote || property.notes.join('; ')))}" placeholder="${escapeHtml(hp('fields.taskInstructionsPlaceholder', 'Remote control, access steps, owner contact...'))}"></label>
                 <button type="button" data-action="delete-property" class="heated-pools-danger-link">${escapeHtml(hp('settings.remove', 'Remove'))}</button>
@@ -1222,6 +1266,26 @@ function parseMoney(value) {
     if (!normalized) return null;
     const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCurrency(value) {
+    if (!Number.isFinite(value)) return '-';
+    return new Intl.NumberFormat(i18n.getCurrentLanguage() === 'pt' ? 'pt-PT' : 'en-GB', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(value);
+}
+
+function renderPricingSummary(property) {
+    const commission = calculateHeatedPoolCommission(property.chargeAmount, property.ownerCostAmount);
+    if (commission === null) return '';
+    return `<span class="heated-pools-pricing-summary">${escapeHtml(hp('status.pricingSummary', 'Guest {{guest}} · Owner {{owner}} · Commission {{commission}}', {
+        guest: formatCurrency(Number(property.chargeAmount)),
+        owner: formatCurrency(Number(property.ownerCostAmount)),
+        commission: formatCurrency(commission)
+    }))}</span>`;
 }
 
 function parsePositiveInteger(value, fallback) {

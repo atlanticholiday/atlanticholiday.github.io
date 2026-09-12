@@ -327,6 +327,7 @@
             "heatUpDays": "Dias de antecedência para aquecer",
             "guestCharge": "Valor cobrado ao hóspede (EUR)",
             "ownerCost": "Custo do proprietário (EUR)",
+            "commission": "Comissão (EUR)",
             "remoteControl": "Ligar/desligar remotamente",
             "remoteNo": "Não — apenas no local",
             "remoteYes": "Sim — disponível remotamente",
@@ -350,6 +351,7 @@
         "status": {
             "remote": "Controlo remoto",
             "onsite": "Apenas no local",
+            "pricingSummary": "Hóspede {{guest}} · Proprietário {{owner}} · Comissão {{commission}}",
             "lastChange": "Última alteração",
             "notRecorded": "Sem registo",
             "by": "por {{name}}",
@@ -445,6 +447,7 @@
         },
         "messages": {
             "loadError": "Não foi possível carregar os registos das piscinas aquecidas.",
+            "propertyAssociationError": "Não foi possível associar as piscinas aquecidas aos alojamentos.",
             "propertyAdded": "Alojamento adicionado.",
             "propertyAddError": "Não foi possível adicionar o alojamento.",
             "reservationAdded": "Reserva adicionada.",

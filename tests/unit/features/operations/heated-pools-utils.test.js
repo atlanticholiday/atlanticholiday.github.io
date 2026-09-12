@@ -1,8 +1,13 @@
 import { describe, test, assert } from "../../../test-harness.js";
 import {
   appendPoolStatusHistory,
+  buildHeatedPoolDirectoryAssociations,
   buildHeatedPoolPropertyDirectory,
   buildHeatedPoolPlan,
+  calculateHeatedPoolCommission,
+  getHeatedPoolPropertyConfig,
+  HEATED_POOL_CATALOG_VERSION,
+  HEATED_POOL_PROPERTY_CATALOG,
   HEATED_POOL_PROPERTY_NAMES,
   inferRemoteControlAvailable,
   parseHeatedPoolsCsv
@@ -223,5 +228,83 @@ describe("Heated pools utils", () => {
     ]);
     assert.equal(JSON.stringify(directory).includes("must-not-leak"), false);
     assert.equal(JSON.stringify(directory).includes("private@example.com"), false);
+  });
+
+  test("records remote-control and temporary availability supplied for the pool catalog", () => {
+    assert.equal(HEATED_POOL_PROPERTY_CATALOG.filter((property) => property.remoteControlAvailable).length, 8);
+    assert.equal(HEATED_POOL_PROPERTY_CATALOG.filter((property) => property.temporarilyUnavailable).length, 3);
+    assert.equal(getHeatedPoolPropertyConfig("Villa Alegria").remoteControlAvailable, true);
+    assert.equal(getHeatedPoolPropertyConfig("Acqua Beach").remoteControlAvailable, true);
+    assert.equal(getHeatedPoolPropertyConfig("Villa Alves").temporarilyUnavailable, true);
+    assert.equal(getHeatedPoolPropertyConfig("Casa dos Francelhos").temporarilyUnavailable, true);
+    assert.equal(getHeatedPoolPropertyConfig("Villa Vista Atlantica").temporarilyUnavailable, true);
+    assert.equal(getHeatedPoolPropertyConfig("Dream House").remoteControlAvailable, false);
+  });
+
+  test("records each supplied pricing tier and calculates commission to cents", () => {
+    const tierCount = (chargeAmount, ownerCostAmount) => HEATED_POOL_PROPERTY_CATALOG.filter((property) => (
+      property.chargeAmount === chargeAmount && property.ownerCostAmount === ownerCostAmount
+    )).length;
+
+    assert.equal(tierCount(45, 35), 16);
+    assert.equal(tierCount(45, 36.40), 1);
+    assert.equal(tierCount(50, 40), 2);
+    assert.equal(tierCount(35, 25), 1);
+    assert.equal(tierCount(30, 25), 1);
+    assert.deepEqual(getHeatedPoolPropertyConfig("Dream House"), {
+      name: "Dream House",
+      chargeAmount: 45,
+      ownerCostAmount: 35,
+      remoteControlAvailable: false,
+      temporarilyUnavailable: false
+    });
+    assert.equal(calculateHeatedPoolCommission(45, 35), 10);
+    assert.equal(calculateHeatedPoolCommission(45, 36.40), 8.60);
+    assert.equal(calculateHeatedPoolCommission(50, 40), 10);
+    assert.equal(calculateHeatedPoolCommission(35, 25), 10);
+    assert.equal(calculateHeatedPoolCommission(30, 25), 5);
+    assert.equal(calculateHeatedPoolCommission(null, null), null);
+    assert.equal(getHeatedPoolPropertyConfig("Villa Ocean Haven").ownerCostAmount, 36.40);
+    assert.equal(getHeatedPoolPropertyConfig("Cape View").chargeAmount, 50);
+    assert.equal(getHeatedPoolPropertyConfig("Acqua Beach").chargeAmount, 35);
+    assert.equal(getHeatedPoolPropertyConfig("Midnight House").chargeAmount, 30);
+  });
+
+  test("associates matched listings and preserves records already migrated", () => {
+    const associations = buildHeatedPoolDirectoryAssociations([
+      { id: "listing-alegria", name: "Villa Alegria" },
+      { id: "listing-alves", name: "Villa Alves" },
+      { id: "listing-ocean", name: "Villa Ocean Haven" }
+    ], [
+      {
+        id: "legacy-ocean-pool",
+        propertyName: "Villa Ocean Haven",
+        poolState: "on",
+        remoteControlAvailable: true
+      }
+    ]);
+
+    const alegria = associations.find((entry) => entry.id === "listing-alegria");
+    const alves = associations.find((entry) => entry.id === "listing-alves");
+    const ocean = associations.find((entry) => entry.id === "legacy-ocean-pool");
+
+    assert.equal(alegria.type, "create");
+    assert.equal(alegria.data.remoteControlAvailable, true);
+    assert.equal(alves.data.poolState, "unavailable");
+    assert.equal(ocean.type, "update");
+    assert.equal(ocean.data.propertyDirectoryId, "listing-ocean");
+    assert.equal(Object.hasOwn(ocean.data, "poolState"), false);
+
+    const migrated = buildHeatedPoolDirectoryAssociations([
+      { id: "listing-ocean", name: "Villa Ocean Haven" }
+    ], [{
+      id: "legacy-ocean-pool",
+      propertyName: "Villa Ocean Haven",
+      propertyDirectoryId: "listing-ocean",
+      catalogVersion: HEATED_POOL_CATALOG_VERSION,
+      poolState: "off",
+      remoteControlAvailable: true
+    }]);
+    assert.deepEqual(migrated, []);
   });
 });

@@ -532,6 +532,14 @@
     font-size: 9px;
 }
 
+.heated-pools-pricing-summary {
+    display: block;
+    margin-top: 3px;
+    color: var(--pool-muted);
+    font-size: 10px;
+    line-height: 1.35;
+}
+
 .heated-pools-status-row h4 {
     overflow: hidden;
     margin: 0;
@@ -1043,13 +1051,26 @@
 
 .heated-pools-setting-row {
     display: grid;
-    grid-template-columns: minmax(180px, 1.05fr) repeat(4, minmax(110px, 0.6fr)) minmax(230px, 1.4fr) auto;
+    grid-template-columns: minmax(180px, 1.05fr) repeat(5, minmax(105px, 0.6fr)) minmax(230px, 1.4fr) auto;
     min-height: 82px;
     align-items: end;
     gap: 12px;
     padding: 12px 10px;
     border-top: 1px solid var(--pool-line);
     background: #ffffff;
+}
+
+.heated-pools-setting-row__commission output {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--pool-green);
+    background: var(--pool-surface-subtle);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .heated-pools-setting-row:first-child {

@@ -4,31 +4,142 @@ const MONEY_PATTERN = /(\d+(?:[,.]\d{1,2})?)/;
 const YES_VALUES = new Set(['sim', 'yes', 'y']);
 const NO_VALUES = new Set(['nao', 'não', 'no', 'n']);
 
-// Display labels only. Sensitive property fields must never be copied into the
-// heated-pool workspace; buildHeatedPoolPropertyDirectory returns { id, name }.
-export const HEATED_POOL_PROPERTY_NAMES = Object.freeze([
-    'Villa Ocean Haven',
-    'Villa de la Ponte',
-    'Dream House',
-    'Pearl of Madeira',
-    'Villa Alegria',
-    'Villa Primavera',
-    'Palm Paradise',
-    'Cape View',
-    'Villa Zenha',
-    'Breeze House 1',
-    'Casa Vista Azul',
-    'Midnight House',
-    'Casa dos Francelhos',
-    'Villa Alves',
-    'Acqua Beach',
-    'Villa Devaneio',
-    'Villa Jasmin',
-    'Vila Sofia',
-    'Villa Valentina',
-    'Villa Baradaje',
-    'Villa Vista Atlântica'
+export const HEATED_POOL_CATALOG_VERSION = '2026-09-12-pricing';
+
+const STANDARD_POOL_PRICING = Object.freeze({ chargeAmount: 45, ownerCostAmount: 35 });
+
+// This catalog contains operational capability only. Sensitive listing fields
+// must never be copied into the heated-pool workspace; the directory builder
+// below continues to return only { id, name }.
+export const HEATED_POOL_PROPERTY_CATALOG = Object.freeze([
+    heatedPoolCatalogEntry('Villa Ocean Haven', { chargeAmount: 45, ownerCostAmount: 36.40 }),
+    heatedPoolCatalogEntry('Dream House', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Villa de la Ponte', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Pearl of Madeira', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Villa Alegria', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Villa Primavera', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Palm Paradise', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Cape View', { chargeAmount: 50, ownerCostAmount: 40, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Villa Zenha', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Breeze House 1', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Villa Baradaje', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Villa Valentina', STANDARD_POOL_PRICING),
+    heatedPoolCatalogEntry('Vila Sofia', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Villa Jasmin', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Villa Devaneio', { ...STANDARD_POOL_PRICING, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Acqua Beach', { chargeAmount: 35, ownerCostAmount: 25, remoteControlAvailable: true }),
+    heatedPoolCatalogEntry('Villa Alves', { ...STANDARD_POOL_PRICING, temporarilyUnavailable: true }),
+    heatedPoolCatalogEntry('Casa dos Francelhos', { ...STANDARD_POOL_PRICING, temporarilyUnavailable: true }),
+    heatedPoolCatalogEntry('Midnight House', { chargeAmount: 30, ownerCostAmount: 25 }),
+    heatedPoolCatalogEntry('Villa Vista Atlântica', { ...STANDARD_POOL_PRICING, temporarilyUnavailable: true }),
+    heatedPoolCatalogEntry('Casa Vista Azul', { chargeAmount: 50, ownerCostAmount: 40 })
 ]);
+
+export const HEATED_POOL_PROPERTY_NAMES = Object.freeze(
+    HEATED_POOL_PROPERTY_CATALOG.map((property) => property.name)
+);
+
+function heatedPoolCatalogEntry(name, options = {}) {
+    return Object.freeze({
+        name,
+        chargeAmount: normalizeCatalogMoney(options.chargeAmount),
+        ownerCostAmount: normalizeCatalogMoney(options.ownerCostAmount),
+        remoteControlAvailable: options.remoteControlAvailable === true,
+        temporarilyUnavailable: options.temporarilyUnavailable === true
+    });
+}
+
+function normalizeCatalogMoney(value) {
+    if (value === null || value === undefined || value === '') return null;
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+export function calculateHeatedPoolCommission(chargeAmount, ownerCostAmount) {
+    if (chargeAmount === null || chargeAmount === undefined || chargeAmount === ''
+        || ownerCostAmount === null || ownerCostAmount === undefined || ownerCostAmount === '') {
+        return null;
+    }
+    const charge = Number(chargeAmount);
+    const ownerCost = Number(ownerCostAmount);
+    if (!Number.isFinite(charge) || !Number.isFinite(ownerCost)) return null;
+    return Math.round((charge - ownerCost) * 100) / 100;
+}
+
+export function getHeatedPoolPropertyConfig(propertyName = '') {
+    const key = normalizeForCompare(propertyName);
+    return HEATED_POOL_PROPERTY_CATALOG.find((property) => normalizeForCompare(property.name) === key) || null;
+}
+
+export function buildHeatedPoolDirectoryAssociations(directory = [], configuredProperties = []) {
+    const configuredByDirectoryId = new Map();
+    const configuredByName = new Map();
+
+    configuredProperties.forEach((property) => {
+        const directoryId = normalizeText(property?.propertyDirectoryId);
+        const nameKey = normalizeForCompare(property?.propertyName || property?.name);
+        if (directoryId) configuredByDirectoryId.set(directoryId, property);
+        if (nameKey) configuredByName.set(nameKey, property);
+    });
+
+    return directory.flatMap((entry) => {
+        const config = getHeatedPoolPropertyConfig(entry?.name);
+        const directoryId = normalizeText(entry?.id);
+        if (!config || !directoryId) return [];
+
+        const existing = configuredByDirectoryId.get(directoryId)
+            || configuredByName.get(normalizeForCompare(config.name));
+        if (!existing) {
+            return [{
+                type: 'create',
+                id: directoryId,
+                data: {
+                    propertyName: config.name,
+                    propertyDirectoryId: directoryId,
+                    poolState: config.temporarilyUnavailable ? 'unavailable' : 'unknown',
+                    poolNote: config.temporarilyUnavailable ? 'Temporarily deactivated.' : '',
+                    lastChangeDate: null,
+                    chargeAmount: config.chargeAmount,
+                    ownerCostAmount: config.ownerCostAmount,
+                    heatUpDays: 1,
+                    remoteControlAvailable: config.remoteControlAvailable,
+                    notes: config.temporarilyUnavailable ? ['Temporarily deactivated.'] : [],
+                    reservations: [],
+                    statusHistory: [],
+                    catalogVersion: HEATED_POOL_CATALOG_VERSION
+                }
+            }];
+        }
+
+        const data = {};
+        if (normalizeText(existing.propertyDirectoryId) !== directoryId) {
+            data.propertyDirectoryId = directoryId;
+        }
+        if (normalizeText(existing.propertyName || existing.name) !== config.name) {
+            data.propertyName = config.name;
+        }
+
+        // Apply the supplied capabilities once. Later edits in Settings remain
+        // under operational control instead of being reverted on every load.
+        if (existing.catalogVersion !== HEATED_POOL_CATALOG_VERSION) {
+            data.chargeAmount = config.chargeAmount;
+            data.ownerCostAmount = config.ownerCostAmount;
+            data.remoteControlAvailable = config.remoteControlAvailable;
+            data.catalogVersion = HEATED_POOL_CATALOG_VERSION;
+            if (config.temporarilyUnavailable) {
+                data.poolState = 'unavailable';
+                data.poolNote = 'Temporarily deactivated.';
+                data.notes = uniqueValues([
+                    ...(Array.isArray(existing.notes) ? existing.notes : [existing.notes]),
+                    'Temporarily deactivated.'
+                ]);
+            }
+        }
+
+        return Object.keys(data).length
+            ? [{ type: 'update', id: existing.id, data }]
+            : [];
+    });
+}
 
 export function buildHeatedPoolPropertyDirectory(properties = [], approvedNames = HEATED_POOL_PROPERTY_NAMES) {
     const approvedByKey = new Map(approvedNames.map((name) => [normalizeForCompare(name), normalizeText(name)]));

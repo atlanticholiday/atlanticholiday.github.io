@@ -327,6 +327,7 @@
       "heatUpDays": "Heat-up days",
       "guestCharge": "Guest charge EUR",
       "ownerCost": "Owner cost EUR",
+      "commission": "Commission EUR",
       "remoteControl": "Remote on/off",
       "remoteNo": "No — on-site only",
       "remoteYes": "Yes — available remotely",
@@ -350,6 +351,7 @@
     "status": {
       "remote": "Remote on/off",
       "onsite": "On-site only",
+      "pricingSummary": "Guest {{guest}} · Owner {{owner}} · Commission {{commission}}",
       "lastChange": "Last change",
       "notRecorded": "Not recorded",
       "by": "by {{name}}",
@@ -445,6 +447,7 @@
     },
     "messages": {
       "loadError": "Could not load heated pool records.",
+      "propertyAssociationError": "Could not associate heated pools with listings.",
       "propertyAdded": "Property added.",
       "propertyAddError": "Could not add property.",
       "reservationAdded": "Reservation added.",
