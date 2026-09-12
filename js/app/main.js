@@ -1073,7 +1073,8 @@ function subscribeScheduleDataForCurrentUser() {
     const scheduleDataAccess = getScheduleDataAccessPlan({
         canUseSchedule,
         canUseVacationCenter,
-        isLimitedScheduleUser
+        isLimitedScheduleUser,
+        needsAttendanceCompliance: hasLinkedEmployee && !isTimeClockStation
     });
 
     if (!shouldLoadEmployeeDirectory) {

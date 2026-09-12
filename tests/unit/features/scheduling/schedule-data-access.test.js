@@ -28,6 +28,19 @@ describe('Schedule data access', () => {
     });
   });
 
+  test('loads compliance settings for linked employee self-service without private schedule data', () => {
+    assert.deepEqual(getScheduleDataAccessPlan({
+      canUseSchedule: true,
+      isLimitedScheduleUser: true,
+      needsAttendanceCompliance: true
+    }), {
+      loadVacationRecords: false,
+      loadGlobalSettings: true,
+      loadDailyNotes: false,
+      loadShiftPresets: false
+    });
+  });
+
   test('preserves complete schedule data for management', () => {
     assert.deepEqual(getScheduleDataAccessPlan({ canUseSchedule: true }), {
       loadVacationRecords: true,

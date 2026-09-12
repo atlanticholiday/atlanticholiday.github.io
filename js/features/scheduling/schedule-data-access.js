@@ -11,13 +11,18 @@ export function getEmployeeDirectoryCollectionName({
 export function getScheduleDataAccessPlan({
     canUseSchedule = false,
     canUseVacationCenter = false,
-    isLimitedScheduleUser = false
+    isLimitedScheduleUser = false,
+    needsAttendanceCompliance = false
 } = {}) {
     const canUseManagementScheduleData = Boolean(canUseSchedule && !isLimitedScheduleUser);
 
     return {
         loadVacationRecords: Boolean(canUseVacationCenter || canUseManagementScheduleData),
-        loadGlobalSettings: Boolean(canUseVacationCenter || canUseManagementScheduleData),
+        loadGlobalSettings: Boolean(
+            canUseVacationCenter
+            || canUseManagementScheduleData
+            || needsAttendanceCompliance
+        ),
         loadDailyNotes: canUseManagementScheduleData,
         loadShiftPresets: canUseManagementScheduleData
     };
