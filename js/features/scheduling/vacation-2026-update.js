@@ -63,15 +63,15 @@ export const VACATION_2026_SOURCE_ROWS = Object.freeze([
         ranges: [['2026-07-04', '2026-07-04'], ['2026-07-18', '2026-07-18'], ['2026-10-09', '2026-10-09']]
     },
     {
-        code: '30S', name: 'Sofia Gonçalves', totalEntitlement: 16, usedThrough2025: 0, reported2026Days: 1, remaining: 15,
+        code: '30S', name: 'Sofia Beatriz Cardoso Gonçalves', totalEntitlement: 16, usedThrough2025: 0, reported2026Days: 1, remaining: 15,
         ranges: [['2026-11-05', '2026-11-05']]
     },
     {
-        code: '31R', name: 'Ruben Gouveia', totalEntitlement: 16, usedThrough2025: 0, reported2026Days: 5, remaining: 11,
+        code: '31R', name: 'Ruben Alexandre Teixeira Gouveia', totalEntitlement: 16, usedThrough2025: 0, reported2026Days: 5, remaining: 11,
         ranges: [['2026-07-04', '2026-07-04'], ['2026-07-18', '2026-07-19'], ['2026-10-04', '2026-10-04'], ['2026-10-09', '2026-10-09']]
     },
     {
-        code: '33BB', name: 'Bárbara Batista', totalEntitlement: 8, usedThrough2025: 0, reported2026Days: 0, remaining: 8,
+        code: '33BB', name: 'Bárbara Alexandra Mendonça Batista', totalEntitlement: 8, usedThrough2025: 0, reported2026Days: 0, remaining: 8,
         ranges: []
     }
 ]);

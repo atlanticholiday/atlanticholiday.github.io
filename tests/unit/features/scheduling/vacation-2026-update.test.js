@@ -47,6 +47,27 @@ describe("Vacation 2026 update", () => {
     assert.equal(plan.items[0].openingAllowance, 74);
   });
 
+  test("matches the confirmed full names when newer profiles have no staff number", () => {
+    const confirmedNames = new Map([
+      [30, "Sofia Beatriz Cardoso Gonçalves"],
+      [31, "Ruben Alexandre Teixeira Gouveia"],
+      [33, "Bárbara Alexandra Mendonça Batista"]
+    ]);
+    const employees = VACATION_2026_SOURCE_ROWS.map((row, index) => {
+      const staffNumber = Number(row.code.match(/^\d+/)[0]);
+      return {
+        id: `employee-${index}`,
+        name: confirmedNames.get(staffNumber) || row.name,
+        staffNumber: confirmedNames.has(staffNumber) ? null : staffNumber
+      };
+    });
+    const plan = buildVacation2026UpdatePlan(employees);
+
+    assert.equal(plan.items.length, 18);
+    assert.deepEqual(plan.unmatched, []);
+    assert.deepEqual(plan.ambiguous, []);
+  });
+
   test("produces the stated remaining balance in the Vacation Center", () => {
     VACATION_2026_SOURCE_ROWS.forEach((row) => {
       const employee = {
