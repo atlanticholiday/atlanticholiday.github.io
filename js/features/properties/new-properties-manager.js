@@ -5,6 +5,7 @@
 
 import {
     BED_TYPES,
+    FRONT_DESK_COLLEAGUES,
     calculateChecklistProgress,
     calculatePropertyInventory,
     createDefaultChecklist,
@@ -24,6 +25,7 @@ export class NewPropertiesManager {
         this.activeView = 'board'; // 'board' | 'list' | 'inventory'
         this.activeDrawerTab = 'checklist'; // 'checklist' | 'inventory' | 'pipeline'
         this.statusFilter = 'all';
+        this.colleagueFilter = 'all';
         this.searchQuery = '';
         this.hideNewListings = false;
         try {
@@ -146,6 +148,16 @@ export class NewPropertiesManager {
         return this.properties.find(p => p.id === this.selectedPropertyId) || null;
     }
 
+    getDistinctColleagues() {
+        const set = new Set(FRONT_DESK_COLLEAGUES);
+        for (const p of this.properties) {
+            if (p.collaborator && p.collaborator.trim()) {
+                set.add(p.collaborator.trim());
+            }
+        }
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt'));
+    }
+
     getFilteredProperties() {
         let list = [...this.properties];
 
@@ -167,6 +179,12 @@ export class NewPropertiesManager {
             } else if (this.statusFilter !== 'all') {
                 list = list.filter(p => p.status === this.statusFilter);
             }
+        }
+
+        // Filter by assigned front desk colleague
+        if (this.colleagueFilter && this.colleagueFilter !== 'all') {
+            const filterLower = this.colleagueFilter.toLowerCase().trim();
+            list = list.filter(p => (p.collaborator || '').toLowerCase().includes(filterLower));
         }
 
         if (this.searchQuery) {
@@ -321,7 +339,7 @@ export class NewPropertiesManager {
 
                     <!-- PROJECT HEADER & VIEW TABS -->
                     <div class="asana-project-header">
-                        <div class="asana-project-header__top">
+                        <div class="asana-project-header__top flex flex-wrap items-center justify-between gap-3 pb-3">
                             <div class="asana-project-header__title">
                                 <span class="w-8 h-8 rounded-lg bg-red-100 text-brand flex items-center justify-center text-sm font-bold shadow-xs">
                                     <i class="fas fa-clipboard-check"></i>
@@ -330,6 +348,20 @@ export class NewPropertiesManager {
                                     <h1 class="text-xl font-bold text-gray-900">${isPt ? 'Onboarding de Novos Alojamentos' : 'New Property Onboarding'}</h1>
                                     <p class="text-xs font-medium text-gray-500">${isPt ? 'Checklist de entrada, inventário essencial calculado e pipeline' : 'Onboarding checklist, essentials inventory calculator & pipeline'}</p>
                                 </div>
+                            </div>
+
+                            <!-- Colleague Filter Dropdown -->
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-semibold text-gray-500 flex items-center gap-1.5 shrink-0" for="asana-colleague-filter">
+                                    <i class="fas fa-user-circle text-brand"></i>
+                                    <span>${isPt ? 'Front Desk:' : 'Front Desk:'}</span>
+                                </label>
+                                <select id="asana-colleague-filter" class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white font-medium text-gray-700 outline-none focus:border-brand shadow-xs cursor-pointer" data-action="filter-colleague">
+                                    <option value="all" ${this.colleagueFilter === 'all' ? 'selected' : ''}>${isPt ? 'Todos os Colegas' : 'All Colleagues'}</option>
+                                    ${this.getDistinctColleagues().map(c => `
+                                        <option value="${this.escapeHtml(c)}" ${this.colleagueFilter === c ? 'selected' : ''}>${this.escapeHtml(c)}</option>
+                                    `).join('')}
+                                </select>
                             </div>
                         </div>
 
@@ -415,8 +447,8 @@ export class NewPropertiesManager {
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">${isPt ? 'Colaborador Responsável' : 'Responsible Collaborator'}</label>
-                            <input type="text" id="modal-prop-collab" value="André / João" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">${isPt ? 'Colega Front Desk Responsável' : 'Responsible Front Desk Colleague'}</label>
+                            <input type="text" id="modal-prop-collab" list="front-desk-colleagues-datalist" value="André / João" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white" placeholder="${isPt ? 'Escolher ou escrever nome...' : 'Choose or write name...'}" autocomplete="off" />
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -426,6 +458,11 @@ export class NewPropertiesManager {
                     </form>
                 </div>
             </div>
+
+            <!-- Front Desk Colleagues Autocomplete Datalist -->
+            <datalist id="front-desk-colleagues-datalist">
+                ${this.getDistinctColleagues().map(c => `<option value="${this.escapeHtml(c)}"></option>`).join('')}
+            </datalist>
         `;
 
         this.bindDynamicEvents();
@@ -583,9 +620,9 @@ export class NewPropertiesManager {
                 </div>
 
                 <div class="asana-card__footer">
-                    <div>
-                        <i class="fas fa-user-circle text-gray-400 mr-1"></i>
-                        <span>${this.escapeHtml(property.collaborator || 'André / João')}</span>
+                    <div class="flex items-center gap-1.5" title="${isPt ? 'Colega Front Desk Responsável' : 'Responsible Front Desk Colleague'}">
+                        <i class="fas fa-user-circle text-brand text-xs"></i>
+                        <span class="font-medium text-gray-700">${this.escapeHtml(property.collaborator || 'André / João')}</span>
                     </div>
                     ${cleaner ? `
                         <div class="asana-card__cleaner" title="${isPt ? 'Empresa de Limpeza' : 'Cleaning Company'}">
@@ -608,7 +645,7 @@ export class NewPropertiesManager {
                             <th>${isPt ? 'Quartos / WC / Pax' : 'Specs'}</th>
                             <th>${isPt ? 'Checklist Entrada' : 'Checklist Progress'}</th>
                             <th>${isPt ? 'Empresa de Limpeza' : 'Cleaning Partner'}</th>
-                            <th>${isPt ? 'Responsável' : 'Collaborator'}</th>
+                            <th>${isPt ? 'Responsável Front Desk' : 'Front Desk Colleague'}</th>
                             <th class="text-right">${isPt ? 'Ações' : 'Actions'}</th>
                         </tr>
                     </thead>
@@ -637,7 +674,12 @@ export class NewPropertiesManager {
                                         </div>
                                     </td>
                                     <td class="text-xs font-medium text-gray-700">${this.escapeHtml(cleaner)}</td>
-                                    <td class="text-xs text-gray-600">${this.escapeHtml(p.collaborator || 'André / João')}</td>
+                                    <td class="text-xs text-gray-700">
+                                        <span class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2 py-1 rounded-md">
+                                            <i class="fas fa-user-circle text-brand text-xs"></i>
+                                            <span class="font-medium">${this.escapeHtml(p.collaborator || 'André / João')}</span>
+                                        </span>
+                                    </td>
                                     <td class="text-right">
                                         <button type="button" class="btn-asana-secondary py-1 px-2 text-xs" data-action="open-property" data-id="${p.id}">
                                             <i class="fas fa-arrow-right"></i>
@@ -760,12 +802,38 @@ export class NewPropertiesManager {
                             </div>
                         ` : ''}
 
-                        <!-- PROPERTY TITLE -->
+                        <!-- PROPERTY TITLE & ASSIGNEE HEADER -->
                         <div>
                             <input type="text" class="asana-drawer__title-input" value="${this.escapeHtml(property.name)}" data-action="update-property-name" data-id="${property.id}" placeholder="${isPt ? 'Nome do Alojamento' : 'Property Name'}" />
-                            <div class="flex items-center gap-4 text-xs text-gray-500 mt-2 px-1">
-                                <div><i class="fas fa-user-circle mr-1"></i> ${this.escapeHtml(property.collaborator || 'André / João')}</div>
-                                <div><i class="fas fa-calendar-alt mr-1"></i> ${property.date || '—'}</div>
+                            <div class="flex flex-wrap items-center gap-3 text-xs mt-3 px-1">
+                                <!-- Front Desk Colleague Assignee Badge -->
+                                <div class="asana-collab-badge" title="${isPt ? 'Atribuir a colega de Front Desk ou escrever nome' : 'Assign to front desk colleague or write name'}">
+                                    <i class="fas fa-user-circle text-brand text-sm"></i>
+                                    <span class="text-gray-500 font-medium">${isPt ? 'Front Desk:' : 'Front Desk:'}</span>
+                                    <input
+                                        type="text"
+                                        list="front-desk-colleagues-datalist"
+                                        class="asana-collab-input"
+                                        value="${this.escapeHtml(property.collaborator || 'André / João')}"
+                                        data-action="update-property-collaborator"
+                                        data-id="${property.id}"
+                                        placeholder="${isPt ? 'Nome do colega...' : 'Colleague name...'}"
+                                        autocomplete="off"
+                                    />
+                                </div>
+
+                                <!-- Date Badge -->
+                                <div class="asana-date-badge" title="${isPt ? 'Data de Entrada' : 'Onboarding Date'}">
+                                    <i class="fas fa-calendar-alt text-gray-400"></i>
+                                    <span class="text-gray-500 font-medium">${isPt ? 'Data:' : 'Date:'}</span>
+                                    <input
+                                        type="date"
+                                        class="asana-date-input"
+                                        value="${property.date || ''}"
+                                        data-action="update-property-date"
+                                        data-id="${property.id}"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -990,6 +1058,38 @@ export class NewPropertiesManager {
 
         return `
             <div class="space-y-6">
+                <!-- Responsável Front Desk & Acompanhamento -->
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
+                        <i class="fas fa-user-check text-brand"></i> ${isPt ? 'Responsável Front Desk & Acompanhamento' : 'Front Desk Assignee & Follow-up'}
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="block text-gray-500 mb-1">${isPt ? 'Colega de Front Desk Responsável' : 'Front Desk Colleague Assigned'}</label>
+                            <input
+                                type="text"
+                                list="front-desk-colleagues-datalist"
+                                value="${this.escapeHtml(property.collaborator || 'André / João')}"
+                                class="w-full p-2 border border-gray-300 rounded-lg bg-white font-medium text-gray-800 focus:border-brand outline-none"
+                                data-action="update-property-collaborator"
+                                data-id="${property.id}"
+                                placeholder="${isPt ? 'Escrever nome ou escolher colega...' : 'Write name or choose colleague...'}"
+                                autocomplete="off"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-gray-500 mb-1">${isPt ? 'Data de Entrada / Início' : 'Entry / Start Date'}</label>
+                            <input
+                                type="date"
+                                value="${property.date || ''}"
+                                class="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:border-brand outline-none"
+                                data-action="update-property-date"
+                                data-id="${property.id}"
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Chaves e Cofres -->
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
                     <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
@@ -1275,6 +1375,21 @@ export class NewPropertiesManager {
                     this.saveProperties();
                     this.render();
                 }
+            } else if (action === 'filter-colleague') {
+                this.colleagueFilter = target.value;
+                this.render();
+            } else if (action === 'update-property-collaborator') {
+                const prop = this.properties.find(p => p.id === id);
+                if (prop) {
+                    prop.collaborator = target.value.trim();
+                    this.saveProperties();
+                }
+            } else if (action === 'update-property-date') {
+                const prop = this.properties.find(p => p.id === id);
+                if (prop) {
+                    prop.date = target.value;
+                    this.saveProperties();
+                }
             } else if (action === 'update-inv-rec') {
                 const item = target.dataset.item;
                 const field = target.dataset.field;
@@ -1300,6 +1415,18 @@ export class NewPropertiesManager {
                 const prop = this.properties.find(p => p.id === id);
                 if (prop) {
                     prop.name = target.value;
+                    this.saveProperties();
+                }
+            } else if (action === 'update-property-collaborator') {
+                const prop = this.properties.find(p => p.id === id);
+                if (prop) {
+                    prop.collaborator = target.value;
+                    this.saveProperties();
+                }
+            } else if (action === 'update-property-date') {
+                const prop = this.properties.find(p => p.id === id);
+                if (prop) {
+                    prop.date = target.value;
                     this.saveProperties();
                 }
             } else if (action === 'update-task-notes') {
@@ -1423,6 +1550,24 @@ export class NewPropertiesManager {
         if (!prop) return;
 
         prop.status = prop.status === 'archived' ? 'in_progress' : 'archived';
+        this.saveProperties();
+        this.render();
+    }
+
+    updatePropertyCollaborator(propertyId, collaborator) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        prop.collaborator = String(collaborator || '').trim();
+        this.saveProperties();
+        this.render();
+    }
+
+    updatePropertyDate(propertyId, date) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        prop.date = String(date || '').trim();
         this.saveProperties();
         this.render();
     }

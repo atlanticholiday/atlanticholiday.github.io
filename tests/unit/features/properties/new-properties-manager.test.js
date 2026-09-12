@@ -421,6 +421,73 @@ describe("New Properties Manager", () => {
             container.remove();
         }
     });
+
+    test("assigns and edits front desk colleague name with datalist and filters by colleague", () => {
+        const container = document.createElement("div");
+        container.id = "test-colleague-assignment";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-colleague-assignment", storage });
+            manager.init();
+
+            // 1. Datalist for front desk autocomplete exists
+            const datalist = container.querySelector("#front-desk-colleagues-datalist");
+            assert.ok(datalist, "Front desk datalist exists for colleague selection");
+            assert.ok(datalist.children.length > 5, "Datalist has suggested colleagues");
+
+            // 2. Colleague filter dropdown exists in project header
+            const filterSelect = container.querySelector("#asana-colleague-filter");
+            assert.ok(filterSelect, "Colleague filter dropdown exists");
+            assert.equal(filterSelect.value, "all");
+
+            // 3. Open drawer for first property and inspect front desk assignee input
+            const targetProp = manager.properties[0];
+            manager.selectedPropertyId = targetProp.id;
+            manager.render();
+
+            const collabInput = container.querySelector(".asana-drawer input[data-action='update-property-collaborator']");
+            assert.ok(collabInput, "Collaborator input exists in drawer");
+            assert.equal(collabInput.getAttribute("list"), "front-desk-colleagues-datalist");
+            assert.equal(collabInput.value, targetProp.collaborator);
+
+            // 4. Assign property to a specific front desk colleague (e.g. 'Marta Camacho')
+            collabInput.value = "Marta Camacho";
+            collabInput.dispatchEvent(new Event("input", { bubbles: true }));
+            collabInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+            assert.equal(targetProp.collaborator, "Marta Camacho", "Target property collaborator updated to Marta Camacho");
+
+            // Verify persistence in storage
+            const savedData = JSON.parse(storage.getItem("atlantic_holiday_new_properties_data_v1"));
+            const savedProp = savedData.find(p => p.id === targetProp.id);
+            assert.equal(savedProp.collaborator, "Marta Camacho", "Assigned colleague persisted in storage");
+
+            // 5. Check Pipeline tab also has colleague input and syncs
+            manager.activeDrawerTab = "pipeline";
+            manager.render();
+            const pipelineCollabInput = container.querySelector(".asana-drawer input[data-action='update-property-collaborator']");
+            assert.ok(pipelineCollabInput, "Pipeline tab has colleague input");
+            assert.equal(pipelineCollabInput.value, "Marta Camacho", "Pipeline tab shows assigned colleague");
+
+            // 6. Test colleague filter in board/list view
+            manager.selectedPropertyId = null;
+            manager.colleagueFilter = "Marta Camacho";
+            manager.render();
+
+            const filtered = manager.getFilteredProperties();
+            assert.ok(filtered.length >= 1, "Filtered properties has at least 1 property");
+            assert.ok(filtered.every(p => p.collaborator.includes("Marta Camacho")), "All filtered properties belong to Marta Camacho");
+
+            // 7. Reset filter back to 'all'
+            manager.colleagueFilter = "all";
+            manager.render();
+            assert.equal(manager.getFilteredProperties().length, 42, "All properties restored when colleague filter is reset");
+        } finally {
+            container.remove();
+        }
+    });
 });
 
 

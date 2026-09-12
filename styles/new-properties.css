@@ -699,6 +699,63 @@ body.asana-theme textarea:focus {
     box-shadow: 0 0 0 3px rgba(239, 91, 108, 0.12);
 }
 
+/* Drawer Assignee (Front Desk) & Date Badges */
+.asana-collab-badge,
+.asana-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.asana-collab-badge:hover,
+.asana-collab-badge:focus-within,
+.asana-date-badge:hover,
+.asana-date-badge:focus-within {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.asana-collab-input {
+    background: transparent !important;
+    border: none !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 140px;
+    cursor: text;
+    transition: width 0.2s ease, color 0.15s ease;
+}
+
+.asana-collab-input:focus {
+    width: 190px;
+    color: var(--asana-accent, #ef5b6c) !important;
+}
+
+.asana-date-input {
+    background: transparent !important;
+    border: none !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #334155 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
 /* Specs Bar (Bedrooms, Bathrooms, Capacity, Beds) */
 .asana-specs-card {
     background-color: #f8fafc;
@@ -1321,6 +1378,25 @@ html[data-theme="dark"] .asana-drawer__title-input:hover {
 
 html[data-theme="dark"] .asana-drawer__title-input:focus {
     background-color: #18181b;
+}
+
+html[data-theme="dark"] .asana-collab-badge,
+html[data-theme="dark"] .asana-date-badge {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-collab-badge:hover,
+html[data-theme="dark"] .asana-collab-badge:focus-within,
+html[data-theme="dark"] .asana-date-badge:hover,
+html[data-theme="dark"] .asana-date-badge:focus-within {
+    background-color: #27272a;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .asana-collab-input,
+html[data-theme="dark"] .asana-date-input {
+    color: #f4f4f5 !important;
 }
 
 html[data-theme="dark"] .asana-specs-card {

@@ -12,6 +12,24 @@ export const BED_TYPES = Object.freeze([
     { id: 'cot', label: 'Baby Cot', labelPt: 'Berço Bebé', defaultSize: '60x120cm' }
 ]);
 
+export const FRONT_DESK_COLLEAGUES = Object.freeze([
+    'André / João',
+    'André Marques',
+    'João Pinto',
+    'Lucas Abreu',
+    'Nastassja de Aguiar',
+    'Marta Camacho',
+    'Celso Ferreira',
+    'Artur Gouveia',
+    'Ana Lume',
+    'Ana Gomes',
+    'Bárbara Pestana',
+    'Luísa Ponte',
+    'João Freitas',
+    'Margarida Coelho',
+    'Rubina Luis'
+]);
+
 export const DEFAULT_CHECKLIST_TEMPLATE = Object.freeze([
     {
         area: 'Chaves',
@@ -389,7 +407,7 @@ export function normalizeProperty(raw = {}, index = 0) {
         name,
         status,
         date: raw.date || new Date().toISOString().split('T')[0],
-        collaborator: raw.collaborator || 'André / João',
+        collaborator: String(raw.collaborator || raw.assignedTo || raw.frontDesk || 'André / João').trim(),
         bedrooms,
         bathrooms,
         capacity,
