@@ -15,179 +15,45 @@
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180.png">
     <script src="js/core/theme-manager.js"></script>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/property-settings-update.css">
-    <style>
-        /* Form sections are always visible */
-        .form-section .form-grid {
-            display: grid;
-        }
-        
-        /* Modern improvements */
-        .section-header {
-            cursor: default;
-            justify-content: center !important;
-            text-align: center;
-            margin-bottom: 1rem !important;
-        }
-        
-        .section-header-title {
-            flex-direction: column !important;
-            gap: 0.75rem !important;
-            align-items: center;
-        }
-        
-        .section-icon {
-            width: 48px !important;
-            height: 48px !important;
-            border-radius: 12px !important;
-            font-size: 1.5rem !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-        }
-        
-        .section-title {
-            font-size: 1.25rem !important;
-            font-weight: 600 !important;
-            margin: 0 !important;
-        }
-        
-        .form-section {
-            padding: 1.5rem !important;
-            margin-bottom: 1.5rem !important;
-        }
-        
-        .form-grid {
-            gap: 1rem !important;
-        }
-        
-        .form-group {
-            margin-bottom: 0.5rem;
-        }
-        
-        /* Consistent two column layout for all sections */
-        .form-section .form-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-        }
-        
-        /* Responsive: single column on smaller screens */
-        @media (max-width: 768px) {
-            .form-section .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* Better form input styling */
-        .form-input {
-            padding: 0.875rem 1rem !important;
-            border-radius: 8px !important;
-            border: 1.5px solid #e2e8f0 !important;
-            transition: all 0.2s ease !important;
-        }
-        
-        .form-input:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-        }
-        
-        .form-label {
-            font-weight: 600 !important;
-            color: #374151 !important;
-            margin-bottom: 0.5rem !important;
-        }
-        
-        /* Sticky floating save button - consolidated styles */
-        
-        #save-bottom-btn:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4) !important;
-            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-        }
-        
-        #save-bottom-btn:active {
-            transform: translateY(0) !important;
-        }
-        
-        /* Hide the original action buttons since we have the floating one */
-        .actions {
-            display: none !important;
-        }
-        
-        /* Ensure the floating button is always on top */
-        #save-bottom-btn {
-            position: fixed !important;
-            bottom: 2rem !important;
-            right: 2rem !important;
-            z-index: 9999 !important;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-            color: white !important;
-            border: none !important;
-            padding: 1rem 2rem !important;
-            border-radius: 50px !important;
-            font-weight: 600 !important;
-            font-size: 1rem !important;
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3) !important;
-            transition: all 0.3s ease !important;
-            cursor: pointer !important;
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 0.5rem !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        #save-bottom-btn::before, #save-bottom-btn::after { content: none !important; }
-        #save-bottom-btn i,
-        #save-bottom-btn .fa,
-        #save-bottom-btn .fas,
-        #save-bottom-btn .far,
-        #save-bottom-btn .fal,
-        #save-bottom-btn .fab {
-            display: inline-block !important;
-            position: static !important;
-            margin: 0 !important;
-            width: auto !important;
-            height: auto !important;
-            line-height: 1 !important;
-            font-size: 1.1rem !important;
-        }
-        #save-bottom-btn span,
-        #save-bottom-btn .btn-label { display: inline-block !important; position: static !important; line-height: 1.1 !important; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/property-settings-update.css?v=20260912-asana-workspace">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
 </head>
 
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <i class="fas fa-cog"></i>
-          </div>
-          <div class="header-text">
-            <h1>Property Settings</h1>
-            <p>Manage links, credentials, and advanced property details</p>
-          </div>
+  <!-- Header / Topbar -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <div class="header-icon">
+          <i class="fas fa-sliders-h"></i>
         </div>
-        <div class="header-actions">
-          <button id="back-to-dashboard" class="btn">
-            <i class="fas fa-arrow-left"></i>
-            <span>Back</span>
-          </button>
-          <button id="save-settings" class="btn btn-primary">
-            <i class="fas fa-save"></i>
-            <span>Save Changes</span>
-          </button>
+        <div class="header-text">
+          <h1>Property Settings</h1>
+          <p>Manage links, credentials, and operational configuration</p>
         </div>
       </div>
+      <div class="header-actions">
+        <button id="back-to-dashboard" class="btn">
+          <i class="fas fa-arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <button id="save-settings" class="btn btn-primary">
+          <i class="fas fa-save"></i>
+          <span>Save Changes</span>
+        </button>
+      </div>
     </div>
+  </header>
 
-    <!-- Sidebar Placeholder -->
-    <div id="settings-sidebar"></div>
+  <!-- Navigation Sidebar -->
+  <div id="settings-sidebar"></div>
 
+  <!-- Main Settings Container -->
+  <div class="container">
     <!-- Property Info -->
     <div id="section-basic-info" class="property-info">
       <div class="section-header">
@@ -1580,11 +1446,6 @@
       }
     });
   </script>
-      <div class="actions">
-        <!-- Original action buttons are hidden -->
-      </div>
-    </form>
-  </div>
 
   <!-- Floating Save Button (outside form for better positioning) -->
   <button type="submit" form="property-settings-form" id="save-bottom-btn" class="btn btn-primary">

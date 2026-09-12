@@ -400,32 +400,55 @@ export class PropertiesManager {
     }
 
     createPropertyCard(property) {
-        const displayType = property.typology || property.type;
+        const displayType = property.typology || property.type || 'Property';
+        const locationText = property.location || 'Location not set';
+        const roomsText = property.rooms !== undefined && property.rooms !== null
+            ? (property.rooms === 0 ? 'Studio' : `${property.rooms} bed${property.rooms !== 1 ? 's' : ''}`)
+            : '';
+        const bathroomsText = property.bathrooms ? `${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}` : '';
+        const floorText = property.floor ? `Floor ${property.floor}` : '';
+        const parkingText = property.parkingSpot ? `Parking ${property.parkingSpot}` : '';
 
-        // Simplified property card: only name, location, typology, and date added
+        const chips = [];
+        if (roomsText) chips.push(`<span class="property-card__chip"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>${roomsText}</span>`);
+        if (bathroomsText) chips.push(`<span class="property-card__chip">${bathroomsText}</span>`);
+        if (floorText) chips.push(`<span class="property-card__chip">${floorText}</span>`);
+        if (parkingText) chips.push(`<span class="property-card__chip">${parkingText}</span>`);
+
+        const createdDate = property.createdAt
+            ? new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()
+            : '';
+
         return `
-            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow property-card">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-1">${property.name}</h3>
-                        <p class="text-sm text-gray-600 mb-2">${property.location}</p>
-                        <span class="text-xs text-blue-600 uppercase px-3 py-1 bg-blue-50 rounded-full font-medium">${displayType}</span>
+            <div class="property-card">
+                <div>
+                    <div class="property-card__header">
+                        <h3 class="property-card__title" title="${property.name}">${property.name}</h3>
+                        <span class="property-card__typology">${displayType}</span>
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <button onclick="editProperty('${property.id}')" class="text-blue-600 hover:text-blue-800 text-sm" title="Edit Property">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="property-card__location">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span>${locationText}</span>
+                    </div>
+                    ${chips.length > 0 ? `<div class="property-card__chips">${chips.join('')}</div>` : ''}
+                </div>
+                <div class="property-card__footer">
+                    <span>${createdDate ? `Added ${createdDate}` : ''}</span>
+                    <div class="property-card__actions">
+                        <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </button>
-                        <button onclick="deleteProperty('${property.id}')" class="text-red-600 hover:text-red-800 text-sm" title="Delete Property">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
                     </div>
-                </div>
-                <div class="pt-3 mt-4 border-t border-gray-100 text-xs text-gray-500">
-                    Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}
                 </div>
             </div>
         `;
@@ -441,7 +464,7 @@ export class PropertiesManager {
         }
 
         tableBody.innerHTML = tableData.map(property => {
-            const displayType = property.typology || property.type;
+            const displayType = property.typology || property.type || 'Property';
 
             // Format values for table display
             const floor = property.floor || '-';
@@ -470,56 +493,56 @@ export class PropertiesManager {
                     : '-';
 
             const status = property.status || 'available';
-            const statusClass = {
-                'available': 'text-green-600 bg-green-50',
-                'occupied': 'text-blue-600 bg-blue-50',
-                'maintenance': 'text-yellow-600 bg-yellow-50',
-                'renovation': 'text-orange-600 bg-orange-50',
-                'inactive': 'text-gray-600 bg-gray-50'
-            }[status] || 'text-green-600 bg-green-50';
+            const statusConfig = {
+                'available': { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' },
+                'occupied': { text: 'Occupied', bg: 'var(--property-blue-soft)', color: 'var(--property-blue)', border: 'var(--property-blue-border)' },
+                'maintenance': { text: 'Maintenance', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
+                'renovation': { text: 'Renovation', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
+                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' }
+            }[status] || { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' };
 
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
-            const rowClass = hasMissingInfo ? 'bg-red-50' : '';
+            const rowClass = hasMissingInfo ? 'has-missing' : '';
 
             return `
-                <tr class="hover:bg-gray-50 transition-colors ${rowClass}">
-                    <td class="px-4 py-3 border-b">
-                        <div class="font-medium text-gray-900">${property.name}</div>
-                        <div class="text-sm text-gray-500">${property.location}</div>
-                        ${property.bathrooms ? `<div class="text-xs text-gray-400">${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</div>` : ''}
+                <tr class="${rowClass}">
+                    <td>
+                        <div style="font-weight:600;color:var(--property-ink);">${property.name}</div>
+                        <div style="font-size:11.5px;color:var(--property-muted);">${property.location || '-'}</div>
+                        ${property.bathrooms ? `<div style="font-size:11px;color:var(--property-subtle);">${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}</div>` : ''}
                     </td>
-                    <td class="px-4 py-3 border-b">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-blue-800 bg-blue-100">
+                    <td>
+                        <span class="property-card__typology">
                             ${displayType}
                         </span>
-                        <div class="text-xs text-gray-500 mt-1">${property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bed${(property.rooms || 0) !== 1 ? 's' : ''}`}</div>
+                        <div style="font-size:11.5px;color:var(--property-muted);margin-top:2px;">${property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bed${(property.rooms || 0) !== 1 ? 's' : ''}`}</div>
                     </td>
-                    <td class="px-4 py-3 border-b text-sm text-gray-900">${floor}</td>
-                    <td class="px-4 py-3 border-b text-sm text-gray-900">${parking}</td>
-                    <td class="px-4 py-3 border-b">
-                        <div class="text-sm text-gray-900">${wifiSpeed}</div>
-                        ${wifiAirbnb !== '-' ? `<div class="text-xs text-blue-600">Airbnb ${wifiAirbnb}</div>` : ''}
+                    <td style="font-size:12px;">${floor}</td>
+                    <td style="font-size:12px;">${parking}</td>
+                    <td>
+                        <div style="font-size:12px;">${wifiSpeed}</div>
+                        ${wifiAirbnb !== '-' ? `<div style="font-size:11px;color:var(--property-blue);">Airbnb ${wifiAirbnb}</div>` : ''}
                     </td>
-                    <td class="px-4 py-3 border-b text-sm text-gray-900">${energy}</td>
-                    <td class="px-4 py-3 border-b text-sm text-center">${smartTv}</td>
-                    <td class="px-4 py-3 border-b">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
-                            ${status.charAt(0).toUpperCase() + status.slice(1)}
+                    <td style="font-size:12px;">${energy}</td>
+                    <td style="font-size:12px;text-align:center;">${smartTv}</td>
+                    <td>
+                        <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:${statusConfig.bg};color:${statusConfig.color};border:1px solid ${statusConfig.border};">
+                            ${statusConfig.text}
                         </span>
                     </td>
-                    <td class="px-4 py-3 border-b">
-                        <div class="flex items-center gap-2">
-                                                    <button onclick="editProperty('${property.id}')" class="text-blue-600 hover:text-blue-800 text-sm p-1" title="Edit Property">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                            <button onclick="deleteProperty('${property.id}')" class="text-red-600 hover:text-red-800 text-sm p-1" title="Delete Property">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <td>
+                        <div class="property-card__actions">
+                            <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                            </a>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -537,20 +560,17 @@ export class PropertiesManager {
         }
 
         listContainer.innerHTML = listData.map(property => {
-            const displayType = property.typology || property.type;
+            const displayType = property.typology || property.type || 'Property';
 
             // Status badge with appropriate colors
-            const getStatusBadge = (status) => {
-                const statusConfig = {
-                    'available': { color: 'green', text: 'Available' },
-                    'occupied': { color: 'blue', text: 'Occupied' },
-                    'maintenance': { color: 'yellow', text: 'Maintenance' },
-                    'renovation': { color: 'orange', text: 'Renovation' },
-                    'inactive': { color: 'gray', text: 'Inactive' }
-                };
-                const config = statusConfig[status] || statusConfig['available'];
-                return `<span class="text-xs text-${config.color}-600 px-2 py-1 bg-${config.color}-50 rounded-full font-medium">${config.text}</span>`;
-            };
+            const status = property.status || 'available';
+            const statusConfig = {
+                'available': { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' },
+                'occupied': { text: 'Occupied', bg: 'var(--property-blue-soft)', color: 'var(--property-blue)', border: 'var(--property-blue-border)' },
+                'maintenance': { text: 'Maintenance', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
+                'renovation': { text: 'Renovation', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
+                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' }
+            }[status] || { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' };
 
             // Format bedroom display
             const bedroomDisplay = property.rooms === 0 ? 'Studio' : `${property.rooms || 0} bed${(property.rooms || 0) !== 1 ? 's' : ''}`;
@@ -558,8 +578,8 @@ export class PropertiesManager {
             // Format additional details
             const details = [];
             if (property.bathrooms) details.push(`${property.bathrooms} bath${property.bathrooms !== 1 ? 's' : ''}`);
-            if (property.floor) details.push(`Floor: ${property.floor}`);
-            if (property.parkingSpot) details.push(`Parking: ${property.parkingSpot}`);
+            if (property.floor) details.push(`Floor ${property.floor}`);
+            if (property.parkingSpot) details.push(`Parking ${property.parkingSpot}`);
 
             // Tech features
             const techFeatures = [];
@@ -588,64 +608,58 @@ export class PropertiesManager {
 
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
-            const rowClass = hasMissingInfo ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200';
+            const rowClass = hasMissingInfo ? 'has-missing' : '';
 
             return `
-                <div class="border ${rowClass} rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <!-- Left: Main Property Info -->
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-lg font-semibold text-gray-900 truncate">${property.name}</h3>
-                                <span class="text-xs text-blue-600 uppercase px-2 py-1 bg-blue-50 rounded-full font-medium flex-shrink-0">${displayType}</span>
-                                ${getStatusBadge(property.status || 'available')}
-                            </div>
-                            
-                            <div class="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                                <span class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    ${property.location}
-                                </span>
-                                
-                                <span class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 15V9" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15V9" />
-                                    </svg>
-                                    ${bedroomDisplay}
-                                </span>
-                                
-                                ${details.length > 0 ? `<span class="text-gray-400">•</span><span>${details.join(' • ')}</span>` : ''}
-                            </div>
-                            
-                            ${techFeatures.length > 0 ? `
-                            <div class="flex flex-wrap gap-2">
-                                ${techFeatures.map(feature => `<span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">${feature}</span>`).join('')}
-                            </div>
-                            ` : ''}
+                <div class="properties-list-row ${rowClass}">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <h3 style="font-size:13.5px;font-weight:700;color:var(--property-ink);margin:0;" class="truncate">${property.name}</h3>
+                            <span class="property-card__typology">${displayType}</span>
+                            <span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10.5px;font-weight:600;background:${statusConfig.bg};color:${statusConfig.color};border:1px solid ${statusConfig.border};">
+                                ${statusConfig.text}
+                            </span>
                         </div>
                         
-                        <!-- Right: Actions -->
-                        <div class="flex items-center gap-2 ml-4 flex-shrink-0">
-                                                    <button onclick="editProperty('${property.id}')" class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded transition-colors" title="Edit Property">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--property-muted);margin-bottom:4px;flex-wrap:wrap;">
+                            <span style="display:inline-flex;align-items:center;gap:3px;">
+                                <svg style="width:12px;height:12px;color:var(--property-subtle);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                ${property.location || '-'}
+                            </span>
+                            
+                            <span style="display:inline-flex;align-items:center;gap:3px;">
+                                <svg style="width:12px;height:12px;color:var(--property-subtle);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 15V9" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15V9" />
+                                </svg>
+                                ${bedroomDisplay}
+                            </span>
+                            
+                            ${details.length > 0 ? `<span style="color:var(--property-subtle);">•</span><span>${details.join(' • ')}</span>` : ''}
+                        </div>
+                        
+                        ${techFeatures.length > 0 ? `
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                            ${techFeatures.map(feature => `<span class="property-card__chip">${feature}</span>`).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="property-card__actions" style="margin-left:12px;flex-shrink:0;">
+                        <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </button>
-                            <button onclick="deleteProperty('${property.id}')" class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors" title="Delete Property">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-                        Added ${new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()}
+                        <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             `;
