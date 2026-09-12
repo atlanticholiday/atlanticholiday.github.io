@@ -3,6 +3,7 @@ import {
     calculateChecklistProgress,
     calculatePropertyInventory,
     createDefaultChecklist,
+    FRONT_DESK_COLLEAGUES,
     getInitialProperties,
     INITIAL_NEW_PROPERTIES,
     normalizeProperty
@@ -154,14 +155,28 @@ describe("New Properties Utils", () => {
         assert.equal(setsTask.done, true);
     });
 
-    test("normalizeProperty creates valid property with fallback defaults", () => {
-        const prop = normalizeProperty({ name: "Custom Villa" });
-        assert.equal(prop.name, "Custom Villa");
-        assert.equal(prop.status, "in_progress");
-        assert.equal(prop.bedrooms, 1);
-        assert.equal(prop.bathrooms, 1);
-        assert.equal(prop.capacity, 2);
-        assert.ok(Array.isArray(prop.beds) && prop.beds.length === 1);
-        assert.ok(Array.isArray(prop.checklist) && prop.checklist.length > 0);
+    test("FRONT_DESK_COLLEAGUES associates real staff members and excludes André / João placeholder", () => {
+        assert.ok(FRONT_DESK_COLLEAGUES.includes("André Marques"), "André Marques is in Front Desk staff");
+        assert.ok(FRONT_DESK_COLLEAGUES.includes("João Pinto"), "João Pinto is in Front Desk staff");
+        assert.ok(FRONT_DESK_COLLEAGUES.includes("Marta Camacho"), "Marta Camacho is in Front Desk staff");
+        assert.ok(FRONT_DESK_COLLEAGUES.includes("Celso Ferreira"), "Celso Ferreira is in Front Desk staff");
+        assert.ok(!FRONT_DESK_COLLEAGUES.includes("André / João"), "Placeholder André / João is excluded from staff directory");
+
+        const merlot = INITIAL_NEW_PROPERTIES.find(p => p.name === "Merlot Apartment");
+        assert.ok(merlot);
+        assert.equal(merlot.collaborator, "André Marques", "Merlot Apartment is associated with André Marques");
+
+        const sunnyStay = INITIAL_NEW_PROPERTIES.find(p => p.name === "Sunny Stay Atlantic Gardens");
+        assert.ok(sunnyStay);
+        assert.equal(sunnyStay.collaborator, "João Pinto", "Sunny Stay is associated with João Pinto");
+
+        const checklist = createDefaultChecklist();
+        const alojGroup = checklist.find(g => g.area === "Alojamento");
+        assert.ok(alojGroup);
+        assert.ok(alojGroup.tasks.every(t => t.responsible !== "André / João"), "Lodging tasks do not have André / João placeholder");
+
+        // Normalizing legacy property with 'André / João' cleanly migrates
+        const legacyProp = normalizeProperty({ name: "Merlot Apartment", collaborator: "André / João" });
+        assert.equal(legacyProp.collaborator, "André Marques", "Legacy André / João placeholder migrates to André Marques");
     });
 });

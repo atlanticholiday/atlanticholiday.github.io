@@ -436,16 +436,24 @@ describe("New Properties Manager", () => {
             const datalist = container.querySelector("#front-desk-colleagues-datalist");
             assert.ok(datalist, "Front desk datalist exists for colleague selection");
             assert.ok(datalist.children.length > 5, "Datalist has suggested colleagues");
+            const datalistValues = Array.from(datalist.children).map(opt => opt.value);
+            assert.ok(datalistValues.includes("André Marques"), "Datalist includes André Marques");
+            assert.ok(!datalistValues.includes("André / João"), "Datalist excludes placeholder André / João");
 
             // 2. Colleague filter dropdown exists in project header
             const filterSelect = container.querySelector("#asana-colleague-filter");
             assert.ok(filterSelect, "Colleague filter dropdown exists");
             assert.equal(filterSelect.value, "all");
 
-            // 3. Open drawer for first property and inspect front desk assignee input
+            // 3. Open drawer for first property and inspect front desk assignee input & back button
             const targetProp = manager.properties[0];
             manager.selectedPropertyId = targetProp.id;
             manager.render();
+
+            // Dedicated sticky Back button (← Voltar) exists inside drawer
+            const backBtn = container.querySelector(".asana-drawer button.asana-drawer__back-btn[data-action='close-drawer']");
+            assert.ok(backBtn, "Dedicated Voltar/Back button exists in drawer toolbar");
+            assert.ok(backBtn.textContent.includes("Voltar") || backBtn.textContent.includes("Back"), "Back button has readable Voltar/Back text");
 
             const collabInput = container.querySelector(".asana-drawer input[data-action='update-property-collaborator']");
             assert.ok(collabInput, "Collaborator input exists in drawer");

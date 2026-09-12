@@ -82,7 +82,13 @@ export class NewPropertiesManager {
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    this.properties = parsed.map((p, i) => normalizeProperty(p, i));
+                    this.properties = parsed.map((p, i) => {
+                        const norm = normalizeProperty(p, i);
+                        if (norm.collaborator === 'André / João') {
+                            norm.collaborator = norm.name === 'Merlot Apartment' ? 'André Marques' : 'André Marques';
+                        }
+                        return norm;
+                    });
                     return;
                 }
             }
@@ -106,6 +112,14 @@ export class NewPropertiesManager {
     bindEvents() {
         if (this.bound) return;
         this.bound = true;
+
+        // Listen for mobile browser back gesture or popstate
+        window.addEventListener('popstate', () => {
+            if (this.selectedPropertyId) {
+                this.selectedPropertyId = null;
+                this.render();
+            }
+        });
 
         // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {
@@ -149,12 +163,17 @@ export class NewPropertiesManager {
     }
 
     getDistinctColleagues() {
-        const set = new Set(FRONT_DESK_COLLEAGUES);
+        const staffEmployees = (this.dataManager?.getActiveEmployees?.() || [])
+            .map(e => e.name)
+            .filter(Boolean);
+        const sourceList = staffEmployees.length > 0 ? staffEmployees : FRONT_DESK_COLLEAGUES;
+        const set = new Set(sourceList);
         for (const p of this.properties) {
-            if (p.collaborator && p.collaborator.trim()) {
+            if (p.collaborator && p.collaborator.trim() && p.collaborator.trim() !== 'André / João') {
                 set.add(p.collaborator.trim());
             }
         }
+        set.delete('André / João');
         return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt'));
     }
 
@@ -455,7 +474,7 @@ export class NewPropertiesManager {
 
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">${isPt ? 'Colega Front Desk Responsável' : 'Responsible Front Desk Colleague'}</label>
-                            <input type="text" id="modal-prop-collab" list="front-desk-colleagues-datalist" value="André / João" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white" placeholder="${isPt ? 'Escolher ou escrever nome...' : 'Choose or write name...'}" autocomplete="off" />
+                            <input type="text" id="modal-prop-collab" list="front-desk-colleagues-datalist" value="" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white" placeholder="${isPt ? 'Escolher ou escrever colega de Front Desk...' : 'Choose or write Front Desk colleague...'}" autocomplete="off" />
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -639,7 +658,7 @@ export class NewPropertiesManager {
                 <div class="asana-card__footer">
                     <div class="flex items-center gap-1.5" title="${isPt ? 'Colega Front Desk Responsável' : 'Responsible Front Desk Colleague'}">
                         <i class="fas fa-user-circle text-brand text-xs"></i>
-                        <span class="font-medium text-gray-700">${this.escapeHtml(property.collaborator || 'André / João')}</span>
+                        <span class="font-medium ${property.collaborator ? 'text-gray-700' : 'text-gray-400 italic'}">${this.escapeHtml(property.collaborator || (isPt ? 'Não atribuído' : 'Unassigned'))}</span>
                     </div>
                     ${cleaner ? `
                         <div class="asana-card__cleaner" title="${isPt ? 'Empresa de Limpeza' : 'Cleaning Company'}">
@@ -694,7 +713,7 @@ export class NewPropertiesManager {
                                     <td class="text-xs text-gray-700">
                                         <span class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2 py-1 rounded-md">
                                             <i class="fas fa-user-circle text-brand text-xs"></i>
-                                            <span class="font-medium">${this.escapeHtml(p.collaborator || 'André / João')}</span>
+                                            <span class="font-medium ${p.collaborator ? 'text-gray-800' : 'text-gray-400 italic'}">${this.escapeHtml(p.collaborator || (isPt ? 'Não atribuído' : 'Unassigned'))}</span>
                                         </span>
                                     </td>
                                     <td class="text-right">
@@ -766,21 +785,26 @@ export class NewPropertiesManager {
                 <div class="asana-drawer" id="asana-property-drawer">
                     <!-- TOOLBAR -->
                     <div class="asana-drawer__toolbar">
-                        <div class="flex items-center gap-3">
-                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-2 ${property.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : ''}" data-action="toggle-complete-property" data-id="${property.id}">
+                        <div class="asana-drawer__toolbar-main">
+                            <button type="button" class="asana-drawer__back-btn" data-action="close-drawer" title="${isPt ? 'Voltar aos alojamentos (ou toque fora / Esc)' : 'Back to properties (or tap outside / Esc)'}">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>${isPt ? 'Voltar' : 'Back'}</span>
+                            </button>
+
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-2 ${property.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-semibold' : ''}" data-action="toggle-complete-property" data-id="${property.id}">
                                 <i class="fas ${property.status === 'completed' ? 'fa-check-circle text-emerald-600' : 'fa-check text-gray-400'}"></i>
-                                <span>${property.status === 'completed' ? (isPt ? 'Concluído' : 'Completed') : (isPt ? 'Marcar Concluído' : 'Mark Completed')}</span>
+                                <span class="whitespace-nowrap">${property.status === 'completed' ? (isPt ? 'Concluído' : 'Completed') : (isPt ? 'Marcar Concluído' : 'Mark Completed')}</span>
                             </button>
 
                             <select class="text-xs font-semibold px-2 py-1.5 rounded-lg border border-gray-300 bg-white" data-action="change-property-status" data-id="${property.id}">
                                 <option value="waiting" ${property.status === 'waiting' ? 'selected' : ''}>${isPt ? 'À Espera' : 'Waiting / Pending'}</option>
                                 <option value="in_progress" ${property.status === 'in_progress' ? 'selected' : ''}>${isPt ? 'Em Curso' : 'In Progress'}</option>
                                 <option value="completed" ${property.status === 'completed' ? 'selected' : ''}>${isPt ? 'Concluído' : 'Completed'}</option>
-                                <option value="archived" ${property.status === 'archived' ? 'selected' : ''}>${isPt ? '📦 Arquivado (Parado / Desativado)' : '📦 Archived (Stopped / Disabled)'}</option>
+                                <option value="archived" ${property.status === 'archived' ? 'selected' : ''}>${isPt ? '📦 Arquivado' : '📦 Archived'}</option>
                             </select>
                         </div>
 
-                        <div class="flex items-center gap-2">
+                        <div class="asana-drawer__toolbar-actions">
                             <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 ${property.status === 'archived' ? 'bg-gray-100 text-gray-800 border-gray-300 font-semibold' : 'text-gray-600'}" data-action="toggle-archive-property" data-id="${property.id}" title="${isPt ? (property.status === 'archived' ? 'Reativar processo de onboarding' : 'Arquivar (parar processo permanentemente)') : (property.status === 'archived' ? 'Reactivate onboarding process' : 'Archive (permanently stop process)')}">
                                 <i class="fas ${property.status === 'archived' ? 'fa-box-open text-emerald-600' : 'fa-box-archive text-gray-500'}"></i>
                                 <span class="hidden sm:inline">${property.status === 'archived' ? (isPt ? 'Reativar' : 'Reactivate') : (isPt ? 'Arquivar' : 'Archive')}</span>
@@ -789,10 +813,10 @@ export class NewPropertiesManager {
                                 <i class="fas ${property.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
                                 <span class="hidden sm:inline">${property.hidden ? (isPt ? 'Ocultado' : 'Hidden') : (isPt ? 'Ocultar' : 'Hide')}</span>
                             </button>
-                            <button type="button" class="btn-asana-secondary text-xs text-red-600 hover:bg-red-50" data-action="delete-property" data-id="${property.id}" title="${isPt ? 'Eliminar' : 'Delete'}">
+                            <button type="button" class="btn-asana-secondary text-xs text-red-600 hover:bg-red-50 p-2" data-action="delete-property" data-id="${property.id}" title="${isPt ? 'Eliminar' : 'Delete'}">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 hover:bg-gray-100 text-gray-700 font-semibold px-3 py-1.5 rounded-lg border border-gray-300 shadow-xs" data-action="close-drawer" title="${isPt ? 'Fechar gaveta (Esc ou clique fora)' : 'Close drawer (Esc or click outside)'}">
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 hover:bg-gray-100 text-gray-700 font-semibold px-3 py-1.5 rounded-lg border border-gray-300 shadow-xs hidden sm:flex" data-action="close-drawer" title="${isPt ? 'Fechar gaveta (Esc ou clique fora)' : 'Close drawer (Esc or click outside)'}">
                                 <i class="fas fa-times"></i>
                                 <span>${isPt ? 'Fechar' : 'Close'}</span>
                             </button>
@@ -831,10 +855,10 @@ export class NewPropertiesManager {
                                         type="text"
                                         list="front-desk-colleagues-datalist"
                                         class="asana-collab-input"
-                                        value="${this.escapeHtml(property.collaborator || 'André / João')}"
+                                        value="${this.escapeHtml(property.collaborator || '')}"
                                         data-action="update-property-collaborator"
                                         data-id="${property.id}"
-                                        placeholder="${isPt ? 'Nome do colega...' : 'Colleague name...'}"
+                                        placeholder="${isPt ? 'Escolher colega de Front Desk...' : 'Choose Front Desk colleague...'}"
                                         autocomplete="off"
                                     />
                                 </div>
@@ -1202,11 +1226,11 @@ export class NewPropertiesManager {
                             <input
                                 type="text"
                                 list="front-desk-colleagues-datalist"
-                                value="${this.escapeHtml(property.collaborator || 'André / João')}"
+                                value="${this.escapeHtml(property.collaborator || '')}"
                                 class="w-full p-2 border border-gray-300 rounded-lg bg-white font-medium text-gray-800 focus:border-brand outline-none"
                                 data-action="update-property-collaborator"
                                 data-id="${property.id}"
-                                placeholder="${isPt ? 'Escrever nome ou escolher colega...' : 'Write name or choose colleague...'}"
+                                placeholder="${isPt ? 'Escolher colega de Front Desk ou escrever nome...' : 'Choose Front Desk colleague or write name...'}"
                                 autocomplete="off"
                             />
                         </div>
@@ -1326,7 +1350,7 @@ export class NewPropertiesManager {
                 const bathrooms = parseFloat(document.getElementById('modal-prop-bathrooms')?.value) || 1;
                 const capacity = parseInt(document.getElementById('modal-prop-capacity')?.value, 10) || 2;
                 const status = document.getElementById('modal-prop-status')?.value || 'in_progress';
-                const collaborator = document.getElementById('modal-prop-collab')?.value || 'André / João';
+                const collaborator = document.getElementById('modal-prop-collab')?.value?.trim() || '';
 
                 const newProp = normalizeProperty({
                     name,
@@ -1431,6 +1455,11 @@ export class NewPropertiesManager {
                         this.selectedPropertyId = id;
                         if (action === 'open-property-inventory') {
                             this.activeDrawerTab = 'inventory';
+                        }
+                        if (typeof window !== 'undefined' && window.history?.pushState) {
+                            try {
+                                window.history.pushState({ asanaDrawerOpen: true, propertyId: id }, '');
+                            } catch (e) {}
                         }
                         this.render();
                     }

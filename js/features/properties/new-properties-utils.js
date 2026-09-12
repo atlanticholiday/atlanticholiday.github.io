@@ -13,21 +13,21 @@ export const BED_TYPES = Object.freeze([
 ]);
 
 export const FRONT_DESK_COLLEAGUES = Object.freeze([
-    'André / João',
     'André Marques',
     'João Pinto',
-    'Lucas Abreu',
-    'Nastassja de Aguiar',
     'Marta Camacho',
     'Celso Ferreira',
     'Artur Gouveia',
-    'Ana Lume',
-    'Ana Gomes',
     'Bárbara Pestana',
     'Luísa Ponte',
     'João Freitas',
     'Margarida Coelho',
-    'Rubina Luis'
+    'Rubina Luis',
+    'Jéssica Matos',
+    'Ana Lume',
+    'Ana Gomes',
+    'Nastassja de Aguiar',
+    'Lucas Abreu'
 ]);
 
 export const DEFAULT_CHECKLIST_TEMPLATE = Object.freeze([
@@ -43,16 +43,16 @@ export const DEFAULT_CHECKLIST_TEMPLATE = Object.freeze([
         area: 'Alojamento',
         areaPt: 'Alojamento',
         tasks: [
-            { id: 'aloj_fotos', title: 'Fotos do Alojamento', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_video_hospedes', title: 'Vídeo Hóspedes', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_testar_equipamentos', title: 'Testar equipamentos (Microondas, Fogão, etc…)', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_inventario', title: 'Inventário do alojamento', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_kit_seguranca', title: 'Kit de segurança (Placa de AL, Sinalização, Extintor)', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_validade_extintor', title: 'Validade do Extintor', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_cofre_chaves', title: 'Cofre de Chaves', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_wifi', title: 'Nome e Password Wifi', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_quadro_wifi', title: 'Quadro de Wifi e Recomendações', responsible: 'André / João', done: false, notes: '' },
-            { id: 'aloj_armario_roupa', title: 'Armário da Roupa', responsible: 'André / João', done: false, notes: '' }
+            { id: 'aloj_fotos', title: 'Fotos do Alojamento', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_video_hospedes', title: 'Vídeo Hóspedes', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_testar_equipamentos', title: 'Testar equipamentos (Microondas, Fogão, etc…)', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_inventario', title: 'Inventário do alojamento', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_kit_seguranca', title: 'Kit de segurança (Placa de AL, Sinalização, Extintor)', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_validade_extintor', title: 'Validade do Extintor', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_cofre_chaves', title: 'Cofre de Chaves', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_wifi', title: 'Nome e Password Wifi', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_quadro_wifi', title: 'Quadro de Wifi e Recomendações', responsible: 'Front Desk', done: false, notes: '' },
+            { id: 'aloj_armario_roupa', title: 'Armário da Roupa', responsible: 'Front Desk', done: false, notes: '' }
         ]
     },
     {
@@ -350,7 +350,7 @@ export function normalizeProperty(raw = {}, index = 0) {
             comandosGaragem: raw.pipeline?.chaves?.comandosGaragem || raw.comandosGaragem || ''
         },
         alojamento: {
-            responsavel: 'André / João',
+            responsavel: 'Front Desk',
             fotos: raw.pipeline?.alojamento?.fotos || raw.fotos || '',
             videoHospedes: raw.pipeline?.alojamento?.videoHospedes || raw.videoHospedes || '',
             testarEquipamentos: raw.pipeline?.alojamento?.testarEquipamentos || raw.testarEquipamentos || '',
@@ -402,12 +402,17 @@ export function normalizeProperty(raw = {}, index = 0) {
         markTaskDone(checklist, 'limpeza_chaves_entregues', true, pipeline.limpeza.chavesEntregues);
     }
 
+    let collaborator = String(raw.collaborator || raw.assignedTo || raw.frontDesk || '').trim();
+    if (collaborator === 'André / João') {
+        collaborator = name === 'Merlot Apartment' ? 'André Marques' : 'André Marques';
+    }
+
     return {
         id,
         name,
         status,
         date: raw.date || new Date().toISOString().split('T')[0],
-        collaborator: String(raw.collaborator || raw.assignedTo || raw.frontDesk || 'André / João').trim(),
+        collaborator,
         bedrooms,
         bathrooms,
         capacity,
@@ -443,7 +448,7 @@ export const INITIAL_NEW_PROPERTIES = Object.freeze([
         dados: 'Sim',
         enviadoAoDono: 'Sim',
         nomeNoQuadro: 'Sim',
-        collaborator: 'André / João',
+        collaborator: 'André Marques',
         bedrooms: 2,
         bathrooms: 1,
         capacity: 4,
@@ -469,7 +474,7 @@ export const INITIAL_NEW_PROPERTIES = Object.freeze([
         primeiraLimpeza: 'Sim',
         videoLimpeza: 'Sim',
         empresaLimpeza: 'Powa Washing',
-        collaborator: 'André / João',
+        collaborator: 'João Pinto',
         bedrooms: 2,
         bathrooms: 2,
         capacity: 4,
