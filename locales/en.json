@@ -351,6 +351,7 @@
     "status": {
       "remote": "Remote on/off",
       "onsite": "On-site only",
+      "poolControl": "Pool control",
       "pricingSummary": "Guest {{guest}} · Owner {{owner}} · Commission {{commission}}",
       "lastChange": "Last change",
       "notRecorded": "Not recorded",

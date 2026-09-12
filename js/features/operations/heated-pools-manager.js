@@ -756,36 +756,54 @@ export class HeatedPoolsManager {
                         <div class="heated-pools-status-row__property">
                             <div class="heated-pools-status-row__identity">
                                 <h4>${escapeHtml(property.propertyName)}</h4>
-                                <span class="heated-pools-remote-capability ${property.remoteControlAvailable ? 'is-available' : ''}">
-                                    <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
-                                    ${escapeHtml(property.remoteControlAvailable ? hp('status.remote', 'Remote on/off') : hp('status.onsite', 'On-site only'))}
-                                </span>
-                                ${renderPricingSummary(property)}
+                                <div class="heated-pools-status-row__identity-meta">
+                                    <span class="heated-pools-remote-capability ${property.remoteControlAvailable ? 'is-available' : ''}">
+                                        <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
+                                        ${escapeHtml(property.remoteControlAvailable ? hp('status.remote', 'Remote on/off') : hp('status.onsite', 'On-site only'))}
+                                    </span>
+                                    ${renderPricingSummary(property)}
+                                </div>
                             </div>
+                        </div>
+                        <div class="heated-pools-status-row__control">
                             <span class="heated-pools-live-state heated-pools-live-state--${escapeHtml(property.poolState)}">
                                 <i aria-hidden="true"></i>${escapeHtml(poolStateLabel(property.poolState))}
                             </span>
+                            <div class="heated-pools-status-row__actions heated-pools-power-actions" role="group" aria-label="${escapeHtml(hp('status.setStateLabel', 'Set {{property}} pool state', { property: property.propertyName }))}">
+                                ${property.poolState !== 'on' ? `<button type="button" data-pool-state="on"><i class="fas fa-power-off" aria-hidden="true"></i> ${escapeHtml(hp('status.turnOn', 'Turn on'))}</button>` : ''}
+                                ${property.poolState !== 'off' ? `<button type="button" data-pool-state="off">${escapeHtml(hp('status.turnOff', 'Turn off'))}</button>` : ''}
+                            </div>
                         </div>
                         <div class="heated-pools-status-row__last">
                             <span>${escapeHtml(hp('status.lastChange', 'Last change'))}</span>
-                            <strong>${latestChange ? escapeHtml(formatHistoryTime(latestChange.at)) : property.lastChangeDate ? escapeHtml(formatDisplayDate(property.lastChangeDate)) : escapeHtml(hp('status.notRecorded', 'Not recorded'))}</strong>
-                            <small>${latestChange ? escapeHtml(hp('status.by', 'by {{name}}', { name: actorLabel(latestChange.actor) })) : escapeHtml(hp('status.noColleague', 'No colleague recorded'))}</small>
+                            <div class="heated-pools-status-row__detail">
+                                <strong>${latestChange ? escapeHtml(formatHistoryTime(latestChange.at)) : property.lastChangeDate ? escapeHtml(formatDisplayDate(property.lastChangeDate)) : escapeHtml(hp('status.notRecorded', 'Not recorded'))}</strong>
+                                <span aria-hidden="true">·</span>
+                                <small>${latestChange ? escapeHtml(hp('status.by', 'by {{name}}', { name: actorLabel(latestChange.actor) })) : escapeHtml(hp('status.noColleague', 'No colleague recorded'))}</small>
+                            </div>
                         </div>
                         <div class="heated-pools-status-row__reservation">
                             <span>${escapeHtml(hp('status.nextReservation', 'Next reservation'))}</span>
-                            <strong>${nextReservation ? escapeHtml(nextReservation.dateRange) : escapeHtml(hp('status.noneScheduled', 'None scheduled'))}</strong>
-                            <small>${nextReservation ? escapeHtml(requestLabel(nextReservation)) : escapeHtml(hp('status.noGuestRequest', 'No guest request'))}</small>
-                        </div>
-                        <div class="heated-pools-status-row__actions heated-pools-power-actions" role="group" aria-label="${escapeHtml(hp('status.setStateLabel', 'Set {{property}} pool state', { property: property.propertyName }))}">
-                            ${property.poolState !== 'on' ? `<button type="button" data-pool-state="on"><i class="fas fa-power-off" aria-hidden="true"></i> ${escapeHtml(hp('status.turnOn', 'Turn on'))}</button>` : ''}
-                            ${property.poolState !== 'off' ? `<button type="button" data-pool-state="off">${escapeHtml(hp('status.turnOff', 'Turn off'))}</button>` : ''}
+                            <div class="heated-pools-status-row__detail">
+                                <strong>${nextReservation ? escapeHtml(nextReservation.dateRange) : escapeHtml(hp('status.noneScheduled', 'None scheduled'))}</strong>
+                                <span aria-hidden="true">·</span>
+                                <small>${nextReservation ? escapeHtml(requestLabel(nextReservation)) : escapeHtml(hp('status.noGuestRequest', 'No guest request'))}</small>
+                            </div>
                         </div>
                     </article>
                 `;
             });
 
         list.innerHTML = properties.length
-            ? properties.join('')
+            ? `
+                <div class="heated-pools-status-header" aria-hidden="true">
+                    <span>${escapeHtml(hp('columns.property', 'Property'))}</span>
+                    <span>${escapeHtml(hp('status.poolControl', 'Pool control'))}</span>
+                    <span>${escapeHtml(hp('status.lastChange', 'Last change'))}</span>
+                    <span>${escapeHtml(hp('status.nextReservation', 'Next reservation'))}</span>
+                </div>
+                ${properties.join('')}
+            `
             : `<p class="heated-pools-empty-row">${escapeHtml(hp('status.noMatches', 'No properties match the search.'))}</p>`;
 
         list.querySelectorAll('[data-pool-state]').forEach((button) => {

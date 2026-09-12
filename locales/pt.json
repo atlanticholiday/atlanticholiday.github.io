@@ -351,6 +351,7 @@
         "status": {
             "remote": "Controlo remoto",
             "onsite": "Apenas no local",
+            "poolControl": "Controlo da piscina",
             "pricingSummary": "Hóspede {{guest}} · Proprietário {{owner}} · Comissão {{commission}}",
             "lastChange": "Última alteração",
             "notRecorded": "Sem registo",
