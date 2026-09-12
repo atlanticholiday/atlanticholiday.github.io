@@ -110,7 +110,9 @@ export function buildVacation2026UpdatePlan(employees = []) {
         const normalizedName = normalizeMatchValue(sourceRow.name);
         const staffMatches = employees.filter((employee) => Number(employee?.staffNumber) === sourceStaffNumber);
         const nameMatches = employees.filter((employee) => normalizeMatchValue(employee?.name) === normalizedName);
-        const matches = staffMatches.length === 1 ? staffMatches : nameMatches;
+        // A confirmed full name wins when legacy source codes have since been
+        // reassigned. Staff number remains the fallback for renamed profiles.
+        const matches = nameMatches.length === 1 ? nameMatches : staffMatches;
 
         if (matches.length !== 1 || claimedEmployeeIds.has(matches[0]?.id)) {
             if (matches.length > 1) ambiguous.push(sourceRow.name);

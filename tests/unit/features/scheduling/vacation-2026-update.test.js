@@ -69,6 +69,22 @@ describe("Vacation 2026 update", () => {
     assert.deepEqual(plan.ambiguous, []);
   });
 
+  test("prefers a confirmed name when a legacy source number was reassigned", () => {
+    const employees = VACATION_2026_SOURCE_ROWS.map((row, index) => ({
+      id: `employee-${index}`,
+      name: row.name,
+      staffNumber: row.name.startsWith("Sofia ")
+        ? 31
+        : (row.name.startsWith("Ruben ") ? 32 : Number(row.code.match(/^\d+/)[0]))
+    }));
+    const plan = buildVacation2026UpdatePlan(employees);
+
+    assert.equal(plan.items.length, 18);
+    assert.deepEqual(plan.unmatched, []);
+    assert.deepEqual(plan.ambiguous, []);
+    assert.equal(plan.items.find((item) => item.sourceRow.name.startsWith("Ruben ")).employee.staffNumber, 32);
+  });
+
   test("produces the stated remaining balance in the Vacation Center", () => {
     VACATION_2026_SOURCE_ROWS.forEach((row) => {
       const employee = {

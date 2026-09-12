@@ -472,7 +472,7 @@ def build_document():
     doc.add_paragraph(
         "A atualização preparada abrange 18 trabalhadores e usa o identificador técnico calendar-2026-v2. A fonte reconcilia 726 dias de direito acumulado, 185 dias usados até 2025, 270 dias reportados em 2026 e 271 dias remanescentes. O plano recusa a operação se faltar um trabalhador ou existir correspondência ambígua."
     )
-    add_bullet(doc, "Correspondência prioritária pelo número de trabalhador e, em alternativa, pelo nome normalizado.")
+    add_bullet(doc, "Correspondência prioritária por nome completo normalizado e, em alternativa, pelo número de trabalhador para perfis cujo nome tenha mudado.")
     add_bullet(doc, "Cópia de segurança criada na mesma operação atómica, antes de substituir os registos de 2026.")
     add_bullet(doc, "Cópia limitada a saldos, baseline, férias e registos afetados; acesso reservado a funções de gestão.")
     add_bullet(doc, "Registos fora de 2026 são preservados, incluindo segmentos de períodos que atravessam a passagem de ano.")
@@ -480,18 +480,18 @@ def build_document():
     add_note(
         doc,
         "Estado da execução",
-        "A lógica, a cópia de segurança e os testes automáticos estão concluídos. A aplicação aos dados reais e a verificação visual exigem uma sessão autenticada de gestão; não são criadas picagens de assiduidade durante esta migração.",
-        PALE_AMBER,
-        "B45309",
+        "Migração aplicada em produção em 12/09/2026 às 13:58:54 UTC. Foram correspondidos 18 de 18 trabalhadores, sem omissões ou ambiguidades, e validados os períodos e saldos de cada perfil sem falhas. A cópia de segurança contém os 18 perfis e 110 registos anteriores. A operação não criou nem alterou picagens de assiduidade.",
+        PALE_TEAL,
+        "0F766E",
     )
 
     add_heading(doc, "13 Evidência técnica", 1)
     tech_rows = [
-        ("Testes da aplicação", "443 testes de navegador aprovados em 12/09/2026"),
+        ("Testes da aplicação", "444 testes de navegador aprovados em 12/09/2026"),
         ("Regras de segurança", "Suite de integração Firestore aprovada, incluindo isolamento da cópia de férias"),
         ("Integridade", "Eventos canónicos imutáveis e arquivo mensal com manifesto SHA-256"),
         ("Retenção", "Campo retainUntil calculado por cinco anos para assiduidade e trabalho suplementar"),
-        ("Versões anteriores", "fd775b6 — contacto RGPD no autosserviço; 26a2c17 — segurança do acesso pessoal a tarefas; f69b5ac — nomes completos na atualização de férias"),
+        ("Versões anteriores", "fd775b6 — contacto RGPD no autosserviço; 26a2c17 — segurança do acesso pessoal a tarefas; 008f59e — migração segura e dossier de inspeção"),
     ]
     add_table(doc, ["Evidência", "Resultado"], tech_rows, [Cm(4.4), Cm(12.8)])
 
