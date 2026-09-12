@@ -32,6 +32,24 @@ body.asana-theme {
     overflow: hidden;
 }
 
+/* Reset default form input styles from main.css within Asana app */
+body.asana-theme input:not([type="checkbox"]):not([type="radio"]),
+body.asana-theme select,
+body.asana-theme textarea {
+    min-height: unset;
+    letter-spacing: normal;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+body.asana-theme input:not([type="checkbox"]):not([type="radio"]):focus,
+body.asana-theme select:focus,
+body.asana-theme textarea:focus {
+    transform: none;
+    box-shadow: 0 0 0 2px rgba(239, 91, 108, 0.15);
+}
+
 .asana-layout {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
@@ -762,13 +780,18 @@ body.asana-theme {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
+    height: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    padding: 0 10px;
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
     color: #334155;
+    box-sizing: border-box;
+    line-height: 32px;
 }
 
 .asana-bed-chip button.remove-bed {
@@ -778,10 +801,89 @@ body.asana-theme {
     cursor: pointer;
     font-size: 12px;
     padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
 }
 
 .asana-bed-chip button.remove-bed:hover {
     color: #ef4444;
+}
+
+/* Bed Add Group: Dropdown & Button properly the same size */
+.asana-bed-add-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.asana-bed-select {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    padding: 0 28px 0 10px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    cursor: pointer;
+    line-height: 32px !important;
+    outline: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 8px center !important;
+    background-repeat: no-repeat !important;
+    background-size: 14px 14px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    transition: all 0.15s ease;
+}
+
+.asana-bed-select:hover {
+    border-color: #94a3b8 !important;
+    background-color: #f8fafc !important;
+}
+
+.asana-bed-select:focus {
+    border-color: var(--asana-accent, #ef5b6c) !important;
+    box-shadow: 0 0 0 2px rgba(239, 91, 108, 0.15) !important;
+}
+
+.asana-bed-add-btn {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    line-height: 32px !important;
+    transition: all 0.15s ease;
+}
+
+.asana-bed-add-btn:hover {
+    background-color: #f8fafc !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+
+.asana-bed-add-btn:active {
+    background-color: #f1f5f9 !important;
+    transform: scale(0.98);
 }
 
 /* Recalculation Notice Banner */
@@ -1248,6 +1350,19 @@ html[data-theme="dark"] .asana-bed-chip {
     background-color: #18181b;
     border-color: #3f3f46;
     color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-bed-select,
+html[data-theme="dark"] .asana-bed-add-btn {
+    background-color: #18181b !important;
+    border-color: #3f3f46 !important;
+    color: #f4f4f5 !important;
+}
+
+html[data-theme="dark"] .asana-bed-select:hover,
+html[data-theme="dark"] .asana-bed-add-btn:hover {
+    background-color: #27272a !important;
+    border-color: #52525b !important;
 }
 
 html[data-theme="dark"] .asana-inventory-table th {

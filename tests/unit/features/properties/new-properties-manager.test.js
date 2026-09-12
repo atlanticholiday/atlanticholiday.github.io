@@ -367,6 +367,60 @@ describe("New Properties Manager", () => {
             container.remove();
         }
     });
+
+    test("keeps drawer open when clicking bed configuration controls with matched sizing", () => {
+        const container = document.createElement("div");
+        container.id = "test-bed-controls-sizing";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-bed-controls-sizing", storage });
+            manager.init();
+
+            // 1. Open drawer for first property
+            const targetProp = manager.properties[0];
+            manager.selectedPropertyId = targetProp.id;
+            manager.render();
+
+            assert.equal(manager.selectedPropertyId, targetProp.id, "Drawer is open");
+
+            // 2. Bed select and add button have matched classes
+            const bedSelect = container.querySelector("#drawer-add-bed-select");
+            const addBedBtn = container.querySelector(".asana-drawer button[data-action='add-bed']");
+            assert.ok(bedSelect, "Bed select dropdown exists");
+            assert.ok(addBedBtn, "Add bed button exists");
+            assert.ok(bedSelect.classList.contains("asana-bed-select"), "Select has asana-bed-select class");
+            assert.ok(addBedBtn.classList.contains("asana-bed-add-btn"), "Button has asana-bed-add-btn class");
+
+            // 3. Click directly on bed select: drawer MUST NOT close
+            bedSelect.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(manager.selectedPropertyId, targetProp.id, "Drawer remains open when clicking bed select dropdown");
+
+            // 4. Click on bed chip label: drawer MUST NOT close
+            const bedChip = container.querySelector(".asana-bed-chip span");
+            if (bedChip) {
+                bedChip.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+                assert.equal(manager.selectedPropertyId, targetProp.id, "Drawer remains open when clicking inside bed chip");
+            }
+
+            // 5. Select bed type and click add bed button
+            const initialBedsCount = (targetProp.beds || []).length;
+            bedSelect.value = "single";
+            addBedBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+            assert.equal(manager.selectedPropertyId, targetProp.id, "Drawer remains open after adding a bed");
+            assert.equal((targetProp.beds || []).length, initialBedsCount + 1, "Bed was added to property");
+
+            // 6. Clicking on the overlay backdrop outside the drawer still closes it
+            const overlay = container.querySelector("#asana-property-drawer-overlay");
+            assert.ok(overlay, "Overlay backdrop exists");
+            overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(manager.selectedPropertyId, null, "Drawer closes when clicking overlay backdrop");
+        } finally {
+            container.remove();
+        }
+    });
 });
 
 

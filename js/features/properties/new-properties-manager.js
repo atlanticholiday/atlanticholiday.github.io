@@ -371,7 +371,7 @@ export class NewPropertiesManager {
             ${this.renderPropertyDrawer(selected, isPt)}
 
             <!-- NEW PROPERTY MODAL -->
-            <div id="new-property-modal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4" data-action="close-modal">
+            <div id="new-property-modal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
                 <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
                     <div class="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
                         <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -696,14 +696,14 @@ export class NewPropertiesManager {
 
     renderPropertyDrawer(property, isPt) {
         if (!property) {
-            return `<div id="asana-property-drawer-overlay" class="asana-drawer-overlay" data-action="close-drawer"></div>`;
+            return `<div id="asana-property-drawer-overlay" class="asana-drawer-overlay"></div>`;
         }
 
         const inv = calculatePropertyInventory(property);
         const progress = calculateChecklistProgress(property.checklist);
 
         return `
-            <div id="asana-property-drawer-overlay" class="asana-drawer-overlay open" data-action="close-drawer" role="dialog" aria-modal="true" aria-label="${this.escapeHtml(property.name)}">
+            <div id="asana-property-drawer-overlay" class="asana-drawer-overlay open" role="dialog" aria-modal="true" aria-label="${this.escapeHtml(property.name)}">
                 <div class="asana-drawer" id="asana-property-drawer">
                     <!-- TOOLBAR -->
                     <div class="asana-drawer__toolbar">
@@ -826,13 +826,14 @@ export class NewPropertiesManager {
                                         </div>
                                     `).join('')}
 
-                                    <!-- Add Bed Button / Dropdown -->
-                                    <div class="inline-flex items-center gap-1">
-                                        <select id="drawer-add-bed-select" class="text-xs p-1.5 border border-gray-300 rounded-lg bg-white">
+                                    <!-- Add Bed Button / Dropdown (Same size: 34px height, matching borders, fonts) -->
+                                    <div class="asana-bed-add-group">
+                                        <select id="drawer-add-bed-select" class="asana-bed-select" aria-label="${isPt ? 'Tipo de cama' : 'Bed type'}">
                                             ${BED_TYPES.map(b => `<option value="${b.id}">${isPt ? b.labelPt : b.label}</option>`).join('')}
                                         </select>
-                                        <button type="button" class="btn-asana-secondary py-1 px-2.5 text-xs" data-action="add-bed" data-id="${property.id}">
-                                            <i class="fas fa-plus"></i> ${isPt ? 'Adicionar Cama' : 'Add Bed'}
+                                        <button type="button" class="asana-bed-add-btn" data-action="add-bed" data-id="${property.id}">
+                                            <i class="fas fa-plus"></i>
+                                            <span>${isPt ? 'Adicionar Cama' : 'Add Bed'}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1132,14 +1133,17 @@ export class NewPropertiesManager {
 
         // Click delegation on container
         this.container.onclick = (e) => {
+            const insideDrawerPanel = Boolean(e.target && e.target.closest('#asana-property-drawer'));
+            const insideModalPanel = Boolean(e.target && e.target.closest('#new-property-modal > div'));
+
             // 1. If clicking directly on drawer overlay backdrop (outside the drawer panel), close drawer
-            if (e.target && (e.target.id === 'asana-property-drawer-overlay' || e.target.classList.contains('asana-drawer-overlay'))) {
+            if (!insideDrawerPanel && e.target && (e.target.id === 'asana-property-drawer-overlay' || e.target.classList.contains('asana-drawer-overlay'))) {
                 this.closeDrawer();
                 return;
             }
 
-            // 2. If clicking directly on new property modal backdrop, close modal
-            if (e.target && e.target.id === 'new-property-modal') {
+            // 2. If clicking directly on new property modal backdrop (outside modal dialog), close modal
+            if (!insideModalPanel && e.target && e.target.id === 'new-property-modal') {
                 document.getElementById('new-property-modal')?.classList.add('hidden');
                 return;
             }
