@@ -37,7 +37,7 @@
     <link rel="stylesheet" href="styles/app-switcher.css">
     <link rel="stylesheet" href="styles/tasks.css">
     <link rel="stylesheet" href="styles/cleaning-ah.css">
-    <link rel="stylesheet" href="styles/heated-pools.css?v=20260912-compact-controls">
+    <link rel="stylesheet" href="styles/heated-pools.css?v=20260912-avantio-calculator">
     <link rel="stylesheet" href="styles/staff.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/properties.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
@@ -2798,6 +2798,22 @@
                     <input type="hidden" name="propertyId"><input type="hidden" name="state"><input type="hidden" name="source">
                     <div id="heated-pools-state-summary" class="heated-pools-state-summary"></div>
                     <label><span data-i18n="heatedPools.dialogs.associateReservation">Associate with reservation</span><select name="reservationId" id="heated-pools-state-reservation"></select></label>
+                    <section id="heated-pools-turn-on-fields" class="heated-pools-turn-on" hidden>
+                        <div class="heated-pools-turn-on__heading">
+                            <strong data-i18n="heatedPools.dialogs.bookingDetails">Booking and payment</strong>
+                            <span data-i18n="heatedPools.dialogs.bookingDetailsHint">Required before switching the pool on.</span>
+                        </div>
+                        <div class="heated-pools-form-grid heated-pools-turn-on__fields">
+                            <label><span data-i18n="heatedPools.columns.checkIn">Check-in</span><input name="startDate" type="date"></label>
+                            <label><span data-i18n="heatedPools.columns.checkOut">Check-out</span><input name="endDate" type="date"></label>
+                            <label class="heated-pools-form-wide"><span data-i18n="heatedPools.fields.guestPaidTotal">Total paid by guest</span><div class="heated-pools-money-input"><span>€</span><input name="guestPaidAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="315.00"></div></label>
+                        </div>
+                        <div id="heated-pools-settlement" class="heated-pools-settlement" aria-live="polite">
+                            <div class="heated-pools-settlement__primary"><span data-i18n="heatedPools.fields.writeInAvantio">Write in Avantio</span><output id="heated-pools-avantio-amount">—</output></div>
+                            <div><span data-i18n="heatedPools.fields.commissionTotal">Commission</span><output id="heated-pools-commission-amount">—</output></div>
+                            <p id="heated-pools-settlement-detail" data-i18n="heatedPools.dialogs.enterCalculationDetails">Enter the dates and total paid to calculate.</p>
+                        </div>
+                    </section>
                     <label><span data-i18n="heatedPools.dialogs.optionalNote">Optional note</span><textarea name="stateNote" rows="3" placeholder="Remote switched on, colleague confirmed onsite..." data-i18n="heatedPools.dialogs.stateNotePlaceholder" data-i18n-attr="placeholder"></textarea></label>
                     <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog data-i18n="common.cancel">Cancel</button><button type="submit" class="heated-pools-primary-action" data-i18n="heatedPools.dialogs.confirmChange">Confirm change</button></div>
                 </form>

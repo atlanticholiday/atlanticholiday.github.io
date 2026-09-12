@@ -14,6 +14,7 @@ import {
     buildHeatedPoolPropertyDirectory,
     buildHeatedPoolPlan,
     calculateHeatedPoolCommission,
+    calculateHeatedPoolSettlement,
     HEATED_POOL_PROPERTY_NAMES,
     inferRemoteControlAvailable,
     summarizePoolProperties
@@ -144,18 +145,29 @@ export class HeatedPoolsManager {
         }
 
         if (stateForm) {
+            const reservationSelect = stateForm.elements.reservationId;
+            reservationSelect?.addEventListener('change', () => {
+                this.populateStateTurnOnDetails();
+                this.renderStateSettlement();
+            });
+            ['startDate', 'endDate', 'guestPaidAmount'].forEach((field) => {
+                stateForm.elements[field]?.addEventListener('input', () => this.renderStateSettlement());
+            });
             stateForm.addEventListener('submit', (event) => {
                 event.preventDefault();
                 const formData = new FormData(stateForm);
                 this.setPoolState(formData.get('propertyId'), formData.get('state'), {
                     reservationId: formData.get('reservationId'),
                     source: formData.get('source') || 'manual',
-                    note: formData.get('stateNote')
+                    note: formData.get('stateNote'),
+                    startDate: formData.get('startDate'),
+                    endDate: formData.get('endDate'),
+                    guestPaidAmount: formData.get('guestPaidAmount')
                 }).then((changed) => {
                     if (changed) this.closeDialogs();
                 }).catch((error) => {
                     console.error('[HeatedPools] state change failed:', error);
-                    this.showMessage(hp('messages.stateSaveError', 'Could not save the pool state.'), 'error');
+                    this.showMessage(error.message || hp('messages.stateSaveError', 'Could not save the pool state.'), 'error');
                 });
             });
         }
@@ -238,8 +250,64 @@ export class HeatedPoolsManager {
         form.elements.source.value = source;
         form.elements.stateNote.value = '';
         summary.innerHTML = `<strong>${escapeHtml(property.propertyName)}</strong><span>${escapeHtml(poolStateLabel(property.poolState))} → ${escapeHtml(poolStateLabel(state))}</span>`;
-        reservationSelect.innerHTML = reservationAssociationOptions(property, property.reservations.find((entry) => entry.id === reservationId) || findNextReservation(property, this.today));
+        const selectedReservation = property.reservations.find((entry) => entry.id === reservationId)
+            || (state === 'on' ? findNextReservation(property, this.today) : null);
+        reservationSelect.innerHTML = reservationAssociationOptions(property, selectedReservation, state);
+        const turnOnFields = document.getElementById('heated-pools-turn-on-fields');
+        if (turnOnFields) turnOnFields.hidden = state !== 'on';
+        ['startDate', 'endDate', 'guestPaidAmount'].forEach((field) => {
+            if (form.elements[field]) form.elements[field].required = state === 'on';
+        });
+        this.populateStateTurnOnDetails(selectedReservation);
+        this.renderStateSettlement();
         this.openDialog('state');
+    }
+
+    populateStateTurnOnDetails(selectedReservation = null) {
+        const form = document.getElementById('heated-pools-state-form');
+        if (!form || form.elements.state.value !== 'on') return;
+        const property = this.properties.find((entry) => entry.id === form.elements.propertyId.value);
+        const reservation = selectedReservation
+            || property?.reservations.find((entry) => entry.id === form.elements.reservationId.value)
+            || null;
+        form.elements.startDate.value = reservation?.startDate || '';
+        form.elements.endDate.value = reservation?.endDate || '';
+        form.elements.guestPaidAmount.value = reservation?.guestPaidAmount ?? '';
+    }
+
+    renderStateSettlement() {
+        const form = document.getElementById('heated-pools-state-form');
+        const avantioOutput = document.getElementById('heated-pools-avantio-amount');
+        const commissionOutput = document.getElementById('heated-pools-commission-amount');
+        const detail = document.getElementById('heated-pools-settlement-detail');
+        if (!form || !avantioOutput || !commissionOutput || !detail) return null;
+        const property = this.properties.find((entry) => entry.id === form.elements.propertyId.value);
+        const settlement = calculateHeatedPoolSettlement({
+            guestPaidAmount: form.elements.guestPaidAmount.value,
+            chargeAmount: property?.chargeAmount,
+            ownerCostAmount: property?.ownerCostAmount,
+            startDate: form.elements.startDate.value,
+            endDate: form.elements.endDate.value
+        });
+
+        avantioOutput.value = settlement ? formatCurrency(settlement.avantioAmount) : '—';
+        avantioOutput.textContent = avantioOutput.value;
+        commissionOutput.value = settlement ? formatCurrency(settlement.commissionAmount) : '—';
+        commissionOutput.textContent = commissionOutput.value;
+        detail.dataset.warning = settlement && !settlement.matchesStayLength ? 'true' : 'false';
+        detail.textContent = settlement
+            ? settlement.matchesStayLength
+                ? hp('dialogs.calculationDetail', '{{nights}} nights · {{guestRate}} guest rate · {{ownerRate}} owner rate', {
+                    nights: settlement.nights,
+                    guestRate: formatCurrency(Number(property.chargeAmount)),
+                    ownerRate: formatCurrency(Number(property.ownerCostAmount))
+                })
+                : hp('dialogs.paymentMismatch', '{{nights}} nights normally total {{expected}}. Check the guest-paid amount.', {
+                    nights: settlement.nights,
+                    expected: formatCurrency(settlement.expectedGuestAmount)
+                })
+            : hp('dialogs.enterCalculationDetails', 'Enter the dates and total paid to calculate.');
+        return settlement;
     }
 
     async addProperty(formData) {
@@ -353,25 +421,80 @@ export class HeatedPoolsManager {
         return this.directoryAssociationPromise;
     }
 
-    async setPoolState(propertyId, state, { reservationId = '', source = 'manual', note = '' } = {}) {
+    async setPoolState(propertyId, state, {
+        reservationId = '',
+        source = 'manual',
+        note = '',
+        startDate = '',
+        endDate = '',
+        guestPaidAmount = ''
+    } = {}) {
         const property = this.properties.find((entry) => entry.id === propertyId);
         if (!property || !['on', 'off'].includes(state)) return false;
-        const reservation = property.reservations.find((entry) => entry.id === reservationId) || null;
+        let reservation = property.reservations.find((entry) => entry.id === reservationId) || null;
+        let reservations = property.reservations;
+
+        if (state === 'on') {
+            if (!startDate || !endDate) {
+                throw new Error(hp('messages.datesRequired', 'Start and end dates are required.'));
+            }
+            if (endDate <= startDate) {
+                throw new Error(hp('messages.endDateInvalid', 'End date must be after the start date.'));
+            }
+            if (property.chargeAmount === null || property.ownerCostAmount === null) {
+                throw new Error(hp('messages.pricingRequired', 'Configure the guest and owner rates before switching the pool on.'));
+            }
+            const settlement = calculateHeatedPoolSettlement({
+                guestPaidAmount,
+                chargeAmount: property.chargeAmount,
+                ownerCostAmount: property.ownerCostAmount,
+                startDate,
+                endDate
+            });
+            if (!settlement) {
+                throw new Error(hp('messages.guestPaidRequired', 'Enter the total amount paid by the guest.'));
+            }
+
+            reservation = {
+                ...(reservation || {}),
+                id: reservation?.id || `res_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                propertyName: property.propertyName,
+                dateRange: `${formatShortDate(startDate)} - ${formatShortDate(endDate)}`,
+                startDate,
+                endDate,
+                heatingRequested: true,
+                requestStatus: 'yes',
+                paymentStatus: 'yes',
+                avantioStatus: reservation?.avantioStatus === 'yes' ? 'yes' : 'waiting',
+                guestPaidAmount: settlement.guestPaidAmount,
+                avantioAmount: settlement.avantioAmount,
+                commissionAmount: settlement.commissionAmount,
+                chargeAmountAtBooking: Number(property.chargeAmount),
+                ownerCostAmountAtBooking: Number(property.ownerCostAmount),
+                chargedUnits: settlement.chargedUnits,
+                notes: cleanText(reservation?.notes)
+            };
+            reservations = reservationId
+                ? property.reservations.map((entry) => entry.id === reservationId ? reservation : entry)
+                : [...property.reservations, reservation];
+            reservations.sort((a, b) => a.startDate.localeCompare(b.startDate));
+        }
+
         const plannedTaskType = source === 'planned_task' && reservation
             ? state === 'on' ? 'turn_on' : 'turn_off'
             : '';
         const completedReservations = plannedTaskType
             ? updateReservationTaskActivity(
-                property.reservations,
+                reservations,
                 reservation.id,
                 'taskCompletions',
                 plannedTaskType,
                 this.createTaskActivity()
             )
-            : property.reservations;
+            : reservations;
 
         if (property.poolState === state) {
-            if (plannedTaskType) {
+            if (plannedTaskType || state === 'on') {
                 await this.updateProperty(propertyId, { reservations: completedReservations });
                 this.showMessage(hp('messages.taskCompleted', '{{property}} {{state}} task completed for {{reservation}}.', {
                     property: property.propertyName,
@@ -411,7 +534,7 @@ export class HeatedPoolsManager {
             poolState: state,
             lastChangeDate: this.today,
             statusHistory,
-            ...(plannedTaskType ? { reservations: completedReservations } : {})
+            ...(state === 'on' || plannedTaskType ? { reservations: completedReservations } : {})
         });
         this.showMessage(hp('messages.markedState', '{{property}} marked {{state}}{{reservation}}.', {
             property: property.propertyName,
@@ -602,6 +725,12 @@ export class HeatedPoolsManager {
                     requestStatus: reservation.requestStatus || statusFromBoolean(reservation.heatingRequested),
                     paymentStatus: reservation.paymentStatus || 'blank',
                     avantioStatus: reservation.avantioStatus || 'blank',
+                    guestPaidAmount: parseMoney(reservation.guestPaidAmount ?? reservation.poolPaidAmountValue),
+                    avantioAmount: parseMoney(reservation.avantioAmount ?? reservation.poolAvantioAmountValue),
+                    commissionAmount: parseMoney(reservation.commissionAmount),
+                    chargeAmountAtBooking: parseMoney(reservation.chargeAmountAtBooking),
+                    ownerCostAmountAtBooking: parseMoney(reservation.ownerCostAmountAtBooking),
+                    chargedUnits: Number.isFinite(Number(reservation.chargedUnits)) ? Number(reservation.chargedUnits) : null,
                     notes: cleanText(reservation.notes),
                     taskClaims: normalizeTaskActivityMap(reservation.taskClaims),
                     taskCompletions: normalizeTaskActivityMap(reservation.taskCompletions)
@@ -835,14 +964,20 @@ export class HeatedPoolsManager {
                         </select>
                     </td>
                     <td>
-                        <select data-res-field="paymentStatus" class="heated-pools-inline-input">
-                            ${statusOptions(reservation.paymentStatus)}
-                        </select>
+                        <div class="heated-pools-status-with-amount">
+                            <select data-res-field="paymentStatus" class="heated-pools-inline-input">
+                                ${statusOptions(reservation.paymentStatus)}
+                            </select>
+                            ${Number.isFinite(reservation.guestPaidAmount) ? `<small>${escapeHtml(formatCurrency(reservation.guestPaidAmount))}</small>` : ''}
+                        </div>
                     </td>
                     <td>
-                        <select data-res-field="avantioStatus" class="heated-pools-inline-input">
-                            ${statusOptions(reservation.avantioStatus)}
-                        </select>
+                        <div class="heated-pools-status-with-amount">
+                            <select data-res-field="avantioStatus" class="heated-pools-inline-input">
+                                ${statusOptions(reservation.avantioStatus)}
+                            </select>
+                            ${Number.isFinite(reservation.avantioAmount) ? `<small>${escapeHtml(formatCurrency(reservation.avantioAmount))}</small>` : ''}
+                        </div>
                     </td>
                     <td><input data-res-field="notes" value="${escapeHtml(reservation.notes || '')}" class="heated-pools-inline-input"></td>
                     <td><button type="button" data-action="delete-reservation" class="heated-pools-danger-link">${escapeHtml(hp('reservations.delete', 'Delete'))}</button></td>
@@ -1099,9 +1234,11 @@ function poolStateLabel(state) {
     return hp(`states.${state || 'unknown'}`, fallback);
 }
 
-function reservationAssociationOptions(property, selectedReservation = null) {
+function reservationAssociationOptions(property, selectedReservation = null, state = '') {
     return [
-        `<option value="">${escapeHtml(hp('association.general', 'General change — no reservation'))}</option>`,
+        `<option value="">${escapeHtml(state === 'on'
+            ? hp('association.newReservation', 'New reservation')
+            : hp('association.general', 'General change — no reservation'))}</option>`,
         ...property.reservations
             .slice()
             .sort((a, b) => b.startDate.localeCompare(a.startDate))

@@ -328,6 +328,9 @@
       "guestCharge": "Guest charge EUR",
       "ownerCost": "Owner cost EUR",
       "commission": "Commission EUR",
+      "guestPaidTotal": "Total paid by guest",
+      "writeInAvantio": "Write in Avantio",
+      "commissionTotal": "Commission",
       "remoteControl": "Remote on/off",
       "remoteNo": "No — on-site only",
       "remoteYes": "Yes — available remotely",
@@ -340,6 +343,11 @@
       "stateEyebrow": "Confirm physical change",
       "stateTitle": "Change pool state",
       "associateReservation": "Associate with reservation",
+      "bookingDetails": "Booking and payment",
+      "bookingDetailsHint": "Required before switching the pool on.",
+      "enterCalculationDetails": "Enter the dates and total paid to calculate.",
+      "calculationDetail": "{{nights}} nights · {{guestRate}} guest rate · {{ownerRate}} owner rate",
+      "paymentMismatch": "{{nights}} nights normally total {{expected}}. Check the guest-paid amount.",
       "optionalNote": "Optional note",
       "stateNotePlaceholder": "Remote switched on, colleague confirmed onsite...",
       "confirmChange": "Confirm change",
@@ -444,6 +452,7 @@
     },
     "association": {
       "general": "General change — no reservation",
+      "newReservation": "New reservation",
       "heatingRequested": "heating requested"
     },
     "messages": {
@@ -469,6 +478,8 @@
       "choosePropertyFirst": "Choose a property first.",
       "datesRequired": "Start and end dates are required.",
       "endDateInvalid": "End date must be after the start date.",
+      "guestPaidRequired": "Enter the total amount paid by the guest.",
+      "pricingRequired": "Configure the guest and owner rates before switching the pool on.",
       "taskCompleted": "{{property}} {{state}} task completed for {{reservation}}.",
       "alreadyState": "{{property}} is already {{state}}.",
       "markedState": "{{property}} marked {{state}}{{reservation}}.",

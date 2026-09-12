@@ -65,6 +65,58 @@ export function calculateHeatedPoolCommission(chargeAmount, ownerCostAmount) {
     return Math.round((charge - ownerCost) * 100) / 100;
 }
 
+export function calculateHeatedPoolSettlement({
+    guestPaidAmount,
+    chargeAmount,
+    ownerCostAmount,
+    startDate,
+    endDate
+} = {}) {
+    const guestPaid = Number(guestPaidAmount);
+    const guestRate = Number(chargeAmount);
+    const ownerRate = Number(ownerCostAmount);
+    const start = parseSettlementDate(startDate);
+    const end = parseSettlementDate(endDate);
+
+    if (!Number.isFinite(guestPaid) || guestPaid <= 0
+        || !Number.isFinite(guestRate) || guestRate <= 0
+        || !Number.isFinite(ownerRate) || ownerRate < 0
+        || !start || !end || end <= start) {
+        return null;
+    }
+
+    const nights = Math.round((end.getTime() - start.getTime()) / 86400000);
+    const chargedUnits = guestPaid / guestRate;
+    const avantioAmount = roundCurrency(chargedUnits * ownerRate);
+    const commissionAmount = roundCurrency(guestPaid - avantioAmount);
+    const expectedGuestAmount = roundCurrency(nights * guestRate);
+
+    return {
+        guestPaidAmount: roundCurrency(guestPaid),
+        avantioAmount,
+        commissionAmount,
+        chargedUnits: Math.round(chargedUnits * 10000) / 10000,
+        nights,
+        expectedGuestAmount,
+        matchesStayLength: Math.abs(guestPaid - expectedGuestAmount) < 0.01
+    };
+}
+
+function parseSettlementDate(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    return date.getUTCFullYear() === Number(match[1])
+        && date.getUTCMonth() === Number(match[2]) - 1
+        && date.getUTCDate() === Number(match[3])
+        ? date
+        : null;
+}
+
+function roundCurrency(value) {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
 export function getHeatedPoolPropertyConfig(propertyName = '') {
     const key = normalizeForCompare(propertyName);
     return HEATED_POOL_PROPERTY_CATALOG.find((property) => normalizeForCompare(property.name) === key) || null;

@@ -1456,6 +1456,139 @@ body:has(.heated-pools-dialog:not(.hidden)) .quick-search-trigger {
     font-weight: 650;
 }
 
+#heated-pools-state-form {
+    gap: 14px;
+}
+
+.heated-pools-turn-on[hidden] {
+    display: none;
+}
+
+.heated-pools-turn-on {
+    display: grid;
+    gap: 12px;
+    border-top: 1px solid var(--pool-line);
+    padding-top: 14px;
+}
+
+.heated-pools-turn-on__heading {
+    display: grid;
+    gap: 2px;
+}
+
+.heated-pools-turn-on__heading strong {
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.heated-pools-turn-on__heading span {
+    color: var(--pool-muted);
+    font-size: 11px;
+}
+
+.heated-pools-turn-on__fields {
+    gap: 10px;
+}
+
+.heated-pools-money-input {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    border: 1px solid var(--pool-line);
+    border-radius: 6px;
+    padding-left: 10px;
+    color: var(--pool-muted);
+    background: var(--pool-input);
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.heated-pools-money-input:focus-within {
+    border-color: var(--pool-accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px var(--pool-accent-soft);
+}
+
+.heated-pools-dialog__panel .heated-pools-money-input input {
+    min-height: 34px;
+    border: 0;
+    padding-left: 5px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.heated-pools-dialog__panel .heated-pools-money-input input:hover,
+.heated-pools-dialog__panel .heated-pools-money-input input:focus {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.heated-pools-settlement {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--pool-line);
+    border-radius: 8px;
+    background: var(--pool-surface-subtle);
+}
+
+.heated-pools-settlement > div {
+    display: grid;
+    gap: 3px;
+    padding: 11px 12px;
+}
+
+.heated-pools-settlement > div + div {
+    border-left: 1px solid var(--pool-line);
+}
+
+.heated-pools-settlement span {
+    color: var(--pool-muted);
+    font-size: 10px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.heated-pools-settlement output {
+    color: var(--pool-ink);
+    font-size: 16px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.heated-pools-settlement__primary output {
+    color: var(--pool-accent-hover);
+    font-size: 21px;
+}
+
+.heated-pools-settlement p {
+    grid-column: 1 / -1;
+    margin: 0;
+    border-top: 1px solid var(--pool-line);
+    padding: 8px 12px;
+    color: var(--pool-muted);
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.heated-pools-settlement p[data-warning="true"] {
+    color: var(--pool-amber);
+    background: var(--pool-amber-soft);
+}
+
+.heated-pools-status-with-amount {
+    display: grid;
+    gap: 3px;
+}
+
+.heated-pools-status-with-amount small {
+    color: var(--pool-ink);
+    font-size: 10px;
+    font-weight: 700;
+}
+
 .heated-pools-dialog__actions {
     display: flex;
     justify-content: flex-end;
@@ -1765,7 +1898,8 @@ html[data-theme="dark"] #heated-pools-page :is(
     .heated-pools-table th,
     .heated-pools-lane__header,
     .heated-pools-approved-directory,
-    .heated-pools-state-summary
+    .heated-pools-state-summary,
+    .heated-pools-settlement
 ) {
     border-color: var(--pool-line) !important;
     background: var(--pool-surface-subtle) !important;
@@ -1780,11 +1914,20 @@ html[data-theme="dark"] #heated-pools-page :is(
     .heated-pools-dialog__panel input,
     .heated-pools-dialog__panel select,
     .heated-pools-dialog__panel textarea,
+    .heated-pools-money-input,
     .heated-pools-inline-input
 ) {
     border-color: var(--pool-line) !important;
     color: var(--pool-ink) !important;
     background-color: var(--pool-input) !important;
+}
+
+html[data-theme="dark"] #heated-pools-page .heated-pools-money-input input,
+html[data-theme="dark"] #heated-pools-page .heated-pools-money-input input:hover,
+html[data-theme="dark"] #heated-pools-page .heated-pools-money-input input:focus {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 html[data-theme="dark"] #heated-pools-page :is(

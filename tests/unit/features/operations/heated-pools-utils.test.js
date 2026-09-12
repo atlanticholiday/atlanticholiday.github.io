@@ -5,6 +5,7 @@ import {
   buildHeatedPoolPropertyDirectory,
   buildHeatedPoolPlan,
   calculateHeatedPoolCommission,
+  calculateHeatedPoolSettlement,
   getHeatedPoolPropertyConfig,
   HEATED_POOL_CATALOG_VERSION,
   HEATED_POOL_PROPERTY_CATALOG,
@@ -268,6 +269,52 @@ describe("Heated pools utils", () => {
     assert.equal(getHeatedPoolPropertyConfig("Cape View").chargeAmount, 50);
     assert.equal(getHeatedPoolPropertyConfig("Acqua Beach").chargeAmount, 35);
     assert.equal(getHeatedPoolPropertyConfig("Midnight House").chargeAmount, 30);
+  });
+
+  test("calculates the Avantio amount from the guest total and configured rates", () => {
+    assert.deepEqual(calculateHeatedPoolSettlement({
+      guestPaidAmount: 315,
+      chargeAmount: 45,
+      ownerCostAmount: 35,
+      startDate: "2026-09-14",
+      endDate: "2026-09-21"
+    }), {
+      guestPaidAmount: 315,
+      avantioAmount: 245,
+      commissionAmount: 70,
+      chargedUnits: 7,
+      nights: 7,
+      expectedGuestAmount: 315,
+      matchesStayLength: true
+    });
+
+    const oceanHaven = calculateHeatedPoolSettlement({
+      guestPaidAmount: 90,
+      chargeAmount: 45,
+      ownerCostAmount: 36.40,
+      startDate: "2026-10-01",
+      endDate: "2026-10-03"
+    });
+    assert.equal(oceanHaven.avantioAmount, 72.80);
+    assert.equal(oceanHaven.commissionAmount, 17.20);
+    assert.equal(oceanHaven.matchesStayLength, true);
+  });
+
+  test("flags totals that do not match the stay and rejects incomplete settlements", () => {
+    const customTotal = calculateHeatedPoolSettlement({
+      guestPaidAmount: 100,
+      chargeAmount: 50,
+      ownerCostAmount: 40,
+      startDate: "2026-10-01",
+      endDate: "2026-10-04"
+    });
+    assert.equal(customTotal.avantioAmount, 80);
+    assert.equal(customTotal.commissionAmount, 20);
+    assert.equal(customTotal.nights, 3);
+    assert.equal(customTotal.expectedGuestAmount, 150);
+    assert.equal(customTotal.matchesStayLength, false);
+    assert.equal(calculateHeatedPoolSettlement({ guestPaidAmount: 0, chargeAmount: 45, ownerCostAmount: 35, startDate: "2026-10-01", endDate: "2026-10-02" }), null);
+    assert.equal(calculateHeatedPoolSettlement({ guestPaidAmount: 45, chargeAmount: 45, ownerCostAmount: 35, startDate: "2026-10-02", endDate: "2026-10-01" }), null);
   });
 
   test("associates matched listings and preserves records already migrated", () => {

@@ -328,6 +328,9 @@
             "guestCharge": "Valor cobrado ao hóspede (EUR)",
             "ownerCost": "Custo do proprietário (EUR)",
             "commission": "Comissão (EUR)",
+            "guestPaidTotal": "Total pago pelo hóspede",
+            "writeInAvantio": "Colocar no Avantio",
+            "commissionTotal": "Comissão",
             "remoteControl": "Ligar/desligar remotamente",
             "remoteNo": "Não — apenas no local",
             "remoteYes": "Sim — disponível remotamente",
@@ -340,6 +343,11 @@
             "stateEyebrow": "Confirmar alteração física",
             "stateTitle": "Alterar estado da piscina",
             "associateReservation": "Associar à reserva",
+            "bookingDetails": "Reserva e pagamento",
+            "bookingDetailsHint": "Obrigatório antes de ligar a piscina.",
+            "enterCalculationDetails": "Introduza as datas e o total pago para calcular.",
+            "calculationDetail": "{{nights}} noites · tarifa do hóspede {{guestRate}} · tarifa do proprietário {{ownerRate}}",
+            "paymentMismatch": "Para {{nights}} noites, o total normal é {{expected}}. Confirme o valor pago pelo hóspede.",
             "optionalNote": "Nota opcional",
             "stateNotePlaceholder": "Ligada remotamente, confirmação do colega no local...",
             "confirmChange": "Confirmar alteração",
@@ -444,6 +452,7 @@
         },
         "association": {
             "general": "Alteração geral — sem reserva",
+            "newReservation": "Nova reserva",
             "heatingRequested": "aquecimento solicitado"
         },
         "messages": {
@@ -469,6 +478,8 @@
             "choosePropertyFirst": "Escolha primeiro um alojamento.",
             "datesRequired": "As datas de entrada e saída são obrigatórias.",
             "endDateInvalid": "A data de saída tem de ser posterior à data de entrada.",
+            "guestPaidRequired": "Introduza o valor total pago pelo hóspede.",
+            "pricingRequired": "Configure as tarifas do hóspede e do proprietário antes de ligar a piscina.",
             "taskCompleted": "Tarefa de {{property}} concluída para a reserva {{reservation}} — {{state}}.",
             "alreadyState": "A piscina de {{property}} já está {{state}}.",
             "markedState": "Piscina de {{property}} marcada como {{state}}{{reservation}}.",
