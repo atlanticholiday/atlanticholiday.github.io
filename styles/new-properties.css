@@ -996,3 +996,258 @@ body.asana-theme {
         width: 100%;
     }
 }
+
+/* Prevent floating theme toggle from covering topbar actions */
+.theme-toggle-floating {
+    display: none !important;
+}
+
+/* Inline Language & Theme Switcher in Topbar */
+.inventory-lang-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9999px;
+    padding: 2px 4px;
+    height: 36px;
+    box-sizing: border-box;
+}
+
+.inventory-lang-switcher .lang-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 9999px;
+    color: #4b5563;
+    transition: all 0.15s ease;
+}
+
+.inventory-lang-switcher .lang-btn:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+.inventory-lang-switcher .lang-btn.active {
+    background-color: #f3f4f6;
+    color: var(--asana-accent);
+}
+
+.inventory-lang-switcher .theme-toggle {
+    border: 0;
+    border-left: 1px solid #e5e7eb;
+    margin-left: 2px;
+    padding: 0 8px;
+    height: 100%;
+    min-height: unset;
+    min-width: unset;
+    font-size: 11px;
+    color: #64748b;
+    border-radius: 0 9999px 9999px 0;
+}
+
+.inventory-lang-switcher .theme-toggle:hover {
+    color: var(--asana-accent);
+    background-color: transparent;
+}
+
+/* Dark Theme Overrides */
+html[data-theme="dark"] body.asana-theme,
+html[data-theme="dark"] .asana-layout {
+    background-color: #09090b;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-topbar {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-topbar__search input {
+    background-color: #202024;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-topbar__search kbd {
+    background-color: #27272a;
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-project-header {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-project-header__title h1 {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-view-tab {
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-view-tab:hover {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-column {
+    background-color: #121215;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-column__title {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-column__count {
+    background-color: #18181b;
+    color: #a1a1aa;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-card {
+    background-color: #18181b;
+    border-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-card:hover {
+    border-color: #3f3f46;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .asana-card__title {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-spec-badge {
+    background-color: #27272a;
+    color: #d4d4d8;
+}
+
+html[data-theme="dark"] .asana-table-container {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-table th {
+    background-color: #121215;
+    color: #a1a1aa;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-table td {
+    border-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-table tr:hover td {
+    background-color: #202024;
+}
+
+html[data-theme="dark"] .btn-asana-secondary {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .btn-asana-secondary:hover {
+    background-color: #27272a;
+}
+
+html[data-theme="dark"] .inventory-lang-switcher {
+    background-color: #18181b;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .inventory-lang-switcher .lang-btn {
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .inventory-lang-switcher .lang-btn:hover {
+    background-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .inventory-lang-switcher .lang-btn.active {
+    background-color: #27272a;
+    color: var(--asana-accent);
+}
+
+html[data-theme="dark"] .inventory-lang-switcher .theme-toggle {
+    border-left-color: #3f3f46;
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-drawer {
+    background-color: #18181b;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-drawer__toolbar {
+    background-color: #18181b;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-drawer__title-input {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-drawer__title-input:hover {
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .asana-drawer__title-input:focus {
+    background-color: #18181b;
+}
+
+html[data-theme="dark"] .asana-specs-card {
+    background-color: #121215;
+    border-color: #27272a;
+}
+
+html[data-theme="dark"] .asana-stepper {
+    background-color: #18181b;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .asana-stepper button {
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-stepper button:hover {
+    background-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-stepper input {
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-bed-chip {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-inventory-table th {
+    background-color: #121215;
+    border-color: #27272a;
+    color: #a1a1aa;
+}
+
+html[data-theme="dark"] .asana-inventory-table td {
+    border-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] .asana-inventory-category-title {
+    background-color: #202024;
+    color: #f4f4f5;
+}
+

@@ -60,6 +60,12 @@ export class NewPropertiesManager {
     setLanguage(newLang) {
         this.lang = newLang === 'en' ? 'en' : 'pt';
         this.storage?.setItem('preferred_language', this.lang);
+        if (typeof document !== 'undefined') {
+            document.documentElement.lang = this.lang;
+        }
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: this.lang } }));
+        }
         this.render();
     }
 
@@ -223,12 +229,12 @@ export class NewPropertiesManager {
                         </div>
 
                         <div class="asana-topbar__actions">
-                            <button type="button" class="btn-asana-secondary" data-action="toggle-lang" title="Switch language">
-                                <i class="fas fa-globe text-xs"></i>
-                                <span>${this.lang.toUpperCase()}</span>
-                            </button>
+                            <div class="inventory-lang-switcher" title="${isPt ? 'Idioma e Tema' : 'Language & Theme'}">
+                                <button type="button" class="lang-btn ${isPt ? 'active' : ''}" data-action="set-lang" data-lang="pt">PT</button>
+                                <button type="button" class="lang-btn ${!isPt ? 'active' : ''}" data-action="set-lang" data-lang="en">EN</button>
+                            </div>
 
-                            <button type="button" class="btn-asana-secondary" data-action="export-all-xlsx" title="Export all properties to Excel">
+                            <button type="button" class="btn-asana-secondary" data-action="export-all-xlsx" title="${isPt ? 'Exportar para Excel' : 'Export all properties to Excel'}">
                                 <i class="fas fa-file-excel text-emerald-600"></i>
                                 <span class="hidden sm:inline">${isPt ? 'Exportar Tudo' : 'Export Excel'}</span>
                             </button>
@@ -338,6 +344,13 @@ export class NewPropertiesManager {
         `;
 
         this.bindDynamicEvents();
+
+        if (typeof document !== 'undefined') {
+            document.querySelectorAll('.theme-toggle-floating').forEach((el) => el.remove());
+            if (window.ThemeManager?.mountControls) {
+                window.ThemeManager.mountControls();
+            }
+        }
     }
 
     renderViewContent(properties, isPt) {
@@ -955,6 +968,9 @@ export class NewPropertiesManager {
                 case 'switch-view':
                     this.activeView = target.dataset.view;
                     this.render();
+                    break;
+                case 'set-lang':
+                    this.setLanguage(target.dataset.lang || (this.lang === 'pt' ? 'en' : 'pt'));
                     break;
                 case 'toggle-lang':
                     this.setLanguage(this.lang === 'pt' ? 'en' : 'pt');

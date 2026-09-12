@@ -154,4 +154,25 @@ describe("New Properties Manager", () => {
             container.remove();
         }
     });
+
+    test("removes stray floating theme toggle and exposes inventory-lang-switcher", () => {
+        const container = document.createElement("div");
+        container.id = "test-theme";
+        const stray = document.createElement("button");
+        stray.className = "theme-toggle theme-toggle-floating";
+        document.body.append(container, stray);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-theme", storage });
+            manager.init();
+
+            assert.equal(document.querySelectorAll(".theme-toggle-floating").length, 0, "Stray floating toggle is removed");
+            assert.ok(container.querySelector(".inventory-lang-switcher"), "Inline switcher is present");
+        } finally {
+            container.remove();
+            stray.remove();
+        }
+    });
 });
+
