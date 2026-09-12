@@ -604,6 +604,7 @@ body.asana-theme {
 .asana-drawer-overlay.open {
     opacity: 1;
     pointer-events: auto;
+    cursor: pointer;
 }
 
 .asana-drawer {
@@ -616,10 +617,19 @@ body.asana-theme {
     transform: translateX(100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
+    cursor: default;
 }
 
 .asana-drawer-overlay.open .asana-drawer {
     transform: translateX(0);
+}
+
+#new-property-modal {
+    cursor: pointer;
+}
+
+#new-property-modal > div {
+    cursor: default;
 }
 
 .asana-drawer__toolbar {

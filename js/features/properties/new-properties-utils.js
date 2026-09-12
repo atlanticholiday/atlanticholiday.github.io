@@ -396,6 +396,7 @@ export function normalizeProperty(raw = {}, index = 0) {
         pipeline,
         checklist,
         inventoryCustom: raw.inventoryCustom || {}, // key -> { verifiedQty, brand, status, comments }
+        hidden: Boolean(raw.hidden),
         createdAt: raw.createdAt || new Date().toISOString()
     };
 }

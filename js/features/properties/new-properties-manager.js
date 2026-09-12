@@ -13,6 +13,7 @@ import {
 } from './new-properties-utils.js';
 
 const STORAGE_KEY = 'atlantic_holiday_new_properties_data_v1';
+const HIDE_NEW_STORAGE_KEY = 'atlantic_holiday_new_properties_hide_new_v1';
 
 export class NewPropertiesManager {
     constructor({ containerId = 'new-properties-app', storage = window.localStorage } = {}) {
@@ -24,6 +25,10 @@ export class NewPropertiesManager {
         this.activeDrawerTab = 'checklist'; // 'checklist' | 'inventory' | 'pipeline'
         this.statusFilter = 'all';
         this.searchQuery = '';
+        this.hideNewListings = false;
+        try {
+            this.hideNewListings = this.storage?.getItem(HIDE_NEW_STORAGE_KEY) === 'true';
+        } catch (e) {}
         this.lang = 'pt'; // Default to Portuguese for onboarding team
         this.sidebarMobileOpen = false;
         this.bound = false;
@@ -108,11 +113,32 @@ export class NewPropertiesManager {
                 const searchInput = document.getElementById('asana-search-input');
                 searchInput?.focus();
             }
-            // Escape closes drawer
-            if (e.key === 'Escape' && this.selectedPropertyId) {
-                this.closeDrawer();
+            // Escape closes modal or drawer
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('new-property-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                } else if (this.selectedPropertyId) {
+                    this.closeDrawer();
+                }
             }
         });
+    }
+
+    toggleHideNewListings() {
+        this.hideNewListings = !this.hideNewListings;
+        try {
+            this.storage?.setItem(HIDE_NEW_STORAGE_KEY, String(this.hideNewListings));
+        } catch (e) {}
+        this.render();
+    }
+
+    toggleHideProperty(id) {
+        const prop = this.properties.find(p => p.id === id);
+        if (!prop) return;
+        prop.hidden = !prop.hidden;
+        this.saveProperties();
+        this.render();
     }
 
     getSelectedProperty() {
@@ -123,7 +149,15 @@ export class NewPropertiesManager {
     getFilteredProperties() {
         let list = [...this.properties];
 
-        if (this.statusFilter !== 'all') {
+        // Hide individual hidden properties unless viewing hidden status filter
+        if (this.statusFilter !== 'hidden') {
+            list = list.filter(p => !p.hidden);
+        }
+
+        // Hide new listings (in_progress & waiting) when toggle is active
+        if (this.hideNewListings) {
+            list = list.filter(p => p.status === 'completed');
+        } else if (this.statusFilter !== 'all') {
             list = list.filter(p => p.status === this.statusFilter);
         }
 
@@ -149,10 +183,10 @@ export class NewPropertiesManager {
         const selected = this.getSelectedProperty();
 
         const counts = {
-            all: this.properties.length,
-            in_progress: this.properties.filter(p => p.status === 'in_progress').length,
-            waiting: this.properties.filter(p => p.status === 'waiting').length,
-            completed: this.properties.filter(p => p.status === 'completed').length
+            all: this.properties.filter(p => !p.hidden).length,
+            in_progress: this.properties.filter(p => !p.hidden && p.status === 'in_progress').length,
+            waiting: this.properties.filter(p => !p.hidden && p.status === 'waiting').length,
+            completed: this.properties.filter(p => !p.hidden && p.status === 'completed').length
         };
 
         this.container.innerHTML = `
@@ -171,7 +205,7 @@ export class NewPropertiesManager {
 
                     <div class="asana-sidebar__nav">
                         <div class="asana-nav-section-title">${isPt ? 'Geral' : 'Overview'}</div>
-                        <button type="button" class="asana-nav-item ${this.statusFilter === 'all' ? 'active' : ''}" data-action="filter-status" data-status="all">
+                        <button type="button" class="asana-nav-item ${this.statusFilter === 'all' && !this.hideNewListings ? 'active' : ''}" data-action="filter-status" data-status="all">
                             <div class="asana-nav-item__left">
                                 <i class="fas fa-layer-group text-slate-400"></i>
                                 <span>${isPt ? 'Todos os Alojamentos' : 'All Properties'}</span>
@@ -180,7 +214,7 @@ export class NewPropertiesManager {
                         </button>
 
                         <div class="asana-nav-section-title">${isPt ? 'Pipeline' : 'Pipeline'}</div>
-                        <button type="button" class="asana-nav-item ${this.statusFilter === 'in_progress' ? 'active' : ''}" data-action="filter-status" data-status="in_progress">
+                        <button type="button" class="asana-nav-item ${this.statusFilter === 'in_progress' && !this.hideNewListings ? 'active' : ''}" data-action="filter-status" data-status="in_progress">
                             <div class="asana-nav-item__left">
                                 <i class="fas fa-circle-half-stroke text-amber-400"></i>
                                 <span>${isPt ? 'Em Curso' : 'In Progress'}</span>
@@ -188,7 +222,7 @@ export class NewPropertiesManager {
                             <span class="asana-nav-item__badge">${counts.in_progress}</span>
                         </button>
 
-                        <button type="button" class="asana-nav-item ${this.statusFilter === 'waiting' ? 'active' : ''}" data-action="filter-status" data-status="waiting">
+                        <button type="button" class="asana-nav-item ${this.statusFilter === 'waiting' && !this.hideNewListings ? 'active' : ''}" data-action="filter-status" data-status="waiting">
                             <div class="asana-nav-item__left">
                                 <i class="fas fa-hourglass-half text-purple-400"></i>
                                 <span>${isPt ? 'À Espera' : 'Waiting / Pending'}</span>
@@ -196,12 +230,23 @@ export class NewPropertiesManager {
                             <span class="asana-nav-item__badge">${counts.waiting}</span>
                         </button>
 
-                        <button type="button" class="asana-nav-item ${this.statusFilter === 'completed' ? 'active' : ''}" data-action="filter-status" data-status="completed">
+                        <button type="button" class="asana-nav-item ${this.statusFilter === 'completed' && !this.hideNewListings ? 'active' : ''}" data-action="filter-status" data-status="completed">
                             <div class="asana-nav-item__left">
                                 <i class="fas fa-check-circle text-emerald-400"></i>
                                 <span>${isPt ? 'Concluídos' : 'Completed'}</span>
                             </div>
                             <span class="asana-nav-item__badge">${counts.completed}</span>
+                        </button>
+
+                        <div class="asana-nav-section-title">${isPt ? 'Filtros & Opções' : 'Filters & Options'}</div>
+                        <button type="button" class="asana-nav-item ${this.hideNewListings ? 'active' : ''}" data-action="toggle-hide-new" title="${isPt ? 'Ocultar novos alojamentos (em curso e à espera)' : 'Hide new listings (in progress & waiting)'}">
+                            <div class="asana-nav-item__left">
+                                <i class="fas ${this.hideNewListings ? 'fa-eye-slash text-amber-400' : 'fa-eye text-slate-400'}"></i>
+                                <span>${isPt ? 'Ocultar Novos' : 'Hide New Listings'}</span>
+                            </div>
+                            <span class="asana-nav-item__badge ${this.hideNewListings ? 'bg-amber-100 text-amber-800 font-semibold' : ''}">
+                                ${this.hideNewListings ? (isPt ? 'Ativo' : 'On') : (isPt ? 'Desativo' : 'Off')}
+                            </span>
                         </button>
                     </div>
 
@@ -229,10 +274,20 @@ export class NewPropertiesManager {
                         </div>
 
                         <div class="asana-topbar__actions">
+                            <a href="index.html" class="btn-asana-secondary text-xs flex items-center gap-1.5" title="${isPt ? 'Voltar ao Portal Principal' : 'Back to Main Portal'}">
+                                <i class="fas fa-arrow-left"></i>
+                                <span class="hidden sm:inline">${isPt ? 'Portal' : 'Hub'}</span>
+                            </a>
+
                             <div class="inventory-lang-switcher" title="${isPt ? 'Idioma e Tema' : 'Language & Theme'}">
                                 <button type="button" class="lang-btn ${isPt ? 'active' : ''}" data-action="set-lang" data-lang="pt">PT</button>
                                 <button type="button" class="lang-btn ${!isPt ? 'active' : ''}" data-action="set-lang" data-lang="en">EN</button>
                             </div>
+
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 ${this.hideNewListings ? 'bg-amber-50 border-amber-300 text-amber-800 font-semibold shadow-xs' : ''}" data-action="toggle-hide-new" title="${isPt ? 'Ocultar novos alojamentos (em curso e à espera)' : 'Hide new listings (in progress & waiting)'}">
+                                <i class="fas ${this.hideNewListings ? 'fa-eye-slash text-amber-600' : 'fa-eye text-gray-500'}"></i>
+                                <span class="hidden sm:inline">${isPt ? (this.hideNewListings ? 'Novos Ocultados' : 'Ocultar Novos') : (this.hideNewListings ? 'New Hidden' : 'Hide New')}</span>
+                            </button>
 
                             <button type="button" class="btn-asana-secondary" data-action="export-all-xlsx" title="${isPt ? 'Exportar para Excel' : 'Export all properties to Excel'}">
                                 <i class="fas fa-file-excel text-emerald-600"></i>
@@ -278,6 +333,17 @@ export class NewPropertiesManager {
 
                     <!-- CANVAS AREA -->
                     <div class="asana-canvas">
+                        ${this.hideNewListings ? `
+                            <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-xl mb-4 text-xs flex items-center justify-between shadow-xs">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-eye-slash text-amber-600"></i>
+                                    <span><strong>${isPt ? 'Filtro Ativo:' : 'Active Filter:'}</strong> ${isPt ? 'Os novos alojamentos (em curso e à espera) estão ocultados.' : 'New listings (in progress & waiting) are hidden.'}</span>
+                                </div>
+                                <button type="button" class="underline font-semibold hover:text-amber-950 ml-2" data-action="toggle-hide-new">
+                                    ${isPt ? 'Mostrar Todos' : 'Show All'}
+                                </button>
+                            </div>
+                        ` : ''}
                         ${this.renderViewContent(filtered, isPt)}
                     </div>
                 </main>
@@ -287,7 +353,7 @@ export class NewPropertiesManager {
             ${this.renderPropertyDrawer(selected, isPt)}
 
             <!-- NEW PROPERTY MODAL -->
-            <div id="new-property-modal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div id="new-property-modal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4" data-action="close-modal">
                 <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
                     <div class="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
                         <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -566,14 +632,14 @@ export class NewPropertiesManager {
 
     renderPropertyDrawer(property, isPt) {
         if (!property) {
-            return `<div id="asana-property-drawer-overlay" class="asana-drawer-overlay"></div>`;
+            return `<div id="asana-property-drawer-overlay" class="asana-drawer-overlay" data-action="close-drawer"></div>`;
         }
 
         const inv = calculatePropertyInventory(property);
         const progress = calculateChecklistProgress(property.checklist);
 
         return `
-            <div id="asana-property-drawer-overlay" class="asana-drawer-overlay open">
+            <div id="asana-property-drawer-overlay" class="asana-drawer-overlay open" data-action="close-drawer" role="dialog" aria-modal="true" aria-label="${this.escapeHtml(property.name)}">
                 <div class="asana-drawer" id="asana-property-drawer">
                     <!-- TOOLBAR -->
                     <div class="asana-drawer__toolbar">
@@ -591,11 +657,16 @@ export class NewPropertiesManager {
                         </div>
 
                         <div class="flex items-center gap-2">
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 ${property.hidden ? 'bg-amber-50 text-amber-700 border-amber-300' : 'text-gray-600'}" data-action="toggle-hide-property" data-id="${property.id}" title="${isPt ? (property.hidden ? 'Mostrar este alojamento' : 'Ocultar este alojamento') : (property.hidden ? 'Unhide this listing' : 'Hide this listing')}">
+                                <i class="fas ${property.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                                <span class="hidden sm:inline">${property.hidden ? (isPt ? 'Ocultado' : 'Hidden') : (isPt ? 'Ocultar' : 'Hide')}</span>
+                            </button>
                             <button type="button" class="btn-asana-secondary text-xs text-red-600 hover:bg-red-50" data-action="delete-property" data-id="${property.id}" title="${isPt ? 'Eliminar' : 'Delete'}">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            <button type="button" class="text-gray-400 hover:text-gray-700 p-2 text-base" data-action="close-drawer">
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 hover:bg-gray-100 text-gray-700 font-semibold px-3 py-1.5 rounded-lg border border-gray-300 shadow-xs" data-action="close-drawer" title="${isPt ? 'Fechar gaveta (Esc ou clique fora)' : 'Close drawer (Esc or click outside)'}">
                                 <i class="fas fa-times"></i>
+                                <span>${isPt ? 'Fechar' : 'Close'}</span>
                             </button>
                         </div>
                     </div>
@@ -952,8 +1023,40 @@ export class NewPropertiesManager {
             });
         }
 
+        // Close drawer when clicking directly on overlay backdrop
+        const overlay = document.getElementById('asana-property-drawer-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    this.closeDrawer();
+                }
+            });
+        }
+
+        // Close modal when clicking directly on modal backdrop
+        const modal = document.getElementById('new-property-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        }
+
         // Click delegation on container
         this.container.onclick = (e) => {
+            // 1. If clicking directly on drawer overlay backdrop (outside the drawer panel), close drawer
+            if (e.target && (e.target.id === 'asana-property-drawer-overlay' || e.target.classList.contains('asana-drawer-overlay'))) {
+                this.closeDrawer();
+                return;
+            }
+
+            // 2. If clicking directly on new property modal backdrop, close modal
+            if (e.target && e.target.id === 'new-property-modal') {
+                document.getElementById('new-property-modal')?.classList.add('hidden');
+                return;
+            }
+
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -963,7 +1066,21 @@ export class NewPropertiesManager {
             switch (action) {
                 case 'filter-status':
                     this.statusFilter = target.dataset.status;
+                    if (this.hideNewListings && (this.statusFilter === 'in_progress' || this.statusFilter === 'waiting')) {
+                        this.hideNewListings = false;
+                        try {
+                            this.storage?.setItem(HIDE_NEW_STORAGE_KEY, 'false');
+                        } catch (err) {}
+                    }
                     this.render();
+                    break;
+                case 'toggle-hide-new':
+                    this.toggleHideNewListings();
+                    break;
+                case 'toggle-hide-property':
+                    if (id) {
+                        this.toggleHideProperty(id);
+                    }
                     break;
                 case 'switch-view':
                     this.activeView = target.dataset.view;

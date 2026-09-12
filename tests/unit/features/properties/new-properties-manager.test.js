@@ -174,5 +174,138 @@ describe("New Properties Manager", () => {
             stray.remove();
         }
     });
+
+    test("closes drawer when clicking on the drawer overlay backdrop outside the panel", () => {
+        const container = document.createElement("div");
+        container.id = "test-drawer-backdrop";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-drawer-backdrop", storage });
+            manager.init();
+
+            const firstProp = manager.properties[0];
+            manager.selectedPropertyId = firstProp.id;
+            manager.render();
+
+            assert.equal(manager.selectedPropertyId, firstProp.id, "Drawer is initially open");
+            const overlay = container.querySelector("#asana-property-drawer-overlay");
+            assert.ok(overlay, "Overlay exists");
+
+            // Click directly on overlay backdrop
+            overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(manager.selectedPropertyId, null, "Drawer closed when clicking overlay backdrop");
+        } finally {
+            container.remove();
+        }
+    });
+
+    test("closes drawer when clicking close button [data-action='close-drawer']", () => {
+        const container = document.createElement("div");
+        container.id = "test-drawer-close-btn";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-drawer-close-btn", storage });
+            manager.init();
+
+            manager.selectedPropertyId = manager.properties[0].id;
+            manager.render();
+
+            const closeBtn = container.querySelector(".asana-drawer button[data-action='close-drawer']");
+            assert.ok(closeBtn, "Close button exists inside drawer");
+
+            closeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(manager.selectedPropertyId, null, "Drawer closed after clicking close button");
+        } finally {
+            container.remove();
+        }
+    });
+
+    test("closes new property modal when clicking on its backdrop", () => {
+        const container = document.createElement("div");
+        container.id = "test-modal-backdrop";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-modal-backdrop", storage });
+            manager.init();
+
+            const modal = container.querySelector("#new-property-modal");
+            assert.ok(modal, "Modal exists");
+            modal.classList.remove("hidden");
+            assert.ok(!modal.classList.contains("hidden"), "Modal is visible");
+
+            // Click directly on modal backdrop
+            modal.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.ok(modal.classList.contains("hidden"), "Modal hidden after clicking backdrop");
+        } finally {
+            container.remove();
+        }
+    });
+
+    test("toggles hideNewListings option to hide new listings and show completed only", () => {
+        const container = document.createElement("div");
+        container.id = "test-hide-new";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-hide-new", storage });
+            manager.init();
+
+            assert.equal(manager.hideNewListings, false, "hideNewListings is false by default");
+            assert.equal(manager.getFilteredProperties().length, 42, "Shows all 42 properties");
+
+            // Toggle hide new listings
+            manager.toggleHideNewListings();
+            assert.equal(manager.hideNewListings, true, "hideNewListings is now true");
+            assert.equal(manager.getFilteredProperties().length, 20, "Shows only completed listings (20)");
+            assert.equal(storage.getItem("atlantic_holiday_new_properties_hide_new_v1"), "true", "Persists to storage");
+
+            // Check UI button active state and active filter banner
+            assert.ok(container.textContent.includes("Filtro Ativo"), "Shows active filter banner");
+
+            // Click toggle button in topbar/sidebar via event delegation
+            const toggleBtn = container.querySelector("[data-action='toggle-hide-new']");
+            assert.ok(toggleBtn, "Toggle button rendered");
+            toggleBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+            assert.equal(manager.hideNewListings, false, "hideNewListings toggled back to false");
+            assert.equal(manager.getFilteredProperties().length, 42, "Shows all 42 properties again");
+        } finally {
+            container.remove();
+        }
+    });
+
+    test("allows hiding and unhiding an individual property", () => {
+        const container = document.createElement("div");
+        container.id = "test-hide-prop";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-hide-prop", storage });
+            manager.init();
+
+            const targetProp = manager.properties[0];
+            assert.equal(targetProp.hidden, false);
+            assert.equal(manager.getFilteredProperties().length, 42);
+
+            manager.toggleHideProperty(targetProp.id);
+            assert.equal(targetProp.hidden, true, "Property is marked hidden");
+            assert.equal(manager.getFilteredProperties().length, 41, "Hidden property excluded from general list");
+
+            manager.toggleHideProperty(targetProp.id);
+            assert.equal(targetProp.hidden, false, "Property is unhidden");
+            assert.equal(manager.getFilteredProperties().length, 42, "All properties visible again");
+        } finally {
+            container.remove();
+        }
+    });
 });
+
 
