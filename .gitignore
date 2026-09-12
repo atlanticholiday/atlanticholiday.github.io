@@ -43,5 +43,7 @@ backups/
 
 # Local browser automation artifacts
 .airbnb-playwright/
+.pms-playwright/
+.cache/
 downloads/airbnb-invoices/
 downloads/airbnb-reservation-invoices/

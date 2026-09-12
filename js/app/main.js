@@ -27,6 +27,7 @@ import { OwnersManager } from '../features/operations/owners-manager.js';
 import { OperationalGuidelinesManager } from '../features/operations/operational-guidelines-manager.js';
 import { BuildPlannerManager } from '../features/planning/build-planner-manager.js';
 import { ReservationsManager } from '../features/operations/reservations-manager.js';
+import { PropertyCalendarManager } from '../features/operations/property-calendar-manager.js';
 import { RnalManager } from '../features/operations/rnal-manager.js';
 import { SafetyManager } from '../features/operations/safety-manager.js';
 import { VehiclesManager } from '../features/operations/vehicles-manager.js';
@@ -84,7 +85,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, propertyCalendarManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -114,6 +115,12 @@ function clearSensitiveBrowserState() {
             }
         }
         keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+        for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+            const key = window.sessionStorage.key(index);
+            if (key && key.startsWith('2fa_verified_')) {
+                window.sessionStorage.removeItem(key);
+            }
+        }
         window.sessionStorage.removeItem('currentProperty');
     } catch (error) {
         console.warn('Could not clear sensitive browser state:', error);
@@ -374,6 +381,102 @@ function routeCurrentUserAccess() {
     }
 }
 
+let pendingTwoFactorResolver = null;
+
+function promptTwoFactorVerification(email) {
+    const modal = document.getElementById('login-two-factor-modal');
+    const codeInput = document.getElementById('login-two-factor-code');
+    const errorEl = document.getElementById('login-two-factor-error');
+    const emailEl = document.getElementById('login-two-factor-email');
+    const verifyBtn = document.getElementById('login-two-factor-verify-btn');
+
+    if (!modal) return Promise.resolve(false);
+
+    if (emailEl) emailEl.textContent = email || '';
+    if (codeInput) codeInput.value = '';
+    if (errorEl) errorEl.textContent = '';
+    if (verifyBtn) {
+        verifyBtn.disabled = false;
+        const span = verifyBtn.querySelector('span');
+        if (span) span.textContent = t('login.twoFactorVerify', 'Verify Code');
+    }
+
+    modal.classList.remove('hidden');
+    codeInput?.focus();
+
+    return new Promise((resolve) => {
+        pendingTwoFactorResolver = resolve;
+    });
+}
+
+function dismissTwoFactorModal(result = false) {
+    const modal = document.getElementById('login-two-factor-modal');
+    modal?.classList.add('hidden');
+    if (pendingTwoFactorResolver) {
+        const resolver = pendingTwoFactorResolver;
+        pendingTwoFactorResolver = null;
+        resolver(result);
+    }
+}
+
+function setupTwoFactorLoginListeners() {
+    const verifyBtn = document.getElementById('login-two-factor-verify-btn');
+    const cancelBtn = document.getElementById('login-two-factor-cancel-btn');
+    const codeInput = document.getElementById('login-two-factor-code');
+    const errorEl = document.getElementById('login-two-factor-error');
+
+    async function executeVerification() {
+        const code = String(codeInput?.value || '').trim();
+        if (code.length !== 6) {
+            if (errorEl) errorEl.textContent = t('login.twoFactorInvalid', 'Invalid verification code. Please check your app and try again.');
+            return;
+        }
+
+        if (verifyBtn) {
+            verifyBtn.disabled = true;
+            const span = verifyBtn.querySelector('span');
+            if (span) span.textContent = t('login.twoFactorVerifying', 'Verifying…');
+        }
+        if (errorEl) errorEl.textContent = '';
+
+        try {
+            const result = await accessManager.verifyTwoFactorChallenge(code);
+            if (result?.valid) {
+                dismissTwoFactorModal(true);
+            } else {
+                if (errorEl) errorEl.textContent = result?.error || t('login.twoFactorInvalid', 'Invalid verification code. Please check your app and try again.');
+                if (verifyBtn) {
+                    verifyBtn.disabled = false;
+                    const span = verifyBtn.querySelector('span');
+                    if (span) span.textContent = t('login.twoFactorVerify', 'Verify Code');
+                }
+            }
+        } catch (error) {
+            if (errorEl) errorEl.textContent = error?.message || t('login.twoFactorInvalid', 'Invalid verification code. Please check your app and try again.');
+            if (verifyBtn) {
+                verifyBtn.disabled = false;
+                const span = verifyBtn.querySelector('span');
+                if (span) span.textContent = t('login.twoFactorVerify', 'Verify Code');
+            }
+        }
+    }
+
+    verifyBtn?.addEventListener('click', () => {
+        executeVerification();
+    });
+
+    codeInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            executeVerification();
+        }
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        dismissTwoFactorModal(false);
+    });
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -465,6 +568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         operationsManager = new OperationsManager(db);
         reservationsManager = new ReservationsManager(db);
+        propertyCalendarManager = new PropertyCalendarManager(db, null, navigationManager);
         rnalManager = new RnalManager(db);
         safetyManager = new SafetyManager(db);
 
@@ -577,6 +681,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup login event listeners immediately
         eventManager.setupLoginListeners();
+        setupTwoFactorLoginListeners();
 
         // Setup navigation listeners (after Visits injected its button)
         navigationManager.setupNavigationListeners();
@@ -709,6 +814,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                // Two-Factor Authentication Check (Google Authenticator TOTP)
+                if (accessEntry?.twoFactorEnabled) {
+                    const verifiedKey = `2fa_verified_${user.uid}`;
+                    const isVerified = window.sessionStorage?.getItem(verifiedKey) === 'true';
+                    if (!isVerified) {
+                        const verified = await promptTwoFactorVerification(user.email);
+                        if (!verified) {
+                            await signOut(auth).catch((error) => {
+                                console.error('Failed to sign out after cancelled 2FA:', error);
+                            });
+                            return;
+                        }
+                        window.sessionStorage?.setItem(verifiedKey, 'true');
+                    }
+                }
+
                 userId = user.uid;
                 console.log(`🔐 [INITIALIZATION] User logged in: ${userId}`);
                 timeClockAutoOpenedForUser = false;
@@ -770,6 +891,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 operationsManager = new OperationsManager(db, userId); // Initialize operations manager
                 console.log(`🔖 [INITIALIZATION] Creating ReservationsManager...`);
                 reservationsManager = new ReservationsManager(db, userId);
+                console.log(`📅 [INITIALIZATION] Creating PropertyCalendarManager...`);
+                propertyCalendarManager = new PropertyCalendarManager(db, userId, navigationManager);
 
                 console.log(`🔥 [INITIALIZATION] Creating SafetyManager...`);
                 safetyManager = new SafetyManager(db, propertiesManager);
@@ -813,6 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 2000); // Wait 2 seconds for properties to load
             } else {
                 console.log(`🔐 [INITIALIZATION] User logged out`);
+                dismissTwoFactorModal(false);
                 clearSensitiveBrowserState();
                 userId = null;
                 timeClockAutoOpenedForUser = false;
@@ -1024,6 +1148,14 @@ function setupGlobalEventListeners() {
         if (reservationsManager) {
             console.log('Reservations page opened, initializing...');
             reservationsManager.initializeEventListeners();
+        }
+    });
+
+    document.addEventListener('propertyCalendarPageOpened', () => {
+        if (propertyCalendarManager) {
+            console.log('Property Calendar page opened, initializing...');
+            propertyCalendarManager.setNavigationManager(navigationManager);
+            propertyCalendarManager.init();
         }
     });
 

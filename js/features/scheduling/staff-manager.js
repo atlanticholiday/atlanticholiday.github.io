@@ -10,6 +10,7 @@ export class StaffManager {
         this.isHistoryView = false;
         this.searchQuery = '';
         this.sortMode = 'nameAsc';
+        this.viewMode = this.loadViewMode();
 
         this.handleLanguageChange = this.handleLanguageChange.bind(this);
 
@@ -18,6 +19,7 @@ export class StaffManager {
 
     init() {
         this.setupEventListeners();
+        this.setupViewSwitcher();
         this.ensureAddEmployeeFormReady();
         this.updateChrome();
     }
@@ -220,12 +222,65 @@ export class StaffManager {
         }
     }
 
+    loadViewMode() {
+        try {
+            return this.window?.localStorage?.getItem('horario_staff_layout') || 'grid';
+        } catch {
+            return 'grid';
+        }
+    }
+
+    setViewMode(mode) {
+        this.viewMode = mode === 'table' ? 'table' : 'grid';
+        try {
+            this.window?.localStorage?.setItem('horario_staff_layout', this.viewMode);
+        } catch {
+            // ignore storage errors
+        }
+
+        const listContainer = this.document.getElementById('staff-list-container');
+        const historyContainer = this.document.getElementById('history-list-container');
+        const isTable = this.viewMode === 'table';
+
+        listContainer?.classList.toggle('staff-list--table', isTable);
+        historyContainer?.classList.toggle('staff-list--table', isTable);
+
+        const gridBtn = this.document.getElementById('staff-view-grid-btn');
+        const tableBtn = this.document.getElementById('staff-view-table-btn');
+
+        if (gridBtn) {
+            gridBtn.classList.toggle('is-active', !isTable);
+            gridBtn.setAttribute('aria-pressed', !isTable ? 'true' : 'false');
+        }
+        if (tableBtn) {
+            tableBtn.classList.toggle('is-active', isTable);
+            tableBtn.setAttribute('aria-pressed', isTable ? 'true' : 'false');
+        }
+    }
+
+    setupViewSwitcher() {
+        const gridBtn = this.document.getElementById('staff-view-grid-btn');
+        const tableBtn = this.document.getElementById('staff-view-table-btn');
+
+        if (gridBtn && gridBtn.dataset.staffBound !== 'true') {
+            gridBtn.dataset.staffBound = 'true';
+            gridBtn.addEventListener('click', () => this.setViewMode('grid'));
+        }
+        if (tableBtn && tableBtn.dataset.staffBound !== 'true') {
+            tableBtn.dataset.staffBound = 'true';
+            tableBtn.addEventListener('click', () => this.setViewMode('table'));
+        }
+
+        this.setViewMode(this.viewMode);
+    }
+
     render() {
         const listContainer = this.document.getElementById('staff-list-container');
         const historyContainer = this.document.getElementById('history-list-container');
         if (!listContainer || !historyContainer) return;
 
         this.ensureAddEmployeeFormReady();
+        this.setupViewSwitcher();
         this.updateChrome();
 
         this.renderCurrentList();
@@ -275,9 +330,18 @@ export class StaffManager {
         const archivedCount = this.document.getElementById('staff-archived-count');
         const totalCount = this.document.getElementById('staff-total-count');
 
-        if (activeCount) activeCount.textContent = String(activeEmployees.length);
-        if (archivedCount) archivedCount.textContent = String(archivedEmployees.length);
-        if (totalCount) totalCount.textContent = String(activeEmployees.length + archivedEmployees.length);
+        const activeCountStr = String(activeEmployees.length);
+        const archivedCountStr = String(archivedEmployees.length);
+        const totalCountStr = String(activeEmployees.length + archivedEmployees.length);
+
+        if (activeCount) activeCount.textContent = activeCountStr;
+        if (archivedCount) archivedCount.textContent = archivedCountStr;
+        if (totalCount) totalCount.textContent = totalCountStr;
+
+        const activeTabCount = this.document.getElementById('staff-active-tab-count');
+        const archivedTabCount = this.document.getElementById('staff-archived-tab-count');
+        if (activeTabCount) activeTabCount.textContent = activeCountStr;
+        if (archivedTabCount) archivedTabCount.textContent = archivedCountStr;
     }
 
     updateViewButtons() {
@@ -360,6 +424,16 @@ export class StaffManager {
         return parts.map((part) => part.charAt(0).toUpperCase()).join('');
     }
 
+    getAvatarTheme(name = '') {
+        const themes = ['coral', 'indigo', 'emerald', 'amber', 'purple', 'sky', 'rose', 'teal'];
+        let hash = 0;
+        const str = String(name).trim();
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+        }
+        return themes[hash % themes.length];
+    }
+
     getWeekdayLabel(index) {
         return this.translate(`days.short.${index}`, Config.DAYS_OF_WEEK[index] || '');
     }
@@ -396,7 +470,8 @@ export class StaffManager {
                 employee.position,
                 employee.employmentType,
                 employee.email,
-                employee.phone
+                employee.phone,
+                employee.personalPhone
             ].filter(Boolean).join(' ');
 
             return this.normalizeSearchValue(searchableProfile).includes(query);
@@ -459,9 +534,13 @@ export class StaffManager {
         const safeTitle = this.escapeHtml(title);
         const safeMessage = this.escapeHtml(message);
         const toneClass = tone === 'error' ? ' staff-state--error' : '';
+        const iconSvg = tone === 'error'
+            ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
+            : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`;
 
         container.innerHTML = `
             <div class="staff-state${toneClass}">
+                <div class="staff-state__icon">${iconSvg}</div>
                 <p class="staff-state__title">${safeTitle}</p>
                 <p class="staff-state__copy">${safeMessage}</p>
             </div>
@@ -513,19 +592,20 @@ export class StaffManager {
 
     renderActiveCard(employee) {
         const name = this.escapeHtml(employee.name || '');
+        const avatarTheme = this.getAvatarTheme(employee.name);
         const pills = [];
 
         if (employee.staffNumber) {
             pills.push(`<span class="staff-meta-pill staff-meta-pill--accent">${this.escapeHtml(`${this.translate('staff.staffNumber', 'Staff Number')} #${employee.staffNumber}`)}</span>`);
         }
         if (employee.department) {
-            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.department)}</span>`);
+            pills.push(`<span class="staff-meta-pill staff-meta-pill--dept">${this.escapeHtml(employee.department)}</span>`);
         }
         if (employee.position) {
-            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.position)}</span>`);
+            pills.push(`<span class="staff-meta-pill staff-meta-pill--pos">${this.escapeHtml(employee.position)}</span>`);
         }
         if (employee.employmentType) {
-            pills.push(`<span class="staff-meta-pill">${this.escapeHtml(employee.employmentType)}</span>`);
+            pills.push(`<span class="staff-meta-pill staff-meta-pill--type">${this.escapeHtml(employee.employmentType)}</span>`);
         }
 
         if (!pills.length) {
@@ -534,37 +614,63 @@ export class StaffManager {
 
         const contacts = [];
         if (employee.email) {
-            contacts.push(this.escapeHtml(employee.email));
+            contacts.push(`<a href="mailto:${this.escapeHtml(employee.email)}" class="staff-contact-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>${this.escapeHtml(employee.email)}</a>`);
         }
-        if (employee.phone) {
-            contacts.push(this.escapeHtml(employee.phone));
+        if (employee.phone && employee.personalPhone) {
+            const companyTag = this.translate('staff.phoneTypes.companyShort', 'Work');
+            const personalTag = this.translate('staff.phoneTypes.personalShort', 'Personal');
+            contacts.push(`<a href="tel:${this.escapeHtml(employee.phone)}" class="staff-contact-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>${this.escapeHtml(employee.phone)}</a> <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(companyTag)})</span>`);
+            contacts.push(`<a href="tel:${this.escapeHtml(employee.personalPhone)}" class="staff-contact-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>${this.escapeHtml(employee.personalPhone)}</a> <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(personalTag)})</span>`);
+        } else if (employee.phone) {
+            contacts.push(`<a href="tel:${this.escapeHtml(employee.phone)}" class="staff-contact-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>${this.escapeHtml(employee.phone)}</a>`);
+        } else if (employee.personalPhone) {
+            const personalTag = this.translate('staff.phoneTypes.personalShort', 'Personal');
+            contacts.push(`<a href="tel:${this.escapeHtml(employee.personalPhone)}" class="staff-contact-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>${this.escapeHtml(employee.personalPhone)}</a> <span class="text-xs text-slate-500 font-medium">(${this.escapeHtml(personalTag)})</span>`);
         }
 
         const contactMarkup = contacts.length
-            ? `<p class="staff-contact">${contacts.map((item, index) => `${index ? '<span class="staff-contact-separator">/</span>' : ''}${item}`).join('')}</p>`
+            ? `<div class="staff-contact">${contacts.map((item, index) => `${index ? '<span class="staff-contact-separator">/</span>' : ''}${item}`).join('')}</div>`
             : '';
+
+        const normalizedDays = Array.isArray(employee.workDays)
+            ? employee.workDays
+                .map((day) => Number.parseInt(day, 10))
+                .filter((day) => Number.isInteger(day))
+            : [];
+
+        const dayChips = [0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
+            const dayName = this.getWeekdayLabel(dayIdx);
+            const initial = dayName ? dayName.charAt(0).toUpperCase() : '';
+            const isActive = normalizedDays.includes(dayIdx);
+            return `<span class="staff-day-chip${isActive ? ' is-active' : ''}" title="${this.escapeHtml(dayName)}">${this.escapeHtml(initial)}</span>`;
+        }).join('');
 
         return `
             <article class="staff-card">
                 <div class="staff-identity">
-                    <div class="staff-avatar">${this.escapeHtml(this.getInitials(employee.name))}</div>
+                    <div class="staff-avatar staff-avatar--${this.escapeHtml(avatarTheme)}">${this.escapeHtml(this.getInitials(employee.name))}</div>
                     <div class="staff-copy">
                         <div class="staff-name-row">
                             <h3 class="staff-name">${name}</h3>
                         </div>
                         <div class="staff-meta-row">${pills.join('')}</div>
                         ${contactMarkup}
-                        <p class="staff-secondary-meta">
-                            <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
-                            ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
-                        </p>
+                        <div class="staff-schedule-block">
+                            <div class="staff-days-visual" aria-hidden="true">${dayChips}</div>
+                            <p class="staff-secondary-meta">
+                                <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
+                                ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div class="staff-actions">
                     <button class="staff-button staff-button--secondary edit-employee-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         ${this.escapeHtml(this.translate('common.edit', 'Edit'))}
                     </button>
                     <button class="staff-button staff-button--warning archive-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
                         ${this.escapeHtml(this.translate('staff.archive', 'Archive'))}
                     </button>
                 </div>
@@ -619,6 +725,19 @@ export class StaffManager {
         const name = this.escapeHtml(employee.name || '');
         const archivedNote = this.escapeHtml(this.translate('staff.archivedNote', 'Archived record'));
 
+        const normalizedDays = Array.isArray(employee.workDays)
+            ? employee.workDays
+                .map((day) => Number.parseInt(day, 10))
+                .filter((day) => Number.isInteger(day))
+            : [];
+
+        const dayChips = [0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
+            const dayName = this.getWeekdayLabel(dayIdx);
+            const initial = dayName ? dayName.charAt(0).toUpperCase() : '';
+            const isActive = normalizedDays.includes(dayIdx);
+            return `<span class="staff-day-chip${isActive ? ' is-active' : ''}" title="${this.escapeHtml(dayName)}">${this.escapeHtml(initial)}</span>`;
+        }).join('');
+
         return `
             <article class="staff-card staff-card--archived">
                 <div class="staff-identity">
@@ -628,17 +747,22 @@ export class StaffManager {
                             <h3 class="staff-name">${name}</h3>
                             <span class="staff-meta-pill staff-meta-pill--muted">${archivedNote}</span>
                         </div>
-                        <p class="staff-secondary-meta">
-                            <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
-                            ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
-                        </p>
+                        <div class="staff-schedule-block">
+                            <div class="staff-days-visual" aria-hidden="true">${dayChips}</div>
+                            <p class="staff-secondary-meta">
+                                <strong>${this.escapeHtml(this.translate('staff.defaultDays', 'Default days'))}:</strong>
+                                ${this.escapeHtml(this.formatWorkDays(employee.workDays))}
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div class="staff-actions">
                     <button class="staff-button staff-button--success restore-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         ${this.escapeHtml(this.translate('staff.restore', 'Restore'))}
                     </button>
                     <button class="staff-button staff-button--danger delete-btn" data-employee-id="${this.escapeHtml(employee.id)}">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         ${this.escapeHtml(this.translate('common.delete', 'Delete'))}
                     </button>
                 </div>

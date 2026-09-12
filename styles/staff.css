@@ -1,0 +1,1313 @@
+/* ==========================================================================
+   Staff Management - Asana-inspired Operations Workspace
+   ========================================================================== */
+
+#staff-page {
+    --staff-accent: #ef5b6c;
+    --staff-accent-hover: #dd4c5f;
+    --staff-accent-soft: rgba(239, 91, 108, 0.08);
+    --staff-accent-border: rgba(239, 91, 108, 0.22);
+    --staff-ink: #1f2328;
+    --staff-ink-secondary: #4b5563;
+    --staff-muted: #656d76;
+    --staff-subtle: #8c959f;
+    --staff-line: #e1e4e8;
+    --staff-line-subtle: #f0f2f5;
+    --staff-surface: #ffffff;
+    --staff-surface-subtle: #f8fafc;
+    --staff-surface-hover: #f1f5f9;
+    --staff-input: #f8fafc;
+    --staff-input-border: #dbe3ed;
+    --staff-green: #059669;
+    --staff-green-soft: #ecfdf5;
+    --staff-green-border: #a7f3d0;
+    --staff-amber: #b45309;
+    --staff-amber-soft: #fffbeb;
+    --staff-amber-border: #fde68a;
+    --staff-blue: #2563eb;
+    --staff-blue-soft: #eff6ff;
+    --staff-blue-border: #bfdbfe;
+    --staff-purple: #7c3aed;
+    --staff-purple-soft: #f5f3ff;
+    --staff-purple-border: #ddd6fe;
+    --staff-red: #dc2626;
+    --staff-red-soft: #fef2f2;
+    --staff-red-border: #fecaca;
+    
+    min-height: 100vh;
+    color: var(--staff-ink);
+    background: #f6f8fb;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#staff-page.hidden {
+    display: none !important;
+}
+
+#staff-page button,
+#staff-page input,
+#staff-page select,
+#staff-page textarea {
+    font: inherit;
+}
+
+#staff-page button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ==========================================================================
+   Header & Topbar
+   ========================================================================== */
+
+.staff-topbar {
+    border-bottom: 1px solid var(--staff-line);
+    background: var(--staff-surface);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.staff-topbar__inner {
+    display: flex;
+    width: min(100%, 1520px);
+    min-height: 44px;
+    margin: 0 auto;
+    padding: 6px 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.staff-topbar__project {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 10px;
+}
+
+.staff-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 8px;
+    color: var(--staff-muted);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease;
+}
+
+.staff-back-btn:hover {
+    color: var(--staff-ink);
+    background: var(--staff-surface-hover);
+}
+
+.staff-back-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.staff-topbar__divider {
+    width: 1px;
+    height: 16px;
+    background: var(--staff-line);
+}
+
+.staff-project-icon {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 6px;
+    color: #ffffff;
+    background: var(--staff-accent);
+    box-shadow: 0 1px 3px rgba(239, 91, 108, 0.25);
+}
+
+.staff-project-icon svg,
+.staff-project-icon i {
+    width: 13px;
+    height: 13px;
+    font-size: 12px;
+}
+
+.staff-topbar__copy {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.staff-eyebrow,
+.staff-topbar__subtitle {
+    display: none;
+}
+
+.staff-topbar__title {
+    margin: 0;
+    color: var(--staff-ink);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+.staff-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.staff-header-actions .app-switcher-trigger {
+    min-height: 28px;
+    height: 28px;
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 12px;
+    box-shadow: none;
+}
+
+.staff-language-switcher {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--staff-line);
+    border-radius: 6px;
+    padding: 2px;
+    background: var(--staff-surface-subtle);
+    box-shadow: none;
+}
+
+.staff-language-switcher .lang-btn {
+    min-width: 28px;
+    min-height: 24px;
+    border: 0;
+    border-radius: 4px;
+    padding: 0 6px;
+    color: var(--staff-muted);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+
+.staff-language-switcher .lang-btn:hover {
+    color: var(--staff-ink);
+    background: var(--staff-surface-hover);
+}
+
+.staff-language-switcher .lang-btn.active,
+.staff-language-switcher .lang-btn[data-active="true"] {
+    color: var(--staff-ink);
+    background: var(--staff-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.staff-language-switcher .theme-toggle {
+    min-height: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.staff-signout {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 8px;
+    color: var(--staff-muted);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease;
+}
+
+.staff-signout:hover {
+    color: var(--staff-accent-hover);
+    background: var(--staff-accent-soft);
+}
+
+.staff-signout svg,
+.staff-signout i {
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   Project Navigation Tabs (Asana Style)
+   ========================================================================== */
+
+.staff-appbar {
+    border-bottom: 1px solid var(--staff-line);
+    background: var(--staff-surface);
+}
+
+.staff-appbar__inner {
+    width: min(100%, 1520px);
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.staff-view-toggle,
+.staff-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    scrollbar-width: none;
+}
+
+.staff-view-toggle::-webkit-scrollbar,
+.staff-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.staff-view-tab {
+    position: relative;
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 6px 12px;
+    color: var(--staff-muted);
+    background: transparent;
+    box-shadow: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 140ms ease, border-color 140ms ease;
+}
+
+.staff-view-tab:hover {
+    color: var(--staff-ink);
+    border-bottom-color: #cbd5e1;
+    background: transparent;
+}
+
+.staff-view-tab.staff-view-tab-active,
+.staff-view-tab[aria-selected="true"] {
+    color: var(--staff-ink);
+    border-bottom-color: var(--staff-accent);
+    font-weight: 700;
+    background: transparent;
+    box-shadow: none;
+}
+
+.staff-tab-count {
+    display: inline-flex;
+    min-width: 18px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--staff-muted);
+    background: var(--staff-surface-hover);
+    transition: all 140ms ease;
+}
+
+.staff-view-tab.staff-view-tab-active .staff-tab-count,
+.staff-view-tab[aria-selected="true"] .staff-tab-count {
+    color: #ffffff;
+    background: var(--staff-accent);
+}
+
+/* ==========================================================================
+   Workspace Main & Toolbar
+   ========================================================================== */
+
+.staff-main {
+    width: min(100%, 1520px);
+    margin: 0 auto;
+    padding: 10px 20px 40px;
+}
+
+.staff-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 36px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--staff-line);
+}
+
+.staff-toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.staff-add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 12px;
+    color: #ffffff;
+    background: var(--staff-accent);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(239, 91, 108, 0.2);
+    transition: all 140ms ease;
+    white-space: nowrap;
+}
+
+.staff-add-button:hover {
+    background: var(--staff-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(239, 91, 108, 0.3);
+}
+
+.staff-add-button svg {
+    width: 14px;
+    height: 14px;
+}
+
+.staff-toolbar-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--staff-line);
+    margin: 0 1px;
+}
+
+.staff-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 220px;
+    max-width: 100%;
+}
+
+.staff-search-icon {
+    position: absolute;
+    left: 9px;
+    width: 13px;
+    height: 13px;
+    color: var(--staff-muted);
+    pointer-events: none;
+}
+
+.staff-search input {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--staff-input-border);
+    border-radius: 6px;
+    outline: 0;
+    background: var(--staff-surface);
+    padding: 0 24px 0 28px;
+    color: var(--staff-ink);
+    font-size: 12.5px;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.staff-search input::placeholder {
+    color: var(--staff-subtle);
+}
+
+.staff-search input:hover {
+    border-color: #cbd5e1;
+}
+
+.staff-search input:focus {
+    border-color: var(--staff-accent);
+    box-shadow: 0 0 0 2px var(--staff-accent-soft);
+    background: #ffffff;
+}
+
+.staff-search-clear {
+    position: absolute;
+    right: 5px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--staff-muted);
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.staff-search-clear.hidden {
+    display: none;
+}
+
+.staff-search-clear:hover {
+    background: var(--staff-surface-hover);
+    color: var(--staff-ink);
+}
+
+.staff-search-clear svg {
+    width: 11px;
+    height: 11px;
+}
+
+.staff-sort {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.staff-sort svg {
+    position: absolute;
+    left: 9px;
+    width: 13px;
+    height: 13px;
+    color: var(--staff-muted);
+    pointer-events: none;
+}
+
+.staff-sort select {
+    height: 30px;
+    appearance: none;
+    border: 1px solid var(--staff-input-border);
+    border-radius: 6px;
+    outline: 0;
+    background: var(--staff-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23656d76' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center;
+    padding: 0 22px 0 26px;
+    color: var(--staff-ink);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.staff-sort select:hover {
+    border-color: #cbd5e1;
+}
+
+.staff-sort select:focus {
+    border-color: var(--staff-accent);
+    box-shadow: 0 0 0 2px var(--staff-accent-soft);
+}
+
+.staff-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.staff-stat-pills {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.staff-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 5px;
+    background: var(--staff-surface);
+    border: 1px solid var(--staff-line);
+    font-size: 11.5px;
+    color: var(--staff-muted);
+    font-weight: 500;
+}
+
+.staff-stat-pill strong {
+    color: var(--staff-ink);
+    font-weight: 700;
+}
+
+.staff-view-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--staff-line);
+    border-radius: 6px;
+    padding: 2px;
+    background: var(--staff-surface);
+}
+
+.staff-layout-btn {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--staff-muted);
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.staff-layout-btn:hover {
+    color: var(--staff-ink);
+    background: var(--staff-surface-hover);
+}
+
+.staff-layout-btn.is-active {
+    color: var(--staff-ink);
+    background: var(--staff-surface-hover);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.staff-layout-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
+/* Legacy summary elements compatibility */
+.staff-toolbar-summary {
+    display: none;
+}
+
+/* ==========================================================================
+   Panel Heading & Section Status (Hidden for space efficiency)
+   ========================================================================== */
+
+.staff-panel-head {
+    display: none !important;
+}
+
+.staff-panel-title {
+    margin: 0;
+    color: var(--staff-ink);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.staff-panel-description {
+    margin: 2px 0 0;
+    color: var(--staff-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.staff-panel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    padding: 3px 10px;
+    background: var(--staff-accent-soft);
+    color: var(--staff-accent);
+    border: 1px solid var(--staff-accent-border);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.staff-panel-chip--history {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+/* ==========================================================================
+   Colleague Directory List & Cards
+   ========================================================================== */
+
+.staff-scroll-region {
+    max-height: calc(100vh - 145px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.staff-scroll-region::-webkit-scrollbar {
+    width: 6px;
+}
+
+.staff-scroll-region::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.35);
+}
+
+.staff-scroll-region::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.6);
+}
+
+.staff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.staff-list.hidden,
+.staff-list[hidden] {
+    display: none !important;
+}
+
+/* Card Presentation (Asana Grid / Cards View) */
+.staff-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px 20px;
+    align-items: center;
+    border: 1px solid var(--staff-line);
+    border-radius: 12px;
+    background: var(--staff-surface);
+    padding: 14px 18px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.staff-card:hover {
+    transform: translateY(-1px);
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.staff-card--archived {
+    background: #fbfcfd;
+    border-color: #e5e9f0;
+}
+
+.staff-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* Deterministic Asana Pastel Avatars */
+.staff-avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    user-select: none;
+    transition: transform 140ms ease;
+}
+
+.staff-card:hover .staff-avatar {
+    transform: scale(1.04);
+}
+
+.staff-avatar--coral {
+    background: #fff0f1;
+    color: #e14150;
+}
+
+.staff-avatar--indigo {
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.staff-avatar--emerald {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.staff-avatar--amber {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.staff-avatar--purple {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.staff-avatar--sky {
+    background: #f0f9ff;
+    color: #0369a1;
+}
+
+.staff-avatar--rose {
+    background: #fdf2f8;
+    color: #be185d;
+}
+
+.staff-avatar--teal {
+    background: #f0fdfa;
+    color: #0f766e;
+}
+
+.staff-avatar--archived {
+    background: #f1f5f9;
+    color: #64748b;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+}
+
+.staff-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.staff-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.staff-name {
+    margin: 0;
+    color: var(--staff-ink);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+}
+
+.staff-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.staff-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--staff-line);
+    background: var(--staff-surface-subtle);
+    padding: 2px 8px;
+    color: var(--staff-ink-secondary);
+    font-size: 11px;
+    font-weight: 550;
+    line-height: 1.35;
+}
+
+.staff-meta-pill--accent {
+    border-color: #e2e8f0;
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+}
+
+.staff-meta-pill--dept {
+    background: var(--staff-blue-soft);
+    color: var(--staff-blue);
+    border-color: var(--staff-blue-border);
+}
+
+.staff-meta-pill--pos {
+    background: var(--staff-purple-soft);
+    color: var(--staff-purple);
+    border-color: var(--staff-purple-border);
+}
+
+.staff-meta-pill--type {
+    background: var(--staff-green-soft);
+    color: var(--staff-green);
+    border-color: var(--staff-green-border);
+}
+
+.staff-meta-pill--muted {
+    background: #f1f5f9;
+    color: var(--staff-muted);
+}
+
+.staff-schedule-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 3px;
+}
+
+/* Asana 7-day mini tracker */
+.staff-days-visual {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    user-select: none;
+}
+
+.staff-day-chip {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    transition: all 140ms ease;
+}
+
+.staff-day-chip.is-active {
+    background: var(--staff-accent);
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.staff-secondary-meta {
+    margin: 0;
+    color: var(--staff-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.staff-secondary-meta strong {
+    color: var(--staff-ink);
+    font-weight: 600;
+}
+
+.staff-contact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 2px 0 0;
+    color: var(--staff-muted);
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.staff-contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--staff-muted);
+    text-decoration: none;
+    transition: color 120ms ease;
+}
+
+.staff-contact-link:hover {
+    color: var(--staff-accent);
+}
+
+.staff-contact-link svg {
+    width: 13px;
+    height: 13px;
+    opacity: 0.75;
+}
+
+.staff-contact-separator {
+    margin: 0 4px;
+    color: #cbd5e1;
+}
+
+.staff-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.staff-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    border: 1px solid var(--staff-line);
+    border-radius: 6px;
+    background: var(--staff-surface);
+    padding: 0 11px;
+    color: var(--staff-ink);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: all 140ms ease;
+    white-space: nowrap;
+}
+
+.staff-button svg {
+    width: 13px;
+    height: 13px;
+}
+
+.staff-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+}
+
+.staff-button--secondary {
+    border-color: #dbe3ed;
+    background: #ffffff;
+    color: #1e293b;
+}
+
+.staff-button--secondary:hover {
+    background: var(--staff-surface-hover);
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.staff-button--warning {
+    border-color: var(--staff-amber-border);
+    background: var(--staff-amber-soft);
+    color: var(--staff-amber);
+}
+
+.staff-button--warning:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.staff-button--success {
+    border-color: var(--staff-green-border);
+    background: var(--staff-green-soft);
+    color: var(--staff-green);
+}
+
+.staff-button--success:hover {
+    background: #d1fae5;
+    border-color: #10b981;
+}
+
+.staff-button--danger {
+    border-color: var(--staff-red-border);
+    background: var(--staff-red-soft);
+    color: var(--staff-red);
+}
+
+.staff-button--danger:hover {
+    background: #fee2e2;
+    border-color: #ef4444;
+}
+
+/* ==========================================================================
+   Compact Table/List View Mode (Asana List View)
+   ========================================================================== */
+
+.staff-list--table .staff-card {
+    padding: 10px 14px;
+    border-radius: 8px;
+    gap: 12px;
+}
+
+.staff-list--table .staff-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+}
+
+.staff-list--table .staff-name {
+    font-size: 14px;
+}
+
+.staff-list--table .staff-meta-row {
+    margin-top: 1px;
+}
+
+.staff-list--table .staff-schedule-block {
+    margin-top: 1px;
+}
+
+/* ==========================================================================
+   Empty & State Messages (Asana Style)
+   ========================================================================== */
+
+.staff-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 220px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    background: var(--staff-surface);
+    padding: 36px 20px;
+}
+
+.staff-state__icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--staff-surface-hover);
+    color: var(--staff-muted);
+    margin-bottom: 12px;
+    font-size: 20px;
+}
+
+.staff-state__title {
+    margin: 0 0 6px;
+    color: var(--staff-ink);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.staff-state__copy {
+    margin: 0;
+    max-width: 32rem;
+    color: var(--staff-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.staff-state--error {
+    border-color: var(--staff-red-border);
+    border-style: solid;
+    background: var(--staff-red-soft);
+}
+
+.staff-state--error .staff-state__icon {
+    background: #fee2e2;
+    color: var(--staff-red);
+}
+
+.staff-state--error .staff-state__title {
+    color: var(--staff-red);
+}
+
+/* ==========================================================================
+   Modals (Asana Dialog Aesthetics)
+   ========================================================================== */
+
+#add-employee-modal,
+#edit-employee-modal {
+    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.45);
+}
+
+#add-employee-modal .modal-content,
+#edit-employee-modal .modal-content {
+    border: 1px solid var(--staff-line);
+    border-radius: 16px;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+    background: #ffffff;
+}
+
+#add-employee-modal input,
+#add-employee-modal select,
+#edit-employee-modal input,
+#edit-employee-modal select,
+#edit-employee-modal textarea {
+    border: 1px solid var(--staff-input-border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--staff-ink);
+    background: #ffffff;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+#add-employee-modal input:focus,
+#add-employee-modal select:focus,
+#edit-employee-modal input:focus,
+#edit-employee-modal select:focus,
+#edit-employee-modal textarea:focus {
+    border-color: var(--staff-accent);
+    box-shadow: 0 0 0 3px var(--staff-accent-soft);
+    outline: none;
+}
+
+#work-day-checkboxes,
+#edit-employee-work-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
+#work-day-checkboxes label,
+#edit-employee-work-days label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    border: 1px solid var(--staff-line);
+    border-radius: 8px;
+    background: var(--staff-surface-subtle);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--staff-muted);
+    transition: all 140ms ease;
+    user-select: none;
+}
+
+#work-day-checkboxes label:hover,
+#edit-employee-work-days label:hover {
+    border-color: #cbd5e1;
+    color: var(--staff-ink);
+}
+
+#work-day-checkboxes label:has(input:checked),
+#edit-employee-work-days label:has(input:checked) {
+    border-color: var(--staff-accent);
+    background: var(--staff-accent);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(239, 91, 108, 0.28);
+}
+
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
+
+@media (max-width: 900px) {
+    .staff-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .staff-toolbar-left,
+    .staff-toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .staff-search {
+        flex: 1 1 180px;
+        width: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .staff-topbar__inner {
+        padding: 6px 12px;
+    }
+
+    .staff-main {
+        padding: 8px 12px 30px;
+    }
+
+    .staff-appbar__inner {
+        padding: 0 12px;
+    }
+
+    .staff-card {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .staff-actions {
+        justify-content: flex-start;
+        padding-left: 54px;
+    }
+
+    .staff-search {
+        width: 100%;
+    }
+
+    .staff-stat-pills {
+        display: none;
+    }
+
+    #work-day-checkboxes,
+    #edit-employee-work-days {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* ==========================================================================
+   Dark Mode Support (Asana Dark Theme)
+   ========================================================================== */
+
+html[data-theme="dark"] #staff-page {
+    --staff-ink: #f4f4f5;
+    --staff-ink-secondary: #d4d4d8;
+    --staff-muted: #a1a1aa;
+    --staff-subtle: #71717a;
+    --staff-line: #27272a;
+    --staff-line-subtle: #18181b;
+    --staff-surface: #18181b;
+    --staff-surface-subtle: #202024;
+    --staff-surface-hover: #27272a;
+    --staff-input: #202024;
+    --staff-input-border: #3f3f46;
+    background: #09090b;
+}
+
+html[data-theme="dark"] .staff-card {
+    background: var(--staff-surface);
+    border-color: var(--staff-line);
+}
+
+html[data-theme="dark"] .staff-card:hover {
+    border-color: #52525b;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .staff-card--archived {
+    background: #141416;
+}
+
+html[data-theme="dark"] .staff-day-chip {
+    background: #27272a;
+    color: #71717a;
+}
+
+html[data-theme="dark"] .staff-day-chip.is-active {
+    background: var(--staff-accent);
+    color: #ffffff;
+}
+
+html[data-theme="dark"] .staff-button--secondary {
+    background: #27272a;
+    color: #f4f4f5;
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] .staff-button--secondary:hover {
+    background: #3f3f46;
+    border-color: #52525b;
+}
+
+html[data-theme="dark"] .staff-state {
+    background: var(--staff-surface);
+    border-color: #3f3f46;
+}
+
+html[data-theme="dark"] #add-employee-modal .modal-content,
+html[data-theme="dark"] #edit-employee-modal .modal-content {
+    background: #18181b;
+    border-color: #27272a;
+    color: #f4f4f5;
+}
+
+html[data-theme="dark"] #add-employee-modal input,
+html[data-theme="dark"] #add-employee-modal select,
+html[data-theme="dark"] #edit-employee-modal input,
+html[data-theme="dark"] #edit-employee-modal select,
+html[data-theme="dark"] #edit-employee-modal textarea {
+    background: #202024;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+}

@@ -657,6 +657,10 @@ export class UIManager {
         document.getElementById('edit-employee-staff-number').value = emp.staffNumber || '';
         document.getElementById('edit-employee-email').value = emp.email || '';
         document.getElementById('edit-employee-phone').value = emp.phone || '';
+        const personalPhoneEl = document.getElementById('edit-employee-personal-phone');
+        if (personalPhoneEl) {
+            personalPhoneEl.value = emp.personalPhone || '';
+        }
         document.getElementById('edit-employee-department').value = emp.department || '';
         document.getElementById('edit-employee-position').value = emp.position || '';
         document.getElementById('edit-employee-hire-date').value = emp.hireDate || '';

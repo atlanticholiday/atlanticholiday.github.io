@@ -128,6 +128,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'more'
     },
     {
+        key: 'propertyCalendar',
+        buttonId: 'go-to-property-calendar-btn',
+        pageName: 'propertyCalendar',
+        labelKey: 'userManagement.appAccess.options.propertyCalendar',
+        fallbackLabel: 'Property Calendar',
+        group: 'more'
+    },
+    {
         key: 'buildPlanner',
         buttonId: 'go-to-build-planner-btn',
         pageName: 'buildPlanner',

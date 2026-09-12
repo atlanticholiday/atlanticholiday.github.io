@@ -2,7 +2,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
-const { randomBytes, randomUUID, scrypt: scryptCallback, timingSafeEqual } = require("node:crypto");
+const { createHmac, randomBytes, randomUUID, scrypt: scryptCallback, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
 
 initializeApp();
@@ -513,6 +513,107 @@ exports.reviewOvertimeRecord = onCall(async (request) => {
   return { ok: true };
 });
 
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+function base32Encode(buffer) {
+  let bits = 0;
+  let value = 0;
+  let output = "";
+  for (let i = 0; i < buffer.length; i++) {
+    value = (value << 8) | buffer[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) {
+    output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  }
+  return output;
+}
+
+function base32Decode(input) {
+  const cleaned = String(input || "").toUpperCase().replace(/[\s=-]/g, "");
+  let bits = 0;
+  let value = 0;
+  const bytes = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const idx = BASE32_ALPHABET.indexOf(cleaned[i]);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function generateTotpSecret(numBytes = 20) {
+  const buffer = randomBytes(numBytes);
+  return base32Encode(buffer);
+}
+
+function computeTotpCode(secretBase32, counter) {
+  const key = base32Decode(secretBase32);
+  const buffer = Buffer.alloc(8);
+  buffer.writeBigInt64BE(BigInt(counter));
+  const hmac = createHmac("sha1", key).update(buffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const binary = ((hmac[offset] & 0x7f) << 24)
+    | ((hmac[offset + 1] & 0xff) << 16)
+    | ((hmac[offset + 2] & 0xff) << 8)
+    | (hmac[offset + 3] & 0xff);
+  const otp = binary % 1000000;
+  return String(otp).padStart(6, "0");
+}
+
+function verifyTotpCode(secretBase32, code, { window = 1 } = {}) {
+  const cleanedCode = String(code || "").replace(/\s+/g, "");
+  if (cleanedCode.length !== 6 || !/^\d{6}$/.test(cleanedCode)) {
+    return false;
+  }
+  const currentCounter = Math.floor(Date.now() / 1000 / 30);
+  for (let step = -window; step <= window; step++) {
+    const expected = computeTotpCode(secretBase32, currentCounter + step);
+    if (expected === cleanedCode) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getOtpauthUri(secretBase32, email, issuer = "Atlantic Holiday") {
+  const label = encodeURIComponent(`${issuer}:${email}`);
+  const encodedIssuer = encodeURIComponent(issuer);
+  return `otpauth://totp/${label}?secret=${secretBase32}&issuer=${encodedIssuer}&algorithm=SHA1&digits=6&period=30`;
+}
+
+function extractClientIp(request) {
+  const forwarded = request.rawRequest?.headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    const firstIp = forwarded.split(",")[0].trim();
+    if (firstIp) return firstIp;
+  }
+  const realIp = request.rawRequest?.headers?.["x-real-ip"]
+    || request.rawRequest?.headers?.["fastly-client-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim();
+  }
+  const ip = request.rawRequest?.ip || request.rawRequest?.socket?.remoteAddress;
+  if (typeof ip === "string" && ip.trim()) {
+    return ip.replace(/^::ffff:/, "").trim();
+  }
+  return "Unknown";
+}
+
+function extractUserAgent(request) {
+  const ua = request.rawRequest?.headers?.["user-agent"];
+  return typeof ua === "string" ? ua.trim().slice(0, 300) : "";
+}
+
 exports.getMyAccess = onCall(async (request) => {
   const uid = request.auth?.uid;
   const email = normalizeRawEmail(request.auth?.token?.email);
@@ -531,7 +632,48 @@ exports.getMyAccess = onCall(async (request) => {
     return { authorized: false };
   }
 
-  const access = sanitizeAccessEntry(accessEntry, email);
+  const clientIp = extractClientIp(request);
+  const userAgent = extractUserAgent(request);
+  const now = new Date();
+  const occurredAt = formatPortugalLocalDateTime(now);
+
+  const existingRecent = Array.isArray(accessEntry.recentLogins) ? accessEntry.recentLogins : [];
+  const newLoginRecord = {
+    ip: clientIp,
+    userAgent,
+    occurredAt
+  };
+  const filteredRecent = existingRecent.filter((item) => {
+    return !(item?.ip === clientIp && item?.occurredAt === occurredAt);
+  });
+  const recentLogins = [newLoginRecord, ...filteredRecent].slice(0, 10);
+
+  const loginPatch = {
+    lastLoginIp: clientIp,
+    lastLoginAt: occurredAt,
+    lastUserAgent: userAgent,
+    recentLogins
+  };
+
+  await writeAccessEntry(email, loginPatch).catch((err) => {
+    console.warn("Failed to record login IP in allowedEmails:", err);
+  });
+
+  await writeAudit({
+    email,
+    uid,
+    event: "user_session_entry",
+    ip: clientIp,
+    userAgent,
+    occurredAt
+  });
+
+  const updatedEntry = {
+    ...accessEntry,
+    ...loginPatch
+  };
+
+  const access = sanitizeAccessEntry(updatedEntry, email);
   await materializeUserAccess(uid, email, access);
   return { authorized: true, access };
 });
@@ -723,6 +865,162 @@ exports.adminDeleteRole = onCall(async (request) => {
   await firestore.collection("roles").doc(key).delete();
   await writeAudit({ email: actor.email, event: "role_deleted", role: key });
   return { ok: true };
+});
+
+exports.adminSetTwoFactorState = onCall(async (request) => {
+  const actor = await requireAdminAccess(request);
+  const email = requireValidEmail(request.data?.email);
+  const enabled = Boolean(request.data?.enabled);
+
+  const [primaryKey] = getEmailLookupKeys(email);
+  if (!primaryKey) {
+    throw new HttpsError("invalid-argument", "A valid email address is required.");
+  }
+
+  if (!enabled) {
+    await firestore.collection("userTwoFactorSecrets").doc(primaryKey).delete().catch(() => {});
+    await firestore.collection("allowedEmails").doc(primaryKey).set({
+      twoFactorEnabled: false,
+      twoFactorEnrolled: false
+    }, { merge: true });
+    await refreshMaterializedAccess(email);
+    await writeAudit({
+      email: actor.email,
+      targetEmail: email,
+      event: "two_factor_disabled"
+    });
+    return { ok: true, enabled: false, enrolled: false };
+  }
+
+  const secretDoc = await firestore.collection("userTwoFactorSecrets").doc(primaryKey).get();
+  let secret = secretDoc.data()?.secret;
+  let enrolled = Boolean(secretDoc.data()?.enrolled);
+  if (!secret) {
+    secret = generateTotpSecret(20);
+    enrolled = false;
+    await firestore.collection("userTwoFactorSecrets").doc(primaryKey).set({
+      email,
+      secret,
+      enrolled: false,
+      createdAt: FieldValue.serverTimestamp()
+    });
+  }
+
+  await firestore.collection("allowedEmails").doc(primaryKey).set({
+    twoFactorEnabled: true,
+    twoFactorEnrolled: enrolled
+  }, { merge: true });
+  await refreshMaterializedAccess(email);
+  await writeAudit({
+    email: actor.email,
+    targetEmail: email,
+    event: "two_factor_enabled"
+  });
+
+  return { ok: true, enabled: true, enrolled };
+});
+
+exports.adminGetTwoFactorSetup = onCall(async (request) => {
+  const callerEmail = normalizeRawEmail(request.auth?.token?.email);
+  if (!callerEmail) {
+    throw new HttpsError("unauthenticated", "Sign in before configuring two-factor authentication.");
+  }
+  const targetEmail = requireValidEmail(request.data?.email || callerEmail);
+  const isSelf = canonicalizeEmail(callerEmail) === canonicalizeEmail(targetEmail);
+  if (!isSelf) {
+    await requireAdminAccess(request);
+  }
+
+  const [primaryKey] = getEmailLookupKeys(targetEmail);
+  if (!primaryKey) {
+    throw new HttpsError("invalid-argument", "A valid email address is required.");
+  }
+
+  const secretDoc = await firestore.collection("userTwoFactorSecrets").doc(primaryKey).get();
+  let secret = secretDoc.data()?.secret;
+  let enrolled = Boolean(secretDoc.data()?.enrolled);
+
+  if (!secret || request.data?.regenerate) {
+    secret = generateTotpSecret(20);
+    enrolled = false;
+    await firestore.collection("userTwoFactorSecrets").doc(primaryKey).set({
+      email: targetEmail,
+      secret,
+      enrolled: false,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    await firestore.collection("allowedEmails").doc(primaryKey).set({
+      twoFactorEnrolled: false
+    }, { merge: true });
+    await refreshMaterializedAccess(targetEmail);
+  }
+
+  const otpauthUri = getOtpauthUri(secret, targetEmail);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpauthUri)}`;
+
+  return {
+    email: targetEmail,
+    secret,
+    otpauthUri,
+    qrUrl,
+    enrolled
+  };
+});
+
+exports.verifyTwoFactorChallenge = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  const callerEmail = normalizeRawEmail(request.auth?.token?.email);
+  if (!uid || !callerEmail) {
+    throw new HttpsError("unauthenticated", "Sign in before verifying two-factor authentication.");
+  }
+
+  const targetEmail = request.data?.email ? requireValidEmail(request.data?.email) : callerEmail;
+  const isSelf = canonicalizeEmail(callerEmail) === canonicalizeEmail(targetEmail);
+  if (!isSelf) {
+    await requireAdminAccess(request);
+  }
+
+  const code = String(request.data?.code || "").trim();
+  const isEnrollment = Boolean(request.data?.isEnrollment);
+
+  const [primaryKey] = getEmailLookupKeys(targetEmail);
+  const secretDoc = await firestore.collection("userTwoFactorSecrets").doc(primaryKey).get();
+  if (!secretDoc.exists) {
+    throw new HttpsError("failed-precondition", "Two-factor authentication is not configured for this account.");
+  }
+
+  const secret = secretDoc.data()?.secret;
+  const valid = verifyTotpCode(secret, code);
+
+  if (!valid) {
+    await writeAudit({
+      email: callerEmail,
+      uid,
+      targetEmail,
+      event: "two_factor_verification_failed"
+    });
+    return { valid: false, error: "Invalid two-factor code." };
+  }
+
+  if (isEnrollment || !secretDoc.data()?.enrolled) {
+    await firestore.collection("userTwoFactorSecrets").doc(primaryKey).set({
+      enrolled: true,
+      enrolledAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    await firestore.collection("allowedEmails").doc(primaryKey).set({
+      twoFactorEnrolled: true
+    }, { merge: true });
+    await refreshMaterializedAccess(targetEmail);
+  }
+
+  await writeAudit({
+    email: callerEmail,
+    uid,
+    targetEmail,
+    event: "two_factor_verified"
+  });
+
+  return { valid: true };
 });
 
 exports.getUpcomingGuestReservations = onCall(async (request) => {
@@ -1163,7 +1461,13 @@ function sanitizeAccessEntry(entry, fallbackEmail) {
     linkedEmployeeId: entry?.linkedEmployeeId ? String(entry.linkedEmployeeId).slice(0, 160) : null,
     linkedEmployeeName: entry?.linkedEmployeeName ? String(entry.linkedEmployeeName).slice(0, 200) : null,
     linkedEmployeeEmail: normalizeRawEmail(entry?.linkedEmployeeEmail),
-    linkedEmployeeArchived: Boolean(entry?.linkedEmployeeArchived)
+    linkedEmployeeArchived: Boolean(entry?.linkedEmployeeArchived),
+    lastLoginIp: typeof entry?.lastLoginIp === "string" ? entry.lastLoginIp : null,
+    lastLoginAt: typeof entry?.lastLoginAt === "string" ? entry.lastLoginAt : null,
+    lastUserAgent: typeof entry?.lastUserAgent === "string" ? entry.lastUserAgent : null,
+    recentLogins: Array.isArray(entry?.recentLogins) ? entry.recentLogins.slice(0, 10) : [],
+    twoFactorEnabled: Boolean(entry?.twoFactorEnabled),
+    twoFactorEnrolled: Boolean(entry?.twoFactorEnrolled)
   };
   return access;
 }

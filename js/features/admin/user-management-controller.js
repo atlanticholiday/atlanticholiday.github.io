@@ -43,6 +43,29 @@ const ROLE_UI_META = Object.freeze({
 
 const PRIVILEGED_ROLE_SET = new Set(PRIVILEGED_ROLE_KEYS);
 
+export function formatUserAgentSummary(userAgent) {
+    if (!userAgent || typeof userAgent !== 'string') {
+        return '—';
+    }
+    const ua = userAgent;
+    let browser = 'Browser';
+    let os = 'Unknown OS';
+
+    if (/Windows/i.test(ua)) os = 'Windows';
+    else if (/iPhone/i.test(ua)) os = 'iPhone';
+    else if (/iPad/i.test(ua)) os = 'iPad';
+    else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+    else if (/Android/i.test(ua)) os = 'Android';
+    else if (/Linux/i.test(ua)) os = 'Linux';
+
+    if (/Edg\//i.test(ua)) browser = 'Edge';
+    else if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) browser = 'Chrome';
+    else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = 'Safari';
+    else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+
+    return `${browser} · ${os}`;
+}
+
 function isEmailAlreadyInUseError(error) {
     return error?.code === 'auth/email-already-in-use'
         || error?.code === 'functions/already-exists'
@@ -81,6 +104,8 @@ export class UserManagementController {
         this.inspectorNotice = '';
         this.isCreateUserOpen = false;
         this.passwordDialogEmail = '';
+        this.twoFactorDialogEmail = '';
+        this.currentTwoFactorSetup = null;
     }
 
     init() {
@@ -95,12 +120,15 @@ export class UserManagementController {
         this.inspectorNotice = '';
         this.isCreateUserOpen = false;
         this.passwordDialogEmail = '';
+        this.twoFactorDialogEmail = '';
+        this.currentTwoFactorSetup = null;
         this.setupRolePresetInputs();
         this.setupMainViewNavigation();
         this.setupSideViewNavigation();
         this.setupDrawerControls();
         this.setupPreviewControls();
         this.setupDirectoryControls();
+        this.setupTwoFactorControls();
         this.document.addEventListener('userManagementPageOpened', () => {
             this.setActiveMainView(this.currentMainView);
             this.setActiveSideView(this.currentSideView);
@@ -230,6 +258,10 @@ export class UserManagementController {
                     this.setPasswordDialogOpen(false);
                     return;
                 }
+                if (event.key === 'Escape' && this.twoFactorDialogEmail) {
+                    this.setTwoFactorDialogOpen(false);
+                    return;
+                }
                 if (event.key === 'Escape' && this.document.getElementById('user-management-page')?.classList.contains('user-management-inspector-open')) {
                     this.setInspectorOpen(false);
                     return;
@@ -297,6 +329,38 @@ export class UserManagementController {
             this.handleSetUserPassword().catch((error) => {
                 console.error('Failed to set user password:', error);
             });
+        });
+    }
+
+    setupTwoFactorControls() {
+        ['close-two-factor-setup-btn', 'cancel-two-factor-setup-btn', 'done-two-factor-setup-btn', 'two-factor-setup-backdrop'].forEach((id) => {
+            this.document.getElementById(id)?.addEventListener('click', () => {
+                this.setTwoFactorDialogOpen(false);
+            });
+        });
+
+        this.document.getElementById('copy-two-factor-secret-btn')?.addEventListener('click', () => {
+            const secret = this.currentTwoFactorSetup?.secret;
+            if (!secret) return;
+            if (this.window?.navigator?.clipboard?.writeText) {
+                this.window.navigator.clipboard.writeText(secret).then(() => {
+                    this.setText('two-factor-copy-status', this.translate('userManagement.security.secretCopied', 'Key copied to clipboard!'));
+                    setTimeout(() => this.setText('two-factor-copy-status', ''), 3000);
+                }).catch(() => {});
+            }
+        });
+
+        this.document.getElementById('verify-test-two-factor-btn')?.addEventListener('click', () => {
+            this.handleVerifyTestTwoFactor().catch((error) => {
+                console.error('Failed to verify test 2FA code:', error);
+            });
+        });
+
+        this.document.getElementById('two-factor-test-code')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                this.document.getElementById('verify-test-two-factor-btn')?.click();
+            }
         });
     }
 
@@ -440,6 +504,86 @@ export class UserManagementController {
         }
     }
 
+    setTwoFactorDialogOpen(isOpen, email = '') {
+        this.twoFactorDialogEmail = isOpen ? canonicalizeEmail(email) : '';
+        const modal = this.document.getElementById('two-factor-setup-modal');
+        modal?.classList.toggle('hidden', !this.twoFactorDialogEmail);
+        modal?.setAttribute('aria-hidden', this.twoFactorDialogEmail ? 'false' : 'true');
+        this.document.body?.classList.toggle('overflow-hidden', Boolean(this.twoFactorDialogEmail || this.passwordDialogEmail || this.isCreateUserOpen));
+
+        this.setText('two-factor-setup-account-email', this.twoFactorDialogEmail);
+        this.setText('two-factor-setup-error', '');
+        this.setText('two-factor-setup-success', '');
+        this.setText('two-factor-copy-status', '');
+        const codeInput = this.document.getElementById('two-factor-test-code');
+        if (codeInput) codeInput.value = '';
+
+        if (this.twoFactorDialogEmail) {
+            this.loadTwoFactorSetup(this.twoFactorDialogEmail).catch((error) => {
+                this.setText('two-factor-setup-error', error?.message || 'Failed to load 2FA setup details.');
+            });
+        }
+    }
+
+    async loadTwoFactorSetup(email, { regenerate = false } = {}) {
+        this.setText('two-factor-setup-error', '');
+        this.setText('two-factor-setup-success', '');
+        const qrImg = this.document.getElementById('two-factor-qr-image');
+        const secretCode = this.document.getElementById('two-factor-secret-key');
+        if (qrImg) qrImg.src = '';
+        if (secretCode) secretCode.textContent = '…';
+
+        const setup = await this.accessManager.getTwoFactorSetup(email, { regenerate });
+        this.currentTwoFactorSetup = setup;
+
+        if (qrImg && setup?.qrUrl) {
+            qrImg.src = setup.qrUrl;
+        }
+        if (secretCode && setup?.secret) {
+            secretCode.textContent = setup.secret;
+        }
+    }
+
+    async handleVerifyTestTwoFactor() {
+        const email = this.twoFactorDialogEmail;
+        if (!email) return;
+
+        const codeInput = this.document.getElementById('two-factor-test-code');
+        const code = String(codeInput?.value || '').trim();
+        if (code.length !== 6) {
+            this.setText('two-factor-setup-error', this.translate('login.twoFactorCode', '6-Digit Code') + ': 6 digits required.');
+            return;
+        }
+
+        const verifyBtn = this.document.getElementById('verify-test-two-factor-btn');
+        if (verifyBtn) {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = this.translate('login.twoFactorVerifying', 'Verifying…');
+        }
+        this.setText('two-factor-setup-error', '');
+        this.setText('two-factor-setup-success', '');
+
+        try {
+            const result = await this.accessManager.verifyTwoFactorChallenge(code, {
+                email,
+                isEnrollment: true
+            });
+            if (result?.valid) {
+                this.setText('two-factor-setup-success', this.translate('userManagement.security.setupSuccess', 'Two-Factor Authentication successfully confirmed and activated!'));
+                await this.refreshUserList();
+            } else {
+                this.setText('two-factor-setup-error', result?.error || this.translate('login.twoFactorInvalid', 'Invalid verification code. Please check your app and try again.'));
+            }
+        } catch (error) {
+            this.setText('two-factor-setup-error', error?.message || this.translate('login.twoFactorInvalid', 'Invalid verification code. Please check your app and try again.'));
+        } finally {
+            if (verifyBtn) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = this.translate('userManagement.security.verifyAndConfirm', 'Verify & Save');
+            }
+        }
+    }
+
     setInspectorOpen(isOpen) {
         const page = this.document.getElementById('user-management-page');
         page?.classList.toggle('user-management-inspector-open', Boolean(isOpen));
@@ -479,7 +623,13 @@ export class UserManagementController {
                         return {
                             email: entry.email || email,
                             roles: Array.isArray(entry.roles) ? entry.roles : [],
-                            allowedApps: entry.allowedApps ?? null
+                            allowedApps: entry.allowedApps ?? null,
+                            lastLoginIp: entry.lastLoginIp || null,
+                            lastLoginAt: entry.lastLoginAt || null,
+                            lastUserAgent: entry.lastUserAgent || null,
+                            recentLogins: Array.isArray(entry.recentLogins) ? entry.recentLogins : [],
+                            twoFactorEnabled: Boolean(entry.twoFactorEnabled),
+                            twoFactorEnrolled: Boolean(entry.twoFactorEnrolled)
                         };
                     }
                 }
@@ -489,7 +639,13 @@ export class UserManagementController {
                     roles: await this.accessManager.getRoles(email),
                     allowedApps: typeof this.accessManager.getAllowedApps === 'function'
                         ? await this.accessManager.getAllowedApps(email)
-                        : null
+                        : null,
+                    lastLoginIp: null,
+                    lastLoginAt: null,
+                    lastUserAgent: null,
+                    recentLogins: [],
+                    twoFactorEnabled: false,
+                    twoFactorEnrolled: false
                 };
             })
         );
@@ -716,7 +872,7 @@ export class UserManagementController {
         button.innerHTML = `
             <span class="user-management-user-cell">
                 <strong>${this.escapeHtml(linkedEmployee?.name || this.formatEmailLabel(user.email))}</strong>
-                <small>${this.escapeHtml(user.email)}</small>
+                <small>${this.escapeHtml(user.email)}${user.lastLoginIp ? ` · <span class="user-management-ip-inline" title="${this.escapeHtml(this.translate('userManagement.security.lastIp', 'Last Login IP'))}">${this.escapeHtml(user.lastLoginIp)}</span>` : ''}${user.twoFactorEnabled ? ` · <span class="user-management-2fa-inline-pill ${user.twoFactorEnrolled ? 'is-active' : 'is-pending'}">2FA</span>` : ''}</small>
             </span>
             <span class="user-management-table-cell user-management-profile-cell">${this.escapeHtml(this.getPreviewLevelLabel(preview.accessLevel))}</span>
             <span class="user-management-table-cell user-management-app-count-cell">${this.escapeHtml(appsLabel)}</span>
@@ -769,6 +925,10 @@ export class UserManagementController {
         const preview = buildEffectiveAccessPreview(draftUser, { hasEmployeeLink: Boolean(linkedEmployee) });
         const appAccessState = this.getUserAppAccessState(draftUser, linkedEmployee);
         const displayName = linkedEmployee?.name || this.formatEmailLabel(user.email);
+        const lastIp = user.lastLoginIp || null;
+        const lastLoginAt = user.lastLoginAt || null;
+        const lastUa = user.lastUserAgent || null;
+        const recentLogins = Array.isArray(user.recentLogins) ? user.recentLogins : [];
         const roleMarkup = (this.lastRoles || []).map((role) => `
             <div class="user-management-inspector-option">
                 <input id="inspector-role-${this.escapeHtml(role.key)}" type="checkbox" value="${this.escapeHtml(role.key)}" data-inspector-role ${this.inspectorDraft.roles.includes(role.key) ? 'checked' : ''}>
@@ -842,6 +1002,88 @@ export class UserManagementController {
                 </div>
             </div>
 
+            <section class="user-management-inspector-section user-management-security-section">
+                <div class="user-management-inspector-section-head">
+                    <div>
+                        <h4>${this.escapeHtml(this.translate('userManagement.security.title', 'Security & Activity'))}</h4>
+                        <p>${this.escapeHtml(this.translate('userManagement.security.description', 'Verify IP addresses and recent session entries for this account.'))}</p>
+                    </div>
+                </div>
+                <div class="user-management-security-card">
+                    <div class="user-management-security-item">
+                        <div class="user-management-security-meta">
+                            <span class="user-management-security-label">${this.escapeHtml(this.translate('userManagement.security.lastIp', 'Last Login IP'))}</span>
+                            <span class="user-management-security-ip">${this.escapeHtml(lastIp || this.translate('userManagement.security.noIp', 'No IP recorded yet'))}</span>
+                        </div>
+                        ${lastIp && lastIp !== 'Unknown' ? `
+                            <a href="https://whatismyipaddress.com/ip/${encodeURIComponent(lastIp)}" target="_blank" rel="noopener noreferrer" class="user-management-ip-lookup-btn" title="${this.escapeHtml(this.translate('userManagement.security.ipLookupTitle', 'Check IP location and details'))}">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                <span>${this.escapeHtml(this.translate('userManagement.security.verifyIp', 'Check IP'))}</span>
+                            </a>
+                        ` : ''}
+                    </div>
+                    <div class="user-management-security-subitems">
+                        <div class="user-management-security-subitem">
+                            <span class="user-management-security-sublabel">${this.escapeHtml(this.translate('userManagement.security.lastLogin', 'Last Activity'))}:</span>
+                            <strong class="user-management-security-subvalue">${this.escapeHtml(this.formatTimestampDisplay(lastLoginAt))}</strong>
+                        </div>
+                        <div class="user-management-security-subitem">
+                            <span class="user-management-security-sublabel">${this.escapeHtml(this.translate('userManagement.security.device', 'Device'))}:</span>
+                            <strong class="user-management-security-subvalue" title="${this.escapeHtml(lastUa || '')}">${this.escapeHtml(formatUserAgentSummary(lastUa))}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                ${recentLogins.length > 0 ? `
+                    <div class="user-management-recent-logins">
+                        <h5 class="user-management-recent-logins-title">${this.escapeHtml(this.translate('userManagement.security.recentLogins', 'Recent Login Sessions'))}</h5>
+                        <div class="user-management-recent-logins-list">
+                            ${recentLogins.slice(0, 5).map((session) => `
+                                <div class="user-management-login-session-row">
+                                    <span class="user-management-session-ip">${this.escapeHtml(session.ip || '—')}</span>
+                                    <span class="user-management-session-device">${this.escapeHtml(formatUserAgentSummary(session.userAgent))}</span>
+                                    <span class="user-management-session-time">${this.escapeHtml(this.formatTimestampDisplay(session.occurredAt || session.occurredAtIso))}</span>
+                                    ${session.ip && session.ip !== 'Unknown' ? `
+                                        <a href="https://whatismyipaddress.com/ip/${encodeURIComponent(session.ip)}" target="_blank" rel="noopener noreferrer" class="user-management-session-lookup" title="Check IP">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                        </a>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="user-management-2fa-card">
+                    <div class="user-management-2fa-header">
+                        <div class="user-management-2fa-title-group">
+                            <span class="user-management-security-label">${this.escapeHtml(this.translate('userManagement.security.twoFactorTitle', 'Two-Factor Authentication'))}</span>
+                            <span class="user-management-2fa-description">${this.escapeHtml(this.translate('userManagement.security.twoFactorDescription', 'Protect this account with Google Authenticator (TOTP).'))}</span>
+                        </div>
+                        <span class="user-management-2fa-badge ${user.twoFactorEnabled ? (user.twoFactorEnrolled ? 'is-active' : 'is-pending') : 'is-disabled'}">
+                            ${this.escapeHtml(user.twoFactorEnabled ? (user.twoFactorEnrolled ? this.translate('userManagement.security.twoFactorActive', 'Active') : this.translate('userManagement.security.twoFactorPending', 'Setup Pending')) : this.translate('userManagement.security.twoFactorDisabled', 'Disabled'))}
+                        </span>
+                    </div>
+                    <div class="user-management-2fa-actions">
+                        ${!user.twoFactorEnabled ? `
+                            <button type="button" id="enable-2fa-btn" class="user-management-secondary-action">
+                                ${this.escapeHtml(this.translate('userManagement.security.enableTwoFactor', 'Enable 2FA'))}
+                            </button>
+                        ` : `
+                            <button type="button" id="setup-2fa-btn" class="user-management-secondary-action">
+                                ${this.escapeHtml(this.translate('userManagement.security.setupTwoFactor', 'View Setup / QR'))}
+                            </button>
+                            <button type="button" id="reset-2fa-btn" class="user-management-secondary-action">
+                                ${this.escapeHtml(this.translate('userManagement.security.resetTwoFactor', 'Reset 2FA'))}
+                            </button>
+                            <button type="button" id="disable-2fa-btn" class="user-management-danger-action">
+                                ${this.escapeHtml(this.translate('userManagement.security.disableTwoFactor', 'Disable 2FA'))}
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </section>
+
             <section class="user-management-account-actions">
                 <div>
                     <h4>${this.escapeHtml(this.translate('userManagement.inspector.loginTitle', 'Login access'))}</h4>
@@ -875,6 +1117,43 @@ export class UserManagementController {
         });
         container.querySelector('#inspector-preview-btn')?.addEventListener('click', (event) => {
             this.openAccessPreview(draftUser, linkedEmployee, event.currentTarget);
+        });
+
+        container.querySelector('#enable-2fa-btn')?.addEventListener('click', async () => {
+            try {
+                await this.accessManager.setTwoFactorState(user.email, true);
+                await this.refreshUserList();
+                this.setTwoFactorDialogOpen(true, user.email);
+            } catch (error) {
+                this.window.alert(`Failed to enable 2FA: ${error?.message || error}`);
+            }
+        });
+
+        container.querySelector('#disable-2fa-btn')?.addEventListener('click', async () => {
+            if (!this.window.confirm(this.translate('userManagement.security.confirmDisableTwoFactor', 'Are you sure you want to disable two-factor authentication for this user?'))) {
+                return;
+            }
+            try {
+                await this.accessManager.setTwoFactorState(user.email, false);
+                await this.refreshUserList();
+            } catch (error) {
+                this.window.alert(`Failed to disable 2FA: ${error?.message || error}`);
+            }
+        });
+
+        container.querySelector('#setup-2fa-btn')?.addEventListener('click', () => {
+            this.setTwoFactorDialogOpen(true, user.email);
+        });
+
+        container.querySelector('#reset-2fa-btn')?.addEventListener('click', async () => {
+            if (!this.window.confirm(this.translate('userManagement.security.confirmResetTwoFactor', "Resetting 2FA will invalidate the user's current Google Authenticator key and generate a new one. Proceed?"))) {
+                return;
+            }
+            this.setTwoFactorDialogOpen(true, user.email);
+            await this.loadTwoFactorSetup(user.email, { regenerate: true }).catch((error) => {
+                this.setText('two-factor-setup-error', error?.message || 'Failed to reset 2FA.');
+            });
+            await this.refreshUserList();
         });
 
         const accountActions = container.querySelector('#user-inspector-account-actions');
@@ -1701,6 +1980,26 @@ export class UserManagementController {
             .filter(Boolean)
             .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' ') || email;
+    }
+
+    formatTimestampDisplay(value) {
+        if (!value) return '—';
+        try {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return String(value).replace('T', ' ');
+            }
+            return new Intl.DateTimeFormat('en-GB', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23'
+            }).format(date);
+        } catch {
+            return String(value).replace('T', ' ');
+        }
     }
 
     getRoleDisplayTitle(role) {

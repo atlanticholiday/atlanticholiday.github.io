@@ -20,6 +20,10 @@ function createFixture() {
       <div id="staff-active-count"></div>
       <div id="staff-archived-count"></div>
       <div id="staff-total-count"></div>
+      <span id="staff-active-tab-count"></span>
+      <span id="staff-archived-tab-count"></span>
+      <button id="staff-view-grid-btn"></button>
+      <button id="staff-view-table-btn"></button>
       <div id="staff-panel-eyebrow"></div>
       <div id="staff-panel-title"></div>
       <div id="staff-panel-description"></div>
@@ -127,6 +131,10 @@ function installStaffTranslations() {
         validation: {
           nameRequired: "Please enter a name.",
           workDaysRequired: "Please select at least one day."
+        },
+        phoneTypes: {
+          companyShort: "Work",
+          personalShort: "Personal"
         }
       }
     },
@@ -164,6 +172,10 @@ function installStaffTranslations() {
         validation: {
           nameRequired: "Introduza um nome.",
           workDaysRequired: "Selecione pelo menos um dia."
+        },
+        phoneTypes: {
+          companyShort: "Empresa",
+          personalShort: "Pessoal"
         }
       }
     }
@@ -366,4 +378,97 @@ describe("StaffManager", () => {
 
     restoreI18n();
   });
+
+  test("renders company and personal phones and filters by personal phone", () => {
+    const restoreI18n = installStaffTranslations();
+    createFixture();
+
+    const manager = new StaffManager(
+      createDataManager({
+        activeEmployees: [
+          {
+            id: "emp-1",
+            name: "Ana Silva",
+            phone: "+351 912 345 678",
+            personalPhone: "+351 987 654 321",
+            workDays: [1, 2]
+          },
+          {
+            id: "emp-2",
+            name: "Bruno Costa",
+            personalPhone: "+351 966 111 222",
+            workDays: [3, 4]
+          }
+        ]
+      }),
+      createUiManager()
+    );
+
+    manager.render();
+
+    const container = document.getElementById("staff-list-container");
+    assert.includes(container.textContent, "+351 912 345 678");
+    assert.includes(container.textContent, "(Work)");
+    assert.includes(container.textContent, "+351 987 654 321");
+    assert.includes(container.textContent, "(Personal)");
+    assert.includes(container.textContent, "+351 966 111 222");
+
+    const searchInput = document.getElementById("staff-search-input");
+    searchInput.value = "966 111";
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    assert.includes(container.textContent, "Bruno Costa");
+    assert.ok(!container.textContent.includes("Ana Silva"));
+
+    restoreI18n();
+  });
+
+  test("updates Asana tab count badges and toggles between grid and table views", () => {
+    const restoreI18n = installStaffTranslations();
+    createFixture();
+
+    const manager = new StaffManager(
+      createDataManager({
+        activeEmployees: [
+          { id: "emp-1", name: "Ana Silva", workDays: [1, 2, 3] },
+          { id: "emp-2", name: "Carlos Santos", workDays: [4, 5] }
+        ],
+        archivedEmployees: [
+          { id: "emp-3", name: "Zulmira Costa", workDays: [0] }
+        ]
+      }),
+      createUiManager()
+    );
+
+    manager.render();
+
+    // Verify tab counts
+    assert.equal(document.getElementById("staff-active-tab-count").textContent, "2");
+    assert.equal(document.getElementById("staff-archived-tab-count").textContent, "1");
+
+    // Verify avatar themes and schedule chips
+    const avatar = document.querySelector("#staff-list-container .staff-avatar");
+    assert.ok(avatar.className.includes("staff-avatar--"), "avatar should have a deterministic theme class");
+
+    const activeDayChips = document.querySelectorAll("#staff-list-container .staff-day-chip.is-active");
+    assert.ok(activeDayChips.length > 0, "active day chips should be rendered");
+
+    // Test layout switcher toggle
+    const tableBtn = document.getElementById("staff-view-table-btn");
+    const gridBtn = document.getElementById("staff-view-grid-btn");
+    const listContainer = document.getElementById("staff-list-container");
+
+    tableBtn.click();
+    assert.ok(listContainer.classList.contains("staff-list--table"), "list container should have table view class");
+    assert.equal(tableBtn.getAttribute("aria-pressed"), "true");
+    assert.equal(gridBtn.getAttribute("aria-pressed"), "false");
+
+    gridBtn.click();
+    assert.ok(!listContainer.classList.contains("staff-list--table"), "list container should return to grid view");
+    assert.equal(gridBtn.getAttribute("aria-pressed"), "true");
+    assert.equal(tableBtn.getAttribute("aria-pressed"), "false");
+
+    restoreI18n();
+  });
 });
+

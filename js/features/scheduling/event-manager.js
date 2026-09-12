@@ -761,6 +761,7 @@ export class EventManager {
         const staffNumber = document.getElementById('edit-employee-staff-number').value.trim();
         const email = document.getElementById('edit-employee-email').value.trim();
         const phone = document.getElementById('edit-employee-phone').value.trim();
+        const personalPhone = document.getElementById('edit-employee-personal-phone')?.value.trim() || '';
         const department = document.getElementById('edit-employee-department').value.trim();
         const position = document.getElementById('edit-employee-position').value.trim();
         const hireDate = document.getElementById('edit-employee-hire-date').value.trim();
@@ -800,6 +801,7 @@ export class EventManager {
             staffNumber,
             email,
             phone,
+            personalPhone,
             department,
             position,
             hireDate,

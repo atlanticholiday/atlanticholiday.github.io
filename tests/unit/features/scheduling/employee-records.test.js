@@ -23,6 +23,7 @@ describe("Employee records", () => {
     assert.equal(employee.isArchived, false);
     assert.equal(employee.shifts.default, "9:00-18:00");
     assert.equal(employee.vacationAdjustment, 0);
+    assert.equal(employee.personalPhone, null);
     assert.deepEqual(employee.vacationAllowancesByYear, {});
   });
 
@@ -43,6 +44,7 @@ describe("Employee records", () => {
       staffNumber: "",
       email: " ",
       phone: " 912345678 ",
+      personalPhone: " 987654321 ",
       department: " Ops ",
       notes: "  ",
       defaultShift: " 08:00-16:00 ",
@@ -54,6 +56,7 @@ describe("Employee records", () => {
     assert.equal(payload.staffNumber, null);
     assert.equal(payload.email, null);
     assert.equal(payload.phone, "912345678");
+    assert.equal(payload.personalPhone, "987654321");
     assert.equal(payload.department, "Ops");
     assert.equal(payload.notes, null);
     assert.equal(payload["shifts.default"], "08:00-16:00");

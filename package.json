@@ -10,7 +10,8 @@
     "test:browser": "node tests/run-headless.mjs",
     "test:firestore-rules": "npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project demo-horario --config firebase.test.json \"node tests/run-firestore-rules.mjs 8081\"",
     "airbnb:download-invoices": "node scripts/airbnb/invoice-downloader.mjs",
-    "airbnb:download-reservation-invoices": "node scripts/airbnb/reservation-invoice-downloader.mjs"
+    "airbnb:download-reservation-invoices": "node scripts/airbnb/reservation-invoice-downloader.mjs",
+    "pms:sync-calendar": "node scripts/pms/sync-calendar.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.58.2"
