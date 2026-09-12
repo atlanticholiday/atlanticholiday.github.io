@@ -294,7 +294,8 @@ export function createDefaultChecklist() {
 export function normalizeProperty(raw = {}, index = 0) {
     const id = raw.id || `prop_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}`;
     const name = String(raw.name || `New Property ${index + 1}`).trim();
-    const status = raw.status === 'completed' ? 'completed' : raw.status === 'waiting' ? 'waiting' : 'in_progress';
+    const validStatuses = ['in_progress', 'waiting', 'completed', 'archived'];
+    const status = validStatuses.includes(raw.status) ? raw.status : 'in_progress';
     const bedrooms = Math.max(0, parseInt(raw.bedrooms, 10) || 1);
     const bathrooms = Math.max(1, parseFloat(raw.bathrooms) || 1);
     const capacity = Math.max(1, parseInt(raw.capacity, 10) || 2);

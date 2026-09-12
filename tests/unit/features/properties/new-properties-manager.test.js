@@ -306,6 +306,68 @@ describe("New Properties Manager", () => {
             container.remove();
         }
     });
+
+    test("manages archived properties for stopped and permanently disabled processes", () => {
+        const container = document.createElement("div");
+        container.id = "test-archived-props";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const manager = new NewPropertiesManager({ containerId: "test-archived-props", storage });
+            manager.init();
+
+            // 1. Sidebar has "Propriedades Arquivadas" item with count 0 initially
+            const archiveNav = container.querySelector("[data-action='filter-status'][data-status='archived']");
+            assert.ok(archiveNav, "Archived properties nav item exists in sidebar");
+            assert.ok(archiveNav.textContent.includes("Propriedades Arquivadas"));
+
+            // 2. Initial active properties = 42, archived = 0
+            assert.equal(manager.getFilteredProperties().length, 42);
+
+            // 3. Switch to archived view: empty state is shown
+            manager.statusFilter = "archived";
+            manager.render();
+            assert.equal(manager.getFilteredProperties().length, 0);
+            assert.ok(container.textContent.includes("Nenhum alojamento arquivado"), "Shows empty state when no properties are archived");
+
+            // 4. Archive a property (stopped/disabled process)
+            const targetProp = manager.properties[0];
+            manager.toggleArchiveProperty(targetProp.id);
+            assert.equal(targetProp.status, "archived", "Property status is set to archived");
+
+            // 5. Active views exclude archived property
+            manager.statusFilter = "all";
+            manager.render();
+            assert.equal(manager.getFilteredProperties().length, 41, "Archived property excluded from active list");
+
+            // 6. Archived view shows the archived property
+            manager.statusFilter = "archived";
+            manager.render();
+            const archivedList = manager.getFilteredProperties();
+            assert.equal(archivedList.length, 1, "Archived list contains the stopped property");
+            assert.equal(archivedList[0].id, targetProp.id);
+            assert.ok(container.textContent.includes(targetProp.name), "Renders archived property card");
+
+            // 7. Open drawer for archived property: shows stopped/disabled warning banner and reactivate button
+            manager.selectedPropertyId = targetProp.id;
+            manager.render();
+            assert.ok(container.textContent.includes("Processo Parado / Desativado Permanentemente"), "Shows archived banner in drawer");
+
+            const reactivateBtn = container.querySelector(".asana-drawer [data-action='toggle-archive-property']");
+            assert.ok(reactivateBtn, "Reactivate button is rendered");
+
+            // 8. Reactivate the property
+            reactivateBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            assert.equal(targetProp.status, "in_progress", "Property restored to in_progress");
+
+            manager.statusFilter = "all";
+            assert.equal(manager.getFilteredProperties().length, 42, "Active list has 42 properties again");
+        } finally {
+            container.remove();
+        }
+    });
 });
+
 
 

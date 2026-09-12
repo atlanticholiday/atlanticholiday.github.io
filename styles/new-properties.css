@@ -583,6 +583,11 @@ body.asana-theme {
     color: #059669;
     border: 1px solid #a7f3d0;
 }
+.asana-status-pill[data-status="archived"] {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
 
 /* --- ASANA PROPERTY DRAWER / MODAL --- */
 .asana-drawer-overlay {

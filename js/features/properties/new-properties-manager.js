@@ -154,11 +154,19 @@ export class NewPropertiesManager {
             list = list.filter(p => !p.hidden);
         }
 
-        // Hide new listings (in_progress & waiting) when toggle is active
-        if (this.hideNewListings) {
-            list = list.filter(p => p.status === 'completed');
-        } else if (this.statusFilter !== 'all') {
-            list = list.filter(p => p.status === this.statusFilter);
+        // When viewing archived specifically, return only archived properties
+        if (this.statusFilter === 'archived') {
+            list = list.filter(p => p.status === 'archived');
+        } else {
+            // Exclude archived properties from active pipeline views
+            list = list.filter(p => p.status !== 'archived');
+
+            // Hide new listings (in_progress & waiting) when toggle is active
+            if (this.hideNewListings) {
+                list = list.filter(p => p.status === 'completed');
+            } else if (this.statusFilter !== 'all') {
+                list = list.filter(p => p.status === this.statusFilter);
+            }
         }
 
         if (this.searchQuery) {
@@ -183,10 +191,11 @@ export class NewPropertiesManager {
         const selected = this.getSelectedProperty();
 
         const counts = {
-            all: this.properties.filter(p => !p.hidden).length,
+            all: this.properties.filter(p => !p.hidden && p.status !== 'archived').length,
             in_progress: this.properties.filter(p => !p.hidden && p.status === 'in_progress').length,
             waiting: this.properties.filter(p => !p.hidden && p.status === 'waiting').length,
-            completed: this.properties.filter(p => !p.hidden && p.status === 'completed').length
+            completed: this.properties.filter(p => !p.hidden && p.status === 'completed').length,
+            archived: this.properties.filter(p => !p.hidden && p.status === 'archived').length
         };
 
         this.container.innerHTML = `
@@ -236,6 +245,15 @@ export class NewPropertiesManager {
                                 <span>${isPt ? 'Concluídos' : 'Completed'}</span>
                             </div>
                             <span class="asana-nav-item__badge">${counts.completed}</span>
+                        </button>
+
+                        <div class="asana-nav-section-title">${isPt ? 'Arquivo & Desativados' : 'Archived & Inactive'}</div>
+                        <button type="button" class="asana-nav-item ${this.statusFilter === 'archived' ? 'active' : ''}" data-action="filter-status" data-status="archived" title="${isPt ? 'Alojamentos com processo parado ou permanentemente desativado' : 'Properties with process stopped or permanently disabled'}">
+                            <div class="asana-nav-item__left">
+                                <i class="fas fa-box-archive text-gray-400"></i>
+                                <span>${isPt ? 'Propriedades Arquivadas' : 'Archived Properties'}</span>
+                            </div>
+                            <span class="asana-nav-item__badge ${counts.archived > 0 ? 'bg-gray-200 text-gray-800 font-bold' : ''}">${counts.archived}</span>
                         </button>
 
                         <div class="asana-nav-section-title">${isPt ? 'Filtros & Opções' : 'Filters & Options'}</div>
@@ -392,6 +410,7 @@ export class NewPropertiesManager {
                                 <option value="in_progress">${isPt ? 'Em Curso' : 'In Progress'}</option>
                                 <option value="waiting">${isPt ? 'À Espera' : 'Waiting / Pending'}</option>
                                 <option value="completed">${isPt ? 'Concluído' : 'Completed'}</option>
+                                <option value="archived">${isPt ? 'Arquivado (Processo Parado)' : 'Archived (Stopped / Disabled)'}</option>
                             </select>
                         </div>
 
@@ -430,6 +449,43 @@ export class NewPropertiesManager {
     }
 
     renderBoardView(properties, isPt) {
+        if (this.statusFilter === 'archived') {
+            return `
+                <div class="space-y-4">
+                    <div class="bg-gray-100 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-lg bg-gray-200 text-gray-700 flex items-center justify-center text-base">
+                                <i class="fas fa-box-archive"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900">${isPt ? 'Propriedades Arquivadas (Processo Parado / Desativado)' : 'Archived Properties (Process Stopped / Disabled)'}</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">${isPt ? 'Alojamentos cujo processo de entrada foi interrompido e desativado permanentemente. Podem ser reativados a qualquer momento.' : 'Properties whose onboarding was stopped and permanently disabled. They can be reactivated at any time.'}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-gray-200 text-gray-700 rounded-full">
+                            ${properties.length} ${isPt ? 'arquivados' : 'archived'}
+                        </span>
+                    </div>
+
+                    ${properties.length === 0 ? `
+                        <div class="bg-white rounded-2xl border border-gray-200 p-12 text-center max-w-lg mx-auto my-8 shadow-xs">
+                            <div class="w-16 h-16 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i class="fas fa-box-archive"></i>
+                            </div>
+                            <h4 class="text-base font-bold text-gray-900 mb-1">${isPt ? 'Nenhum alojamento arquivado' : 'No archived properties'}</h4>
+                            <p class="text-xs text-gray-500 mb-6 leading-relaxed">${isPt ? 'Alojamentos cujo processo de entrada for cancelado, suspenso ou desativado permanentemente podem ser arquivados para não sobrecarregar o pipeline ativo.' : 'Properties whose onboarding process is cancelled, suspended or permanently disabled can be archived here without cluttering the active pipeline.'}</p>
+                            <button type="button" class="btn-asana-secondary text-xs" data-action="filter-status" data-status="all">
+                                <i class="fas fa-arrow-left mr-1"></i> ${isPt ? 'Ver Alojamentos Ativos' : 'View Active Properties'}
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${properties.map(prop => this.renderPropertyCard(prop, isPt)).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
         const columns = [
             {
                 id: 'waiting',
@@ -488,7 +544,15 @@ export class NewPropertiesManager {
         return `
             <div class="asana-card" data-action="open-property" data-id="${property.id}">
                 <div class="asana-card__header">
-                    <div class="asana-card__title">${this.escapeHtml(property.name)}</div>
+                    <div class="flex items-center gap-2">
+                        <div class="asana-card__title">${this.escapeHtml(property.name)}</div>
+                        ${property.status === 'archived' ? `
+                            <span class="asana-status-pill text-[10px] py-0.5 px-2" data-status="archived">
+                                <i class="fas fa-box-archive text-[9px]"></i>
+                                <span>${isPt ? 'Arquivado' : 'Archived'}</span>
+                            </span>
+                        ` : ''}
+                    </div>
                     <span class="text-xs text-gray-400"><i class="fas fa-chevron-right"></i></span>
                 </div>
 
@@ -557,8 +621,8 @@ export class NewPropertiesManager {
                                     <td class="font-semibold text-gray-900">${this.escapeHtml(p.name)}</td>
                                     <td>
                                         <span class="asana-status-pill" data-status="${p.status}">
-                                            <i class="fas fa-circle text-[8px]"></i>
-                                            <span>${p.status === 'completed' ? (isPt ? 'Concluído' : 'Completed') : p.status === 'waiting' ? (isPt ? 'À Espera' : 'Waiting') : (isPt ? 'Em Curso' : 'In Progress')}</span>
+                                            <i class="fas ${p.status === 'archived' ? 'fa-box-archive' : 'fa-circle'} text-[8px]"></i>
+                                            <span>${this.formatStatusLabel(p.status, isPt)}</span>
                                         </span>
                                     </td>
                                     <td class="text-xs text-gray-600">
@@ -607,7 +671,7 @@ export class NewPropertiesManager {
                                 <div class="flex items-start justify-between mb-2">
                                     <h4 class="font-bold text-gray-900">${this.escapeHtml(p.name)}</h4>
                                     <span class="asana-status-pill" data-status="${p.status}">
-                                        ${p.status === 'completed' ? (isPt ? 'Concluído' : 'Completed') : p.status === 'waiting' ? (isPt ? 'À Espera' : 'Waiting') : (isPt ? 'Em Curso' : 'In Progress')}
+                                        ${this.formatStatusLabel(p.status, isPt)}
                                     </span>
                                 </div>
                                 <div class="text-xs text-gray-500 mb-3">
@@ -653,10 +717,15 @@ export class NewPropertiesManager {
                                 <option value="waiting" ${property.status === 'waiting' ? 'selected' : ''}>${isPt ? 'À Espera' : 'Waiting / Pending'}</option>
                                 <option value="in_progress" ${property.status === 'in_progress' ? 'selected' : ''}>${isPt ? 'Em Curso' : 'In Progress'}</option>
                                 <option value="completed" ${property.status === 'completed' ? 'selected' : ''}>${isPt ? 'Concluído' : 'Completed'}</option>
+                                <option value="archived" ${property.status === 'archived' ? 'selected' : ''}>${isPt ? '📦 Arquivado (Parado / Desativado)' : '📦 Archived (Stopped / Disabled)'}</option>
                             </select>
                         </div>
 
                         <div class="flex items-center gap-2">
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 ${property.status === 'archived' ? 'bg-gray-100 text-gray-800 border-gray-300 font-semibold' : 'text-gray-600'}" data-action="toggle-archive-property" data-id="${property.id}" title="${isPt ? (property.status === 'archived' ? 'Reativar processo de onboarding' : 'Arquivar (parar processo permanentemente)') : (property.status === 'archived' ? 'Reactivate onboarding process' : 'Archive (permanently stop process)')}">
+                                <i class="fas ${property.status === 'archived' ? 'fa-box-open text-emerald-600' : 'fa-box-archive text-gray-500'}"></i>
+                                <span class="hidden sm:inline">${property.status === 'archived' ? (isPt ? 'Reativar' : 'Reactivate') : (isPt ? 'Arquivar' : 'Archive')}</span>
+                            </button>
                             <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 ${property.hidden ? 'bg-amber-50 text-amber-700 border-amber-300' : 'text-gray-600'}" data-action="toggle-hide-property" data-id="${property.id}" title="${isPt ? (property.hidden ? 'Mostrar este alojamento' : 'Ocultar este alojamento') : (property.hidden ? 'Unhide this listing' : 'Hide this listing')}">
                                 <i class="fas ${property.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
                                 <span class="hidden sm:inline">${property.hidden ? (isPt ? 'Ocultado' : 'Hidden') : (isPt ? 'Ocultar' : 'Hide')}</span>
@@ -673,6 +742,24 @@ export class NewPropertiesManager {
 
                     <!-- BODY -->
                     <div class="asana-drawer__body">
+                        <!-- ARCHIVED NOTICE (if permanently stopped/disabled) -->
+                        ${property.status === 'archived' ? `
+                            <div class="bg-gray-100 border border-gray-300 text-gray-800 p-3.5 rounded-xl mb-4 text-xs flex items-center justify-between shadow-xs">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-8 h-8 rounded-lg bg-gray-200 text-gray-700 flex items-center justify-center shrink-0 text-sm">
+                                        <i class="fas fa-ban text-red-500"></i>
+                                    </span>
+                                    <div>
+                                        <div class="font-bold text-gray-900">${isPt ? 'Processo Parado / Desativado Permanentemente' : 'Process Stopped / Permanently Disabled'}</div>
+                                        <div class="text-gray-600 text-[11px] mt-0.5">${isPt ? 'Este alojamento está arquivado e fora do pipeline ativo de novos alojamentos.' : 'This property is archived and kept outside the active onboarding pipeline.'}</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-asana-secondary text-xs py-1.5 px-3 font-semibold bg-white hover:bg-gray-50 text-emerald-700 border-emerald-300 shrink-0" data-action="toggle-archive-property" data-id="${property.id}">
+                                    <i class="fas fa-box-open mr-1"></i> ${isPt ? 'Reativar Processo' : 'Reactivate'}
+                                </button>
+                            </div>
+                        ` : ''}
+
                         <!-- PROPERTY TITLE -->
                         <div>
                             <input type="text" class="asana-drawer__title-input" value="${this.escapeHtml(property.name)}" data-action="update-property-name" data-id="${property.id}" placeholder="${isPt ? 'Nome do Alojamento' : 'Property Name'}" />
@@ -1082,6 +1169,11 @@ export class NewPropertiesManager {
                         this.toggleHideProperty(id);
                     }
                     break;
+                case 'toggle-archive-property':
+                    if (id) {
+                        this.toggleArchiveProperty(id);
+                    }
+                    break;
                 case 'switch-view':
                     this.activeView = target.dataset.view;
                     this.render();
@@ -1320,6 +1412,26 @@ export class NewPropertiesManager {
         prop.status = prop.status === 'completed' ? 'in_progress' : 'completed';
         this.saveProperties();
         this.render();
+    }
+
+    toggleArchiveProperty(propertyId) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        prop.status = prop.status === 'archived' ? 'in_progress' : 'archived';
+        this.saveProperties();
+        this.render();
+    }
+
+    formatStatusLabel(status, isPt) {
+        switch (status) {
+            case 'completed': return isPt ? 'Concluído' : 'Completed';
+            case 'waiting': return isPt ? 'À Espera' : 'Waiting';
+            case 'archived': return isPt ? 'Arquivado' : 'Archived';
+            case 'in_progress':
+            default:
+                return isPt ? 'Em Curso' : 'In Progress';
+        }
     }
 
     deleteProperty(propertyId) {
