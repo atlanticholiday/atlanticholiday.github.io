@@ -182,7 +182,7 @@ export class NewPropertiesManager {
                         <div class="asana-nav-section-title">${isPt ? 'Pipeline' : 'Pipeline'}</div>
                         <button type="button" class="asana-nav-item ${this.statusFilter === 'in_progress' ? 'active' : ''}" data-action="filter-status" data-status="in_progress">
                             <div class="asana-nav-item__left">
-                                <i class="fas fa-spinner fa-spin-pulse text-amber-400"></i>
+                                <i class="fas fa-circle-half-stroke text-amber-400"></i>
                                 <span>${isPt ? 'Em Curso' : 'In Progress'}</span>
                             </div>
                             <span class="asana-nav-item__badge">${counts.in_progress}</span>
@@ -376,7 +376,7 @@ export class NewPropertiesManager {
                 id: 'in_progress',
                 title: isPt ? 'Em Curso' : 'In Progress',
                 color: 'amber',
-                icon: 'fa-spinner',
+                icon: 'fa-circle-half-stroke',
                 items: properties.filter(p => p.status === 'in_progress')
             },
             {
