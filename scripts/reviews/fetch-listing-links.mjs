@@ -178,10 +178,16 @@ async function fetchAirbnbListings(executablePath) {
   await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {});
 
   await promptForEnter(
-    "\n👉 In Microsoft Edge:\n   1. Log into your Airbnb Host account (if prompted).\n   2. Make sure you are on the 'Listings' page where your properties are shown."
+    "\n👉 In Microsoft Edge:\n   1. Log into your Airbnb Host account (if prompted).\n   2. Make sure you are on the 'Listings' page where your properties are shown.\n   (If you have multiple pages or pagination, feel free to click through them; all listings are captured automatically)."
   );
 
   console.log("🔍 Scanning Airbnb page elements...");
+
+  // Auto-scroll to trigger lazy loading
+  for (let s = 0; s < 5; s++) {
+    await page.evaluate(() => window.scrollBy(0, 1200));
+    await page.waitForTimeout(600);
+  }
 
   // Also extract from DOM in case network interception missed any rows
   const domListings = await page.evaluate(() => {
@@ -322,16 +328,41 @@ async function fetchBookingListings(executablePath) {
   return results;
 }
 
+const GENERIC_TOKENS = new Set([
+  "apartment", "apartamentos", "apartamento", "villa", "villas", "house", "casas", "casa",
+  "studio", "loft", "suite", "guesthouse", "flat", "residence", "place",
+  "funchal", "santa", "cruz", "calheta", "machico", "canico", "ribeira", "brava", "santana",
+  "vicente", "moniz", "camara", "lobos", "ponta", "sol", "madeira", "portugal",
+  "view", "ocean", "sea", "mar", "azul", "prime", "location", "by", "pela", "pelo", "por", "atlantic", "holiday", "holidays"
+]);
+
+function findBestMatch(existing, candidateName) {
+  const normCand = normalizeTitle(candidateName);
+  // 1. Direct or substring
+  const direct = existing.find((p) => {
+    const normP = normalizeTitle(p.name);
+    return normP === normCand || normP.includes(normCand) || normCand.includes(normP);
+  });
+  if (direct) return direct;
+
+  // 2. Token match
+  const candTokens = normCand.split(" ").filter((t) => t.length >= 3 && !GENERIC_TOKENS.has(t));
+  if (candTokens.length > 0) {
+    return existing.find((p) => {
+      const normP = normalizeTitle(p.name);
+      return candTokens.every((token) => new RegExp(`\\b${token}\\b`, "i").test(normP));
+    });
+  }
+  return null;
+}
+
 function mergeIntoDataset(dataset, airbnbListings = [], bookingListings = []) {
   const existing = dataset.properties || [];
 
   // Match and merge Airbnb
   airbnbListings.forEach((ab) => {
     const normAb = normalizeTitle(ab.name);
-    let match = existing.find((p) => {
-      const normP = normalizeTitle(p.name);
-      return normP === normAb || normP.includes(normAb) || normAb.includes(normP);
-    });
+    const match = findBestMatch(existing, ab.name);
 
     if (match) {
       match.airbnbUrl = ab.url;
@@ -356,10 +387,7 @@ function mergeIntoDataset(dataset, airbnbListings = [], bookingListings = []) {
   // Match and merge Booking.com
   bookingListings.forEach((bk) => {
     const normBk = normalizeTitle(bk.name);
-    let match = existing.find((p) => {
-      const normP = normalizeTitle(p.name);
-      return normP === normBk || normP.includes(normBk) || normBk.includes(normP);
-    });
+    const match = findBestMatch(existing, bk.name);
 
     if (match) {
       match.bookingUrl = bk.url;
