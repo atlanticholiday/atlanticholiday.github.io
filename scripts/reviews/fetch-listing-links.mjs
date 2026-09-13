@@ -96,9 +96,10 @@ async function promptForEnter(message) {
 
 function normalizeTitle(title) {
   return String(title || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/by\s+atlantic\s+holiday/gi, "")
-    .replace(/by\s+atlantic\s+holidays/gi, "")
+    .replace(/by\s+atlantic\s+holiday[s]?/gi, "")
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -144,7 +145,6 @@ async function fetchAirbnbListings(executablePath) {
         const text = await response.text();
         const json = JSON.parse(text);
 
-        // Recursive search for listing objects with id and name
         function searchListings(obj) {
           if (!obj || typeof obj !== "object") return;
           if (Array.isArray(obj)) {
@@ -152,16 +152,27 @@ async function fetchAirbnbListings(executablePath) {
             return;
           }
 
-          if (obj.id && (obj.name || obj.title || obj.nickname)) {
-            const rawId = String(obj.id);
-            // Numeric or long ID
-            if (/^\d{6,}$/.test(rawId) || rawId.length > 8) {
-              const name = obj.nickname || obj.name || obj.title;
-              discovered.set(rawId, {
-                id: rawId,
-                name: name.trim(),
-                url: `https://www.airbnb.com/rooms/${rawId}`
-              });
+          let rawId = obj.id || obj.listing_id || obj.listingId || obj.roomId || obj.room_id || (obj.listing && obj.listing.id);
+          if (rawId) {
+            rawId = String(rawId);
+            if (!/^\d+$/.test(rawId) && rawId.length > 12) {
+              try {
+                const decoded = Buffer.from(rawId, "base64").toString("utf8");
+                const m = decoded.match(/\d{6,}/);
+                if (m) rawId = m[0];
+              } catch {}
+            }
+            const numMatch = rawId.match(/\b(\d{6,})\b/);
+            if (numMatch) {
+              const id = numMatch[1];
+              const name = obj.nickname || obj.listing_nickname || obj.name || obj.title || obj.listing_title || obj.public_name || (obj.listing && (obj.listing.nickname || obj.listing.name || obj.listing.title));
+              if (name && typeof name === "string" && name.trim().length > 1) {
+                discovered.set(id, {
+                  id,
+                  name: name.trim(),
+                  url: `https://www.airbnb.com/rooms/${id}`
+                });
+              }
             }
           }
 
@@ -177,52 +188,167 @@ async function fetchAirbnbListings(executablePath) {
   console.log(`🌐 Opening ${targetUrl}...`);
   await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {});
 
-  await promptForEnter(
-    "\n👉 In Microsoft Edge:\n   1. Log into your Airbnb Host account (if prompted).\n   2. Make sure you are on the 'Listings' page where your properties are shown.\n   (If you have multiple pages or pagination, feel free to click through them; all listings are captured automatically)."
-  );
+  console.log("\n👉 Please log into your Airbnb Host account in Microsoft Edge.");
+  console.log("   Once logged in, the script will automatically detect the listings page and extract everything!");
 
-  console.log("🔍 Scanning Airbnb page elements...");
+  // Wait for user to log in and reach hosting listings
+  const startTime = Date.now();
+  const maxWaitMs = 10 * 60 * 1000; // 10 minutes
+  let isReady = false;
 
-  // Auto-scroll to trigger lazy loading
-  for (let s = 0; s < 5; s++) {
-    await page.evaluate(() => window.scrollBy(0, 1200));
-    await page.waitForTimeout(600);
+  while (Date.now() - startTime < maxWaitMs) {
+    if (page.isClosed()) {
+      console.log("⚠️ Browser window closed by user.");
+      break;
+    }
+
+    const currentUrl = page.url();
+    const isLoginPage = currentUrl.includes("/login") || currentUrl.includes("authenticate") || currentUrl.includes("checkpoint");
+    const isHosting = (currentUrl.includes("/hosting") || currentUrl.includes("/multicalendar")) && !isLoginPage;
+
+    if (isHosting) {
+      const hasListingsInDOM = await page.evaluate(() => {
+        return Boolean(
+          document.querySelector('a[href*="/hosting/listings/"], a[href*="/rooms/"], [data-testid*="listing"], table tbody tr')
+        );
+      }).catch(() => false);
+
+      if (hasListingsInDOM || discovered.size > 0) {
+        isReady = true;
+        console.log("🎉 Airbnb Host Login detected! Proceeding to extract listings...");
+        break;
+      }
+    }
+
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    if (elapsed > 0 && elapsed % 15 === 0) {
+      console.log(`⏳ [${Math.floor(elapsed / 60)}m ${elapsed % 60}s / 10m] Waiting for login in Microsoft Edge...`);
+    }
+
+    await new Promise((r) => setTimeout(r, 1500));
   }
 
-  // Also extract from DOM in case network interception missed any rows
-  const domListings = await page.evaluate(() => {
-    const results = [];
-    // Links to editor or room
-    const links = document.querySelectorAll('a[href*="/hosting/listings/editor/"], a[href*="/rooms/"], [data-testid*="listing"]');
-    links.forEach((link) => {
-      const href = link.getAttribute("href") || "";
-      const match = href.match(/\/(?:editor|rooms)\/(\d+)/);
-      if (match) {
-        const id = match[1];
-        const row = link.closest("tr") || link.closest('[role="row"]') || link.parentElement;
-        const text = row ? row.innerText : link.innerText;
-        const titleLine = text.split("\n").map((t) => t.trim()).find((t) => t.length > 3 && !t.includes("Active") && !t.includes("Listed"));
-        results.push({ id, name: titleLine || `Listing ${id}`, url: `https://www.airbnb.com/rooms/${id}` });
+  if (page.isClosed()) {
+    return Array.from(discovered.values());
+  }
+
+  // Inject friendly helper banner
+  await page.evaluate(() => {
+    try {
+      if (document.getElementById("ah-status-banner")) return;
+      const banner = document.createElement("div");
+      banner.id = "ah-status-banner";
+      banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999999;background:#0d9488;color:#fff;font-size:16px;font-weight:bold;text-align:center;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,0.3);font-family:sans-serif;";
+      banner.innerText = "🌊 Atlantic Holiday: Logged in! Automatically scanning and collecting all listings...";
+      document.body.appendChild(banner);
+    } catch {}
+  }).catch(() => {});
+
+  async function scrapeDomListings() {
+    const items = await page.evaluate(() => {
+      const results = [];
+      const links = document.querySelectorAll('a[href*="/hosting/listings/editor/"], a[href*="/hosting/listings/details/"], a[href*="/hosting/listings/"], a[href*="/rooms/"], [data-testid*="listing"]');
+      links.forEach((link) => {
+        const href = link.getAttribute("href") || "";
+        const match = href.match(/\/(?:editor|details|rooms|listings)\/(\d{6,})/);
+        if (match) {
+          const id = match[1];
+          const row = link.closest("tr") || link.closest('[role="row"]') || link.closest('[data-testid*="listing"]') || link.parentElement;
+          const text = row ? row.innerText : link.innerText;
+          const lines = text.split("\n").map((t) => t.trim()).filter((t) => t.length > 2);
+          const titleLine = lines.find((t) =>
+            !t.includes("Active") &&
+            !t.includes("Listed") &&
+            !t.includes("Unlisted") &&
+            !t.includes("In progress") &&
+            !t.includes("bedroom") &&
+            !t.includes("bath") &&
+            !t.includes("Instant") &&
+            !/^\d+$/.test(t)
+          );
+          if (titleLine) {
+            results.push({ id, name: titleLine, url: `https://www.airbnb.com/rooms/${id}` });
+          }
+        }
+      });
+      return results;
+    }).catch(() => []);
+
+    items.forEach((it) => {
+      if (!discovered.has(it.id)) {
+        discovered.set(it.id, it);
       }
     });
-    return results;
-  });
+  }
 
-  domListings.forEach((item) => {
-    if (!discovered.has(item.id)) {
-      discovered.set(item.id, item);
+  // Iterate pages
+  let pageNum = 1;
+  let hasMore = true;
+
+  while (hasMore && pageNum <= 30) {
+    if (page.isClosed()) break;
+    console.log(`📄 Scanning listings page ${pageNum}... (Captured so far: ${discovered.size})`);
+
+    for (let s = 0; s < 5; s++) {
+      await page.evaluate(() => window.scrollBy(0, 1000)).catch(() => {});
+      await page.waitForTimeout(400);
     }
-  });
 
-  await context.close();
+    await scrapeDomListings();
 
-  const results = Array.from(discovered.values());
-  console.log(`✅ Successfully extracted ${results.length} Airbnb properties!`);
-  results.forEach((r, idx) => {
-    console.log(`   ${idx + 1}. ${r.name} -> ${r.url}`);
-  });
+    const nextBtn = await page.evaluate(() => {
+      const selectors = [
+        'button[aria-label*="Next"]',
+        'button[aria-label*="Próximo"]',
+        'button[aria-label*="Seguinte"]',
+        'a[aria-label*="Next"]',
+        'a[aria-label*="Próximo"]',
+        'a[aria-label*="Seguinte"]',
+        '[data-testid*="pagination-next"]',
+        'nav[aria-label*="Pagination"] button:last-child',
+        'nav[aria-label*="Paginação"] button:last-child'
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) {
+          const disabled = el.disabled || el.getAttribute("aria-disabled") === "true" || el.classList.contains("disabled");
+          return { found: true, disabled, selector: sel };
+        }
+      }
+      return { found: false };
+    }).catch(() => ({ found: false }));
 
-  return results;
+    if (nextBtn.found && !nextBtn.disabled) {
+      console.log(`➡️ Navigating to next listings page...`);
+      await page.evaluate((sel) => {
+        document.querySelector(sel)?.click();
+      }, nextBtn.selector).catch(() => {});
+      await page.waitForTimeout(3000);
+      pageNum += 1;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  await scrapeDomListings();
+
+  console.log(`\n🎉 Extracted ${discovered.size} total Airbnb listings!`);
+
+  // Update banner
+  await page.evaluate((count) => {
+    try {
+      const banner = document.getElementById("ah-status-banner");
+      if (banner) {
+        banner.style.background = "#16a34a";
+        banner.innerText = `✅ Done! Captured ${count} Airbnb listings. Saving now...`;
+      }
+    } catch {}
+  }, discovered.size).catch(() => {});
+
+  await page.waitForTimeout(2500);
+  await context.close().catch(() => {});
+
+  return Array.from(discovered.values());
 }
 
 async function fetchBookingListings(executablePath) {
@@ -444,6 +570,21 @@ async function main() {
   console.log("\n🎉 ALL DONE!");
   console.log(`📊 Total properties in dataset: ${updatedDataset.properties.length}`);
   console.log(`👉 Saved to: ${options.output}`);
+
+  try {
+    const { execSync } = await import("node:child_process");
+    execSync("git add server-data/property-reviews.json", { stdio: "pipe" });
+    const status = execSync("git status --porcelain server-data/property-reviews.json", { encoding: "utf8" });
+    if (status.trim()) {
+      console.log("💾 Committing and pushing updated listing links to GitHub...");
+      execSync('git commit -m "Update property listing links (Airbnb & Booking)"', { stdio: "pipe" });
+      execSync("git push origin main", { stdio: "inherit" });
+      console.log("✅ Pushed successfully to GitHub!");
+    }
+  } catch (err) {
+    console.warn("⚠️ Git commit/push skipped or failed:", err.message);
+  }
+
   console.log("\nYou can now run 'npm run sync:reviews' or 'sync-reviews.cmd' to fetch reviews for all of them!");
 }
 
@@ -451,3 +592,4 @@ main().catch((err) => {
   console.error("\n❌ Execution failed:", err.message);
   process.exit(1);
 });
+
