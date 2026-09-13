@@ -123,13 +123,101 @@ export function calculatePortfolioSummary(properties = []) {
   };
 }
 
+export function getAllPropertyReviews(property) {
+  if (!property) return [];
+  const reviews = [];
+
+  if (Array.isArray(property.reviews)) {
+    reviews.push(...property.reviews);
+  }
+  if (Array.isArray(property.booking?.reviews)) {
+    property.booking.reviews.forEach((r) => {
+      reviews.push({ ...r, platform: r.platform || 'Booking.com' });
+    });
+  }
+  if (Array.isArray(property.airbnb?.reviews)) {
+    property.airbnb.reviews.forEach((r) => {
+      reviews.push({ ...r, platform: r.platform || 'Airbnb' });
+    });
+  }
+
+  // Deduplicate by ID if present
+  const seen = new Set();
+  const unique = [];
+  for (const r of reviews) {
+    const key = r.id || `${r.platform}-${r.author}-${r.date}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(r);
+    }
+  }
+
+  // Sort by date descending (newest first)
+  unique.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  return unique;
+}
+
+export function getLatestReviewSnippet(property) {
+  const reviews = getAllPropertyReviews(property);
+  return reviews.length > 0 ? reviews[0] : null;
+}
+
+export function filterPropertyReviews(reviews = [], { platform = 'all', filter = 'all', search = '' } = {}) {
+  let list = [...reviews];
+
+  if (platform !== 'all') {
+    const platLow = platform.toLowerCase();
+    list = list.filter((r) => (r.platform || '').toLowerCase().includes(platLow));
+  }
+
+  if (filter === 'positive') {
+    list = list.filter((r) => {
+      if (r.platform === 'Airbnb') return (r.score || 0) >= 4.8;
+      return (r.score || 0) >= 9.0;
+    });
+  } else if (filter === 'attention') {
+    list = list.filter((r) => {
+      if (r.platform === 'Airbnb') {
+        return (r.score || 5) < 4.7 || (r.cleanlinessScore && r.cleanlinessScore < 4.8);
+      }
+      return (r.score || 10) < 8.5 || (r.cleanlinessScore && r.cleanlinessScore < 9.0);
+    });
+  }
+
+  if (search) {
+    const q = search.toLowerCase();
+    list = list.filter((r) =>
+      (r.author && r.author.toLowerCase().includes(q)) ||
+      (r.title && r.title.toLowerCase().includes(q)) ||
+      (r.comment && r.comment.toLowerCase().includes(q)) ||
+      (r.positive && r.positive.toLowerCase().includes(q)) ||
+      (r.negative && r.negative.toLowerCase().includes(q)) ||
+      (r.country && r.country.toLowerCase().includes(q))
+    );
+  }
+
+  return list;
+}
+
 export function filterAndSortProperties(properties = [], { search = '', filter = 'all', sort = 'name-asc' } = {}) {
   let list = [...properties];
 
-  // Search by name or location
+  // Search by name, location, or review comments/authors
   if (search) {
     const q = search.toLowerCase();
-    list = list.filter((p) => (p.name && p.name.toLowerCase().includes(q)) || (p.location && p.location.toLowerCase().includes(q)));
+    list = list.filter((p) => {
+      if (p.name && p.name.toLowerCase().includes(q)) return true;
+      if (p.location && p.location.toLowerCase().includes(q)) return true;
+      const allReviews = getAllPropertyReviews(p);
+      return allReviews.some((r) =>
+        (r.author && r.author.toLowerCase().includes(q)) ||
+        (r.title && r.title.toLowerCase().includes(q)) ||
+        (r.comment && r.comment.toLowerCase().includes(q)) ||
+        (r.positive && r.positive.toLowerCase().includes(q)) ||
+        (r.negative && r.negative.toLowerCase().includes(q)) ||
+        (r.country && r.country.toLowerCase().includes(q))
+      );
+    });
   }
 
   // Filters
@@ -170,3 +258,4 @@ export function filterAndSortProperties(properties = [], { search = '', filter =
 
   return list;
 }
+

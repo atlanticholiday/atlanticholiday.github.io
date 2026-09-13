@@ -20,10 +20,14 @@ export class ReviewsRatingsManager {
       sort: 'name-asc',
       lastUpdated: null,
       selectedProperty: null,
-      showSyncModal: false
+      isSyncing: false,
+      syncToastMessage: null,
+      reviewModalFilter: 'all',
+      reviewModalSearch: ''
     };
 
     this.initialized = false;
+    this._toastTimer = null;
     this.loadFromStorage();
   }
 
@@ -66,10 +70,51 @@ export class ReviewsRatingsManager {
     }
   }
 
+  showToast(message) {
+    this.state.syncToastMessage = message;
+    this.render();
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this.state.syncToastMessage = null;
+      this.render();
+    }, 4500);
+  }
+
+  async syncReviews() {
+    this.state.isSyncing = true;
+    this.render();
+
+    try {
+      const url = `./server-data/property-reviews.json?t=${Date.now()}`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (response.ok) {
+        const dataset = await response.json();
+        if (dataset && Array.isArray(dataset.properties)) {
+          this.state.rawProperties = dataset.properties;
+          this.state.lastUpdated = dataset.lastUpdated || new Date().toISOString();
+          this.saveToStorage(dataset);
+          this.updateCalculations();
+          this.showToast(`Reviews synchronized! (${this.state.rawProperties.length} properties updated)`);
+        } else {
+          this.showToast('Reviews updated.');
+        }
+      } else {
+        this.showToast('Unable to fetch latest reviews file. Displaying local data.');
+      }
+    } catch (err) {
+      console.warn('[ReviewsRatingsManager] Sync error:', err);
+      this.showToast('Network error while refreshing reviews. Displaying local data.');
+    } finally {
+      this.state.isSyncing = false;
+      this.render();
+    }
+  }
+
   async loadFromServer() {
     try {
-      // Load static JSON directly from server-data endpoint
-      const response = await fetch('/server-data/property-reviews.json');
+      // Load static JSON directly from server-data endpoint with cache busting
+      const url = `./server-data/property-reviews.json?t=${Date.now()}`;
+      const response = await fetch(url, { cache: 'no-store' });
       if (response.ok) {
         const dataset = await response.json();
         if (dataset && Array.isArray(dataset.properties)) {
@@ -108,13 +153,23 @@ export class ReviewsRatingsManager {
         sort: this.state.sort,
         lastUpdated: this.state.lastUpdated,
         selectedProperty: this.state.selectedProperty,
-        showSyncModal: this.state.showSyncModal
+        isSyncing: this.state.isSyncing,
+        syncToastMessage: this.state.syncToastMessage,
+        reviewModalFilter: this.state.reviewModalFilter,
+        reviewModalSearch: this.state.reviewModalSearch
       },
       {
         onBack: () => {
           if (this.navigationManager) {
             this.navigationManager.showPreviousPage('landing');
           }
+        },
+        onSyncReviews: () => {
+          this.syncReviews();
+        },
+        onCloseToast: () => {
+          this.state.syncToastMessage = null;
+          this.render();
         },
         onSearch: (query) => {
           this.state.searchQuery = query;
@@ -133,21 +188,24 @@ export class ReviewsRatingsManager {
         },
         onSelectProperty: (propertyId) => {
           this.state.selectedProperty = this.state.rawProperties.find((p) => p.id === propertyId) || null;
+          this.state.reviewModalFilter = 'all';
+          this.state.reviewModalSearch = '';
           this.render();
         },
         onCloseDetailModal: () => {
           this.state.selectedProperty = null;
           this.render();
         },
-        onOpenSyncModal: () => {
-          this.state.showSyncModal = true;
+        onModalReviewFilter: (filterKey) => {
+          this.state.reviewModalFilter = filterKey;
           this.render();
         },
-        onCloseSyncModal: () => {
-          this.state.showSyncModal = false;
+        onModalReviewSearch: (searchQuery) => {
+          this.state.reviewModalSearch = searchQuery;
           this.render();
         }
       }
     );
   }
 }
+

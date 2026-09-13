@@ -1,7 +1,10 @@
 import {
   formatScore,
   getCleanlinessStatus,
-  isAttentionNeeded
+  isAttentionNeeded,
+  getAllPropertyReviews,
+  getLatestReviewSnippet,
+  filterPropertyReviews
 } from './reviews-ratings-utils.js';
 
 export function renderReviewsRatingsDashboard(container, state, handlers) {
@@ -15,7 +18,10 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     sort = 'name-asc',
     lastUpdated = null,
     selectedProperty = null,
-    showSyncModal = false
+    isSyncing = false,
+    syncToastMessage = null,
+    reviewModalFilter = 'all',
+    reviewModalSearch = ''
   } = state;
 
   const lastUpdatedFormatted = lastUpdated
@@ -30,8 +36,27 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 
   container.innerHTML = `
     <div class="reviews-page-wrapper bg-slate-50 min-h-screen pb-16">
+      <!-- Sync Status Toast -->
+      ${
+        syncToastMessage
+          ? `
+        <div id="reviews-sync-toast" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2.5 shadow-md flex items-center justify-between text-xs sm:text-sm font-medium sticky top-0 z-30 animate-fade-in">
+          <div class="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-check-circle text-emerald-200 text-base"></i>
+              <span>${escapeHtml(syncToastMessage)}</span>
+            </div>
+            <button id="toast-close-btn" class="text-white/80 hover:text-white text-xs px-2 py-1 rounded">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      `
+          : ''
+      }
+
       <!-- Top Navigation Bar -->
-      <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <header class="bg-white border-b border-gray-200 sticky ${syncToastMessage ? 'top-10' : 'top-0'} z-20 transition-all">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between h-16">
             <div class="flex items-center gap-4">
@@ -45,7 +70,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                 </div>
                 <div>
                   <h1 class="text-lg font-bold text-gray-900 leading-tight">Reviews & Ratings</h1>
-                  <p class="text-xs text-gray-500">Live guest satisfaction and OTA performance tracking</p>
+                  <p class="text-xs text-gray-500">Live guest satisfaction and verified OTA performance</p>
                 </div>
               </div>
             </div>
@@ -55,9 +80,15 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                 <i class="fas fa-clock text-gray-400"></i>
                 <span>Last updated: <strong class="text-gray-700">${lastUpdatedFormatted}</strong></span>
               </div>
-              <button id="reviews-sync-btn" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold shadow-sm transition-all">
-                <i class="fas fa-sync-alt"></i>
-                <span>Sync Reviews</span>
+              <button
+                id="reviews-sync-btn"
+                ${isSyncing ? 'disabled' : ''}
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold shadow-sm transition-all ${
+                  isSyncing ? 'opacity-70 cursor-not-allowed' : 'active:scale-95'
+                }"
+              >
+                <i class="fas fa-sync-alt ${isSyncing ? 'fa-spin' : ''}"></i>
+                <span>${isSyncing ? 'Syncing Reviews...' : 'Sync Reviews'}</span>
               </button>
             </div>
           </div>
@@ -183,10 +214,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
       </main>
 
       <!-- Property Details Modal / Drawer -->
-      ${selectedProperty ? renderPropertyDetailModal(selectedProperty) : ''}
-
-      <!-- Sync Reviews Instructions Modal -->
-      ${showSyncModal ? renderSyncModal() : ''}
+      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch) : ''}
     </div>
   `;
 
@@ -206,13 +234,17 @@ function renderPropertyCard(prop) {
   const bookingCount = prop.booking?.reviewCount ? `(${prop.booking.reviewCount})` : '';
   const bookingClean = prop.booking?.subScores?.cleanliness ? `${prop.booking.subScores.cleanliness.toFixed(1)}` : '—';
 
+  const latestReview = getLatestReviewSnippet(prop);
+  const allReviews = getAllPropertyReviews(prop);
+  const totalReviewsCount = (prop.booking?.reviewCount || 0) + (prop.airbnb?.reviewCount || 0) || allReviews.length;
+
   return `
     <div class="bg-white rounded-3xl border ${attention ? 'border-rose-200 ring-2 ring-rose-100' : 'border-gray-200'} p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
       <div>
         <!-- Card Header -->
         <div class="flex items-start justify-between gap-3 mb-4">
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-lg font-bold text-gray-900">${escapeHtml(prop.name)}</h3>
               ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
             </div>
@@ -230,7 +262,7 @@ function renderPropertyCard(prop) {
         </div>
 
         <!-- OTA Scores Comparison Grid -->
-        <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="grid grid-cols-2 gap-3 mb-4">
           <!-- Booking.com Box -->
           <div class="rounded-2xl p-4 bg-blue-50/50 border border-blue-100 flex flex-col justify-between">
             <div>
@@ -267,15 +299,40 @@ function renderPropertyCard(prop) {
             </div>
           </div>
         </div>
+
+        <!-- Latest Guest Review Snippet -->
+        ${
+          latestReview
+            ? `
+          <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-4 text-xs text-gray-700">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-800 truncate">
+                <span class="w-5 h-5 rounded-full ${latestReview.platform === 'Airbnb' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'} flex items-center justify-center text-[10px] flex-shrink-0">
+                  ${latestReview.platform === 'Airbnb' ? '<i class="fab fa-airbnb"></i>' : '<i class="fas fa-hotel"></i>'}
+                </span>
+                <span class="truncate">${escapeHtml(latestReview.author || 'Guest')}</span>
+                ${latestReview.country ? `<span class="text-gray-400 font-normal">(${escapeHtml(latestReview.country)})</span>` : ''}
+              </div>
+              <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${latestReview.platform === 'Airbnb' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+                ${latestReview.platform === 'Airbnb' ? `${latestReview.score} ★` : `${latestReview.score} / 10`}
+              </span>
+            </div>
+            <p class="text-xs text-gray-600 line-clamp-2 italic">“${escapeHtml(latestReview.comment || latestReview.title || '')}”</p>
+            ${latestReview.positive ? `<p class="text-[11px] text-emerald-700 font-medium mt-1 truncate"><i class="fas fa-check text-emerald-500 mr-1 text-[10px]"></i>${escapeHtml(latestReview.positive)}</p>` : ''}
+          </div>
+        `
+            : ''
+        }
       </div>
 
       <!-- Footer Actions -->
       <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
-        <span class="text-[11px] text-gray-400">
-          Last check: ${prop.airbnb?.lastChecked ? new Date(prop.airbnb.lastChecked).toLocaleDateString('en-GB') : (prop.booking?.lastChecked ? new Date(prop.booking.lastChecked).toLocaleDateString('en-GB') : 'Never')}
+        <span class="text-[11px] text-gray-400 flex items-center gap-1">
+          <i class="fas fa-comments text-gray-300"></i>
+          <span>${allReviews.length > 0 ? `${allReviews.length} verified reviews loaded` : `${totalReviewsCount} reviews`}</span>
         </span>
-        <button class="reviews-details-btn inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors" data-id="${escapeHtml(prop.id)}">
-          <span>View full breakdown</span>
+        <button class="reviews-details-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}">
+          <span>Read reviews & breakdown</span>
           <i class="fas fa-chevron-right text-[10px]"></i>
         </button>
       </div>
@@ -283,76 +340,220 @@ function renderPropertyCard(prop) {
   `;
 }
 
-function renderPropertyDetailModal(prop) {
+function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '') {
   const airbnbSubs = prop.airbnb?.subScores || {};
   const bookingSubs = prop.booking?.subScores || {};
+  const allReviews = getAllPropertyReviews(prop);
+
+  const bookingReviewsCount = allReviews.filter((r) => r.platform === 'Booking.com').length;
+  const airbnbReviewsCount = allReviews.filter((r) => r.platform === 'Airbnb').length;
+
+  const filteredReviews = filterPropertyReviews(allReviews, {
+    platform: activeFilter === 'booking' ? 'Booking.com' : (activeFilter === 'airbnb' ? 'Airbnb' : 'all'),
+    filter: activeFilter === 'positive' ? 'positive' : (activeFilter === 'attention' ? 'attention' : 'all'),
+    search: searchQuery
+  });
 
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+      <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[92vh] flex flex-col">
         <!-- Close Button -->
-        <button id="modal-close-btn" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors">
+        <button id="modal-close-btn" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
           <i class="fas fa-times text-sm"></i>
         </button>
 
-        <div class="mb-6">
-          <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Scorecard</span>
+        <!-- Header -->
+        <div class="mb-5 pb-4 border-b border-gray-100 pr-10 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Reviews & Ratings</span>
+            ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
+          </div>
           <h2 class="text-2xl font-black text-gray-900 mt-1">${escapeHtml(prop.name)}</h2>
           <p class="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            <i class="fas fa-map-marker-alt"></i>
+            <i class="fas fa-map-marker-alt text-gray-400"></i>
             <span>${escapeHtml(prop.location || 'Madeira')}</span>
+            <span class="mx-1.5">•</span>
+            <span>${allReviews.length} full guest reviews</span>
           </p>
         </div>
 
-        <!-- Breakdown Grid -->
-        <div class="space-y-6">
-          <!-- Booking.com Subscores -->
-          <div class="rounded-2xl border border-blue-100 bg-blue-50/30 p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold text-blue-900 flex items-center gap-2">
-                <i class="fas fa-hotel text-blue-600"></i>
-                <span>Booking.com Sub-category Ratings</span>
-              </h3>
-              <span class="text-xs font-semibold text-blue-700">Overall: ${prop.booking?.score || '—'} / 10</span>
+        <!-- Scrollable Modal Body -->
+        <div class="overflow-y-auto space-y-6 flex-grow pr-1">
+          <!-- Subscores Overview -->
+          <div class="space-y-4">
+            <!-- Booking.com Subscores -->
+            <div class="rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-bold text-blue-900 flex items-center gap-2">
+                  <i class="fas fa-hotel text-blue-600"></i>
+                  <span>Booking.com Sub-category Ratings</span>
+                </h3>
+                <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score ? `${prop.booking.score} / 10` : '—'}</span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                ${renderSubScorePill('Cleanliness', bookingSubs.cleanliness, 10, 'broom')}
+                ${renderSubScorePill('Staff', bookingSubs.staff, 10, 'user-tie')}
+                ${renderSubScorePill('Facilities', bookingSubs.facilities, 10, 'concierge-bell')}
+                ${renderSubScorePill('Comfort', bookingSubs.comfort, 10, 'couch')}
+                ${renderSubScorePill('Value', bookingSubs.value, 10, 'tag')}
+                ${renderSubScorePill('Location', bookingSubs.location, 10, 'map-marker-alt')}
+              </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              ${renderSubScorePill('Cleanliness', bookingSubs.cleanliness, 10, 'broom')}
-              ${renderSubScorePill('Staff', bookingSubs.staff, 10, 'user-tie')}
-              ${renderSubScorePill('Facilities', bookingSubs.facilities, 10, 'concierge-bell')}
-              ${renderSubScorePill('Comfort', bookingSubs.comfort, 10, 'couch')}
-              ${renderSubScorePill('Value', bookingSubs.value, 10, 'tag')}
-              ${renderSubScorePill('Location', bookingSubs.location, 10, 'map-marker-alt')}
+            <!-- Airbnb Subscores -->
+            <div class="rounded-2xl border border-rose-100 bg-rose-50/30 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-bold text-rose-900 flex items-center gap-2">
+                  <i class="fab fa-airbnb text-rose-600"></i>
+                  <span>Airbnb Sub-category Ratings</span>
+                </h3>
+                <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : '—'}</span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                ${renderSubScorePill('Cleanliness', airbnbSubs.cleanliness, 5, 'broom')}
+                ${renderSubScorePill('Accuracy', airbnbSubs.accuracy, 5, 'check-double')}
+                ${renderSubScorePill('Check-in', airbnbSubs.checkin, 5, 'key')}
+                ${renderSubScorePill('Communication', airbnbSubs.communication, 5, 'comment-dots')}
+                ${renderSubScorePill('Location', airbnbSubs.location, 5, 'map-marker-alt')}
+                ${renderSubScorePill('Value', airbnbSubs.value, 5, 'tag')}
+              </div>
             </div>
           </div>
 
-          <!-- Airbnb Subscores -->
-          <div class="rounded-2xl border border-rose-100 bg-rose-50/30 p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold text-rose-900 flex items-center gap-2">
-                <i class="fab fa-airbnb text-rose-600"></i>
-                <span>Airbnb Sub-category Ratings</span>
-              </h3>
-              <span class="text-xs font-semibold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : '—'}</span>
+          <!-- Guest Reviews & Feedback Section -->
+          <div class="pt-2">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-comments text-amber-500"></i>
+                  <span>Guest Reviews & Feedback (${allReviews.length})</span>
+                </h3>
+                <p class="text-xs text-gray-500">Read detailed feedback, comments, and positive/negative points</p>
+              </div>
+
+              <!-- Search in reviews -->
+              <div class="relative w-full sm:w-60">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input
+                  type="text"
+                  id="modal-review-search"
+                  value="${escapeHtml(searchQuery)}"
+                  placeholder="Search in reviews..."
+                  class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
+                />
+              </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              ${renderSubScorePill('Cleanliness', airbnbSubs.cleanliness, 5, 'broom')}
-              ${renderSubScorePill('Accuracy', airbnbSubs.accuracy, 5, 'check-double')}
-              ${renderSubScorePill('Check-in', airbnbSubs.checkin, 5, 'key')}
-              ${renderSubScorePill('Communication', airbnbSubs.communication, 5, 'comment-dots')}
-              ${renderSubScorePill('Location', airbnbSubs.location, 5, 'map-marker-alt')}
-              ${renderSubScorePill('Value', airbnbSubs.value, 5, 'tag')}
+            <!-- Review Filter Pills -->
+            <div class="flex flex-wrap items-center gap-1.5 mb-4 bg-gray-100 p-1 rounded-xl text-xs font-medium">
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${allReviews.length})</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'booking' ? 'bg-white text-blue-700 shadow-sm font-bold' : 'text-gray-600 hover:text-blue-700'}" data-filter="booking">Booking.com (${bookingReviewsCount})</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'airbnb' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="airbnb">Airbnb (${airbnbReviewsCount})</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'positive' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="positive">Positive (9-10 / 5★)</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'attention' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="attention">Needs Attention</button>
+            </div>
+
+            <!-- Review Cards List -->
+            <div class="space-y-4">
+              ${
+                filteredReviews.length === 0
+                  ? `
+                <div class="text-center py-10 bg-gray-50 rounded-2xl border border-gray-200 p-6 text-gray-500 text-xs">
+                  <i class="fas fa-comment-slash text-2xl text-gray-400 mb-2"></i>
+                  <p class="font-medium text-gray-700">No reviews match this filter</p>
+                  <p class="mt-0.5 text-gray-400">Try clearing the search or switching review filters.</p>
+                </div>
+              `
+                  : filteredReviews.map((r) => renderReviewItem(r)).join('')
+              }
             </div>
           </div>
         </div>
 
-        <div class="mt-8 flex justify-end">
-          <button id="modal-ok-btn" class="px-5 py-2.5 rounded-xl bg-gray-900 text-white font-medium text-sm hover:bg-black transition-colors">
-            Done
+        <!-- Footer -->
+        <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+          <span class="text-xs text-gray-400">
+            Showing ${filteredReviews.length} of ${allReviews.length} reviews
+          </span>
+          <button id="modal-ok-btn" class="px-5 py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white font-medium text-sm transition-colors shadow-sm">
+            Close
           </button>
         </div>
       </div>
+    </div>
+  `;
+}
+
+function renderReviewItem(r) {
+  const isAirbnb = r.platform === 'Airbnb';
+  const scoreText = isAirbnb ? `${r.score} ★` : `${r.score} / 10`;
+  const initials = getInitials(r.author);
+
+  return `
+    <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">
+      <!-- Review Header -->
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl ${isAirbnb ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-blue-50 text-blue-600 border border-blue-100'} flex items-center justify-center font-bold text-sm flex-shrink-0">
+            ${initials}
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="text-sm font-bold text-gray-900">${escapeHtml(r.author || 'Guest')}</h4>
+              ${r.country ? `<span class="text-xs text-gray-500 font-normal">(${escapeHtml(r.country)})</span>` : ''}
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${isAirbnb ? 'text-rose-600' : 'text-blue-600'}">
+                ${isAirbnb ? '<i class="fab fa-airbnb"></i> Airbnb' : '<i class="fas fa-hotel"></i> Booking.com'}
+              </span>
+              <span class="text-gray-300">•</span>
+              <span class="text-[11px] text-gray-400">${r.date ? new Date(r.date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', day: 'numeric' }) : 'Verified Stay'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end flex-shrink-0">
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+            ${scoreText}
+          </span>
+          ${r.cleanlinessScore ? `<span class="text-[10px] text-emerald-700 font-semibold mt-1"><i class="fas fa-broom mr-1"></i>Cleanliness ${r.cleanlinessScore}</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Review Body -->
+      ${r.title ? `<h5 class="text-xs font-bold text-gray-900">${escapeHtml(r.title)}</h5>` : ''}
+      ${r.comment ? `<p class="text-xs text-gray-700 leading-relaxed">${escapeHtml(r.comment)}</p>` : ''}
+
+      <!-- Highlight Boxes -->
+      ${
+        r.positive
+          ? `
+        <div class="rounded-xl bg-emerald-50/80 border border-emerald-100 p-2.5 text-xs text-emerald-900 flex items-start gap-2">
+          <i class="fas fa-thumbs-up text-emerald-600 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <strong class="font-semibold text-emerald-800">What was liked:</strong>
+            <span>${escapeHtml(r.positive)}</span>
+          </div>
+        </div>
+      `
+          : ''
+      }
+
+      ${
+        r.negative
+          ? `
+        <div class="rounded-xl bg-amber-50/80 border border-amber-100 p-2.5 text-xs text-amber-900 flex items-start gap-2">
+          <i class="fas fa-exclamation-circle text-amber-600 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <strong class="font-semibold text-amber-800">Room for improvement:</strong>
+            <span>${escapeHtml(r.negative)}</span>
+          </div>
+        </div>
+      `
+          : ''
+      }
     </div>
   `;
 }
@@ -362,56 +563,12 @@ function renderSubScorePill(label, value, max, icon) {
   const isHigh = typeof value === 'number' && (max === 5 ? value >= 4.8 : value >= 9.0);
 
   return `
-    <div class="bg-white rounded-xl p-3 border border-gray-200/80 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <i class="fas fa-${icon} text-gray-400 text-xs"></i>
-        <span class="text-xs text-gray-600 font-medium">${label}</span>
+    <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 flex items-center justify-between">
+      <div class="flex items-center gap-2 truncate">
+        <i class="fas fa-${icon} text-gray-400 text-xs flex-shrink-0"></i>
+        <span class="text-xs text-gray-600 font-medium truncate">${label}</span>
       </div>
-      <span class="text-xs font-bold ${isHigh ? 'text-emerald-600' : 'text-gray-800'}">${valText}</span>
-    </div>
-  `;
-}
-
-function renderSyncModal() {
-  return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
-        <button id="sync-modal-close-btn" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors">
-          <i class="fas fa-times text-sm"></i>
-        </button>
-
-        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 text-xl font-bold mb-4">
-          <i class="fas fa-sync-alt"></i>
-        </div>
-
-        <h2 class="text-xl font-bold text-gray-900">Synchronize Reviews & Ratings</h2>
-        <p class="text-sm text-gray-600 mt-2">
-          The background Playwright scraper visits each property's Airbnb and Booking.com links silently using Microsoft Edge and updates all scores.
-        </p>
-
-        <div class="mt-5 space-y-3">
-          <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Option 1: Terminal Command</h4>
-            <div class="flex items-center justify-between gap-2 mt-2 bg-gray-900 text-gray-100 font-mono text-xs p-2.5 rounded-lg overflow-x-auto">
-              <code>npm run sync:reviews</code>
-              <button id="copy-sync-command-btn" class="text-amber-400 hover:text-amber-300 px-2 py-1 rounded text-[11px] font-sans font-semibold transition-colors">Copy</button>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Option 2: 1-Click File Shortcut</h4>
-            <p class="text-xs text-gray-600 mt-1">
-              Double-click <strong class="text-gray-900 font-mono">sync-reviews.cmd</strong> in the project folder to run the sync anytime without opening a terminal.
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-          <button id="sync-modal-done-btn" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-colors shadow-sm">
-            Got it
-          </button>
-        </div>
-      </div>
+      <span class="text-xs font-bold ${isHigh ? 'text-emerald-600' : 'text-gray-800'} ml-1">${valText}</span>
     </div>
   `;
 }
@@ -422,9 +579,14 @@ function bindViewEvents(container, handlers) {
     handlers.onBack?.();
   });
 
-  // Sync button
+  // Sync button (instant in-app refresh, no terminal commands!)
   container.querySelector('#reviews-sync-btn')?.addEventListener('click', () => {
-    handlers.onOpenSyncModal?.();
+    handlers.onSyncReviews?.();
+  });
+
+  // Toast close button
+  container.querySelector('#toast-close-btn')?.addEventListener('click', () => {
+    handlers.onCloseToast?.();
   });
 
   // Search input
@@ -433,7 +595,7 @@ function bindViewEvents(container, handlers) {
     handlers.onSearch?.(e.target.value);
   });
 
-  // Filter buttons
+  // Main filter buttons
   container.querySelectorAll('.reviews-filter-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       handlers.onFilter?.(btn.dataset.filter);
@@ -445,7 +607,7 @@ function bindViewEvents(container, handlers) {
     handlers.onSort?.(e.target.value);
   });
 
-  // Details buttons
+  // Details buttons on property cards
   container.querySelectorAll('.reviews-details-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       handlers.onSelectProperty?.(btn.dataset.id);
@@ -460,23 +622,26 @@ function bindViewEvents(container, handlers) {
     handlers.onCloseDetailModal?.();
   });
 
-  // Sync Modal close & copy
-  container.querySelector('#sync-modal-close-btn')?.addEventListener('click', () => {
-    handlers.onCloseSyncModal?.();
+  // Modal Review Filter Buttons
+  container.querySelectorAll('.modal-review-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      handlers.onModalReviewFilter?.(btn.dataset.filter);
+    });
   });
-  container.querySelector('#sync-modal-done-btn')?.addEventListener('click', () => {
-    handlers.onCloseSyncModal?.();
+
+  // Modal Review Search Input
+  const modalSearchInput = container.querySelector('#modal-review-search');
+  modalSearchInput?.addEventListener('input', (e) => {
+    handlers.onModalReviewSearch?.(e.target.value);
   });
-  container.querySelector('#copy-sync-command-btn')?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText('npm run sync:reviews');
-      const btn = container.querySelector('#copy-sync-command-btn');
-      if (btn) btn.textContent = 'Copied!';
-      setTimeout(() => {
-        if (btn) btn.textContent = 'Copy';
-      }, 2000);
-    } catch {}
-  });
+}
+
+function getInitials(name = '') {
+  const parts = String(name).trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return (parts[0] ? parts[0].slice(0, 2) : 'AH').toUpperCase();
 }
 
 function escapeHtml(str = '') {
