@@ -113,7 +113,7 @@ export class ReviewsRatingsManager {
       {
         onBack: () => {
           if (this.navigationManager) {
-            this.navigationManager.showPage('properties');
+            this.navigationManager.showPreviousPage('landing');
           }
         },
         onSearch: (query) => {

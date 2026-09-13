@@ -349,6 +349,12 @@ export class NavigationManager {
         document.dispatchEvent(event);
     }
 
+    showReviewsRatingsPage() {
+        this.showPage('reviewsRatings');
+        const event = new CustomEvent('reviewsRatingsPageOpened');
+        document.dispatchEvent(event);
+    }
+
     getCurrentPage() {
         return this.currentPage;
     }
@@ -356,6 +362,7 @@ export class NavigationManager {
     setupNavigationListeners() {
         // Landing page navigation
         const goToPropertiesBtn = document.getElementById('go-to-properties-btn');
+        const goToReviewsRatingsBtn = document.getElementById('go-to-reviews-ratings-btn');
         const goToOperationsBtn = document.getElementById('go-to-operations-btn');
         const goToWelcomePacksBtn = document.getElementById('go-to-welcome-packs-btn');
         const goToLaundryLogBtn = document.getElementById('go-to-laundry-log-btn');
@@ -386,6 +393,12 @@ export class NavigationManager {
                 // Trigger properties page initialization if needed
                 const event = new CustomEvent('propertiesPageOpened');
                 document.dispatchEvent(event);
+            });
+        }
+
+        if (goToReviewsRatingsBtn) {
+            goToReviewsRatingsBtn.addEventListener('click', () => {
+                this.showReviewsRatingsPage();
             });
         }
 
