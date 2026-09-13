@@ -4,7 +4,7 @@ import {
 } from './reviews-ratings-utils.js';
 import { renderReviewsRatingsDashboard } from './reviews-ratings-view.js';
 
-const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache';
+const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v3';
 
 export class ReviewsRatingsManager {
   constructor(db = null, navigationManager = null) {
@@ -24,7 +24,8 @@ export class ReviewsRatingsManager {
       syncToastMessage: null,
       reviewModalFilter: 'all',
       reviewModalSearch: '',
-      isEditingLinks: false
+      isEditingLinks: false,
+      isAddingReview: false
     };
 
     this.initialized = false;
@@ -37,12 +38,6 @@ export class ReviewsRatingsManager {
   }
 
   init() {
-    if (this.initialized) {
-      this.render();
-      return;
-    }
-
-    this.initialized = true;
     this.render();
     this.loadFromServer();
   }
@@ -52,7 +47,7 @@ export class ReviewsRatingsManager {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.properties?.length) {
+        if (parsed.properties?.length && parsed.properties.some((p) => p.reviews?.length)) {
           this.state.rawProperties = parsed.properties;
           this.state.lastUpdated = parsed.lastUpdated || null;
           this.updateCalculations();
@@ -163,6 +158,72 @@ export class ReviewsRatingsManager {
     this.render();
   }
 
+  addPropertyReview(reviewData = {}) {
+    if (!this.state.selectedProperty) return;
+    const prop = this.state.selectedProperty;
+    if (!Array.isArray(prop.reviews)) prop.reviews = [];
+
+    const isAirbnb = reviewData.platform === 'Airbnb';
+    const scoreVal = Number(reviewData.score) || (isAirbnb ? 5 : 10);
+    const cleanVal = reviewData.cleanlinessScore ? Number(reviewData.cleanlinessScore) : null;
+
+    const newRev = {
+      id: `${prop.id}-rev-${Date.now()}`,
+      author: reviewData.author || 'Guest',
+      country: reviewData.country || '',
+      countryCode: '',
+      date: reviewData.date || new Date().toISOString().split('T')[0],
+      platform: reviewData.platform || 'Direct',
+      score: scoreVal,
+      maxScore: isAirbnb ? 5 : 10,
+      title: reviewData.title || '',
+      comment: reviewData.comment || '',
+      positive: reviewData.positive || '',
+      negative: reviewData.negative || '',
+      cleanlinessScore: cleanVal
+    };
+
+    prop.reviews.unshift(newRev);
+
+    const propInList = this.state.rawProperties.find((p) => p.id === prop.id);
+    if (propInList) {
+      if (!Array.isArray(propInList.reviews)) propInList.reviews = [];
+      propInList.reviews.unshift(newRev);
+    }
+
+    this.state.isAddingReview = false;
+    this.updateCalculations();
+    this.saveToStorage({
+      lastUpdated: this.state.lastUpdated,
+      properties: this.state.rawProperties
+    });
+
+    this.showToast(`New review added for ${prop.name}!`);
+    this.render();
+  }
+
+  deletePropertyReview(reviewId) {
+    if (!this.state.selectedProperty) return;
+    const prop = this.state.selectedProperty;
+    if (Array.isArray(prop.reviews)) {
+      prop.reviews = prop.reviews.filter((r) => r.id !== reviewId);
+    }
+
+    const propInList = this.state.rawProperties.find((p) => p.id === prop.id);
+    if (propInList && Array.isArray(propInList.reviews)) {
+      propInList.reviews = propInList.reviews.filter((r) => r.id !== reviewId);
+    }
+
+    this.updateCalculations();
+    this.saveToStorage({
+      lastUpdated: this.state.lastUpdated,
+      properties: this.state.rawProperties
+    });
+
+    this.showToast('Review removed.');
+    this.render();
+  }
+
   render() {
     const container = document.getElementById('reviews-ratings-page');
     if (!container) return;
@@ -181,7 +242,8 @@ export class ReviewsRatingsManager {
         syncToastMessage: this.state.syncToastMessage,
         reviewModalFilter: this.state.reviewModalFilter,
         reviewModalSearch: this.state.reviewModalSearch,
-        isEditingLinks: this.state.isEditingLinks
+        isEditingLinks: this.state.isEditingLinks,
+        isAddingReview: this.state.isAddingReview
       },
       {
         onBack: () => {
@@ -211,16 +273,18 @@ export class ReviewsRatingsManager {
           this.updateCalculations();
           this.render();
         },
-        onSelectProperty: (propertyId) => {
+        onSelectProperty: (propertyId, openInEditLinks = false) => {
           this.state.selectedProperty = this.state.rawProperties.find((p) => p.id === propertyId) || null;
           this.state.reviewModalFilter = 'all';
           this.state.reviewModalSearch = '';
-          this.state.isEditingLinks = false;
+          this.state.isEditingLinks = Boolean(openInEditLinks);
+          this.state.isAddingReview = false;
           this.render();
         },
         onCloseDetailModal: () => {
           this.state.selectedProperty = null;
           this.state.isEditingLinks = false;
+          this.state.isAddingReview = false;
           this.render();
         },
         onModalReviewFilter: (filterKey) => {
@@ -237,6 +301,16 @@ export class ReviewsRatingsManager {
         },
         onSaveLinks: (links) => {
           this.savePropertyLinks(links);
+        },
+        onToggleAddReview: () => {
+          this.state.isAddingReview = !this.state.isAddingReview;
+          this.render();
+        },
+        onAddReview: (reviewData) => {
+          this.addPropertyReview(reviewData);
+        },
+        onDeleteReview: (reviewId) => {
+          this.deletePropertyReview(reviewId);
         }
       }
     );
