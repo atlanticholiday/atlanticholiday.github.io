@@ -265,12 +265,22 @@ function renderPropertyCard(prop) {
 
         <!-- OTA Scores Comparison Grid -->
         <div class="grid grid-cols-2 gap-3 mb-4">
-          <!-- Booking.com Box -->
-          <div class="rounded-2xl p-4 bg-blue-50/50 border border-blue-100 flex flex-col justify-between">
+          <!-- Booking.com Box (Clickable) -->
+          <${prop.bookingUrl ? `a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-2xl p-4 bg-blue-50/50 border border-blue-100 flex flex-col justify-between ${prop.bookingUrl ? 'hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
             <div>
               <div class="flex items-center justify-between text-blue-700 text-xs font-semibold mb-2">
-                <span class="flex items-center gap-1.5"><i class="fas fa-hotel"></i>Booking.com</span>
-                ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener" class="text-blue-500 hover:text-blue-700" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+                <span class="flex items-center gap-1.5 ${prop.bookingUrl ? 'group-hover:text-blue-900 group-hover:underline' : ''}">
+                  <i class="fas fa-hotel"></i>
+                  <span>Booking.com</span>
+                </span>
+                ${
+                  prop.bookingUrl
+                    ? `<span class="text-blue-500 group-hover:text-blue-700 transition-colors flex items-center gap-1 text-[11px] font-medium" title="Open listing in new tab">
+                        <span class="text-[10px] hidden sm:group-hover:inline">Open</span>
+                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                      </span>`
+                    : `<span class="text-[10px] text-gray-400 font-normal">No link</span>`
+                }
               </div>
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-black text-gray-900">${bookingScore}</span>
@@ -281,14 +291,24 @@ function renderPropertyCard(prop) {
               <span>Cleanliness:</span>
               <strong class="font-semibold text-gray-800">${bookingClean} / 10</strong>
             </div>
-          </div>
+          </${prop.bookingUrl ? 'a' : 'div'}>
 
-          <!-- Airbnb Box -->
-          <div class="rounded-2xl p-4 bg-rose-50/50 border border-rose-100 flex flex-col justify-between">
+          <!-- Airbnb Box (Clickable) -->
+          <${prop.airbnbUrl ? `a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-2xl p-4 bg-rose-50/50 border border-rose-100 flex flex-col justify-between ${prop.airbnbUrl ? 'hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
             <div>
               <div class="flex items-center justify-between text-rose-700 text-xs font-semibold mb-2">
-                <span class="flex items-center gap-1.5"><i class="fab fa-airbnb text-sm"></i>Airbnb</span>
-                ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener" class="text-rose-500 hover:text-rose-700" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+                <span class="flex items-center gap-1.5 ${prop.airbnbUrl ? 'group-hover:text-rose-900 group-hover:underline' : ''}">
+                  <i class="fab fa-airbnb text-sm"></i>
+                  <span>Airbnb</span>
+                </span>
+                ${
+                  prop.airbnbUrl
+                    ? `<span class="text-rose-500 group-hover:text-rose-700 transition-colors flex items-center gap-1 text-[11px] font-medium" title="Open listing in new tab">
+                        <span class="text-[10px] hidden sm:group-hover:inline">Open</span>
+                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                      </span>`
+                    : `<span class="text-[10px] text-gray-400 font-normal">No link</span>`
+                }
               </div>
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-black text-gray-900">${airbnbScore}</span>
@@ -299,7 +319,7 @@ function renderPropertyCard(prop) {
               <span>Cleanliness:</span>
               <strong class="font-semibold text-gray-800">${airbnbClean} / 5.0</strong>
             </div>
-          </div>
+          </${prop.airbnbUrl ? 'a' : 'div'}>
         </div>
 
         <!-- Latest Guest Review Snippet -->
@@ -463,10 +483,11 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
           <div class="space-y-4">
             <!-- Booking.com Subscores -->
             <div class="rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
-              <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h3 class="text-xs font-bold text-blue-900 flex items-center gap-2">
                   <i class="fas fa-hotel text-blue-600"></i>
                   <span>Booking.com Sub-category Ratings</span>
+                  ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Booking.com"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
                 </h3>
                 <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score ? `${prop.booking.score} / 10` : '—'}</span>
               </div>
@@ -483,10 +504,11 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
             <!-- Airbnb Subscores -->
             <div class="rounded-2xl border border-rose-100 bg-rose-50/30 p-4">
-              <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h3 class="text-xs font-bold text-rose-900 flex items-center gap-2">
                   <i class="fab fa-airbnb text-rose-600"></i>
                   <span>Airbnb Sub-category Ratings</span>
+                  ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer" class="text-rose-600 hover:text-rose-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Airbnb"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
                 </h3>
                 <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : '—'}</span>
               </div>
