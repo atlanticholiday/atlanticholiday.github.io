@@ -359,6 +359,28 @@ export class HeatedPoolsManager {
         document.body.classList.remove('heated-pools-dialog-open');
     }
 
+    openPropertyHistory(propertyId) {
+        const property = this.properties.find((entry) => entry.id === propertyId);
+        const title = document.getElementById('heated-pools-property-history-title');
+        const summary = document.getElementById('heated-pools-property-history-summary');
+        const timeline = document.getElementById('heated-pools-property-history-timeline');
+        if (!property || !title || !summary || !timeline) return;
+
+        title.textContent = property.propertyName;
+        summary.innerHTML = `
+            <div>
+                <span>${escapeHtml(hp('history.currentState', 'Current state'))}</span>
+                <strong class="heated-pools-live-state heated-pools-live-state--${escapeHtml(property.poolState)}"><i aria-hidden="true"></i>${escapeHtml(poolStateLabel(property.poolState))}</strong>
+            </div>
+            <div>
+                <span>${escapeHtml(hp('history.recordedChanges', 'Recorded changes'))}</span>
+                <strong>${escapeHtml(String(property.statusHistory.length))}</strong>
+            </div>
+        `;
+        timeline.innerHTML = renderStatusHistory(property.statusHistory);
+        this.openDialog('property-history');
+    }
+
     openStateDialog(propertyId, state, reservationId = '', source = 'manual') {
         const property = this.properties.find((entry) => entry.id === propertyId);
         if (!property || !['on', 'off'].includes(state)) return;
@@ -1008,7 +1030,10 @@ export class HeatedPoolsManager {
                     <article class="heated-pools-status-row" data-property-id="${escapeHtml(property.id)}">
                         <div class="heated-pools-status-row__property">
                             <div class="heated-pools-status-row__identity">
-                                <h4>${escapeHtml(property.propertyName)}</h4>
+                                <button type="button" class="heated-pools-property-history-trigger" data-open-property-history="${escapeHtml(property.id)}" aria-label="${escapeHtml(hp('status.viewHistoryFor', 'View history for {{property}}', { property: property.propertyName }))}">
+                                    <h4>${escapeHtml(property.propertyName)}</h4>
+                                    <span>${escapeHtml(hp('status.viewHistory', 'View history'))}<i class="fas fa-chevron-right" aria-hidden="true"></i></span>
+                                </button>
                                 <div class="heated-pools-status-row__identity-meta">
                                     <span class="heated-pools-remote-capability ${property.remoteControlAvailable ? 'is-available' : ''}">
                                         <i class="fas ${property.remoteControlAvailable ? 'fa-wifi' : 'fa-person-walking'}" aria-hidden="true"></i>
@@ -1065,6 +1090,9 @@ export class HeatedPoolsManager {
                 const propertyId = propertyEl?.dataset.propertyId;
                 this.openStateDialog(propertyId, button.dataset.poolState);
             });
+        });
+        list.querySelectorAll('[data-open-property-history]').forEach((button) => {
+            button.addEventListener('click', () => this.openPropertyHistory(button.dataset.openPropertyHistory));
         });
     }
 

@@ -607,6 +607,57 @@
     white-space: nowrap;
 }
 
+.heated-pools-property-history-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    border-radius: 5px;
+    padding: 2px 4px 2px 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.heated-pools-property-history-trigger h4 {
+    min-width: 0;
+}
+
+.heated-pools-property-history-trigger > span {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    color: var(--pool-muted);
+    font-size: 10px;
+    font-weight: 650;
+    opacity: 0;
+    transition: color 120ms ease, opacity 120ms ease;
+}
+
+.heated-pools-property-history-trigger i {
+    font-size: 8px;
+}
+
+.heated-pools-status-row:hover .heated-pools-property-history-trigger > span,
+.heated-pools-property-history-trigger:focus-visible > span {
+    opacity: 1;
+}
+
+.heated-pools-property-history-trigger:hover > span,
+.heated-pools-property-history-trigger:focus-visible > span {
+    color: var(--pool-accent-hover);
+}
+
+.heated-pools-property-history-trigger:focus-visible {
+    outline: 2px solid var(--pool-accent);
+    outline-offset: 2px;
+}
+
 .heated-pools-live-state {
     display: inline-flex;
     min-height: 24px;
@@ -1158,6 +1209,124 @@
     margin-top: 3px;
     color: var(--pool-muted);
     font-size: 11px;
+}
+
+.heated-pools-history-inspector {
+    gap: 0;
+}
+
+.heated-pools-history-inspector__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
+    border-bottom: 1px solid var(--pool-line);
+}
+
+.heated-pools-history-inspector__summary > div {
+    display: grid;
+    gap: 7px;
+    padding: 15px 0;
+}
+
+.heated-pools-history-inspector__summary > div + div {
+    border-left: 1px solid var(--pool-line);
+    padding-left: 18px;
+}
+
+.heated-pools-history-inspector__summary span {
+    color: var(--pool-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.heated-pools-history-inspector__summary > div > strong:not(.heated-pools-live-state) {
+    color: var(--pool-ink);
+    font-size: 18px;
+    font-weight: 750;
+}
+
+.heated-pools-history-inspector__summary .heated-pools-live-state {
+    width: max-content;
+}
+
+.heated-pools-history-inspector__timeline {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 18px 0 24px;
+}
+
+.heated-pools-history-inspector__timeline ol {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.heated-pools-history-inspector__timeline li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    gap: 12px;
+    padding: 0 0 20px;
+}
+
+.heated-pools-history-inspector__timeline li:not(:last-child)::before {
+    position: absolute;
+    top: 12px;
+    bottom: -1px;
+    left: 3px;
+    width: 1px;
+    background: var(--pool-line);
+    content: '';
+}
+
+.heated-pools-history-inspector__timeline .heated-pools-history__dot {
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+    box-shadow: 0 0 0 3px var(--pool-surface);
+}
+
+.heated-pools-history-inspector__timeline li strong,
+.heated-pools-history-inspector__timeline li span,
+.heated-pools-history-inspector__timeline li small,
+.heated-pools-history-inspector__timeline li p {
+    display: block;
+}
+
+.heated-pools-history-inspector__timeline li strong {
+    color: var(--pool-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.heated-pools-history-inspector__timeline li span,
+.heated-pools-history-inspector__timeline li small,
+.heated-pools-history-inspector__timeline li p,
+.heated-pools-history__empty {
+    color: var(--pool-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.heated-pools-history-inspector__timeline li span {
+    margin-top: 3px;
+}
+
+.heated-pools-history-inspector__timeline li small {
+    margin-top: 7px;
+}
+
+.heated-pools-history-inspector__timeline li p {
+    margin: 4px 0 0;
+}
+
+.heated-pools-history__empty {
+    margin: 0;
+    padding: 22px 0;
 }
 
 .heated-pools-reminder-settings {
@@ -1952,6 +2121,10 @@ body:has(.heated-pools-dialog:not(.hidden)) .quick-search-trigger {
 
     .heated-pools-status-row__detail {
         flex-wrap: wrap;
+    }
+
+    .heated-pools-property-history-trigger > span {
+        opacity: 1;
     }
 
     .heated-pools-task-lanes {

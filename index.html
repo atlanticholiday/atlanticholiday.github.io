@@ -37,7 +37,7 @@
     <link rel="stylesheet" href="styles/app-switcher.css">
     <link rel="stylesheet" href="styles/tasks.css">
     <link rel="stylesheet" href="styles/cleaning-ah.css">
-    <link rel="stylesheet" href="styles/heated-pools.css?v=20260912-checkout-reminders">
+    <link rel="stylesheet" href="styles/heated-pools.css?v=20260913-property-history">
     <link rel="stylesheet" href="styles/staff.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/properties.css?v=20260912-asana-workspace">
     <link rel="stylesheet" href="styles/theme.css?v=20260829-dark-controls">
@@ -2831,6 +2831,18 @@
                     <label><span data-i18n="heatedPools.dialogs.optionalNote">Optional note</span><textarea name="stateNote" rows="3" placeholder="Remote switched on, colleague confirmed onsite..." data-i18n="heatedPools.dialogs.stateNotePlaceholder" data-i18n-attr="placeholder"></textarea></label>
                     <div class="heated-pools-dialog__actions"><button type="button" data-close-pool-dialog data-i18n="common.cancel">Cancel</button><button type="submit" class="heated-pools-primary-action" data-i18n="heatedPools.dialogs.confirmChange">Confirm change</button></div>
                 </form>
+            </div>
+
+            <div id="heated-pools-property-history-dialog" class="heated-pools-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="heated-pools-property-history-title">
+                <button type="button" class="heated-pools-dialog__backdrop" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"></button>
+                <section class="heated-pools-dialog__panel heated-pools-history-inspector" tabindex="-1">
+                    <div class="heated-pools-dialog__header">
+                        <div><p class="heated-pools-eyebrow" data-i18n="heatedPools.history.propertyEyebrow">Pool activity</p><h3 id="heated-pools-property-history-title">Pool history</h3></div>
+                        <button type="button" data-close-pool-dialog aria-label="Close" data-i18n-aria-label="common.close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="heated-pools-property-history-summary" class="heated-pools-history-inspector__summary"></div>
+                    <div id="heated-pools-property-history-timeline" class="heated-pools-history-inspector__timeline"></div>
+                </section>
             </div>
 
             <div id="heated-pools-reservation-dialog" class="heated-pools-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="heated-pools-reservation-dialog-title">

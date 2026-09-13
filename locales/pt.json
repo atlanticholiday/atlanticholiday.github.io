@@ -371,6 +371,8 @@
             "setStateLabel": "Alterar o estado da piscina de {{property}}",
             "turnOn": "Ligar",
             "turnOff": "Desligar",
+            "viewHistory": "Ver histórico",
+            "viewHistoryFor": "Ver histórico de {{property}}",
             "noMatches": "Nenhum alojamento corresponde à pesquisa."
         },
         "states": {
@@ -430,6 +432,9 @@
             "notFilled": "Estado do aquecimento não preenchido"
         },
         "history": {
+            "propertyEyebrow": "Atividade da piscina",
+            "currentState": "Estado atual",
+            "recordedChanges": "Alterações registadas",
             "reservation": "Reserva {{label}}",
             "generalChange": "Alteração geral do alojamento",
             "noNote": "Sem nota",

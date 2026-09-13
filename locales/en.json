@@ -371,6 +371,8 @@
       "setStateLabel": "Set {{property}} pool state",
       "turnOn": "Turn on",
       "turnOff": "Turn off",
+      "viewHistory": "View history",
+      "viewHistoryFor": "View history for {{property}}",
       "noMatches": "No properties match the search."
     },
     "states": {
@@ -430,6 +432,9 @@
       "notFilled": "Heating status not filled"
     },
     "history": {
+      "propertyEyebrow": "Pool activity",
+      "currentState": "Current state",
+      "recordedChanges": "Recorded changes",
       "reservation": "Reservation {{label}}",
       "generalChange": "General property change",
       "noNote": "No note",
