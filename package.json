@@ -13,6 +13,7 @@
     "airbnb:download-reservation-invoices": "node scripts/airbnb/reservation-invoice-downloader.mjs",
     "pms:sync-calendar": "node scripts/pms/sync-calendar.mjs",
     "sync:reviews": "node scripts/reviews/sync-reviews.mjs",
+    "sync:reviews:weekly": "node scripts/reviews/weekly-sync.mjs",
     "fetch:links": "node scripts/reviews/fetch-listing-links.mjs",
     "reviews:match-local-links": "node scripts/reviews/match-local-links.mjs"
   },

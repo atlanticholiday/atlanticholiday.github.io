@@ -34,7 +34,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
-server-data/
+server-data/*
+!server-data/property-reviews.json
 backups/
 
 # Temporary files

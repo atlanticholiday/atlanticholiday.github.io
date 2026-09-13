@@ -1,0 +1,2016 @@
+{
+  "lastUpdated": "2026-09-13T07:47:17.289Z",
+  "properties": [
+    {
+      "id": "acanto-loft",
+      "name": "Acanto Loft",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/acanto-loft-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "agostinho-apartment",
+      "name": "Agostinho Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/agostinho-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1620428273086229172",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "apartamento-amarelo",
+      "name": "Apartamento Amarelo",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/apartamento-amarelo-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "aqui-ha-casa",
+      "name": "Aqui Há Casa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/aqui-ha-casa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "art-studio",
+      "name": "Art Studio",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/art-studio-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1538462810053076239",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "atlantic-breeze",
+      "name": "Atlantic Breeze",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/atlantic-breeze-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "atlantic-lookout",
+      "name": "Atlantic Lookout",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/atlantic-lookout-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "avelino-apartment",
+      "name": "Avelino Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/avelino-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "banana-lodge",
+      "name": "Banana Lodge",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/banana-lodge-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-barranca",
+      "name": "Casa Barranca",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-barranca-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "barranca-studio",
+      "name": "Barranca Studio",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/barranca-studio-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "bay-bliss",
+      "name": "Bay Bliss",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/bay-bliss-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "beatmann-1",
+      "name": "Beatmann 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/beatmann-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "beatmann-2",
+      "name": "Beatmann 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/beatmann-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "beatmann-rooftop",
+      "name": "Beatmann Rooftop",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/beatmann-rooftop-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "belle-vue-residence",
+      "name": "Belle Vue Résidence",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/belle-vue-residence-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "camoes-apartment",
+      "name": "Camões Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/camoes-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "canico-skyview-retreat",
+      "name": "Caniço Skyview Retreat",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/canico-skyview-retreat-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-da-avo",
+      "name": "Casa da Avó",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-da-avo-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-da-avo-2",
+      "name": "Casa da Avô-2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-da-avo-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "avo-maria-house",
+      "name": "Avo Maria House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/avo-maria-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "avo-maria-2-house",
+      "name": "Avo Maria/2 House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/avo-maria-2-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-dos-namora",
+      "name": "Casa dos Namora",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-dos-namora-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-moreira",
+      "name": "Casa Moreira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-moreira-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-santa-rita",
+      "name": "Casa Santa Rita",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-santa-rita-by-atlantic-holiday.pt-pt.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "cassia-loft-3s",
+      "name": "Cassia Loft 3S",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/cassia-loft-3s-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1312980427145543733",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "coralina-loft-2n",
+      "name": "Coralina Loft 2N",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/coralina-loft-2n-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "costa-azul",
+      "name": "Costa Azul",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/costa-azul-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "dream-house",
+      "name": "Dream House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/dream-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "dual-haven",
+      "name": "Dual Haven",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/dual-haven-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "eddys-house",
+      "name": "Eddys House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/eddys-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "family-house",
+      "name": "Family House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/family-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "figueiras-house",
+      "name": "Figueiras House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/figueiras-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "funchal-essence",
+      "name": "Funchal Essence",
+      "location": "Funchal",
+      "bookingUrl": "https://www.booking.com/Share-1C9oRtC",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1309575642223826130?guests=1&adults=1",
+      "booking": {
+        "status": "success",
+        "score": 9.5,
+        "reviewCount": 36,
+        "subScores": {
+          "staff": 9.7,
+          "facilities": 9.9,
+          "cleanliness": 9.9,
+          "comfort": 9.7,
+          "value": 9.5,
+          "location": 9.8
+        },
+        "finalUrl": "https://www.booking.com/hotel/pt/funchal-essence-by-atlantic-holiday.en-gb.html?aid=356980&label=gog235jc-10CAsouwFCI2Z1bmNoYWwtZXNzZW5jZS1ieS1hdGxhbnRpYy1ob2xpZGF5SDNYA2i7AYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgCxJyZ1QbAAgHSAiQ4ZjgwNzM2OC00ZmRlLTQzM2MtOWI4ZS01OWQ1YzY3N2ViZWbYAgHgAgE-Share-1C9oRtC%401789283962&chal_t=1789284265126&force_referer=",
+        "lastChecked": "2026-09-13T07:24:30.045Z"
+      },
+      "airbnb": {
+        "status": "success",
+        "score": 5,
+        "reviewCount": 10,
+        "subScores": {
+          "cleanliness": 5,
+          "accuracy": 5,
+          "checkin": 5,
+          "communication": 5,
+          "location": 4.9,
+          "value": 5
+        },
+        "badge": null,
+        "finalUrl": "https://www.airbnb.com/rooms/1309575642223826130?guests=1&adults=1&source_impression_id=p3_1789284272_P3ZWlODccbEDiTNO",
+        "lastChecked": "2026-09-13T07:24:37.066Z"
+      }
+    },
+    {
+      "id": "funchal-frui-vita",
+      "name": "Funchal Frui Vita",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/funchal-frui-vita-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "gilda-apartment",
+      "name": "Gilda Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/gilda-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "lido-apartment",
+      "name": "Lido Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/lido-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "lido-charm",
+      "name": "Lido Charm",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/lido-charm-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-beach-house",
+      "name": "Madeira Beach House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-beach-house-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1630475674301450537",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-sweet-home-c",
+      "name": "Madeira Sweet Home C",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-sweet-home-c-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1358713855354642831",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-sweet-home-d",
+      "name": "Madeira Sweet Home D",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-sweet-home-d-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1358713855354642831",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-sweet-home-e",
+      "name": "Madeira Sweet Home E",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-sweet-home-e-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1358713855354642831",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mar-yam-garden",
+      "name": "Mar Yam Garden",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mar-yam-garden-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1131839618106071471",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mar-yam-sea",
+      "name": "Mar Yam Sea",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mar-yam-sea-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1131839699343386277",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mar-yam-view",
+      "name": "Mar Yam View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mar-yam-view-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1131839879198927575",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "marias-place",
+      "name": "Marias Place",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/marias-place-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "monumental-ocean-view",
+      "name": "Monumental Ocean View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/monumental-ocean-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "heaven-sea-apartment",
+      "name": "Heaven & Sea Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/heaven-sea-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mystic-mountain",
+      "name": "Mystic Mountain",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mystic-mountain-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "ninho-memory",
+      "name": "Ninho Memory",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/ninho-memory-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "quintas-village-ay",
+      "name": "Quintas Village AY",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/quintas-village-ay-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sao-pedro-central-flat",
+      "name": "São Pedro Central Flat",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sao-pedro-central-flat-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sea-mountain",
+      "name": "Sea & Mountain",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sea-mountain-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "harmonia-apartment",
+      "name": "Harmonia Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/harmonia-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sweet-home-reis-magos",
+      "name": "Sweet Home Reis Magos",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sweet-home-reis-magos-by-atlantic-holiday.pt-pt.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1358713855354642831",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "tropical-sun",
+      "name": "Tropical Sun",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/tropical-sun-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-brasovia",
+      "name": "Villa Brasovia",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-brasovia-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-santa-luzia-1",
+      "name": "Villa Santa Luzia/1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-santa-luzia-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-santa-luzia-2",
+      "name": "Villa Santa Luzia/2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-santa-luzia-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "vista-mar",
+      "name": "Vista Mar",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/vista-mar-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1558725806920169202",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mpr-the-finnest",
+      "name": "MPR The Finnest",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mpr-the-finnest-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "acqua-the-finnest",
+      "name": "Acqua The Finnest",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/acqua-the-finnest-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-primavera",
+      "name": "Villa Primavera",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-primavera-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "views-of-madeira",
+      "name": "Views of Madeira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/views-of-madeira-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1418841842515551525",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "babi-by-the-sea",
+      "name": "Babi by the Sea",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/babi-by-the-sea-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "glamorous-apartment",
+      "name": "Glamorous Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/glamorous-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "happystay",
+      "name": "HappyStay",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/happystay-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "porlamar-apartment",
+      "name": "Porlamar Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/porlamar-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "cityzen-funchal",
+      "name": "CityZen Funchal",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/cityzen-funchal-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mar-apartment",
+      "name": "Mar Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mar-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/47443562",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "palm-paradise-villa",
+      "name": "Palm Paradise Villa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/palm-paradise-villa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "atlantic-view-apartment",
+      "name": "Atlantic View Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/atlantic-view-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1283308836941919539",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "my-home-reis-magos",
+      "name": "My Home - Reis Magos",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/my-home-reis-magos-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1358713855354642831",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "big-cliff",
+      "name": "Big Cliff",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/big-cliff-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sunny-stay-green-park",
+      "name": "Sunny Stay Green Park",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sunny-stay-green-park-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "acqua-beach",
+      "name": "Acqua Beach",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/acqua-beach-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "monumental-sea-sky",
+      "name": "Monumental Sea&Sky",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/monumental-sea-sky-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "santo-antonio-view",
+      "name": "Santo António View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/santo-antonio-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "atlantic-haven",
+      "name": "Atlantic Haven",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/atlantic-haven-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "blue-outlook-garden-a",
+      "name": "Blue Outlook Garden A",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/blue-outlook-garden-a-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "blue-outlook-retreat-b",
+      "name": "Blue Outlook Retreat B",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/blue-outlook-retreat-b-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "blue-outlook-view-c",
+      "name": "Blue Outlook View C",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/blue-outlook-view-c-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-alegria",
+      "name": "Villa Alegria",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-alegria-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "cliff-ocean-apartment",
+      "name": "Cliff & Ocean Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/cliff-ocean-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-do-pico",
+      "name": "Casa do Pico",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-do-pico-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "strelitzia-apartment",
+      "name": "Strelitzia Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/strelitzia-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "senhora-do-pilar",
+      "name": "Senhora do Pilar",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/senhora-do-pilar-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-magnolia",
+      "name": "Villa Magnolia",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-magnolia-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-lorenzo",
+      "name": "Villa Lorenzo",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-lorenzo-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "cape-view-villa",
+      "name": "Cape View Villa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/cape-view-villa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sevenhouse",
+      "name": "SevenHouse",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sevenhouse-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "breeze-house-1",
+      "name": "Breeze House/1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/breeze-house-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "breeze-house-2",
+      "name": "Breeze House/2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/breeze-house-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "seaside-escape",
+      "name": "Seaside Escape",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/seaside-escape-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-dos-vinhos",
+      "name": "Casa dos Vinhos",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-dos-vinhos-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "pena-view-apartment",
+      "name": "Pena View Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/pena-view-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "julianas-house-1",
+      "name": "Julianas House 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/julianas-house-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "julianas-house-2",
+      "name": "Julianas House 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/julianas-house-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-zenha",
+      "name": "Villa Zenha",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-zenha-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "garajau-sea-side",
+      "name": "Garajau Sea Side",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/garajau-sea-side-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "pitanga",
+      "name": "Pitanga",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/pitanga-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "gaula-family-haven",
+      "name": "Gaula Family Haven",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/gaula-family-haven-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "stero-house",
+      "name": "Stero House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/stero-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-alves",
+      "name": "Villa Alves",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-alves-by-altlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "judite-home-apartment",
+      "name": "Judite Home Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/judite-home-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-vista-azul",
+      "name": "Casa Vista Azul",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-vista-azul-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1576879229701900256",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "lido-vista-apartment",
+      "name": "Lido Vista Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/lido-vista-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "midnight-house",
+      "name": "Midnight House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/midnight-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "forum-delights-apartment",
+      "name": "Forum Delights Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/forum-delights-apartment.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "santa-cruz-studio-1",
+      "name": "Santa Cruz Studio 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/santa-cruz-studio-1-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1620428273086229172",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "santa-cruz-studio-2",
+      "name": "Santa Cruz Studio 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/santa-cruz-studio-2-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1620428273086229172",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "santa-cruz-studio-3",
+      "name": "Santa Cruz Studio 3",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/santa-cruz-studio-3-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1620428273086229172",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sol-garajau-apartment",
+      "name": "Sol Garajau Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sol-garajau-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-da-figueira",
+      "name": "Casa da Figueira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-da-figueira-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-da-horta",
+      "name": "Casa da Horta",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-da-horta-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-do-ribeirinho",
+      "name": "Casa do Ribeirinho",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-do-ribeirinho-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-familia-teixeira",
+      "name": "Casa Família Teixeira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-familia-teixeira-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "gomes-house",
+      "name": "Gomes House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/gomes-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-morena",
+      "name": "Casa Morena",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-morena-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-teixeira",
+      "name": "Casa Teixeira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-teixeira-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casinha-da-achada",
+      "name": "Casinha da Achada",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casinha-da-achada-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "centromar-bella-vista",
+      "name": "Centromar Bella Vista",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/centromar-bella-vista-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "centromar-residence",
+      "name": "Centromar Residence",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/centromar-residence-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "charming-garajau",
+      "name": "Charming Garajau",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/charming-garajau-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "cosy-central",
+      "name": "Cosy Central",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/cosy-central-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "desert-island-apartment",
+      "name": "Desert Island Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/desert-island-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "elena-apartment",
+      "name": "Elena Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/elena-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "faja-do-amo",
+      "name": "Fajã do Amo",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/faja-do-amo-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-ocean-view",
+      "name": "Madeira Ocean View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-ocean-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "magnolia-apartment",
+      "name": "Magnolia Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/magnolia-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "milagres-apartment",
+      "name": "Milagres Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/milagres-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "mountain-view",
+      "name": "Mountain view",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/mountain-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "my-school-1",
+      "name": "My School 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/my-school-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "my-school-2",
+      "name": "My School 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/my-school-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "paradise-view",
+      "name": "Paradise View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/paradise-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "q-studios-1",
+      "name": "Q Studios 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/q-studios-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "q-studios-2",
+      "name": "Q Studios 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/q-studios-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "q-studios-3",
+      "name": "Q Studios 3",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/q-studios-3-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "refugio-madeirense",
+      "name": "Refúgio Madeirense",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/refugio-madeirense-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "rose-house",
+      "name": "Rose House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/rose-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sa-dias-house",
+      "name": "Sá Dias House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sa-dias-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "savana-apartment",
+      "name": "Savana Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/savana-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sea-view",
+      "name": "Sea View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sea-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "solarium-villa",
+      "name": "Solarium Villa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/solarium-villa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "stone-house",
+      "name": "Stone House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/stone-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "stone-house-vista",
+      "name": "Stone House Vista",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/stone-house-vista-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sunny-side",
+      "name": "Sunny Side",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sunny-side-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "terrace-apartment",
+      "name": "Terrace Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/terrace-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1416545021570448187",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "tropical-pearl",
+      "name": "Tropical Pearl",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/tropical-pearl-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-bella-vista",
+      "name": "Villa Bella Vista",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-bella-vista-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-das-escaleiras",
+      "name": "Villa das Escaleiras",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-das-escaleiras-with-pool-and-jacuzzy.et.html",
+      "airbnbUrl": "https://www.airbnb.co.in/rooms/1563710954614440199",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-de-la-ponte",
+      "name": "Villa de la Ponte",
+      "location": "Arco da Calheta",
+      "bookingUrl": "https://www.booking.com/Share-F4c5fMH",
+      "airbnbUrl": "https://www.airbnb.com/rooms/595401506743251467?guests=1&adults=1",
+      "booking": {
+        "status": "success",
+        "score": 9,
+        "reviewCount": 10,
+        "subScores": {
+          "staff": 9.5,
+          "facilities": 9.5,
+          "cleanliness": 8.1,
+          "comfort": 9.5,
+          "value": 8.5,
+          "location": 7.6
+        },
+        "finalUrl": "https://www.booking.com/hotel/pt/villa-de-la-ponte-by-atlantic-holiday.pt-pt.html?aid=356980&label=Share-F4c5fMH%401789284009",
+        "lastChecked": "2026-09-13T07:24:44.064Z"
+      },
+      "airbnb": {
+        "status": "success",
+        "score": 4.74,
+        "reviewCount": 31,
+        "subScores": {
+          "cleanliness": 4.8,
+          "accuracy": 4.8,
+          "checkin": 4.7,
+          "communication": 4.6,
+          "location": 4.6,
+          "value": 4.6
+        },
+        "badge": null,
+        "finalUrl": "https://www.airbnb.com/rooms/595401506743251467?guests=1&adults=1&source_impression_id=p3_1789284286_P3NTpOYOs4DMNceF",
+        "lastChecked": "2026-09-13T07:24:49.891Z"
+      }
+    },
+    {
+      "id": "villa-do-espigao",
+      "name": "Villa do Espigão",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-do-espigao-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/1565224821148701090",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-formosa-view",
+      "name": "Villa Formosa View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-formosa-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-luxe",
+      "name": "Villa Luxe",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-luxe-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-ocean-haven",
+      "name": "Villa Ocean Haven",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-ocean-haven-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-teresa",
+      "name": "Villa Teresa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-teresa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "studio-villa-teresa",
+      "name": "Studio Villa Teresa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/studio-villa-teresa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "vinhaticos-villa",
+      "name": "Vinhaticos Villa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/vinhaticos-villa-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "yellow-rose",
+      "name": "Yellow Rose",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/yellow-rose-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "ocean-serenity-house",
+      "name": "Ocean Serenity House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/ocean-serenity-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "peaceful-panorama",
+      "name": "Peaceful Panorama",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/peaceful-panorama.en-gb.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sunset-horizon",
+      "name": "Sunset Horizon",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sunset-horizon-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-mar",
+      "name": "Villa Mar",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-mar-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.pt/rooms/47443562",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "estefania-apartment",
+      "name": "Estefânia Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/estefania-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "green-blue-horizon",
+      "name": "Green & Blue Horizon",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/green-blue-horizon-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "majestic-penthouse",
+      "name": "Majestic Penthouse",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/majestic-penthouse-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1283308836941919539",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sapphire-sands",
+      "name": "Sapphire Sands",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sapphire-sands-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sublime-view-villa",
+      "name": "Sublime View Villa",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sublime-view-villa-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1291475442131526578",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "the-view",
+      "name": "The View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/the-view-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/1651012486221350136",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "torre-palace-1",
+      "name": "Torre Palace 1",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/torre-palace-1-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "torre-palace-2",
+      "name": "Torre Palace 2",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/torre-palace-2-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "zembica",
+      "name": "Zembica",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/zembica-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "funchal-s-shamrock",
+      "name": "Funchal‘s Shamrock",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/funchal-s-shamrock-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sea-side-vista",
+      "name": "Sea Side Vista",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sea-side-vista-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "musa-d-ajuda",
+      "name": "Musa D'ajuda",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/musa-d-ajuda-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "horizonte-completo-i",
+      "name": "Horizonte Completo I",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/horizonte-completo-i-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "vila-sofia",
+      "name": "Vila Sofia",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/vila-sofia-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "lido-edge-view",
+      "name": "Lido Edge View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/lido-edge-view-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-baradaye",
+      "name": "Villa Baradaye",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-baradaye-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-valentina",
+      "name": "Villa Valentina",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-valentina-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "calas-loft",
+      "name": "Calas Loft",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/calas-loft-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "quinta-ribeira-encantada",
+      "name": "Quinta Ribeira Encantada",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/quinta-ribeira-encantada-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "eco-monte",
+      "name": "Eco Monte",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/eco-monte-by-atlantic-holiday.pt-pt.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "casa-dos-francelhos",
+      "name": "Casa dos Francelhos",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/casa-dos-francelhos-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "xavelha-clifftop",
+      "name": "Xavelha Clifftop",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/xavelha-clifftop-by-atlantic-holiday.pt-pt.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "horizonte-completo-ii",
+      "name": "Horizonte Completo II",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/horizonte-completo-ii-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-vista-atlantica",
+      "name": "Villa Vista Atlantica",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-vista-atlantica-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "pearl-view",
+      "name": "Pearl View",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/pearl-view-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/986342026704438814",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "ocean-refuge",
+      "name": "Ocean Refuge",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/ocean-refuge-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "sunrising-apartment",
+      "name": "SunRising Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/sunrising-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-paixao",
+      "name": "Villa Paixão",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-paixao-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "richeliu-apartment",
+      "name": "Richeliu Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/richeliu-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "chill-house",
+      "name": "Chill House",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/chill-house-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "recanto-do-sol",
+      "name": "Recanto do Sol",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/recanto-do-sol-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-devaneio",
+      "name": "Villa Devaneio",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-devaneio-amazing-ocean-view-by-atlantic-holiday.pt-pt.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "the-blue-atlantic-apartment",
+      "name": "The Blue Atlantic Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/the-blue-atlantic-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "a-casinha",
+      "name": "A Casinha",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/a-casinha-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "atlantica-lazareto",
+      "name": "Atlântica(Lazareto)",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/atlantica-lazareto-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-jasmin",
+      "name": "Villa Jasmin",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-jasmin-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "garajau-comfort-stay",
+      "name": "Garajau Comfort Stay",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/garajau-comfort-stay-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "starfish-apartment",
+      "name": "Starfish Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/starfish-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "the-elements-of-savoy",
+      "name": "The Elements of Savoy",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/the-elements-of-savoy-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "bays-secrets-apartment",
+      "name": "Bays Secrets Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/bays-secrets-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "infinity-blue",
+      "name": "Infinity Blue",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/infinity-blue-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "la-belle-vie",
+      "name": "La Belle Vie",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/la-belle-vie-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-emilia",
+      "name": "Villa Emília",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-emilia-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "apartamento-calcada-encantada",
+      "name": "Apartamento Calçada Encantada",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/apartamento-calcada-encantada-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "coastal-garden-apartment",
+      "name": "Coastal Garden Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/coastal-garden-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "aurora-atlantic-apartment",
+      "name": "Aurora Atlantic Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/aurora-atlantic-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "azure-atlantic-horizon",
+      "name": "Azure Atlantic Horizon",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/azure-atlantic-horizon-by-atlantic-holiday.en-gb.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "pearl-of-madeira",
+      "name": "Pearl of Madeira",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/pearl-of-madeira-by-atlantic-holiday.html",
+      "airbnbUrl": "https://www.airbnb.com/rooms/986342026704438814",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "laras-apartment",
+      "name": "Laras Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/laras-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "villa-saudade",
+      "name": "Villa Saudade",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/villa-saudade-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "bellas-place-apartment",
+      "name": "Bellas Place Apartment",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/bellas-place-apartment-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "monumental-grand-residence",
+      "name": "Monumental Grand Residence",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/monumental-grand-residence-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    },
+    {
+      "id": "madeira-prestige-residence",
+      "name": "Madeira Prestige Residence",
+      "location": "Madeira",
+      "bookingUrl": "https://www.booking.com/hotel/pt/madeira-prestige-residence-by-atlantic-holiday.html",
+      "airbnbUrl": "",
+      "booking": null,
+      "airbnb": null
+    }
+  ]
+}
