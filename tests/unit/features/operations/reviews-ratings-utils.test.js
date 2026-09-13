@@ -84,6 +84,9 @@ describe("reviews-ratings-utils", () => {
 
     // Ocean View: 4.6 on Airbnb and 8.8 on Booking
     assert.equal(getCleanlinessStatus(sampleProperties[2]), "alert");
+
+    // Empty or unrated property
+    assert.equal(getCleanlinessStatus({}), "unrated");
   });
 
   test("isAttentionNeeded flags properties with low cleanliness or low overall score", () => {

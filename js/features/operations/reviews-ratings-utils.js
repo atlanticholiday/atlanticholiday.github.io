@@ -42,7 +42,8 @@ export function getCleanlinessStatus(property) {
 
   if (isAlert) return 'alert';
   if (isGood) return 'excellent';
-  return 'good';
+  if (typeof airbnbClean === 'number' || typeof bookingClean === 'number') return 'good';
+  return 'unrated';
 }
 
 export function isAttentionNeeded(property) {

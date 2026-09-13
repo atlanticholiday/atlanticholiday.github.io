@@ -4,7 +4,7 @@ import {
 } from './reviews-ratings-utils.js';
 import { renderReviewsRatingsDashboard } from './reviews-ratings-view.js';
 
-const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v3';
+const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v4';
 
 export class ReviewsRatingsManager {
   constructor(db = null, navigationManager = null) {
@@ -44,10 +44,16 @@ export class ReviewsRatingsManager {
 
   loadFromStorage() {
     try {
+      // Purge legacy sample caches
+      ['v1', 'v2', 'v3'].forEach((v) => {
+        try { localStorage.removeItem(`atlantic_holiday_property_reviews_cache_${v}`); } catch {}
+      });
+      try { localStorage.removeItem('atlantic_holiday_property_reviews_cache'); } catch {}
+
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.properties?.length && parsed.properties.some((p) => p.reviews?.length)) {
+        if (Array.isArray(parsed.properties) && parsed.properties.length > 0) {
           this.state.rawProperties = parsed.properties;
           this.state.lastUpdated = parsed.lastUpdated || null;
           this.updateCalculations();

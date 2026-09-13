@@ -111,7 +111,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
               <span class="text-xs text-gray-500 font-medium">/ 5.0</span>
             </div>
             <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full ${summary.airbnbAvg >= 4.8 ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+              <span class="inline-block w-2 h-2 rounded-full ${summary.airbnbAvg ? (summary.airbnbAvg >= 4.8 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
               Superhost benchmark: 4.80
             </p>
           </div>
@@ -127,7 +127,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
               <span class="text-xs text-gray-500 font-medium">/ 10.0</span>
             </div>
             <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full ${summary.bookingAvg >= 9.0 ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+              <span class="inline-block w-2 h-2 rounded-full ${summary.bookingAvg ? (summary.bookingAvg >= 9.0 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
               Target benchmark: 9.00
             </p>
           </div>
@@ -143,7 +143,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
               <span class="text-xs text-gray-500 font-medium">${summary.cleanlinessAvgAirbnb ? '/ 5.0' : '/ 10.0'}</span>
             </div>
             <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="inline-block w-2 h-2 rounded-full ${summary.cleanlinessAvgAirbnb || summary.cleanlinessAvgBooking ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
               Directly aligned with Cleaning AH
             </p>
           </div>
@@ -161,7 +161,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
             <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
               ${summary.attentionNeededCount > 0
                 ? `<span class="text-rose-600 font-semibold"><i class="fas fa-exclamation-triangle text-xs mr-1"></i>${summary.attentionNeededCount} need attention</span>`
-                : `<span class="text-emerald-600 font-medium"><i class="fas fa-check-circle text-xs mr-1"></i>All properties on track</span>`}
+                : `<span class="text-emerald-600 font-medium"><i class="fas fa-check-circle text-xs mr-1"></i>All rated properties on track</span>`}
             </p>
           </div>
         </section>
@@ -257,9 +257,13 @@ function renderPropertyCard(prop) {
           </div>
 
           <div class="flex items-center gap-1.5">
-            ${attention
-              ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
-              : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`}
+            ${
+              attention
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
+                : (prop.booking?.score || prop.airbnb?.score)
+                  ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`
+                  : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
+            }
           </div>
         </div>
 
@@ -351,7 +355,7 @@ function renderPropertyCard(prop) {
       <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
         <span class="text-[11px] text-gray-400 flex items-center gap-1 truncate">
           <i class="fas fa-comments text-gray-300"></i>
-          <span>${allReviews.length > 0 ? `${allReviews.length} verified reviews` : `${totalReviewsCount} reviews`}</span>
+          <span>${allReviews.length > 0 ? `${allReviews.length} verified reviews` : (totalReviewsCount > 0 ? `${totalReviewsCount} reviews` : '0 reviews')}</span>
         </span>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <button class="reviews-card-edit-links-btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}" title="Edit Listing URLs">
