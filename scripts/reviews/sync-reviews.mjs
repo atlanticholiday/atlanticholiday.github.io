@@ -46,6 +46,7 @@ function parseCommandLine(argv) {
     headless: true,
     browserPath: "",
     propertyFilter: "",
+    limit: 0,
     dryRun: false,
     help: false
   };
@@ -67,6 +68,10 @@ function parseCommandLine(argv) {
         break;
       case "--property":
         options.propertyFilter = String(nextValue || "").trim().toLowerCase();
+        if (consumeNext) i += 1;
+        break;
+      case "--limit":
+        options.limit = parseInt(nextValue, 10) || 0;
         if (consumeNext) i += 1;
         break;
       case "--no-headless":
@@ -302,6 +307,10 @@ async function main() {
         (p.name && p.name.toLowerCase().includes(options.propertyFilter)) ||
         (p.id && p.id.toLowerCase().includes(options.propertyFilter))
     );
+  }
+
+  if (options.limit > 0) {
+    targets = targets.slice(0, options.limit);
   }
 
   console.log(`📋 Properties queued for sync: ${targets.length}`);
