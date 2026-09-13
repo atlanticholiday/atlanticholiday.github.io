@@ -30,6 +30,40 @@ function previewTomorrowHeatedPoolReminders() {
   return reminders;
 }
 
+/** Send one clearly labelled delivery test to the default mailbox. */
+function sendHeatedPoolReminderTestEmail() {
+  const subject = '[TESTE] Piscinas aquecidas — confirmação do envio automático';
+  const text = [
+    'Bom dia,',
+    '',
+    'Este é um teste do envio automático de lembretes das piscinas aquecidas.',
+    'O teste foi enviado manualmente e não corresponde a uma reserva real.',
+    '',
+    'Nenhuma ação é necessária.',
+    '',
+    'Atlantic Holiday'
+  ].join('\n');
+  const html = [
+    '<div style="font-family:Arial,sans-serif;color:#1f2328;line-height:1.5;max-width:620px">',
+    '<p>Bom dia,</p>',
+    '<p>Este é um <strong>teste</strong> do envio automático de lembretes das piscinas aquecidas.</p>',
+    '<p>O teste foi enviado manualmente e não corresponde a uma reserva real.</p>',
+    '<p><strong>Nenhuma ação é necessária.</strong></p>',
+    '<p>Atlantic Holiday</p>',
+    '</div>'
+  ].join('');
+
+  MailApp.sendEmail({
+    to: HEATED_POOL_DEFAULT_RECIPIENT,
+    subject,
+    body: text,
+    htmlBody: html,
+    name: 'Atlantic Holiday',
+    replyTo: HEATED_POOL_DEFAULT_RECIPIENT
+  });
+  console.log(`Test email sent to ${HEATED_POOL_DEFAULT_RECIPIENT}.`);
+}
+
 /** Daily trigger entry point. */
 function runHeatedPoolCheckoutReminders() {
   const lock = LockService.getScriptLock();
