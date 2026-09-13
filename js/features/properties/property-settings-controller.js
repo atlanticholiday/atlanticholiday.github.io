@@ -389,6 +389,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         onlineComplaintBooksEmail: 'settings-online-complaint-books-email',
         onlineComplaintBooksPassword: 'settings-online-complaint-books-password',
         airbnbLinksStatus: 'settings-airbnb-links-status',
+        airbnbListingUrl: 'settings-airbnb-listing-url',
+        bookingListingUrl: 'settings-booking-listing-url',
 
         // Connectivity & Utilities
         wifiSpeed: 'settings-wifi-speed',

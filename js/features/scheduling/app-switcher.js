@@ -11,6 +11,7 @@ const DESTINATIONS = Object.freeze([
     { pageName: 'welcomePacks', buttonId: 'go-to-welcome-packs-btn', fallbackLabel: 'Welcome Packs', tone: 'rose', category: 'reservationsGuests' },
     { pageName: 'operationalGuidelines', buttonId: 'go-to-operational-guidelines-btn', fallbackLabel: 'Operational Guide', tone: 'amber', category: 'reservationsGuests' },
     { pageName: 'properties', buttonId: 'go-to-properties-btn', fallbackLabel: 'Properties', tone: 'blue', category: 'propertiesData' },
+    { pageName: 'reviewsRatings', buttonId: 'go-to-reviews-ratings-btn', fallbackLabel: 'Reviews & Ratings', tone: 'amber', category: 'propertiesData' },
     { pageName: 'allinfo', buttonId: 'go-to-allinfo-btn', fallbackLabel: 'All Info', tone: 'blue', category: 'propertiesData' },
     { pageName: 'visits', buttonId: 'go-to-visits-btn', fallbackLabel: 'Visits', tone: 'emerald', category: 'propertiesData' },
     { pageName: 'vehicles', buttonId: 'go-to-vehicles-btn', fallbackLabel: 'Vehicles', tone: 'orange', category: 'servicesLogistics' },

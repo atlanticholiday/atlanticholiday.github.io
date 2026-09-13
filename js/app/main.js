@@ -28,6 +28,7 @@ import { OperationalGuidelinesManager } from '../features/operations/operational
 import { BuildPlannerManager } from '../features/planning/build-planner-manager.js';
 import { ReservationsManager } from '../features/operations/reservations-manager.js';
 import { PropertyCalendarManager } from '../features/operations/property-calendar-manager.js';
+import { ReviewsRatingsManager } from '../features/operations/reviews-ratings-manager.js';
 import { RnalManager } from '../features/operations/rnal-manager.js';
 import { SafetyManager } from '../features/operations/safety-manager.js';
 import { VehiclesManager } from '../features/operations/vehicles-manager.js';
@@ -85,7 +86,7 @@ async function createAuthUserWithoutCallable(email, password) {
 }
 
 // Initialize managers
-let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, propertyCalendarManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
+let dataManager, uiManager, pdfGenerator, eventManager, navigationManager, taskManager, quickSearchManager, propertiesManager, propertyDashboardController, operationsManager, reservationsManager, propertyCalendarManager, accessManager, roleManager, rnalManager, safetyManager, checklistsManager, vehiclesManager, ownersManager, operationalGuidelinesManager, visitsManager, cleaningAhManager, cleaningBillsManager, heatedPoolsManager, welcomePackManager, commissionCalculatorManager, laundryLogManager, linenInventoryManager, airbnbReservationInvoicesManager, reviewsRatingsManager, scheduleManager, vacationCenterManager, staffManager, buildPlannerManager, interactiveAccessPreviewSession;
 const PRIVILEGED_ONLY_LANDING_BUTTON_IDS = Object.freeze([
     'go-to-visits-btn',
     'go-to-cleaning-bills-btn',
@@ -596,6 +597,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         operationalGuidelinesManager = new OperationalGuidelinesManager();
         window.operationalGuidelinesManager = operationalGuidelinesManager;
         operationalGuidelinesManager.init();
+        reviewsRatingsManager = new ReviewsRatingsManager(db, navigationManager);
+        window.reviewsRatingsManager = reviewsRatingsManager;
 
 
         scheduleManager = new ScheduleManager(dataManager, uiManager);
@@ -727,6 +730,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         document.addEventListener('linenInventoryPageOpened', () => {
             try { linenInventoryManager?.render(); } catch (e) { console.warn('Linen Inventory render failed:', e); }
+        });
+        document.addEventListener('reviewsRatingsPageOpened', () => {
+            try { reviewsRatingsManager?.init(); } catch (e) { console.warn('Reviews & Ratings render failed:', e); }
         });
 
         // Listen for language changes and refresh the current view

@@ -48,6 +48,7 @@ export class NavigationManager {
             vacationCenter: 'vacation-center-page',
             staff: 'staff-page',
             propertyCalendar: 'property-calendar-page',
+            reviewsRatings: 'reviews-ratings-page',
         };
         this.recentPages = this.loadRecentPages();
     }

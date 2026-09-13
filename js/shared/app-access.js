@@ -32,6 +32,14 @@ export const APP_ACCESS_OPTIONS = Object.freeze([
         group: 'main'
     },
     {
+        key: 'reviewsRatings',
+        buttonId: 'go-to-reviews-ratings-btn',
+        pageName: 'reviewsRatings',
+        labelKey: 'apps.reviewsRatings',
+        fallbackLabel: 'Reviews & Ratings',
+        group: 'main'
+    },
+    {
         key: 'airbnbReservationInvoices',
         buttonId: 'go-to-airbnb-reservation-invoices-btn',
         pageName: 'airbnbReservationInvoices',
