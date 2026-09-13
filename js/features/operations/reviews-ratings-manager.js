@@ -23,7 +23,8 @@ export class ReviewsRatingsManager {
       isSyncing: false,
       syncToastMessage: null,
       reviewModalFilter: 'all',
-      reviewModalSearch: ''
+      reviewModalSearch: '',
+      isEditingLinks: false
     };
 
     this.initialized = false;
@@ -139,6 +140,29 @@ export class ReviewsRatingsManager {
     });
   }
 
+  savePropertyLinks({ bookingUrl, airbnbUrl } = {}) {
+    if (!this.state.selectedProperty) return;
+
+    const propId = this.state.selectedProperty.id;
+    this.state.selectedProperty.bookingUrl = bookingUrl || '';
+    this.state.selectedProperty.airbnbUrl = airbnbUrl || '';
+
+    const propInList = this.state.rawProperties.find((p) => p.id === propId);
+    if (propInList) {
+      propInList.bookingUrl = bookingUrl || '';
+      propInList.airbnbUrl = airbnbUrl || '';
+    }
+
+    this.state.isEditingLinks = false;
+    this.saveToStorage({
+      lastUpdated: this.state.lastUpdated,
+      properties: this.state.rawProperties
+    });
+
+    this.showToast(`Listing links saved for ${this.state.selectedProperty.name}!`);
+    this.render();
+  }
+
   render() {
     const container = document.getElementById('reviews-ratings-page');
     if (!container) return;
@@ -156,7 +180,8 @@ export class ReviewsRatingsManager {
         isSyncing: this.state.isSyncing,
         syncToastMessage: this.state.syncToastMessage,
         reviewModalFilter: this.state.reviewModalFilter,
-        reviewModalSearch: this.state.reviewModalSearch
+        reviewModalSearch: this.state.reviewModalSearch,
+        isEditingLinks: this.state.isEditingLinks
       },
       {
         onBack: () => {
@@ -190,10 +215,12 @@ export class ReviewsRatingsManager {
           this.state.selectedProperty = this.state.rawProperties.find((p) => p.id === propertyId) || null;
           this.state.reviewModalFilter = 'all';
           this.state.reviewModalSearch = '';
+          this.state.isEditingLinks = false;
           this.render();
         },
         onCloseDetailModal: () => {
           this.state.selectedProperty = null;
+          this.state.isEditingLinks = false;
           this.render();
         },
         onModalReviewFilter: (filterKey) => {
@@ -203,6 +230,13 @@ export class ReviewsRatingsManager {
         onModalReviewSearch: (searchQuery) => {
           this.state.reviewModalSearch = searchQuery;
           this.render();
+        },
+        onToggleEditLinks: () => {
+          this.state.isEditingLinks = !this.state.isEditingLinks;
+          this.render();
+        },
+        onSaveLinks: (links) => {
+          this.savePropertyLinks(links);
         }
       }
     );

@@ -21,7 +21,8 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     isSyncing = false,
     syncToastMessage = null,
     reviewModalFilter = 'all',
-    reviewModalSearch = ''
+    reviewModalSearch = '',
+    isEditingLinks = false
   } = state;
 
   const lastUpdatedFormatted = lastUpdated
@@ -214,7 +215,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
       </main>
 
       <!-- Property Details Modal / Drawer -->
-      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch) : ''}
+      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch, isEditingLinks) : ''}
     </div>
   `;
 
@@ -340,7 +341,7 @@ function renderPropertyCard(prop) {
   `;
 }
 
-function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '') {
+function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false) {
   const airbnbSubs = prop.airbnb?.subScores || {};
   const bookingSubs = prop.booking?.subScores || {};
   const allReviews = getAllPropertyReviews(prop);
@@ -379,6 +380,78 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '')
 
         <!-- Scrollable Modal Body -->
         <div class="overflow-y-auto space-y-6 flex-grow pr-1">
+          <!-- OTA Listing Links Section -->
+          <div class="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+            <div class="flex items-center justify-between mb-2.5">
+              <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                <i class="fas fa-link text-amber-500"></i>
+                <span>Listing URLs (for Automated Review Sync)</span>
+              </h4>
+              <button id="modal-toggle-edit-links-btn" class="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
+                ${isEditingLinks ? '<i class="fas fa-times mr-1"></i>Cancel' : '<i class="fas fa-pen mr-1"></i>Edit Links'}
+              </button>
+            </div>
+
+            ${
+              !isEditingLinks
+                ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
+                  <div class="flex items-center gap-2 truncate pr-2">
+                    <i class="fas fa-hotel text-blue-600 flex-shrink-0"></i>
+                    <span class="truncate text-gray-700">${prop.bookingUrl ? escapeHtml(prop.bookingUrl) : '<span class="text-gray-400 italic">No Booking.com link added</span>'}</span>
+                  </div>
+                  ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener" class="text-blue-500 hover:text-blue-700 p-1 flex-shrink-0" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+                </div>
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
+                  <div class="flex items-center gap-2 truncate pr-2">
+                    <i class="fab fa-airbnb text-rose-600 flex-shrink-0"></i>
+                    <span class="truncate text-gray-700">${prop.airbnbUrl ? escapeHtml(prop.airbnbUrl) : '<span class="text-gray-400 italic">No Airbnb link added</span>'}</span>
+                  </div>
+                  ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener" class="text-rose-500 hover:text-rose-700 p-1 flex-shrink-0" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+                </div>
+              </div>
+            `
+                : `
+              <div class="space-y-3 pt-1">
+                <div>
+                  <label class="block text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <i class="fas fa-hotel text-blue-600"></i> Booking.com Listing URL
+                  </label>
+                  <input
+                    type="url"
+                    id="edit-booking-url-input"
+                    value="${escapeHtml(prop.bookingUrl || '')}"
+                    placeholder="https://www.booking.com/hotel/pt/..."
+                    class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <i class="fab fa-airbnb text-rose-600"></i> Airbnb Listing URL
+                  </label>
+                  <input
+                    type="url"
+                    id="edit-airbnb-url-input"
+                    value="${escapeHtml(prop.airbnbUrl || '')}"
+                    placeholder="https://www.airbnb.pt/rooms/..."
+                    class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                  <button id="modal-save-links-btn" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
+                    <i class="fas fa-save text-[11px]"></i>
+                    <span>Save Links</span>
+                  </button>
+                </div>
+              </div>
+            `
+            }
+          </div>
+
           <!-- Subscores Overview -->
           <div class="space-y-4">
             <!-- Booking.com Subscores -->
@@ -633,6 +706,18 @@ function bindViewEvents(container, handlers) {
   const modalSearchInput = container.querySelector('#modal-review-search');
   modalSearchInput?.addEventListener('input', (e) => {
     handlers.onModalReviewSearch?.(e.target.value);
+  });
+
+  // Modal Toggle Edit Links Button
+  container.querySelector('#modal-toggle-edit-links-btn')?.addEventListener('click', () => {
+    handlers.onToggleEditLinks?.();
+  });
+
+  // Modal Save Links Button
+  container.querySelector('#modal-save-links-btn')?.addEventListener('click', () => {
+    const bookingUrl = container.querySelector('#edit-booking-url-input')?.value.trim() || '';
+    const airbnbUrl = container.querySelector('#edit-airbnb-url-input')?.value.trim() || '';
+    handlers.onSaveLinks?.({ bookingUrl, airbnbUrl });
   });
 }
 
