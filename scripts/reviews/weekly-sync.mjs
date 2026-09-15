@@ -19,7 +19,7 @@ async function main() {
   try {
     // 1. Run sync-reviews.mjs in headless mode
     log("Scraping updated reviews & ratings...");
-    execSync("node scripts/reviews/sync-reviews.mjs", { stdio: "inherit" });
+    execSync("node scripts/reviews/sync-reviews.mjs --fetch-reviews", { stdio: "inherit" });
     log("✅ Scrape complete.");
 
     // 2. Commit and push updated dataset to GitHub Pages

@@ -1,6 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-core";
+import {
+  findBookingReviewObjects,
+  mergeReviews,
+  normalizeAirbnbReview,
+  normalizeBookingReview,
+  stripReviewHtml
+} from "./review-scraper-utils.js";
 
 const DEFAULT_BROWSER_CANDIDATES = [
   process.env.PMS_BROWSER_PATH,
@@ -47,6 +54,7 @@ function parseCommandLine(argv) {
     browserPath: "",
     propertyFilter: "",
     limit: 0,
+    fetchReviews: false,
     dryRun: false,
     help: false
   };
@@ -74,6 +82,10 @@ function parseCommandLine(argv) {
         options.limit = parseInt(nextValue, 10) || 0;
         if (consumeNext) i += 1;
         break;
+      case "--fetch-reviews":
+      case "--reviews":
+        options.fetchReviews = true;
+        break;
       case "--no-headless":
         options.headless = false;
         break;
@@ -100,6 +112,7 @@ Usage:
 Options:
   --output PATH         Path to save output JSON (default: server-data/property-reviews.json)
   --property NAME       Sync only a specific property by name or ID
+  --fetch-reviews       Fetch every available guest review and host response
   --no-headless         Show the browser window while running
   --dry-run             List targets without scraping
   --browser-path PATH   Custom path to Edge or Chrome executable
@@ -107,7 +120,137 @@ Options:
 `);
 }
 
-async function scrapeBooking(page, url) {
+function requestHeadersForReplay(headers = {}) {
+  return Object.fromEntries(
+    Object.entries(headers).filter(([name]) => !name.startsWith(":") && !["content-length", "cookie", "host"].includes(name.toLowerCase()))
+  );
+}
+
+function normalizeBookingPayloads(payloads = []) {
+  const reviews = payloads.flatMap((payload) => findBookingReviewObjects(payload))
+    .map(normalizeBookingReview)
+    .filter((review) => review.author !== "Guest" || review.comment || review.positive || review.negative);
+  return mergeReviews(reviews);
+}
+
+async function extractBookingReviewsFromDom(page) {
+  const rawReviews = await page.locator('[data-testid="review-card"], .review_list_new_item_block, .review_item').evaluateAll((cards) => cards.map((card) => {
+    const text = (selector) => card.querySelector(selector)?.textContent?.trim() || "";
+    const attr = (selector, name) => card.querySelector(selector)?.getAttribute(name) || "";
+    return {
+      reviewId: card.getAttribute("data-review-id") || card.id || "",
+      reviewerName: text('[data-testid="reviewer-name"], [data-testid="reviewer-avatar"] + div h3, .bui-avatar-block__title, .reviewer_name'),
+      countryName: attr('[data-testid="reviewer-country"] img, .reviewer_country_flag', "alt") || text('[data-testid="reviewer-country"], .reviewer_country'),
+      reviewDate: text('[data-testid="review-date"], .review_item_date'),
+      reviewScore: text('[data-testid="review-score"], .review-score-badge, .review-score-badge__score'),
+      title: text('[data-testid="review-title"], .review_item_header_content'),
+      positiveText: text('[data-testid="review-positive-text"], .review_pos'),
+      negativeText: text('[data-testid="review-negative-text"], .review_neg'),
+      reviewText: text('[data-testid="review-comment"], [data-testid="review-text"], .review_item_review_content'),
+      propertyResponse: text('[data-testid*="response"], [data-testid*="reply"], .review_item_response, .c-review-block__response')
+    };
+  })).catch(() => []);
+
+  const featured = await page.locator('[data-testid="featuredreview"]').evaluateAll((cards) => cards.map((card) => ({
+    reviewerName: card.querySelector('[data-testid="featuredreview-avatar"] h4')?.textContent?.trim() || "",
+    countryName: card.querySelector('[data-testid="featuredreview-avatar"] img')?.getAttribute("alt") || "",
+    reviewText: card.querySelector('[data-testid="featuredreview-text"] blockquote')?.textContent?.replace(/^\s*["“]|["”]\s*$/g, "").trim() || ""
+  }))).catch(() => []);
+
+  return mergeReviews([...rawReviews, ...featured].map(normalizeBookingReview));
+}
+
+async function fetchBookingReviews(page, expectedCount = 0) {
+  const payloads = [];
+  let replayRequest = null;
+
+  const captureReviewResponse = async (response) => {
+    const request = response.request();
+    if (!request.url().includes("/dml/graphql") || !/ReviewList/i.test(request.postData() || "")) return;
+    try {
+      const payload = await response.json();
+      const reviews = normalizeBookingPayloads([payload]);
+      if (reviews.length) {
+        payloads.push(payload);
+        replayRequest = request;
+      }
+    } catch {}
+  };
+
+  page.on("response", captureReviewResponse);
+  try {
+    await page.locator('#onetrust-reject-all-handler, #onetrust-accept-btn-handler').first().click({ timeout: 1500 }).catch(() => {});
+    const openReviews = page.locator('[data-testid="review-score-read-all-actionable"], [data-testid="fr-read-all-reviews"]').first();
+    if (await openReviews.count()) {
+      await openReviews.click({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(3500);
+    }
+
+    let reviews = mergeReviews(normalizeBookingPayloads(payloads), await extractBookingReviewsFromDom(page));
+
+    if (replayRequest && expectedCount > reviews.length) {
+      const body = replayRequest.postDataJSON();
+      const pageSize = Number(body?.variables?.input?.limit) || 10;
+      const headers = requestHeadersForReplay(await replayRequest.allHeaders());
+      let skip = pageSize;
+
+      while (skip < expectedCount) {
+        const nextBody = structuredClone(body);
+        nextBody.variables.input.skip = skip;
+        const response = await page.request.post(replayRequest.url(), { headers, data: nextBody });
+        if (!response.ok()) break;
+        const payload = await response.json();
+        const pageReviews = normalizeBookingPayloads([payload]);
+        if (!pageReviews.length) break;
+        payloads.push(payload);
+        reviews = mergeReviews(reviews, pageReviews);
+        skip += pageSize;
+        if (pageReviews.length < pageSize) break;
+      }
+    }
+
+    return mergeReviews(reviews, normalizeBookingPayloads(payloads));
+  } finally {
+    page.off("response", captureReviewResponse);
+  }
+}
+
+function airbnbReviewsRoot(payload) {
+  return payload?.data?.presentation?.stayProductDetailPage?.reviews || null;
+}
+
+async function fetchRemainingAirbnbReviews(page, initialRequest, initialPayload) {
+  const root = airbnbReviewsRoot(initialPayload);
+  if (!root || !initialRequest) return [];
+
+  const reviews = [...(root.reviews || [])];
+  const total = Number(root.metadata?.reviewsCount) || reviews.length;
+  const url = new URL(initialRequest.url());
+  const variables = JSON.parse(url.searchParams.get("variables") || "{}");
+  const requestOptions = variables.pdpReviewsRequest;
+  const pageSize = Number(requestOptions?.limit) || 24;
+  const headers = requestHeadersForReplay(await initialRequest.allHeaders());
+
+  for (let offset = pageSize; offset < total; offset += pageSize) {
+    const nextVariables = structuredClone(variables);
+    nextVariables.pdpReviewsRequest.offset = String(offset);
+    nextVariables.pdpReviewsRequest.limit = pageSize;
+    nextVariables.pdpReviewsRequest.first = pageSize;
+    url.searchParams.set("variables", JSON.stringify(nextVariables));
+
+    const response = await page.request.get(url.toString(), { headers });
+    if (!response.ok()) break;
+    const nextRoot = airbnbReviewsRoot(await response.json());
+    const nextReviews = nextRoot?.reviews || [];
+    if (!nextReviews.length) break;
+    reviews.push(...nextReviews);
+    if (nextReviews.length < pageSize) break;
+  }
+
+  return mergeReviews(reviews.map(normalizeAirbnbReview));
+}
+
+async function scrapeBooking(page, url, { fetchReviews = false } = {}) {
   try {
     const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 40000 });
     await page.waitForTimeout(3000);
@@ -166,11 +309,15 @@ async function scrapeBooking(page, url) {
       };
     });
 
+    const reviews = fetchReviews ? await fetchBookingReviews(page, extracted.reviewCount) : [];
+
     return {
       status: "success",
       score: extracted.score,
       reviewCount: extracted.reviewCount,
       subScores: extracted.subScores,
+      reviews,
+      fetchedReviewCount: reviews.length,
       finalUrl: extracted.finalUrl,
       lastChecked: new Date().toISOString()
     };
@@ -183,7 +330,24 @@ async function scrapeBooking(page, url) {
   }
 }
 
-async function scrapeAirbnb(page, url) {
+async function scrapeAirbnb(page, url, { fetchReviews = false } = {}) {
+  let reviewsRequest = null;
+  let reviewsPayload = null;
+  let capturedReviewCount = 0;
+  const captureReviews = async (response) => {
+    if (!response.url().includes("StaysPdpReviewsQuery")) return;
+    try {
+      const payload = await response.json();
+      const reviewCount = airbnbReviewsRoot(payload)?.reviews?.length || 0;
+      if (reviewCount > capturedReviewCount) {
+        capturedReviewCount = reviewCount;
+        reviewsRequest = response.request();
+        reviewsPayload = payload;
+      }
+    } catch {}
+  };
+  page.on("response", captureReviews);
+
   try {
     const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 40000 });
     await page.waitForTimeout(3000);
@@ -250,12 +414,18 @@ async function scrapeAirbnb(page, url) {
       };
     });
 
+    const reviews = fetchReviews
+      ? await fetchRemainingAirbnbReviews(page, reviewsRequest, reviewsPayload)
+      : [];
+
     return {
       status: "success",
       score: extracted.score,
       reviewCount: extracted.reviewCount,
       subScores: extracted.subScores,
       badge: extracted.badge,
+      reviews,
+      fetchedReviewCount: reviews.length,
       finalUrl: extracted.finalUrl,
       lastChecked: new Date().toISOString()
     };
@@ -265,6 +435,8 @@ async function scrapeAirbnb(page, url) {
       error: err.message,
       lastChecked: new Date().toISOString()
     };
+  } finally {
+    page.off("response", captureReviews);
   }
 }
 
@@ -297,6 +469,7 @@ async function main() {
 
   console.log("🌟 Atlantic Holiday - Reviews & Ratings Synchronizer");
   console.log(`📁 Target dataset: ${options.output}`);
+  console.log(`💬 Full review fetching: ${options.fetchReviews ? "Enabled" : "Disabled (ratings only)"}`);
 
   const dataset = await loadExistingDataset(options.output);
   let targets = dataset.properties || [];
@@ -356,10 +529,17 @@ async function main() {
         console.log(`  🔵 Booking.com: ${property.bookingUrl}`);
         const page = await context.newPage();
         try {
-          const bookingResult = await scrapeBooking(page, property.bookingUrl);
-          property.booking = bookingResult;
+          const bookingResult = await scrapeBooking(page, property.bookingUrl, { fetchReviews: options.fetchReviews });
+          const previousBookingReviews = property.booking?.reviews || [];
+          property.booking = {
+            ...bookingResult,
+            reviews: options.fetchReviews && bookingResult.status === "success"
+              ? bookingResult.reviews
+              : previousBookingReviews
+          };
           if (bookingResult.status === "success") {
             console.log(`     ✅ Score: ${bookingResult.score}/10 (${bookingResult.reviewCount || "?"} reviews)`);
+            if (options.fetchReviews) console.log(`     💬 Fetched ${bookingResult.fetchedReviewCount} review records`);
             if (bookingResult.subScores?.cleanliness) {
               console.log(`     🧹 Cleanliness: ${bookingResult.subScores.cleanliness}/10`);
             }
@@ -372,17 +552,24 @@ async function main() {
       }
 
       // Friendly delay between platforms
-      await new Promise((r) => setTimeout(r, 2000));
+      if (property.bookingUrl && property.airbnbUrl) await new Promise((r) => setTimeout(r, 2000));
 
       // 2. Scrape Airbnb if URL provided
       if (property.airbnbUrl) {
         console.log(`  🔴 Airbnb: ${property.airbnbUrl}`);
         const page = await context.newPage();
         try {
-          const airbnbResult = await scrapeAirbnb(page, property.airbnbUrl);
-          property.airbnb = airbnbResult;
+          const airbnbResult = await scrapeAirbnb(page, property.airbnbUrl, { fetchReviews: options.fetchReviews });
+          const previousAirbnbReviews = property.airbnb?.reviews || [];
+          property.airbnb = {
+            ...airbnbResult,
+            reviews: options.fetchReviews && airbnbResult.status === "success"
+              ? airbnbResult.reviews
+              : previousAirbnbReviews
+          };
           if (airbnbResult.status === "success") {
             console.log(`     ✅ Score: ${airbnbResult.score}/5 ★ (${airbnbResult.reviewCount || "?"} reviews)`);
+            if (options.fetchReviews) console.log(`     💬 Fetched ${airbnbResult.fetchedReviewCount} review records`);
             if (airbnbResult.badge) {
               console.log(`     🏆 Badge: ${airbnbResult.badge}`);
             }
@@ -398,7 +585,7 @@ async function main() {
       }
 
       // Small pause between properties
-      await new Promise((r) => setTimeout(r, 2000));
+      if (property.bookingUrl || property.airbnbUrl) await new Promise((r) => setTimeout(r, 2000));
     }
 
     dataset.lastUpdated = new Date().toISOString();

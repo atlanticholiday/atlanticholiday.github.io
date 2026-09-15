@@ -163,6 +163,21 @@ export function getLatestReviewSnippet(property) {
   return reviews.length > 0 ? reviews[0] : null;
 }
 
+export function getReviewResponse(review) {
+  if (!review || typeof review !== 'object') return '';
+  const response = review.response
+    ?? review.hostResponse
+    ?? review.propertyResponse
+    ?? review.reply
+    ?? review.answer
+    ?? '';
+  return typeof response === 'string' ? response.trim() : '';
+}
+
+export function hasReviewResponse(review) {
+  return getReviewResponse(review).length > 0;
+}
+
 export function filterPropertyReviews(reviews = [], { platform = 'all', filter = 'all', search = '' } = {}) {
   let list = [...reviews];
 
@@ -183,6 +198,10 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
       }
       return (r.score || 10) < 8.5 || (r.cleanlinessScore && r.cleanlinessScore < 9.0);
     });
+  } else if (filter === 'answered') {
+    list = list.filter(hasReviewResponse);
+  } else if (filter === 'unanswered') {
+    list = list.filter((r) => !hasReviewResponse(r));
   }
 
   if (search) {
@@ -193,6 +212,7 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
       (r.comment && r.comment.toLowerCase().includes(q)) ||
       (r.positive && r.positive.toLowerCase().includes(q)) ||
       (r.negative && r.negative.toLowerCase().includes(q)) ||
+      (getReviewResponse(r).toLowerCase().includes(q)) ||
       (r.country && r.country.toLowerCase().includes(q))
     );
   }
@@ -216,6 +236,7 @@ export function filterAndSortProperties(properties = [], { search = '', filter =
         (r.comment && r.comment.toLowerCase().includes(q)) ||
         (r.positive && r.positive.toLowerCase().includes(q)) ||
         (r.negative && r.negative.toLowerCase().includes(q)) ||
+        (getReviewResponse(r).toLowerCase().includes(q)) ||
         (r.country && r.country.toLowerCase().includes(q))
       );
     });
@@ -259,4 +280,3 @@ export function filterAndSortProperties(properties = [], { search = '', filter =
 
   return list;
 }
-

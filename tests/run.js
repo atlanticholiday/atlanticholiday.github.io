@@ -32,6 +32,7 @@ import "./unit/features/operations/reservations-utils.test.js";
 import "./unit/features/operations/property-calendar-utils.test.js";
 import "./unit/features/operations/property-calendar-manager.test.js";
 import "./unit/features/operations/reviews-ratings-utils.test.js";
+import "./unit/features/operations/review-scraper-utils.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";
 import "./unit/features/operations/welcome-pack-purchase-utils.test.js";
 import "./unit/features/inventory/essentials-utils.test.js";

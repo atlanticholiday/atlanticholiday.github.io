@@ -618,7 +618,10 @@ body.asana-theme textarea:focus {
     backdrop-filter: blur(2px);
     z-index: 50;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(20px, 3vw, 48px);
+    box-sizing: border-box;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -631,23 +634,28 @@ body.asana-theme textarea:focus {
 }
 
 .asana-drawer {
-    width: 100%;
-    max-width: none;
-    height: 100%;
-    height: 100dvh;
+    width: min(1800px, 100%);
+    height: min(1000px, 100%);
+    max-height: 100%;
     background-color: #ffffff;
-    box-shadow: none;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 16px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
     display: flex;
     flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    transition:
+        opacity 0.18s ease,
+        transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
     cursor: default;
     box-sizing: border-box;
 }
 
 .asana-drawer-overlay.open .asana-drawer {
-    transform: translateX(0);
+    opacity: 1;
+    transform: translateY(0) scale(1);
 }
 
 #new-property-modal {
@@ -2108,4 +2116,3 @@ html[data-theme="dark"] .asana-drawer__toolbar {
     background-color: #18181b;
     border-color: #27272a;
 }
-

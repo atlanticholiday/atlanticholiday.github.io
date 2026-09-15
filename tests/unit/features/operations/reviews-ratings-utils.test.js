@@ -8,7 +8,9 @@ import {
   filterAndSortProperties,
   getAllPropertyReviews,
   getLatestReviewSnippet,
-  filterPropertyReviews
+  filterPropertyReviews,
+  getReviewResponse,
+  hasReviewResponse
 } from "../../../../js/features/operations/reviews-ratings-utils.js";
 
 describe("reviews-ratings-utils", () => {
@@ -196,6 +198,21 @@ describe("reviews-ratings-utils", () => {
     const cleanMatch = filterPropertyReviews(reviews, { search: "clean" });
     assert.equal(cleanMatch.length, 1);
     assert.equal(cleanMatch[0].author, "David");
+  });
+
+  test("detects host answers and filters answered and unanswered reviews", () => {
+    const reviews = [
+      { id: "answered", author: "Ana", response: "Thank you for staying with us." },
+      { id: "legacy-reply", author: "Ben", hostResponse: "We appreciate your feedback." },
+      { id: "unanswered", author: "Cara", response: "   " }
+    ];
+
+    assert.equal(hasReviewResponse(reviews[0]), true);
+    assert.equal(hasReviewResponse(reviews[2]), false);
+    assert.equal(getReviewResponse(reviews[1]), "We appreciate your feedback.");
+    assert.deepEqual(filterPropertyReviews(reviews, { filter: "answered" }).map((review) => review.id), ["answered", "legacy-reply"]);
+    assert.deepEqual(filterPropertyReviews(reviews, { filter: "unanswered" }).map((review) => review.id), ["unanswered"]);
+    assert.equal(filterPropertyReviews(reviews, { search: "appreciate" })[0].id, "legacy-reply");
   });
 
   test("filterAndSortProperties searches inside guest review comments", () => {

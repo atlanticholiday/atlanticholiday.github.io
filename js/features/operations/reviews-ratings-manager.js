@@ -186,7 +186,9 @@ export class ReviewsRatingsManager {
       comment: reviewData.comment || '',
       positive: reviewData.positive || '',
       negative: reviewData.negative || '',
-      cleanlinessScore: cleanVal
+      cleanlinessScore: cleanVal,
+      response: reviewData.response || '',
+      hasResponse: Boolean(reviewData.response?.trim())
     };
 
     prop.reviews.unshift(newRev);
@@ -322,4 +324,3 @@ export class ReviewsRatingsManager {
     );
   }
 }
-

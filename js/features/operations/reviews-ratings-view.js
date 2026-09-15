@@ -4,7 +4,9 @@ import {
   isAttentionNeeded,
   getAllPropertyReviews,
   getLatestReviewSnippet,
-  filterPropertyReviews
+  filterPropertyReviews,
+  getReviewResponse,
+  hasReviewResponse
 } from './reviews-ratings-utils.js';
 
 export function renderReviewsRatingsDashboard(container, state, handlers) {
@@ -379,10 +381,12 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
   const bookingReviewsCount = allReviews.filter((r) => r.platform === 'Booking.com').length;
   const airbnbReviewsCount = allReviews.filter((r) => r.platform === 'Airbnb').length;
+  const answeredReviewsCount = allReviews.filter(hasReviewResponse).length;
+  const unansweredReviewsCount = allReviews.length - answeredReviewsCount;
 
   const filteredReviews = filterPropertyReviews(allReviews, {
     platform: activeFilter === 'booking' ? 'Booking.com' : (activeFilter === 'airbnb' ? 'Airbnb' : 'all'),
-    filter: activeFilter === 'positive' ? 'positive' : (activeFilter === 'attention' ? 'attention' : 'all'),
+    filter: ['positive', 'attention', 'answered', 'unanswered'].includes(activeFilter) ? activeFilter : 'all',
     search: searchQuery
   });
 
@@ -606,6 +610,10 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
                   <label class="block text-[11px] font-semibold text-gray-700 mb-1">Full Comment</label>
                   <textarea id="review-comment-input" rows="2" placeholder="Write the guest feedback or comments here..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
                 </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-gray-700 mb-1">Host Answer (optional)</label>
+                  <textarea id="review-response-input" rows="2" placeholder="Paste the answer sent to the guest, if any..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   <div>
                     <label class="block text-[11px] font-semibold text-emerald-800 mb-1">What was liked (positive)</label>
@@ -634,6 +642,8 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
               <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'airbnb' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="airbnb">Airbnb (${airbnbReviewsCount})</button>
               <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'positive' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="positive">Positive (9-10 / 5★)</button>
               <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'attention' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="attention">Needs Attention</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'answered' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="answered">Answered (${answeredReviewsCount})</button>
+              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'unanswered' ? 'bg-white text-amber-700 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-700'}" data-filter="unanswered">Unanswered (${unansweredReviewsCount})</button>
             </div>
 
             <!-- Review Cards List -->
@@ -669,8 +679,10 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
 function renderReviewItem(r) {
   const isAirbnb = r.platform === 'Airbnb';
-  const scoreText = isAirbnb ? `${r.score} ★` : `${r.score} / 10`;
+  const scoreText = typeof r.score === 'number' ? (isAirbnb ? `${r.score} ★` : `${r.score} / 10`) : 'No score';
   const initials = getInitials(r.author);
+  const response = getReviewResponse(r);
+  const answered = hasReviewResponse(r);
 
   return `
     <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">
@@ -697,6 +709,10 @@ function renderReviewItem(r) {
 
         <div class="flex flex-col items-end flex-shrink-0 gap-1.5">
           <div class="flex items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold ${answered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+              <i class="fas ${answered ? 'fa-reply' : 'fa-clock'}"></i>
+              ${answered ? 'Answered' : 'Unanswered'}
+            </span>
             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
               ${scoreText}
             </span>
@@ -736,6 +752,20 @@ function renderReviewItem(r) {
             <strong class="font-semibold text-amber-800">Room for improvement:</strong>
             <span>${escapeHtml(r.negative)}</span>
           </div>
+        </div>
+      `
+          : ''
+      }
+
+      ${
+        answered
+          ? `
+        <div class="rounded-xl bg-sky-50/80 border border-sky-100 p-3 text-xs text-sky-950">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <strong class="font-semibold text-sky-800 flex items-center gap-1.5"><i class="fas fa-reply"></i>Host answer${r.responseAuthor ? ` by ${escapeHtml(r.responseAuthor)}` : ''}</strong>
+            ${r.responseDate ? `<span class="text-[10px] text-sky-600">${escapeHtml(r.responseDate)}</span>` : ''}
+          </div>
+          <p class="leading-relaxed whitespace-pre-line">${escapeHtml(response)}</p>
         </div>
       `
           : ''
@@ -858,6 +888,7 @@ function bindViewEvents(container, handlers) {
     const comment = container.querySelector('#review-comment-input')?.value.trim() || '';
     const positive = container.querySelector('#review-positive-input')?.value.trim() || '';
     const negative = container.querySelector('#review-negative-input')?.value.trim() || '';
+    const response = container.querySelector('#review-response-input')?.value.trim() || '';
 
     handlers.onAddReview?.({
       author,
@@ -869,7 +900,8 @@ function bindViewEvents(container, handlers) {
       title,
       comment,
       positive,
-      negative
+      negative,
+      response
     });
   });
 
