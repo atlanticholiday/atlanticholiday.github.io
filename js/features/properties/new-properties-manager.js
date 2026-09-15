@@ -17,9 +17,10 @@ const STORAGE_KEY = 'atlantic_holiday_new_properties_data_v1';
 const HIDE_NEW_STORAGE_KEY = 'atlantic_holiday_new_properties_hide_new_v1';
 
 export class NewPropertiesManager {
-    constructor({ containerId = 'new-properties-app', storage = window.localStorage } = {}) {
+    constructor({ containerId = 'new-properties-app', storage = window.localStorage, dataManager = null } = {}) {
         this.containerId = containerId;
         this.storage = storage;
+        this.dataManager = dataManager || (typeof window !== 'undefined' ? window.dataManager : null);
         this.properties = [];
         this.selectedPropertyId = null;
         this.activeView = 'board'; // 'board' | 'list' | 'inventory'
@@ -162,12 +163,59 @@ export class NewPropertiesManager {
         return this.properties.find(p => p.id === this.selectedPropertyId) || null;
     }
 
+    isFrontDeskEmployee(employee) {
+        const department = String(employee?.department || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[-_]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return department === 'front desk'
+            || department === 'frontdesk'
+            || department === 'front office'
+            || department === 'reception'
+            || department === 'rececao';
+    }
+
+    getFrontDeskColleagues() {
+        const hasLiveDirectory = Boolean(this.dataManager?.hasLoadedEmployeeDirectory?.());
+        const liveEmployees = hasLiveDirectory
+            ? (this.dataManager?.getActiveEmployees?.() || [])
+            : [];
+        const names = hasLiveDirectory
+            ? liveEmployees.filter(employee => this.isFrontDeskEmployee(employee)).map(employee => employee?.name)
+            : FRONT_DESK_COLLEAGUES;
+
+        return Array.from(new Set(names.map(name => String(name || '').trim()).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b, 'pt'));
+    }
+
+    renderFrontDeskOptions(selectedValue = '', isPt = true) {
+        const selected = String(selectedValue || '').trim();
+        const colleagues = this.getFrontDeskColleagues();
+        const options = [
+            `<option value="" ${selected ? '' : 'selected'}>${isPt ? 'Sem colega atribuído' : 'No colleague assigned'}</option>`
+        ];
+
+        if (selected && !colleagues.includes(selected)) {
+            options.push(`<option value="${this.escapeHtml(selected)}" selected>${this.escapeHtml(selected)} (${isPt ? 'atual' : 'current'})</option>`);
+        }
+
+        if (colleagues.length > 0) {
+            options.push(...colleagues.map(name => `
+                <option value="${this.escapeHtml(name)}" ${selected === name ? 'selected' : ''}>${this.escapeHtml(name)}</option>
+            `));
+        } else {
+            options.push(`<option value="" disabled>${isPt ? 'Nenhum colega de Front Desk associado' : 'No Front Desk colleagues associated'}</option>`);
+        }
+
+        return options.join('');
+    }
+
     getDistinctColleagues() {
-        const staffEmployees = (this.dataManager?.getActiveEmployees?.() || [])
-            .map(e => e.name)
-            .filter(Boolean);
-        const sourceList = staffEmployees.length > 0 ? staffEmployees : FRONT_DESK_COLLEAGUES;
-        const set = new Set(sourceList);
+        const set = new Set(this.getFrontDeskColleagues());
         for (const p of this.properties) {
             if (p.collaborator && p.collaborator.trim() && p.collaborator.trim() !== 'André / João') {
                 set.add(p.collaborator.trim());
@@ -474,7 +522,9 @@ export class NewPropertiesManager {
 
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-1">${isPt ? 'Colega Front Desk Responsável' : 'Responsible Front Desk Colleague'}</label>
-                            <input type="text" id="modal-prop-collab" list="front-desk-colleagues-datalist" value="" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white" placeholder="${isPt ? 'Escolher ou escrever colega de Front Desk...' : 'Choose or write Front Desk colleague...'}" autocomplete="off" />
+                            <select id="modal-prop-collab" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white">
+                                ${this.renderFrontDeskOptions('', isPt)}
+                            </select>
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -485,10 +535,6 @@ export class NewPropertiesManager {
                 </div>
             </div>
 
-            <!-- Front Desk Colleagues Autocomplete Datalist -->
-            <datalist id="front-desk-colleagues-datalist">
-                ${this.getDistinctColleagues().map(c => `<option value="${this.escapeHtml(c)}"></option>`).join('')}
-            </datalist>
         `;
 
         this.bindDynamicEvents();
@@ -825,61 +871,67 @@ export class NewPropertiesManager {
 
                     <!-- BODY -->
                     <div class="asana-drawer__body">
-                        <!-- ARCHIVED NOTICE (if permanently stopped/disabled) -->
-                        ${property.status === 'archived' ? `
-                            <div class="bg-gray-100 border border-gray-300 text-gray-800 p-3.5 rounded-xl mb-4 text-xs flex items-center justify-between shadow-xs">
-                                <div class="flex items-center gap-2.5">
-                                    <span class="w-8 h-8 rounded-lg bg-gray-200 text-gray-700 flex items-center justify-center shrink-0 text-sm">
-                                        <i class="fas fa-ban text-red-500"></i>
-                                    </span>
-                                    <div>
-                                        <div class="font-bold text-gray-900">${isPt ? 'Processo Parado / Desativado Permanentemente' : 'Process Stopped / Permanently Disabled'}</div>
-                                        <div class="text-gray-600 text-[11px] mt-0.5">${isPt ? 'Este alojamento está arquivado e fora do pipeline ativo de novos alojamentos.' : 'This property is archived and kept outside the active onboarding pipeline.'}</div>
+                        <section class="asana-drawer__overview" aria-label="${isPt ? 'Resumo e configuração do alojamento' : 'Property summary and configuration'}">
+                            <!-- ARCHIVED NOTICE (if permanently stopped/disabled) -->
+                            ${property.status === 'archived' ? `
+                                <div class="bg-gray-100 border border-gray-300 text-gray-800 p-3.5 rounded-xl text-xs flex items-center justify-between shadow-xs">
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="w-8 h-8 rounded-lg bg-gray-200 text-gray-700 flex items-center justify-center shrink-0 text-sm">
+                                            <i class="fas fa-ban text-red-500"></i>
+                                        </span>
+                                        <div>
+                                            <div class="font-bold text-gray-900">${isPt ? 'Processo Parado / Desativado Permanentemente' : 'Process Stopped / Permanently Disabled'}</div>
+                                            <div class="text-gray-600 text-[11px] mt-0.5">${isPt ? 'Este alojamento está arquivado e fora do pipeline ativo de novos alojamentos.' : 'This property is archived and kept outside the active onboarding pipeline.'}</div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-asana-secondary text-xs py-1.5 px-3 font-semibold bg-white hover:bg-gray-50 text-emerald-700 border-emerald-300 shrink-0" data-action="toggle-archive-property" data-id="${property.id}">
+                                        <i class="fas fa-box-open mr-1"></i> ${isPt ? 'Reativar Processo' : 'Reactivate'}
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            <!-- PROPERTY TITLE & ASSIGNEE HEADER -->
+                            <div>
+                                <input type="text" class="asana-drawer__title-input" value="${this.escapeHtml(property.name)}" data-action="update-property-name" data-id="${property.id}" placeholder="${isPt ? 'Nome do Alojamento' : 'Property Name'}" />
+                                <div class="flex flex-wrap items-center gap-3 text-xs mt-3 px-1">
+                                    <!-- Front Desk Colleague Assignee Badge -->
+                                    <div class="asana-collab-badge" title="${isPt ? 'Atribuir a colega de Front Desk ou escrever nome' : 'Assign to front desk colleague or write name'}">
+                                        <i class="fas fa-user-circle text-brand text-sm"></i>
+                                        <span class="text-gray-500 font-medium">${isPt ? 'Front Desk:' : 'Front Desk:'}</span>
+                                        <select
+                                            class="asana-collab-input"
+                                            data-action="update-property-collaborator"
+                                            data-id="${property.id}"
+                                            aria-label="${isPt ? 'Colega de Front Desk responsável' : 'Responsible Front Desk colleague'}"
+                                        >
+                                            ${this.renderFrontDeskOptions(property.collaborator, isPt)}
+                                        </select>
+                                    </div>
+
+                                    <!-- Date Badge -->
+                                    <div class="asana-date-badge" title="${isPt ? 'Data de Entrada' : 'Onboarding Date'}">
+                                        <i class="fas fa-calendar-alt text-gray-400"></i>
+                                        <span class="text-gray-500 font-medium">${isPt ? 'Data:' : 'Date:'}</span>
+                                        <input
+                                            type="date"
+                                            class="asana-date-input"
+                                            value="${property.date || ''}"
+                                            data-action="update-property-date"
+                                            data-id="${property.id}"
+                                        />
                                     </div>
                                 </div>
-                                <button type="button" class="btn-asana-secondary text-xs py-1.5 px-3 font-semibold bg-white hover:bg-gray-50 text-emerald-700 border-emerald-300 shrink-0" data-action="toggle-archive-property" data-id="${property.id}">
-                                    <i class="fas fa-box-open mr-1"></i> ${isPt ? 'Reativar Processo' : 'Reactivate'}
-                                </button>
                             </div>
-                        ` : ''}
 
-                        <!-- PROPERTY TITLE & ASSIGNEE HEADER -->
-                        <div>
-                            <input type="text" class="asana-drawer__title-input" value="${this.escapeHtml(property.name)}" data-action="update-property-name" data-id="${property.id}" placeholder="${isPt ? 'Nome do Alojamento' : 'Property Name'}" />
-                            <div class="flex flex-wrap items-center gap-3 text-xs mt-3 px-1">
-                                <!-- Front Desk Colleague Assignee Badge -->
-                                <div class="asana-collab-badge" title="${isPt ? 'Atribuir a colega de Front Desk ou escrever nome' : 'Assign to front desk colleague or write name'}">
-                                    <i class="fas fa-user-circle text-brand text-sm"></i>
-                                    <span class="text-gray-500 font-medium">${isPt ? 'Front Desk:' : 'Front Desk:'}</span>
-                                    <input
-                                        type="text"
-                                        list="front-desk-colleagues-datalist"
-                                        class="asana-collab-input"
-                                        value="${this.escapeHtml(property.collaborator || '')}"
-                                        data-action="update-property-collaborator"
-                                        data-id="${property.id}"
-                                        placeholder="${isPt ? 'Escolher colega de Front Desk...' : 'Choose Front Desk colleague...'}"
-                                        autocomplete="off"
-                                    />
+                            ${this.getFrontDeskColleagues().length === 0 ? `
+                                <div class="asana-front-desk-empty" role="status">
+                                    <i class="fas fa-user-slash"></i>
+                                    <span>${isPt ? 'Nenhum colega ativo está associado ao departamento Front Desk.' : 'No active colleague is associated with the Front Desk department.'}</span>
                                 </div>
+                            ` : ''}
 
-                                <!-- Date Badge -->
-                                <div class="asana-date-badge" title="${isPt ? 'Data de Entrada' : 'Onboarding Date'}">
-                                    <i class="fas fa-calendar-alt text-gray-400"></i>
-                                    <span class="text-gray-500 font-medium">${isPt ? 'Data:' : 'Date:'}</span>
-                                    <input
-                                        type="date"
-                                        class="asana-date-input"
-                                        value="${property.date || ''}"
-                                        data-action="update-property-date"
-                                        data-id="${property.id}"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SPECS CONFIGURATOR CARD (Bedrooms, Bathrooms, Capacity, Beds) -->
-                        <div class="asana-specs-card">
+                            <!-- SPECS CONFIGURATOR CARD (Bedrooms, Bathrooms, Capacity, Beds) -->
+                            <div class="asana-specs-card">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-bold uppercase tracking-wider text-gray-700">
                                     <i class="fas fa-sliders-h text-brand mr-1"></i> ${isPt ? 'Configuração do Alojamento (Ajusta o Inventário)' : 'Capacity & Specs (Adjusts Inventory)'}
@@ -952,32 +1004,35 @@ export class NewPropertiesManager {
                                 <i class="fas fa-wand-magic-sparkles"></i>
                                 <span>${isPt ? 'O inventário de essenciais, pratos, toalhas e lençóis recalcula automaticamente com base nestes números.' : 'Inventory quantities, dishes, towels and linens automatically adjust based on these values.'}</span>
                             </div>
-                        </div>
+                            </div>
+                        </section>
 
-                        <!-- DRAWER TABS -->
-                        <div class="asana-drawer-tabs">
-                            <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'checklist' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="checklist">
-                                <i class="fas fa-clipboard-check"></i>
-                                <span>${isPt ? 'Checklist de Entrada' : 'Onboarding Checklist'} (${progress.percent}%)</span>
-                            </button>
-                            <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'inventory' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="inventory">
-                                <i class="fas fa-boxes-stacked"></i>
-                                <span>${isPt ? 'Inventário de Essenciais' : 'Essentials Inventory'}</span>
-                            </button>
-                            <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'pipeline' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="pipeline">
-                                <i class="fas fa-key"></i>
-                                <span>${isPt ? 'Chaves & Pipeline' : 'Keys & Pipeline'}</span>
-                            </button>
-                        </div>
+                        <section class="asana-drawer__workspace" aria-label="${isPt ? 'Tarefas e inventário do alojamento' : 'Property tasks and inventory'}">
+                            <!-- DRAWER TABS -->
+                            <div class="asana-drawer-tabs">
+                                <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'checklist' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="checklist">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span>${isPt ? 'Checklist de Entrada' : 'Onboarding Checklist'} (${progress.percent}%)</span>
+                                </button>
+                                <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'inventory' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="inventory">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                    <span>${isPt ? 'Inventário de Essenciais' : 'Essentials Inventory'}</span>
+                                </button>
+                                <button type="button" class="asana-drawer-tab ${this.activeDrawerTab === 'pipeline' ? 'active' : ''}" data-action="switch-drawer-tab" data-tab="pipeline">
+                                    <i class="fas fa-key"></i>
+                                    <span>${isPt ? 'Chaves & Pipeline' : 'Keys & Pipeline'}</span>
+                                </button>
+                            </div>
 
-                        <!-- TAB CONTENT: CHECKLIST -->
-                        ${this.activeDrawerTab === 'checklist' ? this.renderDrawerChecklist(property, isPt) : ''}
+                            <!-- TAB CONTENT: CHECKLIST -->
+                            ${this.activeDrawerTab === 'checklist' ? this.renderDrawerChecklist(property, isPt) : ''}
 
-                        <!-- TAB CONTENT: INVENTORY -->
-                        ${this.activeDrawerTab === 'inventory' ? this.renderDrawerInventory(property, inv, isPt) : ''}
+                            <!-- TAB CONTENT: INVENTORY -->
+                            ${this.activeDrawerTab === 'inventory' ? this.renderDrawerInventory(property, inv, isPt) : ''}
 
-                        <!-- TAB CONTENT: PIPELINE & LOGISTICS -->
-                        ${this.activeDrawerTab === 'pipeline' ? this.renderDrawerPipeline(property, isPt) : ''}
+                            <!-- TAB CONTENT: PIPELINE & LOGISTICS -->
+                            ${this.activeDrawerTab === 'pipeline' ? this.renderDrawerPipeline(property, isPt) : ''}
+                        </section>
                     </div>
                 </div>
             </div>
@@ -1006,7 +1061,15 @@ export class NewPropertiesManager {
                                     <div class="asana-checklist-item__content">
                                         <div class="asana-checklist-item__title" data-action="toggle-task" data-id="${property.id}" data-task="${task.id}" role="button" tabindex="0">${this.escapeHtml(task.title)}</div>
                                         <div class="asana-checklist-item__meta">
-                                            <span class="asana-checklist-item__resp">${this.escapeHtml(task.responsible || 'Equipa')}</span>
+                                            <select
+                                                class="asana-checklist-item__resp-select"
+                                                data-action="update-task-responsible"
+                                                data-id="${property.id}"
+                                                data-task="${task.id}"
+                                                aria-label="${isPt ? 'Colega responsável por' : 'Colleague responsible for'} ${this.escapeHtml(task.title)}"
+                                            >
+                                                ${this.renderFrontDeskOptions(task.responsible, isPt)}
+                                            </select>
                                             <input type="text" class="asana-checklist-item__notes" value="${this.escapeHtml(task.notes || '')}" placeholder="${isPt ? '+ Adicionar observações...' : '+ Add notes...'}" data-action="update-task-notes" data-id="${property.id}" data-task="${task.id}" />
                                         </div>
                                     </div>
@@ -1223,16 +1286,13 @@ export class NewPropertiesManager {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div>
                             <label class="block text-gray-500 mb-1">${isPt ? 'Colega de Front Desk Responsável' : 'Front Desk Colleague Assigned'}</label>
-                            <input
-                                type="text"
-                                list="front-desk-colleagues-datalist"
-                                value="${this.escapeHtml(property.collaborator || '')}"
+                            <select
                                 class="w-full p-2 border border-gray-300 rounded-lg bg-white font-medium text-gray-800 focus:border-brand outline-none"
                                 data-action="update-property-collaborator"
                                 data-id="${property.id}"
-                                placeholder="${isPt ? 'Escolher colega de Front Desk ou escrever nome...' : 'Choose Front Desk colleague or write name...'}"
-                                autocomplete="off"
-                            />
+                            >
+                                ${this.renderFrontDeskOptions(property.collaborator, isPt)}
+                            </select>
                         </div>
                         <div>
                             <label class="block text-gray-500 mb-1">${isPt ? 'Data de Entrada / Início' : 'Entry / Start Date'}</label>
@@ -1570,6 +1630,9 @@ export class NewPropertiesManager {
                     prop.date = target.value;
                     this.saveProperties();
                 }
+            } else if (action === 'update-task-responsible') {
+                const taskId = target.dataset.task;
+                this.updateTaskResponsible(id, taskId, target.value);
             } else if (action === 'update-inv-rec') {
                 const item = target.dataset.item;
                 const field = target.dataset.field;
@@ -1698,6 +1761,21 @@ export class NewPropertiesManager {
             for (const task of group.tasks || []) {
                 if (task.id === taskId) {
                     task.notes = notes;
+                    this.saveProperties();
+                    return;
+                }
+            }
+        }
+    }
+
+    updateTaskResponsible(propertyId, taskId, responsible) {
+        const prop = this.properties.find(p => p.id === propertyId);
+        if (!prop) return;
+
+        for (const group of prop.checklist || []) {
+            for (const task of group.tasks || []) {
+                if (task.id === taskId) {
+                    task.responsible = String(responsible || '').trim();
                     this.saveProperties();
                     return;
                 }
