@@ -895,7 +895,7 @@ export class NewPropertiesManager {
                                 <input type="text" class="asana-drawer__title-input" value="${this.escapeHtml(property.name)}" data-action="update-property-name" data-id="${property.id}" placeholder="${isPt ? 'Nome do Alojamento' : 'Property Name'}" />
                                 <div class="flex flex-wrap items-center gap-3 text-xs mt-3 px-1">
                                     <!-- Front Desk Colleague Assignee Badge -->
-                                    <div class="asana-collab-badge" title="${isPt ? 'Atribuir a colega de Front Desk ou escrever nome' : 'Assign to front desk colleague or write name'}">
+                                    <div class="asana-collab-badge" title="${isPt ? 'Selecionar colega de Front Desk responsável' : 'Select the responsible Front Desk colleague'}">
                                         <i class="fas fa-user-circle text-brand text-sm"></i>
                                         <span class="text-gray-500 font-medium">${isPt ? 'Front Desk:' : 'Front Desk:'}</span>
                                         <select
@@ -1658,12 +1658,6 @@ export class NewPropertiesManager {
                 const prop = this.properties.find(p => p.id === id);
                 if (prop) {
                     prop.name = target.value;
-                    this.saveProperties();
-                }
-            } else if (action === 'update-property-collaborator') {
-                const prop = this.properties.find(p => p.id === id);
-                if (prop) {
-                    prop.collaborator = target.value;
                     this.saveProperties();
                 }
             } else if (action === 'update-property-date') {

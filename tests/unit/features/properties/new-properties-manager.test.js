@@ -422,7 +422,7 @@ describe("New Properties Manager", () => {
         }
     });
 
-    test("assigns and edits front desk colleague name with datalist and filters by colleague", () => {
+    test("assigns properties and checklist tasks from the full front desk colleague list", () => {
         const container = document.createElement("div");
         container.id = "test-colleague-assignment";
         document.body.appendChild(container);
@@ -432,13 +432,12 @@ describe("New Properties Manager", () => {
             const manager = new NewPropertiesManager({ containerId: "test-colleague-assignment", storage });
             manager.init();
 
-            // 1. Datalist for front desk autocomplete exists
-            const datalist = container.querySelector("#front-desk-colleagues-datalist");
-            assert.ok(datalist, "Front desk datalist exists for colleague selection");
-            assert.ok(datalist.children.length > 5, "Datalist has suggested colleagues");
-            const datalistValues = Array.from(datalist.children).map(opt => opt.value);
-            assert.ok(datalistValues.includes("André Marques"), "Datalist includes André Marques");
-            assert.ok(!datalistValues.includes("André / João"), "Datalist excludes placeholder André / João");
+            // 1. All configured Front Desk colleagues are available
+            const configuredColleagues = manager.getFrontDeskColleagues();
+            assert.ok(configuredColleagues.length > 5, "Front Desk directory has configured colleagues");
+            assert.ok(configuredColleagues.includes("André Marques"), "Directory includes André Marques");
+            assert.ok(configuredColleagues.includes("Marta Camacho"), "Directory includes Marta Camacho");
+            assert.ok(!configuredColleagues.includes("André / João"), "Directory excludes the old combined placeholder");
 
             // 2. Colleague filter dropdown exists in project header
             const filterSelect = container.querySelector("#asana-colleague-filter");
@@ -455,15 +454,16 @@ describe("New Properties Manager", () => {
             assert.ok(backBtn, "Dedicated Voltar/Back button exists in drawer toolbar");
             assert.ok(backBtn.textContent.includes("Voltar") || backBtn.textContent.includes("Back"), "Back button has readable Voltar/Back text");
 
-            const collabInput = container.querySelector(".asana-drawer input[data-action='update-property-collaborator']");
-            assert.ok(collabInput, "Collaborator input exists in drawer");
-            assert.equal(collabInput.getAttribute("list"), "front-desk-colleagues-datalist");
-            assert.equal(collabInput.value, targetProp.collaborator);
+            const collabSelect = container.querySelector(".asana-drawer select[data-action='update-property-collaborator']");
+            assert.ok(collabSelect, "Collaborator selector exists in drawer");
+            const colleagueOptions = Array.from(collabSelect.options).map(option => option.value);
+            assert.ok(colleagueOptions.includes("André Marques"), "Selector includes André Marques");
+            assert.ok(colleagueOptions.includes("Marta Camacho"), "Selector includes Marta Camacho");
+            assert.equal(collabSelect.value, targetProp.collaborator);
 
             // 4. Assign property to a specific front desk colleague (e.g. 'Marta Camacho')
-            collabInput.value = "Marta Camacho";
-            collabInput.dispatchEvent(new Event("input", { bubbles: true }));
-            collabInput.dispatchEvent(new Event("change", { bubbles: true }));
+            collabSelect.value = "Marta Camacho";
+            collabSelect.dispatchEvent(new Event("change", { bubbles: true }));
 
             assert.equal(targetProp.collaborator, "Marta Camacho", "Target property collaborator updated to Marta Camacho");
 
@@ -472,14 +472,27 @@ describe("New Properties Manager", () => {
             const savedProp = savedData.find(p => p.id === targetProp.id);
             assert.equal(savedProp.collaborator, "Marta Camacho", "Assigned colleague persisted in storage");
 
-            // 5. Check Pipeline tab also has colleague input and syncs
+            // 5. Assign an individual checklist task and persist it
+            const firstTask = targetProp.checklist[0].tasks[0];
+            const taskAssigneeSelect = container.querySelector(".asana-checklist-item__resp-select[data-action='update-task-responsible']");
+            assert.ok(taskAssigneeSelect, "Checklist task has an assignee selector");
+            assert.ok(Array.from(taskAssigneeSelect.options).some(option => option.value === "Marta Camacho"), "Task selector includes every Front Desk colleague");
+            taskAssigneeSelect.value = "Marta Camacho";
+            taskAssigneeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            assert.equal(firstTask.responsible, "Marta Camacho", "Checklist task assignee is updated");
+
+            const savedTaskProperty = JSON.parse(storage.getItem("atlantic_holiday_new_properties_data_v1"))
+                .find(property => property.id === targetProp.id);
+            assert.equal(savedTaskProperty.checklist[0].tasks[0].responsible, "Marta Camacho", "Checklist task assignee persists");
+
+            // 6. Check Pipeline tab also has colleague selector and syncs
             manager.activeDrawerTab = "pipeline";
             manager.render();
-            const pipelineCollabInput = container.querySelector(".asana-drawer input[data-action='update-property-collaborator']");
-            assert.ok(pipelineCollabInput, "Pipeline tab has colleague input");
-            assert.equal(pipelineCollabInput.value, "Marta Camacho", "Pipeline tab shows assigned colleague");
+            const pipelineCollabSelect = container.querySelector(".asana-drawer__workspace select[data-action='update-property-collaborator']");
+            assert.ok(pipelineCollabSelect, "Pipeline tab has colleague selector");
+            assert.equal(pipelineCollabSelect.value, "Marta Camacho", "Pipeline tab shows assigned colleague");
 
-            // 6. Test colleague filter in board/list view
+            // 7. Test colleague filter in board/list view
             manager.selectedPropertyId = null;
             manager.colleagueFilter = "Marta Camacho";
             manager.render();
@@ -488,10 +501,45 @@ describe("New Properties Manager", () => {
             assert.ok(filtered.length >= 1, "Filtered properties has at least 1 property");
             assert.ok(filtered.every(p => p.collaborator.includes("Marta Camacho")), "All filtered properties belong to Marta Camacho");
 
-            // 7. Reset filter back to 'all'
+            // 8. Reset filter back to 'all'
             manager.colleagueFilter = "all";
             manager.render();
             assert.equal(manager.getFilteredProperties().length, 42, "All properties restored when colleague filter is reset");
+        } finally {
+            container.remove();
+        }
+    });
+
+    test("uses only active Front Desk departments and warns when none are associated", () => {
+        const container = document.createElement("div");
+        container.id = "test-front-desk-directory";
+        document.body.appendChild(container);
+
+        try {
+            const storage = createMockStorage();
+            const dataManager = {
+                hasLoadedEmployeeDirectory: () => true,
+                getActiveEmployees: () => [
+                    { name: "André Marques", department: "Front Desk" },
+                    { name: "Maria Receção", department: "Receção" },
+                    { name: "Housekeeping Colleague", department: "Housekeeping" }
+                ]
+            };
+            const manager = new NewPropertiesManager({ containerId: container.id, storage, dataManager });
+            manager.init();
+
+            assert.deepEqual(manager.getFrontDeskColleagues(), ["André Marques", "Maria Receção"], "Only active Front Desk-related departments are assignable");
+
+            manager.dataManager = {
+                hasLoadedEmployeeDirectory: () => true,
+                getActiveEmployees: () => [{ name: "Housekeeping Colleague", department: "Housekeeping" }]
+            };
+            manager.selectedPropertyId = manager.properties[0].id;
+            manager.render();
+
+            const warning = container.querySelector(".asana-front-desk-empty");
+            assert.ok(warning, "Empty Front Desk directory warning is visible");
+            assert.ok(warning.textContent.includes("Nenhum colega ativo"), "Warning clearly explains that no active Front Desk colleague is associated");
         } finally {
             container.remove();
         }
@@ -597,6 +645,5 @@ describe("New Properties Manager", () => {
         }
     });
 });
-
 
 
