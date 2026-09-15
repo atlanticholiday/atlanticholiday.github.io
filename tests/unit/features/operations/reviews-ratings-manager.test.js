@@ -71,7 +71,7 @@ describe("ReviewsRatingsManager", () => {
       })
     );
     localStorage.setItem(
-      "atlantic_holiday_property_reviews_cache_v4",
+      "atlantic_holiday_property_reviews_cache_v5",
       JSON.stringify({
         properties: [
           {
@@ -88,7 +88,58 @@ describe("ReviewsRatingsManager", () => {
     assert.equal(freshManager.state.rawProperties[0].airbnb.score, 4.56);
   });
 
-  test("deletePropertyReview removes review from platform-specific arrays", () => {
+  test("mergeServerDataset properly imports server reviews when local cache had empty reviews", () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+
+    const manager = new ReviewsRatingsManager();
+    // Simulate stale local cache with empty reviews arrays
+    manager.state.rawProperties = [
+      {
+        id: "acanto-loft",
+        name: "Acanto Loft",
+        bookingUrl: "https://booking.com/acanto",
+        airbnbUrl: "https://airbnb.pt/rooms/1371090652884733487",
+        booking: { score: 9.1, reviewCount: 28, reviews: [] },
+        airbnb: { score: 4.56, reviewCount: 9, reviews: [] },
+        reviews: []
+      }
+    ];
+
+    const serverDataset = {
+      lastUpdated: "2026-09-15T22:00:00.000Z",
+      properties: [
+        {
+          id: "acanto-loft",
+          name: "Acanto Loft",
+          booking: {
+            score: 9.1,
+            reviewCount: 28,
+            reviews: [
+              { id: "rev-b1", author: "Marta", score: 8, comment: "Great" },
+              { id: "rev-b2", author: "Nikola", score: 9, comment: "Nice" }
+            ]
+          },
+          airbnb: {
+            score: 4.56,
+            reviewCount: 9,
+            reviews: [
+              { id: "rev-a1", author: "Louise", score: 4, comment: "Super" }
+            ]
+          },
+          reviews: []
+        }
+      ]
+    };
+
+    manager.mergeServerDataset(serverDataset);
+
+    const merged = manager.state.rawProperties.find((p) => p.id === "acanto-loft");
+    assert.equal(merged.booking.reviews.length, 2, "Booking reviews must be imported from server");
+    assert.equal(merged.airbnb.reviews.length, 1, "Airbnb reviews must be imported from server");
+  });
+
+  test("deletePropertyReview removes review from platform-specific arrays and persists across server refreshes", () => {
     resetDom(`<div id="reviews-ratings-page"></div>`);
     localStorage.clear();
 
@@ -122,5 +173,32 @@ describe("ReviewsRatingsManager", () => {
     manager.deletePropertyReview("rev-air-1");
     assert.equal(testProp.airbnb.reviews.length, 0);
     assert.equal(testProp.airbnb.fetchedReviewCount, 0);
+
+    // Refresh from server containing the deleted reviews
+    const serverDataset = {
+      properties: [
+        {
+          id: "prop-1",
+          name: "Property 1",
+          booking: {
+            reviews: [
+              { id: "rev-book-1", author: "Alice" },
+              { id: "rev-book-2", author: "Bob" }
+            ]
+          },
+          airbnb: {
+            reviews: [
+              { id: "rev-air-1", author: "Charlie" }
+            ]
+          }
+        }
+      ]
+    };
+    manager.mergeServerDataset(serverDataset);
+
+    const updated = manager.state.rawProperties.find((p) => p.id === "prop-1");
+    assert.equal(updated.booking.reviews.length, 1, "rev-book-1 should remain deleted");
+    assert.equal(updated.booking.reviews[0].id, "rev-book-2");
+    assert.equal(updated.airbnb.reviews.length, 0, "rev-air-1 should remain deleted");
   });
 });

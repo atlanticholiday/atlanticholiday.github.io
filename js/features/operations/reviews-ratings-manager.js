@@ -4,8 +4,55 @@ import {
 } from './reviews-ratings-utils.js';
 import { renderReviewsRatingsDashboard } from './reviews-ratings-view.js';
 
-const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v4';
+const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v5';
 const STORAGE_KEY_OVERRIDES = 'atlantic_holiday_reviews_user_overrides_v1';
+
+function mergePlatformReviews(serverReviews = [], localReviews = [], deletedIds = new Set()) {
+  const sRevs = Array.isArray(serverReviews) ? serverReviews : [];
+  const lRevs = Array.isArray(localReviews) ? localReviews : [];
+
+  const map = new Map();
+  // Server reviews are primary scraped reviews
+  for (const r of sRevs) {
+    if (!r) continue;
+    const id = r.id || r.sourceId;
+    if (id && deletedIds.has(id)) continue;
+    map.set(id || `srv-${map.size}`, r);
+  }
+  // Local reviews may contain user additions or edits
+  for (const r of lRevs) {
+    if (!r) continue;
+    const id = r.id || r.sourceId;
+    if (id && deletedIds.has(id)) continue;
+    if (id && map.has(id)) {
+      map.set(id, { ...map.get(id), ...r });
+    } else {
+      map.set(id || `loc-${map.size}`, r);
+    }
+  }
+  return Array.from(map.values());
+}
+
+function mergePlatformData(serverPlat, localPlat, deletedIds = new Set()) {
+  if (!serverPlat && !localPlat) return null;
+  if (!serverPlat) return localPlat;
+  if (!localPlat) return serverPlat;
+
+  const mergedReviews = mergePlatformReviews(serverPlat.reviews, localPlat.reviews, deletedIds);
+
+  return {
+    ...localPlat,
+    ...serverPlat,
+    score: serverPlat.score !== undefined && serverPlat.score !== null ? serverPlat.score : localPlat.score,
+    reviewCount: serverPlat.reviewCount !== undefined && serverPlat.reviewCount !== null ? serverPlat.reviewCount : localPlat.reviewCount,
+    subScores: {
+      ...(localPlat.subScores || {}),
+      ...(serverPlat.subScores || {})
+    },
+    reviews: mergedReviews,
+    fetchedReviewCount: mergedReviews.length
+  };
+}
 
 export class ReviewsRatingsManager {
   constructor(db = null, navigationManager = null) {
@@ -67,7 +114,7 @@ export class ReviewsRatingsManager {
   loadFromStorage() {
     try {
       // Purge legacy sample caches
-      ['v1', 'v2', 'v3'].forEach((v) => {
+      ['v1', 'v2', 'v3', 'v4'].forEach((v) => {
         try { localStorage.removeItem(`atlantic_holiday_property_reviews_cache_${v}`); } catch {}
       });
       try { localStorage.removeItem('atlantic_holiday_property_reviews_cache'); } catch {}
@@ -197,6 +244,21 @@ export class ReviewsRatingsManager {
           prop.airbnb.reviewCount = parseInt(override.airbnbCount, 10);
         }
       }
+
+      if (Array.isArray(override.deletedReviewIds) && override.deletedReviewIds.length > 0) {
+        const delSet = new Set(override.deletedReviewIds);
+        if (Array.isArray(prop.reviews)) {
+          prop.reviews = prop.reviews.filter((r) => !delSet.has(r.id) && !delSet.has(r.sourceId));
+        }
+        if (Array.isArray(prop.booking?.reviews)) {
+          prop.booking.reviews = prop.booking.reviews.filter((r) => !delSet.has(r.id) && !delSet.has(r.sourceId));
+          prop.booking.fetchedReviewCount = prop.booking.reviews.length;
+        }
+        if (Array.isArray(prop.airbnb?.reviews)) {
+          prop.airbnb.reviews = prop.airbnb.reviews.filter((r) => !delSet.has(r.id) && !delSet.has(r.sourceId));
+          prop.airbnb.fetchedReviewCount = prop.airbnb.reviews.length;
+        }
+      }
     }
   }
 
@@ -215,22 +277,47 @@ export class ReviewsRatingsManager {
     const existingMap = new Map((this.state.rawProperties || []).map((p) => [p.id, p]));
     const merged = dataset.properties.map((serverProp) => {
       const local = existingMap.get(serverProp.id);
-      if (!local) return serverProp;
+      const propOverrides = this.userOverrides?.[serverProp.id] || {};
+      const deletedIds = new Set(Array.isArray(propOverrides.deletedReviewIds) ? propOverrides.deletedReviewIds : []);
+
+      if (!local) {
+        return {
+          ...serverProp,
+          booking: mergePlatformData(serverProp.booking, null, deletedIds),
+          airbnb: mergePlatformData(serverProp.airbnb, null, deletedIds),
+          reviews: (serverProp.reviews || []).filter((r) => {
+            const id = r.id || r.sourceId;
+            return !id || !deletedIds.has(id);
+          })
+        };
+      }
+
+      const mergedTopReviews = [
+        ...(serverProp.reviews || []),
+        ...((local.reviews || []).filter((lr) => !(serverProp.reviews || []).some((sr) => (sr.id || sr.sourceId) === (lr.id || lr.sourceId))))
+      ].filter((r) => {
+        const id = r.id || r.sourceId;
+        return !id || !deletedIds.has(id);
+      });
+
       return {
         ...serverProp,
         bookingUrl: local.bookingUrl || serverProp.bookingUrl || '',
         airbnbUrl: local.airbnbUrl || serverProp.airbnbUrl || '',
-        booking: local.booking || serverProp.booking || null,
-        airbnb: local.airbnb || serverProp.airbnb || null,
-        reviews: [
-          ...(serverProp.reviews || []),
-          ...((local.reviews || []).filter((lr) => !(serverProp.reviews || []).some((sr) => sr.id === lr.id)))
-        ]
+        booking: mergePlatformData(serverProp.booking, local.booking, deletedIds),
+        airbnb: mergePlatformData(serverProp.airbnb, local.airbnb, deletedIds),
+        reviews: mergedTopReviews
       };
     });
     this.state.rawProperties = merged;
     // Layer user overrides on top of server data
     this.applyUserOverrides();
+    // Keep selectedProperty in sync with freshly merged property
+    if (this.state.selectedProperty) {
+      this.state.selectedProperty =
+        this.state.rawProperties.find((p) => p.id === this.state.selectedProperty.id) ||
+        this.state.selectedProperty;
+    }
     this.state.lastUpdated = dataset.lastUpdated || this.state.lastUpdated;
     this.saveToStorage({
       lastUpdated: this.state.lastUpdated,
@@ -420,7 +507,7 @@ export class ReviewsRatingsManager {
     prop.reviews.unshift(newRev);
 
     const propInList = this.state.rawProperties.find((p) => p.id === prop.id);
-    if (propInList) {
+    if (propInList && propInList !== prop) {
       if (!Array.isArray(propInList.reviews)) propInList.reviews = [];
       propInList.reviews.unshift(newRev);
     }
@@ -439,29 +526,39 @@ export class ReviewsRatingsManager {
   deletePropertyReview(reviewId) {
     if (!this.state.selectedProperty) return;
     const prop = this.state.selectedProperty;
-    if (Array.isArray(prop.reviews)) {
-      prop.reviews = prop.reviews.filter((r) => r.id !== reviewId);
+    const propId = prop.id;
+
+    if (!this.userOverrides[propId]) this.userOverrides[propId] = {};
+    if (!Array.isArray(this.userOverrides[propId].deletedReviewIds)) {
+      this.userOverrides[propId].deletedReviewIds = [];
     }
-    if (Array.isArray(prop.booking?.reviews)) {
-      prop.booking.reviews = prop.booking.reviews.filter((r) => r.id !== reviewId);
+    if (!this.userOverrides[propId].deletedReviewIds.includes(reviewId)) {
+      this.userOverrides[propId].deletedReviewIds.push(reviewId);
+    }
+    this.saveOverridesToStorage();
+    this.saveOverrideToFirestore(propId, this.userOverrides[propId]);
+
+    const filterRev = (list) => (Array.isArray(list) ? list.filter((r) => r.id !== reviewId && r.sourceId !== reviewId) : []);
+
+    prop.reviews = filterRev(prop.reviews);
+    if (prop.booking) {
+      prop.booking.reviews = filterRev(prop.booking.reviews);
       prop.booking.fetchedReviewCount = prop.booking.reviews.length;
     }
-    if (Array.isArray(prop.airbnb?.reviews)) {
-      prop.airbnb.reviews = prop.airbnb.reviews.filter((r) => r.id !== reviewId);
+    if (prop.airbnb) {
+      prop.airbnb.reviews = filterRev(prop.airbnb.reviews);
       prop.airbnb.fetchedReviewCount = prop.airbnb.reviews.length;
     }
 
-    const propInList = this.state.rawProperties.find((p) => p.id === prop.id);
-    if (propInList) {
-      if (Array.isArray(propInList.reviews)) {
-        propInList.reviews = propInList.reviews.filter((r) => r.id !== reviewId);
-      }
-      if (Array.isArray(propInList.booking?.reviews)) {
-        propInList.booking.reviews = propInList.booking.reviews.filter((r) => r.id !== reviewId);
+    const propInList = this.state.rawProperties.find((p) => p.id === propId);
+    if (propInList && propInList !== prop) {
+      propInList.reviews = filterRev(propInList.reviews);
+      if (propInList.booking) {
+        propInList.booking.reviews = filterRev(propInList.booking.reviews);
         propInList.booking.fetchedReviewCount = propInList.booking.reviews.length;
       }
-      if (Array.isArray(propInList.airbnb?.reviews)) {
-        propInList.airbnb.reviews = propInList.airbnb.reviews.filter((r) => r.id !== reviewId);
+      if (propInList.airbnb) {
+        propInList.airbnb.reviews = filterRev(propInList.airbnb.reviews);
         propInList.airbnb.fetchedReviewCount = propInList.airbnb.reviews.length;
       }
     }
