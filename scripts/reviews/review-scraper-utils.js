@@ -25,6 +25,14 @@ function numberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function normalizeDate(value) {
+  const text = String(value || "").trim();
+  const dayFirst = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!dayFirst) return text;
+  const [, day, month, year, hour = "00", minute = "00", second = "00"] = dayFirst;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hour.padStart(2, "0")}:${minute}:${second}`;
+}
+
 function stableId(platform, sourceId, author, date, comment) {
   if (sourceId !== null && sourceId !== undefined && String(sourceId).trim()) {
     return `${platform.toLowerCase()}-${String(sourceId).trim()}`;
@@ -43,7 +51,7 @@ export function normalizeAirbnbReview(review = {}) {
   const author = stripReviewHtml(firstDefined(review, ["reviewer.firstName", "reviewer.hostName", "author"]) || "Guest");
   const comment = stripReviewHtml(firstDefined(review, ["comments", "commentV2", "comment", "localizedCommentV2.comments", "localizedReview.comments"]) || "");
   const response = stripReviewHtml(firstDefined(review, ["response", "localizedCommentV2.response", "localizedReview.response"]) || "");
-  const date = String(firstDefined(review, ["createdAt", "date"]) || "");
+  const date = normalizeDate(firstDefined(review, ["createdAt", "date"]));
 
   return {
     id: stableId("airbnb", review.id, author, date, comment),
@@ -82,9 +90,9 @@ export function normalizeBookingReview(review = {}) {
     "partnerReply.reply", "response.text", "ownerResponse.text", "reply.text", "answer.text",
     "response", "reply", "answer", "hotelResponse", "propertyResponse"
   ]) || "");
-  const date = String(firstDefined(review, [
+  const date = normalizeDate(firstDefined(review, [
     "reviewedDate", "date", "reviewDate", "createdAt", "dateOfReview", "stayDate"
-  ]) || "");
+  ]));
   const sourceId = firstDefined(review, ["id", "reviewId", "reviewUrl", "url"]);
 
   return {

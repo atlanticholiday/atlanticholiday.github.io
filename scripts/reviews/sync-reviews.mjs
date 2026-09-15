@@ -134,12 +134,19 @@ function normalizeBookingPayloads(payloads = []) {
 }
 
 async function extractBookingReviewsFromDom(page) {
-  const rawReviews = await page.locator('[data-testid="review-card"], .review_list_new_item_block, .review_item').evaluateAll((cards) => cards.map((card) => {
+  const reviewCards = page.locator('[data-testid="review-card"], .review_list_new_item_block, .review_item');
+  const reviewCardCount = await reviewCards.count();
+  for (let index = 0; index < reviewCardCount; index += 1) {
+    await reviewCards.nth(index).scrollIntoViewIfNeeded().catch(() => {});
+    await page.waitForTimeout(75);
+  }
+
+  const rawReviews = await reviewCards.evaluateAll((cards) => cards.map((card) => {
     const text = (selector) => card.querySelector(selector)?.textContent?.trim() || "";
     const attr = (selector, name) => card.querySelector(selector)?.getAttribute(name) || "";
     return {
       reviewId: card.getAttribute("data-review-id") || card.id || "",
-      reviewerName: text('[data-testid="reviewer-name"], [data-testid="reviewer-avatar"] + div h3, .bui-avatar-block__title, .reviewer_name'),
+      reviewerName: text('[data-testid="reviewer-name"], [data-testid="review-avatar"] h3, [data-testid="review-avatar"] h4, [data-testid="reviewer-avatar"] + div h3, .bui-avatar-block__title, .reviewer_name'),
       countryName: attr('[data-testid="reviewer-country"] img, .reviewer_country_flag', "alt") || text('[data-testid="reviewer-country"], .reviewer_country'),
       reviewDate: text('[data-testid="review-date"], .review_item_date'),
       reviewScore: text('[data-testid="review-score"], .review-score-badge, .review-score-badge__score'),
@@ -157,7 +164,14 @@ async function extractBookingReviewsFromDom(page) {
     reviewText: card.querySelector('[data-testid="featuredreview-text"] blockquote')?.textContent?.replace(/^\s*["“]|["”]\s*$/g, "").trim() || ""
   }))).catch(() => []);
 
-  return mergeReviews([...rawReviews, ...featured].map(normalizeBookingReview));
+  const normalizedCards = rawReviews.map(normalizeBookingReview)
+    .filter((review) => review.author !== "Guest" || review.comment || review.positive || review.negative);
+  const normalizedFeatured = featured.map(normalizeBookingReview)
+    .filter((review) => review.author !== "Guest" || review.comment);
+
+  // Featured cards repeat reviews from the full list and do not carry stable
+  // source IDs. Use them only when Booking does not expose the full list.
+  return mergeReviews(normalizedCards.length ? normalizedCards : normalizedFeatured);
 }
 
 async function fetchBookingReviews(page, expectedCount = 0) {
@@ -231,18 +245,29 @@ async function fetchRemainingAirbnbReviews(page, initialRequest, initialPayload)
   const pageSize = Number(requestOptions?.limit) || 24;
   const headers = requestHeadersForReplay(await initialRequest.allHeaders());
 
-  for (let offset = pageSize; offset < total; offset += pageSize) {
+  // The page's initial query often returns only a small featured subset even
+  // though it asks for a full page. Replaying offset 0 returns the actual page.
+  for (let offset = 0; offset < total; offset += pageSize) {
     const nextVariables = structuredClone(variables);
     nextVariables.pdpReviewsRequest.offset = String(offset);
     nextVariables.pdpReviewsRequest.limit = pageSize;
     nextVariables.pdpReviewsRequest.first = pageSize;
+    nextVariables.pdpReviewsRequest.sortingPreference = "MOST_RECENT";
     url.searchParams.set("variables", JSON.stringify(nextVariables));
 
     const response = await page.request.get(url.toString(), { headers });
-    if (!response.ok()) break;
-    const nextRoot = airbnbReviewsRoot(await response.json());
+    if (!response.ok()) {
+      console.warn(`     ⚠️ Airbnb review page ${Math.floor(offset / pageSize) + 1} returned HTTP ${response.status()}`);
+      break;
+    }
+    const payload = await response.json();
+    const nextRoot = airbnbReviewsRoot(payload);
     const nextReviews = nextRoot?.reviews || [];
-    if (!nextReviews.length) break;
+    if (!nextReviews.length) {
+      const apiMessage = payload?.errors?.[0]?.message || "no review records returned";
+      console.warn(`     ⚠️ Airbnb review page ${Math.floor(offset / pageSize) + 1}: ${apiMessage}`);
+      break;
+    }
     reviews.push(...nextReviews);
     if (nextReviews.length < pageSize) break;
   }
@@ -540,6 +565,9 @@ async function main() {
           if (bookingResult.status === "success") {
             console.log(`     ✅ Score: ${bookingResult.score}/10 (${bookingResult.reviewCount || "?"} reviews)`);
             if (options.fetchReviews) console.log(`     💬 Fetched ${bookingResult.fetchedReviewCount} review records`);
+            if (options.fetchReviews && bookingResult.reviewCount > bookingResult.fetchedReviewCount) {
+              console.warn(`     ⚠️ Booking.com exposed ${bookingResult.fetchedReviewCount} of ${bookingResult.reviewCount} public reviews to this session`);
+            }
             if (bookingResult.subScores?.cleanliness) {
               console.log(`     🧹 Cleanliness: ${bookingResult.subScores.cleanliness}/10`);
             }
@@ -570,6 +598,9 @@ async function main() {
           if (airbnbResult.status === "success") {
             console.log(`     ✅ Score: ${airbnbResult.score}/5 ★ (${airbnbResult.reviewCount || "?"} reviews)`);
             if (options.fetchReviews) console.log(`     💬 Fetched ${airbnbResult.fetchedReviewCount} review records`);
+            if (options.fetchReviews && airbnbResult.reviewCount > airbnbResult.fetchedReviewCount) {
+              console.warn(`     ⚠️ Airbnb exposed ${airbnbResult.fetchedReviewCount} of ${airbnbResult.reviewCount} public reviews to this session`);
+            }
             if (airbnbResult.badge) {
               console.log(`     🏆 Badge: ${airbnbResult.badge}`);
             }

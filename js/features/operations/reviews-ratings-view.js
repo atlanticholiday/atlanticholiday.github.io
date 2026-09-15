@@ -240,6 +240,7 @@ function renderPropertyCard(prop) {
 
   const latestReview = getLatestReviewSnippet(prop);
   const allReviews = getAllPropertyReviews(prop);
+  const unansweredReviewsCount = allReviews.filter((review) => !hasReviewResponse(review)).length;
   const totalReviewsCount = (prop.booking?.reviewCount || 0) + (prop.airbnb?.reviewCount || 0) || allReviews.length;
 
   return `
@@ -357,7 +358,7 @@ function renderPropertyCard(prop) {
       <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
         <span class="text-[11px] text-gray-400 flex items-center gap-1 truncate">
           <i class="fas fa-comments text-gray-300"></i>
-          <span>${allReviews.length > 0 ? `${allReviews.length} verified reviews` : (totalReviewsCount > 0 ? `${totalReviewsCount} reviews` : '0 reviews')}</span>
+          <span>${allReviews.length > 0 ? `${allReviews.length} fetched reviews` : (totalReviewsCount > 0 ? `${totalReviewsCount} reviews` : '0 reviews')}${unansweredReviewsCount > 0 ? ` · <strong class="text-amber-600">${unansweredReviewsCount} unanswered</strong>` : ''}</span>
         </span>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <button class="reviews-card-edit-links-btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}" title="Edit Listing URLs">
@@ -702,7 +703,7 @@ function renderReviewItem(r) {
                 ${isAirbnb ? '<i class="fab fa-airbnb"></i> Airbnb' : '<i class="fas fa-hotel"></i> Booking.com'}
               </span>
               <span class="text-gray-300">•</span>
-              <span class="text-[11px] text-gray-400">${r.date ? new Date(r.date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', day: 'numeric' }) : 'Verified Stay'}</span>
+              <span class="text-[11px] text-gray-400">${escapeHtml(formatReviewDate(r))}</span>
             </div>
           </div>
         </div>
@@ -922,6 +923,15 @@ function getInitials(name = '') {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return (parts[0] ? parts[0].slice(0, 2) : 'AH').toUpperCase();
+}
+
+function formatReviewDate(review = {}) {
+  if (!review.date) return review.localizedDate || 'Verified Stay';
+  const parsed = new Date(review.date);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', day: 'numeric' });
+  }
+  return review.localizedDate || review.date;
 }
 
 function escapeHtml(str = '') {

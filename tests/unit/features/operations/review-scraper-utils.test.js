@@ -12,7 +12,7 @@ describe("review-scraper-utils", () => {
     const review = normalizeAirbnbReview({
       id: "123",
       comments: "Lovely flat.<br/>Very clean.",
-      createdAt: "2026-08-04T10:00:00Z",
+      createdAt: "04/08/2026 10:00:00",
       rating: 5,
       reviewer: { firstName: "Ana" },
       responder: { hostName: "Atlantic Holiday" },
@@ -23,6 +23,7 @@ describe("review-scraper-utils", () => {
     assert.equal(review.id, "airbnb-123");
     assert.equal(review.author, "Ana");
     assert.equal(review.comment, "Lovely flat.\nVery clean.");
+    assert.equal(review.date, "2026-08-04T10:00:00");
     assert.equal(review.responseAuthor, "Atlantic Holiday");
     assert.equal(review.hasResponse, true);
   });
