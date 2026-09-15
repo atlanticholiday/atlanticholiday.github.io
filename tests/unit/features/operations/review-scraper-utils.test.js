@@ -64,4 +64,40 @@ describe("review-scraper-utils", () => {
     assert.equal(merged.find((review) => review.id === "booking-one").hasResponse, true);
     assert.equal(stripReviewHtml("Hello<br>world &amp; friends"), "Hello\nworld & friends");
   });
+
+  test("merges rating-only reviews with DOM cards bearing score titles and dates", () => {
+    const graphqlReview = {
+      id: "booking-5e382862d7278af4",
+      sourceId: "5e382862d7278af4",
+      platform: "Booking.com",
+      author: "Diveki",
+      country: "France",
+      date: "1779131640",
+      score: 7,
+      title: "",
+      comment: "",
+      positive: "",
+      negative: ""
+    };
+    const domReview = {
+      id: "booking-160bf6d3",
+      sourceId: "",
+      platform: "Booking.com",
+      author: "Diveki",
+      country: "",
+      date: "Reviewed: May 18, 2026",
+      score: null,
+      title: "Good",
+      comment: "",
+      positive: "",
+      negative: ""
+    };
+
+    const merged = mergeReviews([graphqlReview], [domReview]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].author, "Diveki");
+    assert.equal(merged[0].score, 7);
+    assert.equal(merged[0].country, "France");
+    assert.equal(merged[0].date, "Reviewed: May 18, 2026");
+  });
 });

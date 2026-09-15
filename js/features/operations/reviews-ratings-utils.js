@@ -126,35 +126,93 @@ export function calculatePortfolioSummary(properties = []) {
 
 export function getAllPropertyReviews(property) {
   if (!property) return [];
-  const reviews = [];
+  const rawList = [];
 
   if (Array.isArray(property.reviews)) {
-    reviews.push(...property.reviews);
+    rawList.push(...property.reviews);
   }
   if (Array.isArray(property.booking?.reviews)) {
     property.booking.reviews.forEach((r) => {
-      reviews.push({ ...r, platform: r.platform || 'Booking.com' });
+      rawList.push({ ...r, platform: r.platform || 'Booking.com' });
     });
   }
   if (Array.isArray(property.airbnb?.reviews)) {
     property.airbnb.reviews.forEach((r) => {
-      reviews.push({ ...r, platform: r.platform || 'Airbnb' });
+      rawList.push({ ...r, platform: r.platform || 'Airbnb' });
     });
   }
 
-  // Deduplicate by ID if present
-  const seen = new Set();
-  const unique = [];
-  for (const r of reviews) {
-    const key = r.id || `${r.platform}-${r.author}-${r.date}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(r);
+  // Deduplicate by signature and merge complementary fields
+  const GENERIC_SCORE_TITLES = new Set([
+    'exceptional', 'superb', 'wonderful', 'fabulous', 'very good', 'good',
+    'pleasant', 'passable', 'disappointing', 'very poor', 'poor',
+    'excecional', 'soberbo', 'muito bom', 'bom', 'agradável', 'passável', 'fraco', 'muito fraco'
+  ]);
+
+  const byKey = new Map();
+  for (const r of rawList) {
+    if (!r) continue;
+    const authorNorm = (r.author || 'guest').trim().toLowerCase();
+    const bodyText = (r.comment || r.positive || r.negative || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    const titleNorm = (r.title || '').trim().toLowerCase();
+    const effectiveText = bodyText || (GENERIC_SCORE_TITLES.has(titleNorm) ? '' : titleNorm);
+    const textSample = effectiveText.slice(0, 80);
+    const platformNorm = (r.platform || '').trim().toLowerCase();
+
+    let key;
+    if (authorNorm && authorNorm !== 'guest') {
+      key = textSample
+        ? `${platformNorm}|${authorNorm}|${textSample}`
+        : `${platformNorm}|${authorNorm}`;
+    } else if (textSample) {
+      key = `${platformNorm}|${textSample}`;
+    } else {
+      key = r.sourceId ? `${platformNorm}|${r.sourceId}` : (r.id || `${platformNorm}|${authorNorm}|${r.date}`);
+    }
+
+    const existing = byKey.get(key);
+    if (existing) {
+      byKey.set(key, {
+        ...r,
+        ...existing,
+        id: existing.sourceId ? existing.id : (r.sourceId ? r.id : existing.id),
+        sourceId: existing.sourceId || r.sourceId || '',
+        score: existing.score !== null && existing.score !== undefined ? existing.score : r.score,
+        country: existing.country || r.country || '',
+        title: existing.title || r.title || '',
+        positive: existing.positive || r.positive || '',
+        negative: existing.negative || r.negative || '',
+        comment: existing.comment || r.comment || '',
+        response: existing.response || r.response || '',
+        hasResponse: existing.hasResponse || r.hasResponse || Boolean(r.response || existing.response),
+        date: existing.date && !/^\d{9,13}$/.test(existing.date) ? existing.date : (r.date || existing.date)
+      });
+    } else {
+      byKey.set(key, { ...r });
     }
   }
 
+  const unique = Array.from(byKey.values());
+
   // Sort by date descending (newest first)
-  unique.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  unique.sort((a, b) => {
+    const parseTime = (d) => {
+      if (!d) return 0;
+      const s = String(d).trim();
+      if (/^\d{9,13}$/.test(s)) {
+        const n = Number(s);
+        return n < 1e11 ? n * 1000 : n;
+      }
+      const clean = s.replace(/^Reviewed:\s*/i, '');
+      const t = new Date(clean).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return parseTime(b.date) - parseTime(a.date);
+  });
+
   return unique;
 }
 

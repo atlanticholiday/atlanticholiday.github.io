@@ -26,7 +26,16 @@ function numberOrNull(value) {
 }
 
 function normalizeDate(value) {
-  const text = String(value || "").trim();
+  if (!value) return "";
+  const text = String(value).trim();
+  if (/^\d{9,13}$/.test(text)) {
+    const num = Number(text);
+    const ms = num < 1e11 ? num * 1000 : num;
+    const d = new Date(ms);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toISOString().split("T")[0];
+    }
+  }
   const dayFirst = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (!dayFirst) return text;
   const [, day, month, year, hour = "00", minute = "00", second = "00"] = dayFirst;
@@ -145,12 +154,70 @@ export function findBookingReviewObjects(payload) {
   });
 }
 
+const GENERIC_SCORE_TITLES = new Set([
+  "exceptional", "superb", "wonderful", "fabulous", "very good", "good",
+  "pleasant", "passable", "disappointing", "very poor", "poor",
+  "excecional", "soberbo", "muito bom", "bom", "agradável", "passável", "fraco", "muito fraco"
+]);
+
 export function mergeReviews(...groups) {
-  const byId = new Map();
+  const byKey = new Map();
   groups.flat().filter(Boolean).forEach((review) => {
-    const key = review.id || `${review.platform}|${review.author}|${review.date}|${review.comment || review.positive || ""}`;
-    const existing = byId.get(key);
-    byId.set(key, existing ? { ...existing, ...review } : review);
+    const authorNorm = (review.author || "guest").trim().toLowerCase();
+    const bodyText = (review.comment || review.positive || review.negative || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    const titleNorm = (review.title || "").trim().toLowerCase();
+    const effectiveText = bodyText || (GENERIC_SCORE_TITLES.has(titleNorm) ? "" : titleNorm);
+    const textSample = effectiveText.slice(0, 80);
+    const platformNorm = (review.platform || "").trim().toLowerCase();
+
+    let sigKey;
+    if (authorNorm && authorNorm !== "guest") {
+      sigKey = textSample
+        ? `${platformNorm}|${authorNorm}|${textSample}`
+        : `${platformNorm}|${authorNorm}`;
+    } else if (textSample) {
+      sigKey = `${platformNorm}|${textSample}`;
+    } else {
+      sigKey = review.sourceId ? `${platformNorm}|${review.sourceId}` : review.id;
+    }
+
+    const existing = byKey.get(sigKey);
+    if (existing) {
+      byKey.set(sigKey, {
+        ...review,
+        ...existing,
+        id: existing.sourceId ? existing.id : (review.sourceId ? review.id : existing.id),
+        sourceId: existing.sourceId || review.sourceId || "",
+        score: existing.score !== null && existing.score !== undefined ? existing.score : review.score,
+        country: existing.country || review.country || "",
+        title: existing.title || review.title || "",
+        positive: existing.positive || review.positive || "",
+        negative: existing.negative || review.negative || "",
+        comment: existing.comment || review.comment || "",
+        response: existing.response || review.response || "",
+        hasResponse: existing.hasResponse || review.hasResponse || Boolean(review.response || existing.response),
+        date: existing.date && !/^\d{9,13}$/.test(existing.date) ? existing.date : (review.date || existing.date)
+      });
+    } else {
+      byKey.set(sigKey, { ...review });
+    }
   });
-  return [...byId.values()].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  return [...byKey.values()].sort((a, b) => {
+    const parseTime = (d) => {
+      if (!d) return 0;
+      const s = String(d).trim();
+      if (/^\d{9,13}$/.test(s)) {
+        const n = Number(s);
+        return n < 1e11 ? n * 1000 : n;
+      }
+      const clean = s.replace(/^Reviewed:\s*/i, "");
+      const t = new Date(clean).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return parseTime(b.date) - parseTime(a.date);
+  });
 }

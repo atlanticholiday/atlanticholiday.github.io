@@ -5,6 +5,7 @@ import {
 import { renderReviewsRatingsDashboard } from './reviews-ratings-view.js';
 
 const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v4';
+const STORAGE_KEY_OVERRIDES = 'atlantic_holiday_reviews_user_overrides_v1';
 
 export class ReviewsRatingsManager {
   constructor(db = null, navigationManager = null) {
@@ -28,16 +29,37 @@ export class ReviewsRatingsManager {
       isAddingReview: false
     };
 
+    this.userOverrides = {};
+    this.unsubscribeOverrides = null;
     this.initialized = false;
     this._toastTimer = null;
     this.loadFromStorage();
+    this.setupFirestoreSync();
   }
 
   setNavigationManager(navManager) {
     this.navigationManager = navManager;
   }
 
+  hasAccess() {
+    if (!this.navigationManager) return true;
+    return this.navigationManager.canOpenPage?.('reviewsRatings') !== false;
+  }
+
+  syncAccessVisibility() {
+    if (!this.hasAccess()) {
+      const container = document.getElementById('reviews-ratings-page');
+      if (container) container.innerHTML = '';
+      this.state.rawProperties = [];
+      this.state.filteredProperties = [];
+    }
+  }
+
   init() {
+    if (!this.hasAccess()) {
+      this.render();
+      return;
+    }
     this.render();
     this.loadFromServer();
   }
@@ -50,12 +72,18 @@ export class ReviewsRatingsManager {
       });
       try { localStorage.removeItem('atlantic_holiday_property_reviews_cache'); } catch {}
 
+      const cachedOverrides = localStorage.getItem(STORAGE_KEY_OVERRIDES);
+      if (cachedOverrides) {
+        this.userOverrides = JSON.parse(cachedOverrides) || {};
+      }
+
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.properties) && parsed.properties.length > 0) {
           this.state.rawProperties = parsed.properties;
           this.state.lastUpdated = parsed.lastUpdated || null;
+          this.applyUserOverrides();
           this.updateCalculations();
         }
       }
@@ -72,6 +100,106 @@ export class ReviewsRatingsManager {
     }
   }
 
+  saveOverridesToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY_OVERRIDES, JSON.stringify(this.userOverrides));
+    } catch (err) {
+      console.warn('[ReviewsRatingsManager] Failed to cache user overrides:', err);
+    }
+  }
+
+  async setupFirestoreSync() {
+    if (!this.db) return;
+    try {
+      const { doc, onSnapshot } = await import(
+        'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
+      );
+      const docRef = doc(this.db, 'settings', 'propertyReviewOverrides');
+      this.unsubscribeOverrides = onSnapshot(
+        docRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const remoteOverrides = snapshot.data() || {};
+            this.userOverrides = { ...this.userOverrides, ...remoteOverrides };
+            this.saveOverridesToStorage();
+            this.applyUserOverrides();
+            this.updateCalculations();
+            this.render();
+          }
+        },
+        (err) => {
+          console.warn('[ReviewsRatingsManager] Firestore overrides listener warning:', err?.message || err);
+        }
+      );
+    } catch (err) {
+      console.warn('[ReviewsRatingsManager] Failed to init Firestore sync:', err);
+    }
+  }
+
+  async saveOverrideToFirestore(propId, overrideData) {
+    if (!this.db) return;
+    try {
+      const { doc, setDoc, updateDoc } = await import(
+        'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
+      );
+      const docRef = doc(this.db, 'settings', 'propertyReviewOverrides');
+      await setDoc(docRef, { [propId]: overrideData }, { merge: true });
+
+      // If matching property document exists in properties collection, update its listing URLs
+      try {
+        const propDoc = doc(this.db, 'properties', propId);
+        const updatePayload = {};
+        if (overrideData.bookingUrl !== undefined) updatePayload.bookingListingUrl = overrideData.bookingUrl;
+        if (overrideData.airbnbUrl !== undefined) updatePayload.airbnbListingUrl = overrideData.airbnbUrl;
+        if (Object.keys(updatePayload).length > 0) {
+          updateDoc(propDoc, updatePayload).catch(() => {});
+        }
+      } catch {}
+    } catch (err) {
+      console.warn('[ReviewsRatingsManager] Could not save override to Firestore:', err?.message || err);
+    }
+  }
+
+  applyUserOverrides() {
+    if (!this.userOverrides || typeof this.userOverrides !== 'object') return;
+    for (const [propId, override] of Object.entries(this.userOverrides)) {
+      if (!override || typeof override !== 'object') continue;
+      const prop = this.state.rawProperties.find((p) => p.id === propId);
+      if (!prop) continue;
+
+      if (override.bookingUrl !== undefined) prop.bookingUrl = override.bookingUrl;
+      if (override.airbnbUrl !== undefined) prop.airbnbUrl = override.airbnbUrl;
+
+      if (override.bookingScore !== undefined || override.bookingClean !== undefined || override.bookingCount !== undefined) {
+        if (!prop.booking) prop.booking = { status: 'success', subScores: {}, reviews: [] };
+        if (override.bookingScore !== undefined && override.bookingScore !== null && override.bookingScore !== '') {
+          prop.booking.score = Number(override.bookingScore);
+        }
+        if (override.bookingClean !== undefined && override.bookingClean !== null && override.bookingClean !== '') {
+          if (!prop.booking.subScores) prop.booking.subScores = {};
+          prop.booking.subScores.cleanliness = Number(override.bookingClean);
+        }
+        if (override.bookingCount !== undefined && override.bookingCount !== null && override.bookingCount !== '') {
+          prop.booking.reviewCount = parseInt(override.bookingCount, 10);
+        }
+      }
+
+      if (override.airbnbScore !== undefined || override.airbnbClean !== undefined || override.airbnbCount !== undefined) {
+        if (!prop.airbnb) prop.airbnb = { status: 'success', subScores: {}, reviews: [] };
+        if (override.airbnbScore !== undefined && override.airbnbScore !== null && override.airbnbScore !== '') {
+          prop.airbnb.score = Number(override.airbnbScore);
+        }
+        if (override.airbnbClean !== undefined && override.airbnbClean !== null && override.airbnbClean !== '') {
+          if (!prop.airbnb.subScores) prop.airbnb.subScores = {};
+          prop.airbnb.subScores.cleanliness = Number(override.airbnbClean);
+        }
+        if (override.airbnbCount !== undefined && override.airbnbCount !== null && override.airbnbCount !== '') {
+          prop.airbnb.reviewCount = parseInt(override.airbnbCount, 10);
+        }
+      }
+    }
+  }
+
   showToast(message) {
     this.state.syncToastMessage = message;
     this.render();
@@ -80,6 +208,34 @@ export class ReviewsRatingsManager {
       this.state.syncToastMessage = null;
       this.render();
     }, 4500);
+  }
+
+  mergeServerDataset(dataset) {
+    if (!dataset || !Array.isArray(dataset.properties)) return;
+    const existingMap = new Map((this.state.rawProperties || []).map((p) => [p.id, p]));
+    const merged = dataset.properties.map((serverProp) => {
+      const local = existingMap.get(serverProp.id);
+      if (!local) return serverProp;
+      return {
+        ...serverProp,
+        bookingUrl: local.bookingUrl || serverProp.bookingUrl || '',
+        airbnbUrl: local.airbnbUrl || serverProp.airbnbUrl || '',
+        booking: local.booking || serverProp.booking || null,
+        airbnb: local.airbnb || serverProp.airbnb || null,
+        reviews: [
+          ...(serverProp.reviews || []),
+          ...((local.reviews || []).filter((lr) => !(serverProp.reviews || []).some((sr) => sr.id === lr.id)))
+        ]
+      };
+    });
+    this.state.rawProperties = merged;
+    // Layer user overrides on top of server data
+    this.applyUserOverrides();
+    this.state.lastUpdated = dataset.lastUpdated || this.state.lastUpdated;
+    this.saveToStorage({
+      lastUpdated: this.state.lastUpdated,
+      properties: this.state.rawProperties
+    });
   }
 
   async syncReviews() {
@@ -92,13 +248,23 @@ export class ReviewsRatingsManager {
       if (response.ok) {
         const dataset = await response.json();
         if (dataset && Array.isArray(dataset.properties)) {
-          this.state.rawProperties = dataset.properties;
-          this.state.lastUpdated = dataset.lastUpdated || new Date().toISOString();
-          this.saveToStorage(dataset);
+          this.mergeServerDataset(dataset);
           this.updateCalculations();
-          this.showToast(`Reviews synchronized! (${this.state.rawProperties.length} properties updated)`);
+          const lastUpdatedFormatted = this.state.lastUpdated
+            ? new Date(this.state.lastUpdated).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : null;
+          this.showToast(
+            lastUpdatedFormatted
+              ? `Reviews dataset refreshed from server (scraped: ${lastUpdatedFormatted})`
+              : 'Reviews dataset refreshed from server'
+          );
         } else {
-          this.showToast('Reviews updated.');
+          this.showToast('Reviews dataset refreshed.');
         }
       } else {
         this.showToast('Unable to fetch latest reviews file. Displaying local data.');
@@ -120,9 +286,7 @@ export class ReviewsRatingsManager {
       if (response.ok) {
         const dataset = await response.json();
         if (dataset && Array.isArray(dataset.properties)) {
-          this.state.rawProperties = dataset.properties;
-          this.state.lastUpdated = dataset.lastUpdated || null;
-          this.saveToStorage(dataset);
+          this.mergeServerDataset(dataset);
           this.updateCalculations();
           this.render();
         }
@@ -141,26 +305,88 @@ export class ReviewsRatingsManager {
     });
   }
 
-  savePropertyLinks({ bookingUrl, airbnbUrl } = {}) {
+  savePropertyLinks({
+    bookingUrl,
+    airbnbUrl,
+    bookingScore,
+    bookingClean,
+    bookingCount,
+    airbnbScore,
+    airbnbClean,
+    airbnbCount
+  } = {}) {
     if (!this.state.selectedProperty) return;
 
-    const propId = this.state.selectedProperty.id;
-    this.state.selectedProperty.bookingUrl = bookingUrl || '';
-    this.state.selectedProperty.airbnbUrl = airbnbUrl || '';
+    const prop = this.state.selectedProperty;
+    const propId = prop.id;
+
+    if (bookingUrl !== undefined) prop.bookingUrl = bookingUrl || '';
+    if (airbnbUrl !== undefined) prop.airbnbUrl = airbnbUrl || '';
+
+    // Direct Score & Cleanliness updates
+    if (bookingScore !== undefined && bookingScore !== '') {
+      if (!prop.booking) prop.booking = { status: 'success', subScores: {}, reviews: [] };
+      prop.booking.score = Number(bookingScore);
+    }
+    if (bookingClean !== undefined && bookingClean !== '') {
+      if (!prop.booking) prop.booking = { status: 'success', subScores: {}, reviews: [] };
+      if (!prop.booking.subScores) prop.booking.subScores = {};
+      prop.booking.subScores.cleanliness = Number(bookingClean);
+    }
+    if (bookingCount !== undefined && bookingCount !== '') {
+      if (!prop.booking) prop.booking = { status: 'success', subScores: {}, reviews: [] };
+      prop.booking.reviewCount = parseInt(bookingCount, 10);
+    }
+
+    if (airbnbScore !== undefined && airbnbScore !== '') {
+      if (!prop.airbnb) prop.airbnb = { status: 'success', subScores: {}, reviews: [] };
+      prop.airbnb.score = Number(airbnbScore);
+    }
+    if (airbnbClean !== undefined && airbnbClean !== '') {
+      if (!prop.airbnb) prop.airbnb = { status: 'success', subScores: {}, reviews: [] };
+      if (!prop.airbnb.subScores) prop.airbnb.subScores = {};
+      prop.airbnb.subScores.cleanliness = Number(airbnbClean);
+    }
+    if (airbnbCount !== undefined && airbnbCount !== '') {
+      if (!prop.airbnb) prop.airbnb = { status: 'success', subScores: {}, reviews: [] };
+      prop.airbnb.reviewCount = parseInt(airbnbCount, 10);
+    }
 
     const propInList = this.state.rawProperties.find((p) => p.id === propId);
     if (propInList) {
-      propInList.bookingUrl = bookingUrl || '';
-      propInList.airbnbUrl = airbnbUrl || '';
+      propInList.bookingUrl = prop.bookingUrl;
+      propInList.airbnbUrl = prop.airbnbUrl;
+      propInList.booking = prop.booking;
+      propInList.airbnb = prop.airbnb;
     }
 
+    // Record user override so it survives all future server refreshes
+    const override = {
+      bookingUrl: prop.bookingUrl,
+      airbnbUrl: prop.airbnbUrl
+    };
+    if (bookingScore !== undefined && bookingScore !== '') override.bookingScore = Number(bookingScore);
+    if (bookingClean !== undefined && bookingClean !== '') override.bookingClean = Number(bookingClean);
+    if (bookingCount !== undefined && bookingCount !== '') override.bookingCount = parseInt(bookingCount, 10);
+    if (airbnbScore !== undefined && airbnbScore !== '') override.airbnbScore = Number(airbnbScore);
+    if (airbnbClean !== undefined && airbnbClean !== '') override.airbnbClean = Number(airbnbClean);
+    if (airbnbCount !== undefined && airbnbCount !== '') override.airbnbCount = parseInt(airbnbCount, 10);
+
+    this.userOverrides[propId] = {
+      ...(this.userOverrides[propId] || {}),
+      ...override
+    };
+    this.saveOverridesToStorage();
+    this.saveOverrideToFirestore(propId, this.userOverrides[propId]);
+
     this.state.isEditingLinks = false;
+    this.updateCalculations();
     this.saveToStorage({
       lastUpdated: this.state.lastUpdated,
       properties: this.state.rawProperties
     });
 
-    this.showToast(`Listing links saved for ${this.state.selectedProperty.name}!`);
+    this.showToast(`Details and ratings saved for ${prop.name}!`);
     this.render();
   }
 
@@ -216,10 +442,28 @@ export class ReviewsRatingsManager {
     if (Array.isArray(prop.reviews)) {
       prop.reviews = prop.reviews.filter((r) => r.id !== reviewId);
     }
+    if (Array.isArray(prop.booking?.reviews)) {
+      prop.booking.reviews = prop.booking.reviews.filter((r) => r.id !== reviewId);
+      prop.booking.fetchedReviewCount = prop.booking.reviews.length;
+    }
+    if (Array.isArray(prop.airbnb?.reviews)) {
+      prop.airbnb.reviews = prop.airbnb.reviews.filter((r) => r.id !== reviewId);
+      prop.airbnb.fetchedReviewCount = prop.airbnb.reviews.length;
+    }
 
     const propInList = this.state.rawProperties.find((p) => p.id === prop.id);
-    if (propInList && Array.isArray(propInList.reviews)) {
-      propInList.reviews = propInList.reviews.filter((r) => r.id !== reviewId);
+    if (propInList) {
+      if (Array.isArray(propInList.reviews)) {
+        propInList.reviews = propInList.reviews.filter((r) => r.id !== reviewId);
+      }
+      if (Array.isArray(propInList.booking?.reviews)) {
+        propInList.booking.reviews = propInList.booking.reviews.filter((r) => r.id !== reviewId);
+        propInList.booking.fetchedReviewCount = propInList.booking.reviews.length;
+      }
+      if (Array.isArray(propInList.airbnb?.reviews)) {
+        propInList.airbnb.reviews = propInList.airbnb.reviews.filter((r) => r.id !== reviewId);
+        propInList.airbnb.fetchedReviewCount = propInList.airbnb.reviews.length;
+      }
     }
 
     this.updateCalculations();
@@ -235,6 +479,30 @@ export class ReviewsRatingsManager {
   render() {
     const container = document.getElementById('reviews-ratings-page');
     if (!container) return;
+
+    if (!this.hasAccess()) {
+      container.innerHTML = `
+        <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl border border-gray-200 p-8 max-w-md w-full text-center shadow-sm space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-900">Access Restricted</h2>
+            <p class="text-sm text-gray-500 leading-relaxed">
+              You do not have permission to view Reviews & Ratings. Please contact an administrator if you require access.
+            </p>
+            <button id="reviews-access-back-btn" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium transition-colors">
+              <i class="fas fa-arrow-left text-xs"></i>
+              <span>Back to Dashboard</span>
+            </button>
+          </div>
+        </div>
+      `;
+      container.querySelector('#reviews-access-back-btn')?.addEventListener('click', () => {
+        this.navigationManager?.showLandingPage?.();
+      });
+      return;
+    }
 
     renderReviewsRatingsDashboard(
       container,

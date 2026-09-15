@@ -291,6 +291,7 @@ function syncAccessModeUi() {
     cleaningAhManager?.syncAccessVisibility?.();
     laundryLogManager?.syncAccessVisibility?.();
     linenInventoryManager?.syncAccessVisibility?.();
+    reviewsRatingsManager?.syncAccessVisibility?.();
 
     const scheduleButton = document.getElementById('go-to-schedule-btn');
     const scheduleButtonTitle = document.getElementById('go-to-schedule-title');

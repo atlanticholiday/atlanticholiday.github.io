@@ -39,10 +39,25 @@ const DEFAULT_SEED_PROPERTIES = [
 ];
 
 function resolveBrowserExecutable(preferredPath) {
-  const candidates = preferredPath ? [preferredPath] : DEFAULT_BROWSER_CANDIDATES;
+  if (preferredPath && fs.existsSync(preferredPath)) {
+    return preferredPath;
+  }
+  try {
+    const pwPath = chromium.executablePath?.();
+    if (pwPath && fs.existsSync(pwPath)) return pwPath;
+  } catch {}
+
+  const linuxCandidates = [
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser"
+  ];
+
+  const candidates = [...DEFAULT_BROWSER_CANDIDATES, ...linuxCandidates];
   const resolved = candidates.find((c) => c && fs.existsSync(c));
   if (!resolved) {
-    throw new Error("No supported Chromium browser (Edge or Chrome) found.");
+    throw new Error("No supported Chromium browser (Edge, Chrome, or Playwright Chromium) found.");
   }
   return resolved;
 }
@@ -55,6 +70,7 @@ function parseCommandLine(argv) {
     propertyFilter: "",
     limit: 0,
     fetchReviews: false,
+    missingOnly: false,
     dryRun: false,
     help: false
   };
@@ -86,6 +102,10 @@ function parseCommandLine(argv) {
       case "--reviews":
         options.fetchReviews = true;
         break;
+      case "--missing-only":
+      case "--unsynced-only":
+        options.missingOnly = true;
+        break;
       case "--no-headless":
         options.headless = false;
         break;
@@ -112,6 +132,7 @@ Usage:
 Options:
   --output PATH         Path to save output JSON (default: server-data/property-reviews.json)
   --property NAME       Sync only a specific property by name or ID
+  --missing-only        Only sync properties that are currently unrated or missing scores
   --fetch-reviews       Fetch every available guest review and host response
   --no-headless         Show the browser window while running
   --dry-run             List targets without scraping
@@ -200,7 +221,8 @@ async function fetchBookingReviews(page, expectedCount = 0) {
       await page.waitForTimeout(3500);
     }
 
-    let reviews = mergeReviews(normalizeBookingPayloads(payloads), await extractBookingReviewsFromDom(page));
+    const payloadReviews = normalizeBookingPayloads(payloads);
+    let reviews = payloadReviews.length > 0 ? payloadReviews : await extractBookingReviewsFromDom(page);
 
     if (replayRequest && expectedCount > reviews.length) {
       const body = replayRequest.postDataJSON();
@@ -507,6 +529,14 @@ async function main() {
     );
   }
 
+  if (options.missingOnly) {
+    targets = targets.filter((p) => {
+      const needsBooking = p.bookingUrl && (!p.booking || p.booking.score === null || p.booking.score === undefined);
+      const needsAirbnb = p.airbnbUrl && (!p.airbnb || p.airbnb.score === null || p.airbnb.score === undefined);
+      return needsBooking || needsAirbnb;
+    });
+  }
+
   if (options.limit > 0) {
     targets = targets.slice(0, options.limit);
   }
@@ -615,8 +645,13 @@ async function main() {
         }
       }
 
+      // Incrementally save progress after each property
+      dataset.lastUpdated = new Date().toISOString();
+      await fs.promises.mkdir(path.dirname(options.output), { recursive: true });
+      await fs.promises.writeFile(options.output, JSON.stringify(dataset, null, 2), "utf8");
+
       // Small pause between properties
-      if (property.bookingUrl || property.airbnbUrl) await new Promise((r) => setTimeout(r, 2000));
+      if (property.bookingUrl || property.airbnbUrl) await new Promise((r) => setTimeout(r, 1500));
     }
 
     dataset.lastUpdated = new Date().toISOString();

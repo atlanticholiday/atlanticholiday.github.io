@@ -169,6 +169,39 @@ describe("reviews-ratings-utils", () => {
     assert.equal(latest.author, "Carlos");
   });
 
+  test("getAllPropertyReviews cleanly deduplicates GraphQL rating-only and DOM cards", () => {
+    const property = {
+      booking: {
+        reviews: [
+          {
+            id: "b-gql",
+            sourceId: "src-1",
+            author: "Diveki",
+            country: "France",
+            date: "1779131640",
+            score: 7,
+            title: ""
+          },
+          {
+            id: "b-dom",
+            sourceId: "",
+            author: "Diveki",
+            country: "",
+            date: "Reviewed: May 18, 2026",
+            score: null,
+            title: "Good"
+          }
+        ]
+      }
+    };
+
+    const all = getAllPropertyReviews(property);
+    assert.equal(all.length, 1);
+    assert.equal(all[0].author, "Diveki");
+    assert.equal(all[0].score, 7);
+    assert.equal(all[0].country, "France");
+  });
+
   test("filterPropertyReviews filters by platform, sentiment, and query", () => {
     const reviews = [
       { id: "1", author: "David", platform: "Booking.com", score: 9.5, comment: "Super clean bathroom", positive: "Very quiet" },

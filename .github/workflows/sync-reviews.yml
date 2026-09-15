@@ -1,0 +1,75 @@
+﻿name: Sync Property Reviews & Ratings
+
+on:
+  schedule:
+    # Run every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      fetch_reviews:
+        description: 'Fetch full guest review history (slower)'
+        type: boolean
+        default: false
+      missing_only:
+        description: 'Only scrape unrated/missing properties'
+        type: boolean
+        default: true
+      property:
+        description: 'Specific property name/ID filter (leave blank for all)'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reviews-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-reviews:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium with system dependencies
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Reviews Scraper
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.fetch_reviews }}" = "true" ]; then
+            ARGS="$ARGS --fetch-reviews"
+          fi
+          if [ "${{ github.event.inputs.missing_only }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            ARGS="$ARGS --missing-only"
+          fi
+          if [ -n "${{ github.event.inputs.property }}" ]; then
+            ARGS="$ARGS --property=\"${{ github.event.inputs.property }}\""
+          fi
+          echo "Executing: node scripts/reviews/sync-reviews.mjs $ARGS"
+          node scripts/reviews/sync-reviews.mjs $ARGS
+
+      - name: Commit and push updated dataset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add server-data/property-reviews.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Dataset is up to date."
+          else
+            DATE_STR=$(date +'%Y-%m-%d')
+            git commit -m "Auto-sync reviews & ratings dataset: ${DATE_STR}"
+            git push origin main
+          fi

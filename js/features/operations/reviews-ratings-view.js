@@ -230,13 +230,25 @@ function renderPropertyCard(prop) {
   const attention = isAttentionNeeded(prop);
   const cleanStatus = getCleanlinessStatus(prop);
 
-  const airbnbScore = prop.airbnb?.score ? `${prop.airbnb.score.toFixed(1)} ★` : '—';
-  const airbnbCount = prop.airbnb?.reviewCount ? `(${prop.airbnb.reviewCount})` : '';
-  const airbnbClean = prop.airbnb?.subScores?.cleanliness ? `${prop.airbnb.subScores.cleanliness.toFixed(1)}` : '—';
-
-  const bookingScore = prop.booking?.score ? `${prop.booking.score.toFixed(1)}` : '—';
+  const hasBookingData = prop.booking?.score !== undefined && prop.booking?.score !== null;
+  const isBookingAwaitingSync = Boolean(prop.bookingUrl && !hasBookingData);
+  const bookingScore = hasBookingData
+    ? `${prop.booking.score.toFixed(1)}`
+    : (isBookingAwaitingSync ? 'Awaiting sync' : '—');
   const bookingCount = prop.booking?.reviewCount ? `(${prop.booking.reviewCount})` : '';
-  const bookingClean = prop.booking?.subScores?.cleanliness ? `${prop.booking.subScores.cleanliness.toFixed(1)}` : '—';
+  const bookingClean = prop.booking?.subScores?.cleanliness
+    ? `${prop.booking.subScores.cleanliness.toFixed(1)} / 10`
+    : (isBookingAwaitingSync ? 'Pending sync' : '— / 10');
+
+  const hasAirbnbData = prop.airbnb?.score !== undefined && prop.airbnb?.score !== null;
+  const isAirbnbAwaitingSync = Boolean(prop.airbnbUrl && !hasAirbnbData);
+  const airbnbScore = hasAirbnbData
+    ? `${prop.airbnb.score.toFixed(1)} ★`
+    : (isAirbnbAwaitingSync ? 'Awaiting sync' : '—');
+  const airbnbCount = prop.airbnb?.reviewCount ? `(${prop.airbnb.reviewCount})` : '';
+  const airbnbClean = prop.airbnb?.subScores?.cleanliness
+    ? `${prop.airbnb.subScores.cleanliness.toFixed(1)} / 5.0`
+    : (isAirbnbAwaitingSync ? 'Pending sync' : '— / 5.0');
 
   const latestReview = getLatestReviewSnippet(prop);
   const allReviews = getAllPropertyReviews(prop);
@@ -263,9 +275,11 @@ function renderPropertyCard(prop) {
             ${
               attention
                 ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
-                : (prop.booking?.score || prop.airbnb?.score)
+                : (hasBookingData || hasAirbnbData)
                   ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`
-                  : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
+                  : (prop.bookingUrl || prop.airbnbUrl)
+                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Listing linked, awaiting automated review sync"><i class="fas fa-clock text-[10px]"></i>Awaiting Sync</span>`
+                    : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
             }
           </div>
         </div>
@@ -290,13 +304,13 @@ function renderPropertyCard(prop) {
                 }
               </div>
               <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-black text-gray-900">${bookingScore}</span>
+                <span class="${isBookingAwaitingSync ? 'text-xs font-bold text-amber-600 italic' : 'text-2xl font-black text-gray-900'}">${bookingScore}</span>
                 <span class="text-xs text-gray-500">${bookingCount}</span>
               </div>
             </div>
             <div class="mt-3 pt-2 border-t border-blue-100/80 text-[11px] text-gray-600 flex items-center justify-between">
               <span>Cleanliness:</span>
-              <strong class="font-semibold text-gray-800">${bookingClean} / 10</strong>
+              <strong class="font-semibold text-gray-800">${bookingClean}</strong>
             </div>
           </${prop.bookingUrl ? 'a' : 'div'}>
 
@@ -318,13 +332,13 @@ function renderPropertyCard(prop) {
                 }
               </div>
               <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-black text-gray-900">${airbnbScore}</span>
+                <span class="${isAirbnbAwaitingSync ? 'text-xs font-bold text-amber-600 italic' : 'text-2xl font-black text-gray-900'}">${airbnbScore}</span>
                 <span class="text-xs text-gray-500">${airbnbCount}</span>
               </div>
             </div>
             <div class="mt-3 pt-2 border-t border-rose-100/80 text-[11px] text-gray-600 flex items-center justify-between">
               <span>Cleanliness:</span>
-              <strong class="font-semibold text-gray-800">${airbnbClean} / 5.0</strong>
+              <strong class="font-semibold text-gray-800">${airbnbClean}</strong>
             </div>
           </${prop.airbnbUrl ? 'a' : 'div'}>
         </div>
@@ -424,7 +438,7 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
                 <span>Listing URLs (for Automated Review Sync)</span>
               </h4>
               <button id="modal-toggle-edit-links-btn" class="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
-                ${isEditingLinks ? '<i class="fas fa-times mr-1"></i>Cancel' : '<i class="fas fa-pen mr-1"></i>Edit Links'}
+                ${isEditingLinks ? '<i class="fas fa-times mr-1"></i>Cancel' : '<i class="fas fa-pen mr-1"></i>Edit Links & Scores'}
               </button>
             </div>
 
@@ -450,42 +464,132 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
               </div>
             `
                 : `
-              <div class="space-y-3 pt-1">
-                <div>
-                  <label class="block text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <i class="fas fa-hotel text-blue-600"></i> Booking.com Listing URL
-                  </label>
-                  <input
-                    type="url"
-                    id="edit-booking-url-input"
-                    value="${escapeHtml(prop.bookingUrl || '')}"
-                    placeholder="https://www.booking.com/hotel/pt/..."
-                    class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
-                  />
+              <div class="space-y-4 pt-1">
+                <!-- Booking.com Configuration -->
+                <div class="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+                  <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <i class="fas fa-hotel text-blue-600"></i> Booking.com Listing & Ratings
+                  </span>
+                  <div>
+                    <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
+                    <input
+                      type="url"
+                      id="edit-booking-url-input"
+                      value="${escapeHtml(prop.bookingUrl || '')}"
+                      placeholder="https://www.booking.com/hotel/pt/..."
+                      class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                    />
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/10)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        max="10"
+                        id="edit-booking-score-input"
+                        value="${prop.booking?.score !== undefined && prop.booking?.score !== null ? prop.booking.score : ''}"
+                        placeholder="e.g. 9.2"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/10)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        max="10"
+                        id="edit-booking-clean-input"
+                        value="${prop.booking?.subScores?.cleanliness !== undefined && prop.booking?.subScores?.cleanliness !== null ? prop.booking.subScores.cleanliness : ''}"
+                        placeholder="e.g. 9.5"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Reviews Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        id="edit-booking-count-input"
+                        value="${prop.booking?.reviewCount !== undefined && prop.booking?.reviewCount !== null ? prop.booking.reviewCount : ''}"
+                        placeholder="e.g. 15"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label class="block text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <i class="fab fa-airbnb text-rose-600"></i> Airbnb Listing URL
-                  </label>
-                  <input
-                    type="url"
-                    id="edit-airbnb-url-input"
-                    value="${escapeHtml(prop.airbnbUrl || '')}"
-                    placeholder="https://www.airbnb.pt/rooms/..."
-                    class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-white"
-                  />
+                <!-- Airbnb Configuration -->
+                <div class="rounded-xl border border-rose-100 bg-rose-50/40 p-3 space-y-2.5">
+                  <span class="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                    <i class="fab fa-airbnb text-rose-600"></i> Airbnb Listing & Ratings
+                  </span>
+                  <div>
+                    <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
+                    <input
+                      type="url"
+                      id="edit-airbnb-url-input"
+                      value="${escapeHtml(prop.airbnbUrl || '')}"
+                      placeholder="https://www.airbnb.pt/rooms/..."
+                      class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white"
+                    />
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/5.0)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        max="5"
+                        id="edit-airbnb-score-input"
+                        value="${prop.airbnb?.score !== undefined && prop.airbnb?.score !== null ? prop.airbnb.score : ''}"
+                        placeholder="e.g. 4.88"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/5.0)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        max="5"
+                        id="edit-airbnb-clean-input"
+                        value="${prop.airbnb?.subScores?.cleanliness !== undefined && prop.airbnb?.subScores?.cleanliness !== null ? prop.airbnb.subScores.cleanliness : ''}"
+                        placeholder="e.g. 4.9"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Reviews Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        id="edit-airbnb-count-input"
+                        value="${prop.airbnb?.reviewCount !== undefined && prop.airbnb?.reviewCount !== null ? prop.airbnb.reviewCount : ''}"
+                        placeholder="e.g. 24"
+                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-1">
-                  <button id="modal-save-links-btn" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
+                  <button id="modal-save-links-btn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
                     <i class="fas fa-save text-[11px]"></i>
-                    <span>Save Links</span>
+                    <span>Save Details & Scores</span>
                   </button>
                 </div>
               </div>
             `
             }
+            <div class="mt-3 pt-2.5 border-t border-gray-200/70 flex items-start gap-2 text-[11px] text-gray-500">
+              <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
+              <span>Listing links are synced by the background scraper. Run <code class="bg-gray-200/80 px-1 py-0.5 rounded text-gray-800 font-mono text-[10px]">sync-reviews.cmd</code> to pull latest scores and guest reviews, or await the weekly auto-sync.</span>
+            </div>
           </div>
 
           <!-- Subscores Overview -->
@@ -498,7 +602,7 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
                   <span>Booking.com Sub-category Ratings</span>
                   ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Booking.com"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
                 </h3>
-                <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score ? `${prop.booking.score} / 10` : '—'}</span>
+                <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score ? `${prop.booking.score} / 10` : (prop.bookingUrl ? 'Awaiting sync' : '—')}</span>
               </div>
 
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -519,7 +623,7 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
                   <span>Airbnb Sub-category Ratings</span>
                   ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer" class="text-rose-600 hover:text-rose-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Airbnb"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
                 </h3>
-                <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : '—'}</span>
+                <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : (prop.airbnbUrl ? 'Awaiting sync' : '—')}</span>
               </div>
 
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -864,11 +968,27 @@ function bindViewEvents(container, handlers) {
     handlers.onToggleEditLinks?.();
   });
 
-  // Modal Save Links Button
+  // Modal Save Links & Scores Button
   container.querySelector('#modal-save-links-btn')?.addEventListener('click', () => {
     const bookingUrl = container.querySelector('#edit-booking-url-input')?.value.trim() || '';
     const airbnbUrl = container.querySelector('#edit-airbnb-url-input')?.value.trim() || '';
-    handlers.onSaveLinks?.({ bookingUrl, airbnbUrl });
+    const bookingScore = container.querySelector('#edit-booking-score-input')?.value.trim();
+    const bookingClean = container.querySelector('#edit-booking-clean-input')?.value.trim();
+    const bookingCount = container.querySelector('#edit-booking-count-input')?.value.trim();
+    const airbnbScore = container.querySelector('#edit-airbnb-score-input')?.value.trim();
+    const airbnbClean = container.querySelector('#edit-airbnb-clean-input')?.value.trim();
+    const airbnbCount = container.querySelector('#edit-airbnb-count-input')?.value.trim();
+
+    handlers.onSaveLinks?.({
+      bookingUrl,
+      airbnbUrl,
+      bookingScore,
+      bookingClean,
+      bookingCount,
+      airbnbScore,
+      airbnbClean,
+      airbnbCount
+    });
   });
 
   // Modal Toggle Add Review Button
@@ -927,7 +1047,14 @@ function getInitials(name = '') {
 
 function formatReviewDate(review = {}) {
   if (!review.date) return review.localizedDate || 'Verified Stay';
-  const parsed = new Date(review.date);
+  let dateVal = review.date;
+  if (typeof dateVal === 'number' || /^\d{9,13}$/.test(String(dateVal).trim())) {
+    const num = Number(dateVal);
+    dateVal = num < 1e11 ? num * 1000 : num;
+  } else if (typeof dateVal === 'string') {
+    dateVal = dateVal.replace(/^Reviewed:\s*/i, '').trim();
+  }
+  const parsed = new Date(dateVal);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', day: 'numeric' });
   }
