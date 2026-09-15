@@ -1,4 +1,4 @@
-﻿name: Sync Property Reviews & Ratings
+name: Sync Property Reviews & Ratings
 
 on:
   schedule:
@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       fetch_reviews:
-        description: 'Fetch full guest review history (slower)'
+        description: 'Fetch full guest review history'
         type: boolean
-        default: false
+        default: true
       missing_only:
         description: 'Only scrape unrated/missing properties'
         type: boolean

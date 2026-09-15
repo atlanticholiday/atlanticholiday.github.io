@@ -69,7 +69,7 @@ function parseCommandLine(argv) {
     browserPath: "",
     propertyFilter: "",
     limit: 0,
-    fetchReviews: false,
+    fetchReviews: true,
     missingOnly: false,
     dryRun: false,
     help: false
@@ -101,6 +101,10 @@ function parseCommandLine(argv) {
       case "--fetch-reviews":
       case "--reviews":
         options.fetchReviews = true;
+        break;
+      case "--ratings-only":
+      case "--no-reviews":
+        options.fetchReviews = false;
         break;
       case "--missing-only":
       case "--unsynced-only":
