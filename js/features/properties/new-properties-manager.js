@@ -786,7 +786,7 @@ export class NewPropertiesManager {
                     <!-- TOOLBAR -->
                     <div class="asana-drawer__toolbar">
                         <div class="asana-drawer__toolbar-main">
-                            <button type="button" class="asana-drawer__back-btn" data-action="close-drawer" title="${isPt ? 'Voltar aos alojamentos (ou toque fora / Esc)' : 'Back to properties (or tap outside / Esc)'}">
+                            <button type="button" class="asana-drawer__back-btn" data-action="close-drawer" title="${isPt ? 'Voltar aos alojamentos (Esc)' : 'Back to properties (Esc)'}">
                                 <i class="fas fa-arrow-left"></i>
                                 <span>${isPt ? 'Voltar' : 'Back'}</span>
                             </button>
@@ -816,7 +816,7 @@ export class NewPropertiesManager {
                             <button type="button" class="btn-asana-secondary text-xs text-red-600 hover:bg-red-50 p-2" data-action="delete-property" data-id="${property.id}" title="${isPt ? 'Eliminar' : 'Delete'}">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 hover:bg-gray-100 text-gray-700 font-semibold px-3 py-1.5 rounded-lg border border-gray-300 shadow-xs hidden sm:flex" data-action="close-drawer" title="${isPt ? 'Fechar gaveta (Esc ou clique fora)' : 'Close drawer (Esc or click outside)'}">
+                            <button type="button" class="btn-asana-secondary text-xs flex items-center gap-1.5 hover:bg-gray-100 text-gray-700 font-semibold px-3 py-1.5 rounded-lg border border-gray-300 shadow-xs hidden sm:flex" data-action="close-drawer" title="${isPt ? 'Fechar vista (Esc)' : 'Close view (Esc)'}">
                                 <i class="fas fa-times"></i>
                                 <span>${isPt ? 'Fechar' : 'Close'}</span>
                             </button>

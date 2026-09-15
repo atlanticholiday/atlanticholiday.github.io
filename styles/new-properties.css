@@ -632,11 +632,11 @@ body.asana-theme textarea:focus {
 
 .asana-drawer {
     width: 100%;
-    max-width: 840px;
+    max-width: none;
     height: 100%;
     height: 100dvh;
     background-color: #ffffff;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
@@ -2108,5 +2108,4 @@ html[data-theme="dark"] .asana-drawer__toolbar {
     background-color: #18181b;
     border-color: #27272a;
 }
-
 
