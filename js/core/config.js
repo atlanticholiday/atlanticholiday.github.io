@@ -9,7 +9,8 @@ export const Config = {
         appId: "1:926615499821:web:af106d8176f06abdf6f4a4"
     },
     googleSheets: {
-        oauthClientId: "",
+        // OAuth client IDs are public browser identifiers; no client secret or access token is stored here.
+        oauthClientId: "926615499821-skl2ejenejhrkdebm4j71qs4ttoj6ao0.apps.googleusercontent.com",
         spreadsheetId: "1mDZFHWcE29tQS-xzrfpJrgz3EEAaptYN70pmk4U7da0",
         range: "'Alojamentos'!B3:D"
     },

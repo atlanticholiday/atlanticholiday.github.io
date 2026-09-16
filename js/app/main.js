@@ -9,6 +9,7 @@ import { i18n, t } from '../core/i18n.js';
 import { AccessManager } from '../features/admin/access-manager.js';
 import { RoleManager } from '../features/admin/role-manager.js';
 import { UserManagementController } from '../features/admin/user-management-controller.js';
+import { fetchGoogleSheetProperties } from '../features/properties/google-sheets-sync.js';
 import { InteractiveAccessPreviewSession } from '../features/admin/interactive-access-preview-session.js';
 import {
     isRecoverableCallableBackendError,
@@ -890,7 +891,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         canSyncPropertyDirectory: () => dataManager.hasPrivilegedRole?.()
                             || dataManager.canAccessApp?.('properties')
                             || dataManager.canAccessApp?.('allinfo'),
-                        syncPropertiesFromGoogleSheet: httpsCallable(functionsInstance, 'syncPropertiesFromGoogleSheet')
+                        fetchPropertiesFromGoogleSheet: () => fetchGoogleSheetProperties({
+                            clientId: Config.googleSheets.oauthClientId,
+                            spreadsheetId: Config.googleSheets.spreadsheetId,
+                            range: Config.googleSheets.range
+                        })
                     });
                     window.propertiesManager = propertiesManager;
                 }

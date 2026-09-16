@@ -2,7 +2,7 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, updateDoc } fr
 import { writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class PropertiesManager {
-    constructor(db, { canSyncPropertyDirectory = null, syncPropertiesFromGoogleSheet = null } = {}) {
+    constructor(db, { canSyncPropertyDirectory = null, fetchPropertiesFromGoogleSheet = null } = {}) {
         console.log(`📋 [INITIALIZATION] PropertiesManager constructor called`);
         this.db = db;
         this.properties = [];
@@ -12,8 +12,8 @@ export class PropertiesManager {
         this.canSyncPropertyDirectory = typeof canSyncPropertyDirectory === 'function'
             ? canSyncPropertyDirectory
             : () => true;
-        this.syncPropertiesFromGoogleSheet = typeof syncPropertiesFromGoogleSheet === 'function'
-            ? syncPropertiesFromGoogleSheet
+        this.fetchPropertiesFromGoogleSheet = typeof fetchPropertiesFromGoogleSheet === 'function'
+            ? fetchPropertiesFromGoogleSheet
             : null;
         this.propertyDirectorySyncPromise = null;
         this.propertyDirectorySyncPending = false;
@@ -943,30 +943,85 @@ export class PropertiesManager {
     }
 
     async importFromGoogleSheets(onProgress = () => { }) {
-        if (!this.syncPropertiesFromGoogleSheet) {
-            throw new Error('Protected Google Sheets sync is unavailable. Deploy the Firebase sync function first.');
+        if (!this.fetchPropertiesFromGoogleSheet) {
+            throw new Error('Google Sheets sync is unavailable.');
         }
 
-        const response = await this.syncPropertiesFromGoogleSheet({});
-        const result = response?.data || response;
-        if (!result || !Number.isFinite(Number(result.total))) {
-            throw new Error('The property sync returned an invalid response.');
+        const imported = await this.fetchPropertiesFromGoogleSheet();
+        const properties = Array.isArray(imported?.properties) ? imported.properties : [];
+        const errors = Array.isArray(imported?.errors) ? imported.errors.map((error) => String(error)) : [];
+        if (!properties.length) {
+            return {
+                total: 0,
+                successful: 0,
+                failed: errors.length,
+                created: 0,
+                updated: 0,
+                unchanged: 0,
+                errors: errors.length ? errors : ['No valid properties were found in the configured sheet range.']
+            };
         }
 
-        onProgress({
-            completed: Number(result.total),
-            total: Number(result.total),
-            percentage: 100
-        });
+        const normalizeName = (value) => String(value || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLocaleLowerCase('pt-PT');
+        const existingByName = new Map(this.properties.map((property) => [normalizeName(property.name), property]));
+        let created = 0;
+        let updated = 0;
+        let unchanged = 0;
+
+        for (let index = 0; index < properties.length; index += 1) {
+            const property = properties[index];
+            const existing = existingByName.get(normalizeName(property.name));
+
+            try {
+                if (!existing) {
+                    await this.addProperty({
+                        ...property,
+                        wifiSpeed: 'standard',
+                        smartTv: 'no',
+                        energySource: 'electric',
+                        status: 'available'
+                    });
+                    created += 1;
+                } else {
+                    const changed = existing.location !== property.location
+                        || existing.typology !== property.typology
+                        || existing.type !== property.type
+                        || Number(existing.rooms) !== property.rooms;
+
+                    if (changed) {
+                        await this.updateProperty(existing.id, {
+                            location: property.location,
+                            typology: property.typology,
+                            type: property.type,
+                            rooms: property.rooms
+                        });
+                        updated += 1;
+                    } else {
+                        unchanged += 1;
+                    }
+                }
+            } catch (error) {
+                errors.push(`Failed to sync "${property.name}": ${error.message}`);
+            }
+
+            onProgress({
+                completed: index + 1,
+                total: properties.length,
+                percentage: Math.round(((index + 1) / properties.length) * 100)
+            });
+        }
 
         return {
-            total: Number(result.total),
-            successful: Number(result.successful) || 0,
-            failed: Number(result.failed) || 0,
-            created: Number(result.created) || 0,
-            updated: Number(result.updated) || 0,
-            unchanged: Number(result.unchanged) || 0,
-            errors: Array.isArray(result.errors) ? result.errors.map((error) => String(error)) : []
+            total: properties.length,
+            successful: created + updated,
+            failed: errors.length,
+            created,
+            updated,
+            unchanged,
+            errors
         };
     }
 
