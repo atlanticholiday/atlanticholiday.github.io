@@ -6,6 +6,8 @@ describe("PropertiesDashboardController", () => {
   test("registers global edit and delete actions against the active properties manager", async () => {
     resetDom("");
 
+    const batchArchived = [];
+    const batchUnarchived = [];
     const deletedIds = [];
     const archivedIds = [];
     const unarchivedIds = [];
@@ -21,6 +23,9 @@ describe("PropertiesDashboardController", () => {
       getPropertyById(id) {
         return id === "p1" ? property : null;
       },
+      getSelectedPropertyIds() {
+        return ["p1", "p2"];
+      },
       async deleteProperty(id) {
         deletedIds.push(id);
       },
@@ -29,6 +34,12 @@ describe("PropertiesDashboardController", () => {
       },
       async unarchiveProperty(id) {
         unarchivedIds.push(id);
+      },
+      async archivePropertiesBatch(ids) {
+        batchArchived.push(...ids);
+      },
+      async unarchivePropertiesBatch(ids) {
+        batchUnarchived.push(...ids);
       }
     };
 
@@ -45,6 +56,8 @@ describe("PropertiesDashboardController", () => {
     await windowRef.archiveProperty("p1");
     await windowRef.unarchiveProperty("p1");
     await windowRef.deleteProperty("p1");
+    await windowRef.archiveSelectedProperties();
+    await windowRef.unarchiveSelectedProperties();
 
     assert.equal(windowRef.location.href, "property-settings.html?propertyId=p1");
     assert.equal(sessionStorageRef.getItem("currentProperty"), null);
@@ -54,5 +67,11 @@ describe("PropertiesDashboardController", () => {
     assert.equal(unarchivedIds[0], "p1");
     assert.equal(deletedIds.length, 1);
     assert.equal(deletedIds[0], "p1");
+    assert.equal(batchArchived.length, 2);
+    assert.equal(batchArchived[0], "p1");
+    assert.equal(batchArchived[1], "p2");
+    assert.equal(batchUnarchived.length, 2);
+    assert.equal(batchUnarchived[0], "p1");
+    assert.equal(batchUnarchived[1], "p2");
   });
 });

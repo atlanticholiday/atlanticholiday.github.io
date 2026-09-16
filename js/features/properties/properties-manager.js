@@ -31,6 +31,7 @@ export class PropertiesManager {
         this.currentView = 'cards'; // 'cards' or 'table'
         this.tableSortColumn = '';
         this.tableSortDirection = 'asc';
+        this.selectedPropertyIds = new Set();
 
         // Initialize event listeners after DOM is loaded
         setTimeout(() => this.initializeEventListeners(), 100);
@@ -203,6 +204,8 @@ export class PropertiesManager {
         try {
             const propertyRef = doc(this.db, "properties", propertyId);
             await deleteDoc(propertyRef);
+            this.selectedPropertyIds.delete(propertyId);
+            this.updateBatchActionBar();
         } catch (error) {
             console.error('Error deleting property:', error);
             throw error;
@@ -216,6 +219,8 @@ export class PropertiesManager {
                 status: 'archived',
                 archivedAt: new Date()
             });
+            this.selectedPropertyIds.delete(propertyId);
+            this.updateBatchActionBar();
         } catch (error) {
             console.error('Error archiving property:', error);
             throw error;
@@ -229,8 +234,233 @@ export class PropertiesManager {
                 status: 'available',
                 unarchivedAt: new Date()
             });
+            this.selectedPropertyIds.delete(propertyId);
+            this.updateBatchActionBar();
         } catch (error) {
             console.error('Error unarchiving property:', error);
+            throw error;
+        }
+    }
+
+    getSelectedPropertyIds() {
+        return Array.from(this.selectedPropertyIds);
+    }
+
+    togglePropertySelection(propertyId, forceState = null) {
+        if (!propertyId) return;
+
+        if (forceState === true) {
+            this.selectedPropertyIds.add(propertyId);
+        } else if (forceState === false) {
+            this.selectedPropertyIds.delete(propertyId);
+        } else {
+            if (this.selectedPropertyIds.has(propertyId)) {
+                this.selectedPropertyIds.delete(propertyId);
+            } else {
+                this.selectedPropertyIds.add(propertyId);
+            }
+        }
+
+        this.syncSelectionToDom(propertyId);
+        this.updateBatchActionBar();
+    }
+
+    selectAllFilteredProperties() {
+        this.filteredProperties.forEach(p => {
+            if (p && p.id) this.selectedPropertyIds.add(p.id);
+        });
+        this.syncSelectionToDom();
+        this.updateBatchActionBar();
+    }
+
+    clearPropertySelection() {
+        this.selectedPropertyIds.clear();
+        this.syncSelectionToDom();
+        this.updateBatchActionBar();
+    }
+
+    syncSelectionToDom(propertyId = null) {
+        if (typeof document === 'undefined') return;
+        const selector = propertyId
+            ? `.property-select-checkbox[data-id="${propertyId}"]`
+            : '.property-select-checkbox[data-id]';
+        const checkboxes = document.querySelectorAll(selector);
+        checkboxes.forEach(cb => {
+            const isSelected = this.selectedPropertyIds.has(cb.dataset.id);
+            cb.checked = isSelected;
+            const parent = cb.closest('.property-card, tr, .properties-list-row');
+            if (parent) parent.classList.toggle('is-selected', isSelected);
+        });
+    }
+
+    updateBatchActionBar() {
+        if (typeof document === 'undefined') return;
+        const batchBar = document.getElementById('properties-batch-bar');
+        const countEl = document.getElementById('batch-selected-count');
+        const tableSelectAll = document.getElementById('table-select-all-properties');
+
+        const totalSelected = this.selectedPropertyIds.size;
+
+        if (tableSelectAll) {
+            const visibleCount = this.filteredProperties.length;
+            const visibleSelectedCount = this.filteredProperties.filter(p => this.selectedPropertyIds.has(p.id)).length;
+            if (visibleCount === 0 || visibleSelectedCount === 0) {
+                tableSelectAll.checked = false;
+                tableSelectAll.indeterminate = false;
+            } else if (visibleSelectedCount === visibleCount) {
+                tableSelectAll.checked = true;
+                tableSelectAll.indeterminate = false;
+            } else {
+                tableSelectAll.checked = false;
+                tableSelectAll.indeterminate = true;
+            }
+        }
+
+        if (!batchBar) return;
+
+        if (totalSelected === 0) {
+            batchBar.classList.add('hidden');
+            return;
+        }
+
+        batchBar.classList.remove('hidden');
+        if (countEl) {
+            countEl.textContent = `${totalSelected} ${totalSelected === 1 ? 'property' : 'properties'} selected`;
+        }
+
+        const selectedActive = this.properties.filter(p => this.selectedPropertyIds.has(p.id) && !this.isPropertyArchived(p)).length;
+        const selectedArchived = this.properties.filter(p => this.selectedPropertyIds.has(p.id) && this.isPropertyArchived(p)).length;
+
+        const archiveBtn = document.getElementById('batch-archive-btn');
+        const unarchiveBtn = document.getElementById('batch-unarchive-btn');
+
+        if (archiveBtn) {
+            if (selectedActive > 0) {
+                archiveBtn.style.display = 'inline-flex';
+                const label = archiveBtn.querySelector('span');
+                if (label) label.textContent = `Archive (${selectedActive})`;
+            } else {
+                archiveBtn.style.display = 'none';
+            }
+        }
+
+        if (unarchiveBtn) {
+            if (selectedArchived > 0) {
+                unarchiveBtn.style.display = 'inline-flex';
+                const label = unarchiveBtn.querySelector('span');
+                if (label) label.textContent = `Restore (${selectedArchived})`;
+            } else {
+                unarchiveBtn.style.display = 'none';
+            }
+        }
+    }
+
+    async archivePropertiesBatch(propertyIds = null) {
+        const ids = propertyIds || Array.from(this.selectedPropertyIds);
+        if (!ids || ids.length === 0) return { updated: 0 };
+
+        const toArchive = ids.filter(id => {
+            const prop = this.properties.find(p => p.id === id);
+            return !prop || !this.isPropertyArchived(prop);
+        });
+
+        if (toArchive.length === 0) return { updated: 0 };
+
+        try {
+            if (this.db) {
+                const CHUNK_SIZE = 450;
+                for (let i = 0; i < toArchive.length; i += CHUNK_SIZE) {
+                    const chunk = toArchive.slice(i, i + CHUNK_SIZE);
+                    const batch = writeBatch(this.db);
+                    const now = new Date();
+                    chunk.forEach(id => {
+                        const ref = doc(this.db, "properties", id);
+                        batch.update(ref, {
+                            archived: true,
+                            status: 'archived',
+                            archivedAt: now,
+                            updatedAt: now
+                        });
+                    });
+                    await batch.commit();
+                }
+            } else {
+                toArchive.forEach(id => {
+                    const prop = this.properties.find(p => p.id === id);
+                    if (prop) {
+                        prop.archived = true;
+                        prop.status = 'archived';
+                        prop.archivedAt = new Date();
+                    }
+                });
+            }
+
+            toArchive.forEach(id => this.selectedPropertyIds.delete(id));
+            this.syncSelectionToDom();
+            this.updateBatchActionBar();
+
+            if (this.canSyncPropertyDirectory()) {
+                await this.syncPropertyDirectory();
+            }
+
+            return { updated: toArchive.length };
+        } catch (error) {
+            console.error('Error batch archiving properties:', error);
+            throw error;
+        }
+    }
+
+    async unarchivePropertiesBatch(propertyIds = null) {
+        const ids = propertyIds || Array.from(this.selectedPropertyIds);
+        if (!ids || ids.length === 0) return { updated: 0 };
+
+        const toUnarchive = ids.filter(id => {
+            const prop = this.properties.find(p => p.id === id);
+            return !prop || this.isPropertyArchived(prop);
+        });
+
+        if (toUnarchive.length === 0) return { updated: 0 };
+
+        try {
+            if (this.db) {
+                const CHUNK_SIZE = 450;
+                for (let i = 0; i < toUnarchive.length; i += CHUNK_SIZE) {
+                    const chunk = toUnarchive.slice(i, i + CHUNK_SIZE);
+                    const batch = writeBatch(this.db);
+                    const now = new Date();
+                    chunk.forEach(id => {
+                        const ref = doc(this.db, "properties", id);
+                        batch.update(ref, {
+                            archived: false,
+                            status: 'available',
+                            unarchivedAt: now,
+                            updatedAt: now
+                        });
+                    });
+                    await batch.commit();
+                }
+            } else {
+                toUnarchive.forEach(id => {
+                    const prop = this.properties.find(p => p.id === id);
+                    if (prop) {
+                        prop.archived = false;
+                        prop.status = 'available';
+                        prop.unarchivedAt = new Date();
+                    }
+                });
+            }
+
+            toUnarchive.forEach(id => this.selectedPropertyIds.delete(id));
+            this.syncSelectionToDom();
+            this.updateBatchActionBar();
+
+            if (this.canSyncPropertyDirectory()) {
+                await this.syncPropertyDirectory();
+            }
+
+            return { updated: toUnarchive.length };
+        } catch (error) {
+            console.error('Error batch unarchiving properties:', error);
             throw error;
         }
     }
@@ -255,6 +485,14 @@ export class PropertiesManager {
                 id: doc.id,
                 ...doc.data()
             }));
+
+            // Prune any selected IDs that no longer exist
+            const currentIds = new Set(this.properties.map(p => p.id));
+            for (const id of this.selectedPropertyIds) {
+                if (!currentIds.has(id)) {
+                    this.selectedPropertyIds.delete(id);
+                }
+            }
 
             if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) {
                 void this.syncPropertyDirectory();
@@ -398,6 +636,7 @@ export class PropertiesManager {
             propertiesTable.classList.add('hidden');
             document.getElementById('properties-list')?.classList.add('hidden');
             noPropertiesMessage.classList.remove('hidden');
+            this.updateBatchActionBar();
             return;
         }
 
@@ -414,6 +653,7 @@ export class PropertiesManager {
                 <p class="text-lg">No properties match your filters</p>
                 <p class="text-sm">Try adjusting your search or filter criteria</p>
             `;
+            this.updateBatchActionBar();
             return;
         }
 
@@ -454,6 +694,8 @@ export class PropertiesManager {
             propertiesGrid.classList.remove('hidden');
             propertiesGrid.innerHTML = this.filteredProperties.map(property => this.createPropertyCard(property)).join('');
         }
+
+        this.updateBatchActionBar();
     }
 
     createPropertyActionButtons(property) {
@@ -487,6 +729,7 @@ export class PropertiesManager {
 
     createPropertyCard(property) {
         const isArchived = this.isPropertyArchived(property);
+        const isSelected = this.selectedPropertyIds?.has(property.id);
         const displayType = property.typology || property.type || 'Property';
         const locationText = property.location || 'Location not set';
         const roomsText = property.rooms !== undefined && property.rooms !== null
@@ -506,12 +749,23 @@ export class PropertiesManager {
             ? new Date(property.createdAt?.toDate?.() || property.createdAt).toLocaleDateString()
             : '';
 
+        const cardClasses = [
+            'property-card',
+            isArchived ? 'is-archived' : '',
+            isSelected ? 'is-selected' : ''
+        ].filter(Boolean).join(' ');
+
         return `
-            <div class="property-card ${isArchived ? 'is-archived' : ''}">
+            <div class="${cardClasses}">
                 <div>
                     <div class="property-card__header">
-                        <h3 class="property-card__title" title="${property.name}">${property.name}</h3>
-                        <div style="display:flex;align-items:center;gap:4px;">
+                        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                            <span class="property-card__checkbox-wrap">
+                                <input type="checkbox" class="property-select-checkbox" data-id="${property.id}" ${isSelected ? 'checked' : ''} aria-label="Select ${property.name}">
+                            </span>
+                            <h3 class="property-card__title" title="${property.name}">${property.name}</h3>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
                             ${isArchived ? `<span class="property-card__typology" style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;">Archived</span>` : ''}
                             <span class="property-card__typology">${displayType}</span>
                         </div>
@@ -584,15 +838,21 @@ export class PropertiesManager {
                 'archived': { text: 'Archived', bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' }
             }[status] || { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' };
 
+            const isSelected = this.selectedPropertyIds?.has(property.id);
+
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
             const rowClass = [
                 hasMissingInfo ? 'has-missing' : '',
-                isArchived ? 'is-archived' : ''
+                isArchived ? 'is-archived' : '',
+                isSelected ? 'is-selected' : ''
             ].filter(Boolean).join(' ');
 
             return `
                 <tr class="${rowClass}">
+                    <td style="text-align:center;width:38px;">
+                        <input type="checkbox" class="property-select-checkbox" data-id="${property.id}" ${isSelected ? 'checked' : ''} aria-label="Select ${property.name}">
+                    </td>
                     <td>
                         <div style="font-weight:600;color:var(--property-ink);">${property.name}</div>
                         <div style="font-size:11.5px;color:var(--property-muted);">${property.location || '-'}</div>
@@ -638,6 +898,7 @@ export class PropertiesManager {
 
         listContainer.innerHTML = listData.map(property => {
             const isArchived = this.isPropertyArchived(property);
+            const isSelected = this.selectedPropertyIds?.has(property.id);
             const displayType = property.typology || property.type || 'Property';
 
             // Status badge with appropriate colors
@@ -690,11 +951,15 @@ export class PropertiesManager {
             const rowClass = [
                 'properties-list-row',
                 hasMissingInfo ? 'has-missing' : '',
-                isArchived ? 'is-archived' : ''
+                isArchived ? 'is-archived' : '',
+                isSelected ? 'is-selected' : ''
             ].filter(Boolean).join(' ');
 
             return `
                 <div class="${rowClass}">
+                    <div style="display:flex;align-items:center;padding-left:4px;padding-right:8px;flex-shrink:0;">
+                        <input type="checkbox" class="property-select-checkbox" data-id="${property.id}" ${isSelected ? 'checked' : ''} aria-label="Select ${property.name}">
+                    </div>
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                             <h3 style="font-size:13.5px;font-weight:700;color:var(--property-ink);margin:0;" class="truncate">${property.name}</h3>
@@ -1324,6 +1589,75 @@ export class PropertiesManager {
                     btn.disabled = false;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     statusEl.classList.add('hidden');
+                }
+            });
+        }
+
+        // Checkbox change delegation for property selection
+        const propertiesPage = document.getElementById('properties-page');
+        if (propertiesPage) {
+            propertiesPage.addEventListener('change', (e) => {
+                if (e.target && e.target.classList.contains('property-select-checkbox') && e.target.dataset.id) {
+                    this.togglePropertySelection(e.target.dataset.id, e.target.checked);
+                }
+            });
+        }
+
+        // Table select all checkbox
+        const tableSelectAll = document.getElementById('table-select-all-properties');
+        if (tableSelectAll) {
+            tableSelectAll.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.selectAllFilteredProperties();
+                } else {
+                    this.clearPropertySelection();
+                }
+            });
+        }
+
+        // Batch Action Bar buttons
+        const batchSelectAllBtn = document.getElementById('batch-select-all-btn');
+        if (batchSelectAllBtn) {
+            batchSelectAllBtn.addEventListener('click', () => {
+                this.selectAllFilteredProperties();
+            });
+        }
+
+        const batchClearBtn = document.getElementById('batch-clear-btn');
+        if (batchClearBtn) {
+            batchClearBtn.addEventListener('click', () => {
+                this.clearPropertySelection();
+            });
+        }
+
+        const batchArchiveBtn = document.getElementById('batch-archive-btn');
+        if (batchArchiveBtn) {
+            batchArchiveBtn.addEventListener('click', async () => {
+                if (typeof window !== 'undefined' && typeof window.archiveSelectedProperties === 'function') {
+                    await window.archiveSelectedProperties();
+                } else {
+                    const selectedCount = this.selectedPropertyIds.size;
+                    if (selectedCount === 0) return;
+                    const confirmed = typeof confirm === 'function' ? confirm(`Are you sure you want to archive ${selectedCount} selected properties?`) : true;
+                    if (confirmed) {
+                        await this.archivePropertiesBatch();
+                    }
+                }
+            });
+        }
+
+        const batchUnarchiveBtn = document.getElementById('batch-unarchive-btn');
+        if (batchUnarchiveBtn) {
+            batchUnarchiveBtn.addEventListener('click', async () => {
+                if (typeof window !== 'undefined' && typeof window.unarchiveSelectedProperties === 'function') {
+                    await window.unarchiveSelectedProperties();
+                } else {
+                    const selectedCount = this.selectedPropertyIds.size;
+                    if (selectedCount === 0) return;
+                    const confirmed = typeof confirm === 'function' ? confirm(`Are you sure you want to restore ${selectedCount} selected properties?`) : true;
+                    if (confirmed) {
+                        await this.unarchivePropertiesBatch();
+                    }
                 }
             });
         }

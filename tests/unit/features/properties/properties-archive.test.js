@@ -174,4 +174,92 @@ describe('PropertiesManager - Archiving & Import Prevention', () => {
         assert.equal(wbResult.updates.length, 1);
         assert.equal(wbResult.updates[0].property.id, 'p1');
     });
+
+    test('togglePropertySelection, selectAllFilteredProperties, and clearPropertySelection manage selection set', () => {
+        const pm = new PropertiesManager(null);
+        pm.properties = [
+            { id: 'p1', name: 'Villa A' },
+            { id: 'p2', name: 'Villa B' },
+            { id: 'p3', name: 'Villa C' }
+        ];
+        pm.filteredProperties = [pm.properties[0], pm.properties[1]];
+
+        assert.equal(pm.selectedPropertyIds.size, 0);
+
+        // Toggle on
+        pm.togglePropertySelection('p1');
+        assert.equal(pm.selectedPropertyIds.has('p1'), true);
+        assert.equal(pm.selectedPropertyIds.size, 1);
+
+        // Toggle off
+        pm.togglePropertySelection('p1');
+        assert.equal(pm.selectedPropertyIds.has('p1'), false);
+        assert.equal(pm.selectedPropertyIds.size, 0);
+
+        // Force state true / false
+        pm.togglePropertySelection('p2', true);
+        assert.equal(pm.selectedPropertyIds.has('p2'), true);
+        pm.togglePropertySelection('p2', true);
+        assert.equal(pm.selectedPropertyIds.size, 1);
+        pm.togglePropertySelection('p2', false);
+        assert.equal(pm.selectedPropertyIds.has('p2'), false);
+
+        // Select all filtered (p1 and p2, not p3)
+        pm.selectAllFilteredProperties();
+        assert.equal(pm.selectedPropertyIds.size, 2);
+        assert.equal(pm.selectedPropertyIds.has('p1'), true);
+        assert.equal(pm.selectedPropertyIds.has('p2'), true);
+        assert.equal(pm.selectedPropertyIds.has('p3'), false);
+
+        // Clear selection
+        pm.clearPropertySelection();
+        assert.equal(pm.selectedPropertyIds.size, 0);
+        assert.equal(pm.getSelectedPropertyIds().length, 0);
+    });
+
+    test('archivePropertiesBatch and unarchivePropertiesBatch update batch and selection', async () => {
+        const pm = new PropertiesManager(null);
+        pm.properties = [
+            { id: 'p1', name: 'Active 1', archived: false, status: 'available' },
+            { id: 'p2', name: 'Active 2', status: 'available' },
+            { id: 'p3', name: 'Already Archived', archived: true, status: 'archived' }
+        ];
+
+        pm.togglePropertySelection('p1');
+        pm.togglePropertySelection('p2');
+        pm.togglePropertySelection('p3');
+        assert.equal(pm.selectedPropertyIds.size, 3);
+
+        // Batch archive should only update active ones (p1 and p2)
+        const archiveResult = await pm.archivePropertiesBatch();
+        assert.equal(archiveResult.updated, 2);
+        assert.equal(pm.properties[0].archived, true);
+        assert.equal(pm.properties[0].status, 'archived');
+        assert.ok(pm.properties[0].archivedAt instanceof Date);
+        assert.equal(pm.properties[1].archived, true);
+        assert.equal(pm.properties[1].status, 'archived');
+        assert.ok(pm.properties[1].archivedAt instanceof Date);
+
+        // p1 and p2 should be removed from selection; p3 remained untouched because it was already archived
+        assert.equal(pm.selectedPropertyIds.has('p1'), false);
+        assert.equal(pm.selectedPropertyIds.has('p2'), false);
+        assert.equal(pm.selectedPropertyIds.has('p3'), true);
+
+        // Now select all 3 archived properties and batch unarchive
+        pm.togglePropertySelection('p1', true);
+        pm.togglePropertySelection('p2', true);
+        assert.equal(pm.selectedPropertyIds.size, 3);
+
+        const unarchiveResult = await pm.unarchivePropertiesBatch();
+        assert.equal(unarchiveResult.updated, 3);
+        assert.equal(pm.properties[0].archived, false);
+        assert.equal(pm.properties[0].status, 'available');
+        assert.ok(pm.properties[0].unarchivedAt instanceof Date);
+        assert.equal(pm.properties[1].archived, false);
+        assert.equal(pm.properties[1].status, 'available');
+        assert.equal(pm.properties[2].archived, false);
+        assert.equal(pm.properties[2].status, 'available');
+        assert.equal(pm.selectedPropertyIds.size, 0);
+    });
 });
+

@@ -99,6 +99,48 @@ export class PropertiesDashboardController {
             }
         };
 
+        this.windowRef.archiveSelectedProperties = async () => {
+            const selectedIds = this.propertiesManager?.getSelectedPropertyIds?.() || [];
+            if (selectedIds.length === 0) {
+                return;
+            }
+            const count = selectedIds.length;
+            const shouldArchive = this.windowRef.confirm?.(
+                `Are you sure you want to archive ${count} selected ${count === 1 ? 'property' : 'properties'}? They will no longer appear in active lists and will not be re-imported during sync.`
+            );
+            if (!shouldArchive) {
+                return;
+            }
+
+            try {
+                await this.propertiesManager?.archivePropertiesBatch(selectedIds);
+            } catch (error) {
+                console.error('Failed to batch archive properties:', error);
+                this.windowRef.alert?.('Failed to archive selected properties. Please try again.');
+            }
+        };
+
+        this.windowRef.unarchiveSelectedProperties = async () => {
+            const selectedIds = this.propertiesManager?.getSelectedPropertyIds?.() || [];
+            if (selectedIds.length === 0) {
+                return;
+            }
+            const count = selectedIds.length;
+            const shouldRestore = this.windowRef.confirm?.(
+                `Are you sure you want to restore / unarchive ${count} selected ${count === 1 ? 'property' : 'properties'}?`
+            );
+            if (!shouldRestore) {
+                return;
+            }
+
+            try {
+                await this.propertiesManager?.unarchivePropertiesBatch(selectedIds);
+            } catch (error) {
+                console.error('Failed to batch restore properties:', error);
+                this.windowRef.alert?.('Failed to restore selected properties. Please try again.');
+            }
+        };
+
         this.windowRef.deleteProperty = async (propertyId) => {
             const shouldDelete = this.windowRef.confirm?.('Are you sure you want to delete this property?');
             if (!shouldDelete) {

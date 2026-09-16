@@ -1289,6 +1289,9 @@
                         <table class="properties-data-table">
                             <thead>
                                 <tr>
+                                    <th style="width:38px;text-align:center;">
+                                        <input type="checkbox" id="table-select-all-properties" class="property-select-checkbox" title="Select all visible" aria-label="Select all visible">
+                                    </th>
                                     <th class="is-sortable" data-sort="name">Property</th>
                                     <th class="is-sortable" data-sort="type">Type</th>
                                     <th class="is-sortable" data-sort="floor">Floor</th>
@@ -1322,6 +1325,26 @@
             <div id="properties-map-list" class="hidden flex gap-4 mt-3">
                 <div id="properties-list-pane" class="w-1/3 overflow-y-auto space-y-2"></div>
                 <div id="properties-map-pane" class="w-2/3 h-96 rounded-lg border border-gray-200"></div>
+            </div>
+
+            <!-- Floating Batch Action Bar -->
+            <div id="properties-batch-bar" class="properties-batch-bar hidden" role="toolbar" aria-label="Batch actions">
+                <div class="properties-batch-bar__left">
+                    <span id="batch-selected-count" class="properties-batch-bar__count">0 properties selected</span>
+                    <button type="button" id="batch-select-all-btn" class="properties-batch-bar__link">Select all visible</button>
+                </div>
+                <div class="properties-batch-bar__divider"></div>
+                <div class="properties-batch-bar__actions">
+                    <button type="button" id="batch-archive-btn" class="properties-batch-bar__btn is-archive">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                        <span>Archive Selected</span>
+                    </button>
+                    <button type="button" id="batch-unarchive-btn" class="properties-batch-bar__btn is-unarchive">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <span>Restore Selected</span>
+                    </button>
+                    <button type="button" id="batch-clear-btn" class="properties-batch-bar__close" title="Clear selection" aria-label="Clear selection">✕</button>
+                </div>
             </div>
         </main>
     </div>

@@ -947,4 +947,179 @@ tr.is-archived:hover {
     #properties-grid {
         grid-template-columns: 1fr;
     }
+
+    .properties-batch-bar {
+        bottom: 16px;
+        width: calc(100% - 24px);
+        justify-content: space-between;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .properties-batch-bar__link {
+        display: none;
+    }
 }
+
+/* ==========================================================================
+   Property Batch Selection & Action Bar
+   ========================================================================== */
+
+.property-select-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--property-accent, #ef5b6c);
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.property-card__checkbox-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.property-card.is-selected {
+    border-color: #ef5b6c;
+    background: rgba(239, 91, 108, 0.03);
+    box-shadow: 0 0 0 1px #ef5b6c;
+}
+
+.properties-list-row.is-selected,
+tr.is-selected {
+    background-color: rgba(239, 91, 108, 0.05) !important;
+}
+
+.properties-batch-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 16px;
+    background: #1e293b;
+    color: #ffffff;
+    border-radius: 9999px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    animation: batchBarSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.properties-batch-bar.hidden {
+    display: none !important;
+}
+
+@keyframes batchBarSlideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 14px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+.properties-batch-bar__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.properties-batch-bar__count {
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.properties-batch-bar__link {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    transition: color 0.15s ease;
+}
+
+.properties-batch-bar__link:hover {
+    color: #ffffff;
+}
+
+.properties-batch-bar__divider {
+    width: 1px;
+    height: 18px;
+    background: #334155;
+}
+
+.properties-batch-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.properties-batch-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.properties-batch-bar__btn:active {
+    transform: scale(0.97);
+}
+
+.properties-batch-bar__btn.is-archive {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.properties-batch-bar__btn.is-archive:hover {
+    background: #d97706;
+}
+
+.properties-batch-bar__btn.is-unarchive {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.properties-batch-bar__btn.is-unarchive:hover {
+    background: #059669;
+}
+
+.properties-batch-bar__close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.properties-batch-bar__close:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
