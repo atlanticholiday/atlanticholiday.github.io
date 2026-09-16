@@ -217,7 +217,7 @@ describe("LaundryLogManager", () => {
     assert.equal(payload.status, "matched");
   });
 
-  test("renders separate entry, returns, and completed workspaces with section navigation", () => {
+  test("renders a focused three-step manager workflow", () => {
     resetDom(`
       <div id="landing-page"></div>
       <button id="go-to-welcome-packs-btn"></button>
@@ -252,18 +252,16 @@ describe("LaundryLogManager", () => {
 
     manager.switchWorkspace("entry");
 
-    assert.ok(!document.getElementById("laundry-log-form-card").open);
+    assert.ok(document.getElementById("laundry-log-form-card").open);
     assert.ok(document.getElementById("laundry-log-property-input"));
     assert.ok(!document.getElementById("laundry-log-received-date-input"));
-    assert.ok(document.getElementById("laundry-log-form-card").compareDocumentPosition(
-      document.querySelector("[data-laundry-action='jump-section']")
-    ) & Node.DOCUMENT_POSITION_FOLLOWING);
-    assert.equal(document.querySelectorAll("[data-laundry-action='jump-section']").length, 5);
+    assert.equal(document.querySelectorAll("[data-laundry-action='jump-section']").length, 0);
     assert.equal(document.querySelectorAll("[data-laundry-action='review-return']").length, 0);
+    assert.equal(document.querySelectorAll("[data-laundry-action='save']").length, 1);
     assert.ok(document.querySelector("[data-laundry-action='add-custom-item']"));
   });
 
-  test("opens managers on an overview that separates missing items from unchecked returns", () => {
+  test("keeps unchecked returns in step two and exact shortages in step three", () => {
     resetDom(`
       <div id="landing-page"></div>
       <button id="go-to-welcome-packs-btn"></button>
@@ -298,14 +296,23 @@ describe("LaundryLogManager", () => {
     manager.ensureDomScaffold();
     manager.render();
 
-    const overview = document.getElementById("laundry-log-admin-overview");
-    assert.ok(overview);
-    assert.includes(overview.textContent, "Art Studio");
-    assert.ok(overview.querySelector("[data-laundry-issue-key='bathTowel'][data-laundry-issue-kind='missing']"));
-    assert.ok(overview.querySelector("[data-laundry-issue-key='pillowCases'][data-laundry-issue-kind='extra']"));
-    assert.includes(overview.textContent, "Atlantic View");
-    assert.ok(document.querySelector("[data-workspace='overview']"));
-    assert.ok(!document.getElementById("laundry-log-property-input"));
+    assert.equal(manager.activeWorkspace, "entry");
+    assert.ok(document.querySelector("[data-workspace='entry']"));
+    assert.ok(document.querySelector("[data-workspace='returns']"));
+    assert.ok(document.querySelector("[data-workspace='mismatches']"));
+    assert.ok(document.querySelector("[data-workspace='completed']"));
+    assert.ok(!document.querySelector("[data-workspace='overview']"));
+
+    manager.switchWorkspace("returns");
+    assert.equal(document.querySelectorAll("[data-laundry-action='review-return']").length, 1);
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Atlantic View");
+    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Art Studio"));
+
+    manager.switchWorkspace("mismatches");
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Art Studio");
+    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Atlantic View"));
+    assert.ok(document.querySelector("[data-laundry-issue-key='bathTowel'][data-laundry-issue-kind='missing']"));
+    assert.ok(document.querySelector("[data-laundry-issue-key='pillowCases'][data-laundry-issue-kind='extra']"));
   });
 
   test("adds manual other items without using the fixed item list", () => {
