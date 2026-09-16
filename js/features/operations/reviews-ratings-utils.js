@@ -278,6 +278,45 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
   return list;
 }
 
+/**
+ * Returns the N most recent reviews across ALL properties, each tagged
+ * with `propertyName` and `propertyId` so the dashboard can render a
+ * cross-portfolio "Latest Reviews" feed.
+ */
+export function getLatestReviewsAcrossProperties(properties = [], limit = 8) {
+  if (!Array.isArray(properties) || properties.length === 0) return [];
+
+  const all = [];
+  for (const prop of properties) {
+    const reviews = getAllPropertyReviews(prop);
+    for (const r of reviews) {
+      all.push({
+        ...r,
+        propertyName: prop.name || 'Unknown',
+        propertyId: prop.id || ''
+      });
+    }
+  }
+
+  // Sort newest first
+  all.sort((a, b) => {
+    const parseTime = (d) => {
+      if (!d) return 0;
+      const s = String(d).trim();
+      if (/^\d{9,13}$/.test(s)) {
+        const n = Number(s);
+        return n < 1e11 ? n * 1000 : n;
+      }
+      const clean = s.replace(/^Reviewed:\s*/i, '');
+      const t = new Date(clean).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return parseTime(b.date) - parseTime(a.date);
+  });
+
+  return all.slice(0, limit);
+}
+
 export function filterAndSortProperties(properties = [], { search = '', filter = 'all', sort = 'name-asc' } = {}) {
   let list = [...properties];
 

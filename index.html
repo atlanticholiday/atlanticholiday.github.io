@@ -1150,7 +1150,7 @@
                             <svg class="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" /></svg>
                             Sync from Google Sheets
                         </h4>
-                        <p class="text-[11px] text-gray-500">Automatically fetch and update properties from the "Alojamentos" tab.</p>
+                        <p class="text-[11px] text-gray-500">Securely fetch and update properties from the "Alojamentos" tab using your Google account.</p>
                     </div>
                     <button id="sync-sheets-btn" class="properties-secondary-btn">
                         <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -3665,6 +3665,7 @@
             });
         })();
     </script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
     <script type="module" src="js/pwa-register.js"></script>
     <script type="module" src="js/app/main.js?v=20260829-tasks"></script>
 </body>

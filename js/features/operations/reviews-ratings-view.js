@@ -4,6 +4,7 @@ import {
   isAttentionNeeded,
   getAllPropertyReviews,
   getLatestReviewSnippet,
+  getLatestReviewsAcrossProperties,
   filterPropertyReviews,
   getReviewResponse,
   hasReviewResponse
@@ -14,6 +15,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 
   const {
     properties = [],
+    rawProperties = [],
     summary = {},
     searchQuery = '',
     filter = 'all',
@@ -203,6 +205,9 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           </div>
         </div>
 
+        <!-- Latest Reviews Feed -->
+        ${renderLatestReviewsSection(rawProperties, handlers)}
+
         <!-- Properties Scorecard Grid -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
           ${properties.length === 0
@@ -386,6 +391,85 @@ function renderPropertyCard(prop) {
         </div>
       </div>
     </div>
+  `;
+}
+
+function renderLatestReviewsSection(rawProperties, handlers) {
+  const latestReviews = getLatestReviewsAcrossProperties(rawProperties, 8);
+  if (latestReviews.length === 0) return '';
+
+  return `
+    <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
+            <i class="fas fa-stream text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-900">Latest Reviews</h3>
+            <p class="text-[11px] text-gray-500">Most recent guest feedback across all properties</p>
+          </div>
+        </div>
+        <span class="text-[11px] text-gray-400 font-medium">${latestReviews.length} reviews</span>
+      </div>
+
+      <div class="px-5 pb-5 overflow-x-auto">
+        <div class="flex gap-3" style="min-width: max-content;">
+          ${latestReviews.map((r) => {
+            const isAirbnb = r.platform === 'Airbnb';
+            const scoreText = typeof r.score === 'number' ? (isAirbnb ? `${r.score} ★` : `${r.score}/10`) : '—';
+            const commentText = r.comment || r.positive || r.title || '';
+            const snippet = commentText.length > 100 ? commentText.slice(0, 100) + '…' : commentText;
+            const answered = hasReviewResponse(r);
+            const initials = getInitials(r.author);
+            const dateStr = formatReviewDate(r);
+
+            return `
+              <div class="latest-review-card flex-shrink-0 w-72 rounded-2xl border ${isAirbnb ? 'border-rose-100 bg-rose-50/30' : 'border-blue-100 bg-blue-50/30'} p-4 cursor-pointer hover:shadow-md transition-all group" data-property-id="${escapeHtml(r.propertyId)}">
+                <!-- Review Header -->
+                <div class="flex items-start justify-between gap-2 mb-2.5">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-xl ${isAirbnb ? 'bg-rose-100 text-rose-600 border border-rose-200' : 'bg-blue-100 text-blue-600 border border-blue-200'} flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      ${initials}
+                    </div>
+                    <div class="min-w-0">
+                      <h4 class="text-xs font-bold text-gray-900 truncate">${escapeHtml(r.author || 'Guest')}</h4>
+                      <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold ${isAirbnb ? 'text-rose-600' : 'text-blue-600'}">
+                          ${isAirbnb ? '<i class="fab fa-airbnb"></i>' : '<i class="fas fa-hotel"></i>'}
+                        </span>
+                        <span class="text-[10px] text-gray-400">${escapeHtml(dateStr)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black ${isAirbnb ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
+                    ${scoreText}
+                  </span>
+                </div>
+
+                <!-- Comment Snippet -->
+                ${snippet
+                  ? `<p class="text-[11px] text-gray-600 leading-relaxed line-clamp-3 mb-2.5 italic">"${escapeHtml(snippet)}"</p>`
+                  : '<p class="text-[11px] text-gray-400 italic mb-2.5">No written feedback</p>'
+                }
+
+                <!-- Footer: Property Name + Status -->
+                <div class="flex items-center justify-between pt-2 border-t ${isAirbnb ? 'border-rose-100/80' : 'border-blue-100/80'}">
+                  <span class="text-[10px] font-semibold text-gray-700 truncate max-w-[140px] group-hover:text-gray-900 flex items-center gap-1">
+                    <i class="fas fa-building text-gray-400 text-[9px]"></i>
+                    ${escapeHtml(r.propertyName)}
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${answered ? 'text-emerald-600' : 'text-amber-600'}">
+                    <i class="fas ${answered ? 'fa-reply' : 'fa-clock'} text-[8px]"></i>
+                    ${answered ? 'Replied' : 'Pending'}
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -932,6 +1016,14 @@ function bindViewEvents(container, handlers) {
   container.querySelectorAll('.reviews-details-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       handlers.onSelectProperty?.(btn.dataset.id, false);
+    });
+  });
+
+  // Latest Reviews feed — clicking a card opens that property's detail modal
+  container.querySelectorAll('.latest-review-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const propId = card.dataset.propertyId;
+      if (propId) handlers.onSelectProperty?.(propId, false);
     });
   });
 

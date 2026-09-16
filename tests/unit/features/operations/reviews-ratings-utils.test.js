@@ -8,6 +8,7 @@ import {
   filterAndSortProperties,
   getAllPropertyReviews,
   getLatestReviewSnippet,
+  getLatestReviewsAcrossProperties,
   filterPropertyReviews,
   getReviewResponse,
   hasReviewResponse
@@ -275,5 +276,66 @@ describe("reviews-ratings-utils", () => {
     const downtownSearch = filterAndSortProperties(properties, { search: "bustling" });
     assert.equal(downtownSearch.length, 1);
     assert.equal(downtownSearch[0].id, "prop-busy");
+  });
+
+  test("getLatestReviewsAcrossProperties aggregates and tags reviews from all properties", () => {
+    const properties = [
+      {
+        id: "prop-a",
+        name: "Seaside Villa",
+        booking: {
+          reviews: [
+            { id: "r1", author: "Anna", date: "2026-08-01", score: 9.5, comment: "Amazing stay" },
+            { id: "r2", author: "Bob", date: "2026-07-10", score: 8.0, comment: "Decent" }
+          ]
+        }
+      },
+      {
+        id: "prop-b",
+        name: "Mountain Lodge",
+        airbnb: {
+          reviews: [
+            { id: "r3", author: "Carlos", date: "2026-08-15", score: 5.0, comment: "Perfect!" }
+          ]
+        }
+      }
+    ];
+
+    const latest = getLatestReviewsAcrossProperties(properties, 8);
+    assert.equal(latest.length, 3);
+    // Sorted newest first
+    assert.equal(latest[0].author, "Carlos");
+    assert.equal(latest[0].propertyName, "Mountain Lodge");
+    assert.equal(latest[0].propertyId, "prop-b");
+    assert.equal(latest[1].author, "Anna");
+    assert.equal(latest[1].propertyName, "Seaside Villa");
+    assert.equal(latest[2].author, "Bob");
+  });
+
+  test("getLatestReviewsAcrossProperties respects the limit parameter", () => {
+    const properties = [
+      {
+        id: "prop-x",
+        name: "Test Property",
+        booking: {
+          reviews: [
+            { id: "r1", author: "A", date: "2026-01-01", score: 10 },
+            { id: "r2", author: "B", date: "2026-02-01", score: 9 },
+            { id: "r3", author: "C", date: "2026-03-01", score: 8 }
+          ]
+        }
+      }
+    ];
+
+    const limited = getLatestReviewsAcrossProperties(properties, 2);
+    assert.equal(limited.length, 2);
+    assert.equal(limited[0].author, "C"); // Most recent
+    assert.equal(limited[1].author, "B");
+  });
+
+  test("getLatestReviewsAcrossProperties returns empty array for no properties", () => {
+    assert.deepEqual(getLatestReviewsAcrossProperties([], 5), []);
+    assert.deepEqual(getLatestReviewsAcrossProperties(null, 5), []);
+    assert.deepEqual(getLatestReviewsAcrossProperties(undefined), []);
   });
 });

@@ -2,7 +2,7 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, getDocs, updateDoc } fr
 import { writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export class PropertiesManager {
-    constructor(db, { canSyncPropertyDirectory = null } = {}) {
+    constructor(db, { canSyncPropertyDirectory = null, syncPropertiesFromGoogleSheet = null } = {}) {
         console.log(`📋 [INITIALIZATION] PropertiesManager constructor called`);
         this.db = db;
         this.properties = [];
@@ -12,6 +12,9 @@ export class PropertiesManager {
         this.canSyncPropertyDirectory = typeof canSyncPropertyDirectory === 'function'
             ? canSyncPropertyDirectory
             : () => true;
+        this.syncPropertiesFromGoogleSheet = typeof syncPropertiesFromGoogleSheet === 'function'
+            ? syncPropertiesFromGoogleSheet
+            : null;
         this.propertyDirectorySyncPromise = null;
         this.propertyDirectorySyncPending = false;
 
@@ -940,8 +943,31 @@ export class PropertiesManager {
     }
 
     async importFromGoogleSheets(onProgress = () => { }) {
-        void onProgress;
-        throw new Error('Public Google Sheets imports are disabled. Import property data through a protected backend.');
+        if (!this.syncPropertiesFromGoogleSheet) {
+            throw new Error('Protected Google Sheets sync is unavailable. Deploy the Firebase sync function first.');
+        }
+
+        const response = await this.syncPropertiesFromGoogleSheet({});
+        const result = response?.data || response;
+        if (!result || !Number.isFinite(Number(result.total))) {
+            throw new Error('The property sync returned an invalid response.');
+        }
+
+        onProgress({
+            completed: Number(result.total),
+            total: Number(result.total),
+            percentage: 100
+        });
+
+        return {
+            total: Number(result.total),
+            successful: Number(result.successful) || 0,
+            failed: Number(result.failed) || 0,
+            created: Number(result.created) || 0,
+            updated: Number(result.updated) || 0,
+            unchanged: Number(result.unchanged) || 0,
+            errors: Array.isArray(result.errors) ? result.errors.map((error) => String(error)) : []
+        };
     }
 
     initializeEventListeners() {
@@ -1124,22 +1150,28 @@ export class PropertiesManager {
                     });
 
                     if (resultEl) {
-                        if (result.errors.length > 0 && result.successful === 0) {
-                            resultEl.innerHTML = `<div class="text-red-500 mt-2 font-medium">Failed to import properties. See errors below.</div>
-                                                   <div class="text-xs text-red-400 mt-1 max-h-20 overflow-y-auto">${result.errors.join('<br>')}</div>`;
-                        } else {
-                            resultEl.innerHTML = `
-                                <div class="text-green-600 mt-2 font-medium">
-                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Successfully synced: ${result.successful} properties
-                                </div>
-                                ${result.failed > 0 ? `<div class="text-orange-500 text-xs mt-1">Skipped/Failed: ${result.failed} (duplicates or errors)</div>` : ''}
-                                `;
+                        resultEl.replaceChildren();
+                        const summary = document.createElement('div');
+                        summary.className = 'text-green-600 mt-2 font-medium';
+                        summary.textContent = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.unchanged} unchanged.`;
+                        resultEl.appendChild(summary);
+
+                        if (result.errors.length) {
+                            const warning = document.createElement('div');
+                            warning.className = 'text-orange-500 text-xs mt-1 max-h-20 overflow-y-auto';
+                            warning.textContent = `${result.errors.length} row(s) skipped: ${result.errors.join(' ')}`;
+                            resultEl.appendChild(warning);
                         }
                     }
                 } catch (error) {
                     console.error('Sync failed:', error);
-                    if (resultEl) resultEl.innerHTML = `<div class="text-red-600 mt-2">Error: ${error.message}</div>`;
+                    if (resultEl) {
+                        resultEl.replaceChildren();
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'text-red-600 mt-2';
+                        errorMessage.textContent = `Error: ${error.message}`;
+                        resultEl.appendChild(errorMessage);
+                    }
                 } finally {
                     btn.disabled = false;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');

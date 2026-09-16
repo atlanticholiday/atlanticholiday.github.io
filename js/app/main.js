@@ -889,7 +889,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     propertiesManager = new PropertiesManager(db, {
                         canSyncPropertyDirectory: () => dataManager.hasPrivilegedRole?.()
                             || dataManager.canAccessApp?.('properties')
-                            || dataManager.canAccessApp?.('allinfo')
+                            || dataManager.canAccessApp?.('allinfo'),
+                        syncPropertiesFromGoogleSheet: httpsCallable(functionsInstance, 'syncPropertiesFromGoogleSheet')
                     });
                     window.propertiesManager = propertiesManager;
                 }

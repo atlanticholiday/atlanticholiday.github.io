@@ -8,6 +8,11 @@ export const Config = {
         messagingSenderId: "926615499821",
         appId: "1:926615499821:web:af106d8176f06abdf6f4a4"
     },
+    googleSheets: {
+        oauthClientId: "",
+        spreadsheetId: "1mDZFHWcE29tQS-xzrfpJrgz3EEAaptYN70pmk4U7da0",
+        range: "'Alojamentos'!B3:D"
+    },
 
     DAYS_OF_WEEK: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     MONTHS_OF_YEAR: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],

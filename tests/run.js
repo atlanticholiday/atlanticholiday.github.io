@@ -40,6 +40,7 @@ import "./unit/features/inventory/essentials-utils.test.js";
 import "./unit/features/inventory/plenohotel-utils.test.js";
 import "./unit/features/planning/build-planner-manager.test.js";
 import "./unit/features/properties/all-info-page.test.js";
+import "./unit/features/properties/google-sheets-sync.test.js";
 import "./unit/features/properties/property-form-utils.test.js";
 import "./unit/features/properties/property-import-utils.test.js";
 import "./unit/features/properties/properties-dashboard-controller.test.js";

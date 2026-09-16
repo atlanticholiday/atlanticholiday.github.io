@@ -605,6 +605,7 @@ export class ReviewsRatingsManager {
       container,
       {
         properties: this.state.filteredProperties,
+        rawProperties: this.state.rawProperties,
         summary: this.state.summary,
         searchQuery: this.state.searchQuery,
         filter: this.state.filter,
