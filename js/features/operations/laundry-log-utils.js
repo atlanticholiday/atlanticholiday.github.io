@@ -172,6 +172,8 @@ export function summarizeLaundryLogRecord(record = {}) {
     const differenceUnits = mismatches.reduce((sum, mismatch) => {
         return sum + Math.abs(mismatch.delivered - mismatch.received);
     }, 0);
+    const missingUnits = mismatches.reduce((sum, mismatch) => sum + mismatch.missing, 0);
+    const extraUnits = mismatches.reduce((sum, mismatch) => sum + mismatch.extra, 0);
 
     let status = "pending";
     if (receivedStarted) {
@@ -182,6 +184,8 @@ export function summarizeLaundryLogRecord(record = {}) {
         deliveredUnits,
         receivedUnits,
         differenceUnits,
+        missingUnits,
+        extraUnits,
         receivedStarted,
         status,
         mismatches,
@@ -211,6 +215,8 @@ export function createLaundryLogRecord(input = {}, { now = () => new Date().toIS
         deliveredUnits: summary.deliveredUnits,
         receivedUnits: summary.receivedUnits,
         differenceUnits: summary.differenceUnits,
+        missingUnits: summary.missingUnits,
+        extraUnits: summary.extraUnits,
         mismatchItemKeys: summary.mismatches.map((item) => item.key),
         searchText: buildSearchText(normalizedRecord)
     };
@@ -269,7 +275,13 @@ export function summarizeLaundryLogRecords(records = []) {
             matched: decorated.filter((record) => record.status === "matched").length,
             mismatch: decorated.filter((record) => record.status === "mismatch").length,
             deliveredUnits: decorated.reduce((sum, record) => sum + record.deliveredUnits, 0),
-            receivedUnits: decorated.reduce((sum, record) => sum + record.receivedUnits, 0)
+            receivedUnits: decorated.reduce((sum, record) => sum + record.receivedUnits, 0),
+            missingUnits: decorated
+                .filter((record) => record.status === "mismatch")
+                .reduce((sum, record) => sum + record.summary.missingUnits, 0),
+            extraUnits: decorated
+                .filter((record) => record.status === "mismatch")
+                .reduce((sum, record) => sum + record.summary.extraUnits, 0)
         }
     };
 }

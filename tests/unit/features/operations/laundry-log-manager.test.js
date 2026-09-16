@@ -263,6 +263,51 @@ describe("LaundryLogManager", () => {
     assert.ok(document.querySelector("[data-laundry-action='add-custom-item']"));
   });
 
+  test("opens managers on an overview that separates missing items from unchecked returns", () => {
+    resetDom(`
+      <div id="landing-page"></div>
+      <button id="go-to-welcome-packs-btn"></button>
+    `);
+
+    const manager = new LaundryLogManager(null, {
+      getProperties: () => [{ id: "p1", name: "Atlantic View" }]
+    });
+    manager.records = [
+      {
+        id: "waiting",
+        ...createLaundryLogRecord({
+          propertyName: "Atlantic View",
+          deliveryDate: "2026-04-10",
+          items: { bathTowel: { delivered: 4, received: 0 } }
+        }, { now: () => "2026-04-10T10:00:00.000Z" })
+      },
+      {
+        id: "missing",
+        ...createLaundryLogRecord({
+          propertyName: "Art Studio",
+          deliveryDate: "2026-04-11",
+          receivedDate: "2026-04-13",
+          items: {
+            bathTowel: { delivered: 4, received: 2 },
+            pillowCases: { delivered: 2, received: 3 }
+          }
+        }, { now: () => "2026-04-13T10:00:00.000Z" })
+      }
+    ];
+
+    manager.ensureDomScaffold();
+    manager.render();
+
+    const overview = document.getElementById("laundry-log-admin-overview");
+    assert.ok(overview);
+    assert.includes(overview.textContent, "Art Studio");
+    assert.ok(overview.querySelector("[data-laundry-issue-key='bathTowel'][data-laundry-issue-kind='missing']"));
+    assert.ok(overview.querySelector("[data-laundry-issue-key='pillowCases'][data-laundry-issue-kind='extra']"));
+    assert.includes(overview.textContent, "Atlantic View");
+    assert.ok(document.querySelector("[data-workspace='overview']"));
+    assert.ok(!document.getElementById("laundry-log-property-input"));
+  });
+
   test("adds manual other items without using the fixed item list", () => {
     resetDom(`
       <div id="landing-page"></div>
@@ -275,6 +320,7 @@ describe("LaundryLogManager", () => {
 
     manager.ensureDomScaffold();
     manager.render();
+    manager.switchWorkspace("entry");
 
     document.getElementById("laundry-log-property-input").value = "Atlantic View";
     document.querySelector("[data-laundry-action='add-custom-item']").click();

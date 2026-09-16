@@ -619,11 +619,12 @@
     "landing": {
       "description": "Linen by property."
     },
-    "views": {
-      "entryWorkspace": "Entry",
-      "returnsWorkspace": "Returns",
-      "mismatchesWorkspace": "Mismatches",
-      "completedWorkspace": "Completed",
+  "views": {
+    "overviewWorkspace": "Overview",
+    "entryWorkspace": "Send laundry",
+    "returnsWorkspace": "Check returns",
+    "mismatchesWorkspace": "Missing / extra",
+    "completedWorkspace": "History",
       "formTitle": "New laundry handoff",
       "editTitle": "Update laundry handoff",
       "pendingTitle": "Pending returns",
@@ -633,15 +634,39 @@
       "completedTitle": "Completed returns",
       "sectionNavTitle": "Laundry sections"
     },
-    "stats": {
+  "stats": {
       "totalRecords": "Records",
       "pending": "Pending",
       "matched": "Matched",
       "unitsDelivered": "Units out",
       "unitsReceived": "Units back",
       "summaryToggle": "Quick Summary",
-      "summaryHint": "{{count}} records, {{pending}} pending"
-    },
+    "summaryHint": "{{count}} records, {{pending}} pending"
+  },
+  "overview": {
+    "kicker": "Admin overview",
+    "title": "What needs attention",
+    "clearTitle": "Everything is accounted for",
+    "helper": "Missing means a checked return came back short. Waiting means the return has not been counted yet.",
+    "missingLabel": "Missing items",
+    "missingMeta": "{{properties}} properties with differences · {{extra}} extra",
+    "waitingLabel": "Waiting to be checked",
+    "waitingMeta": "Returns with no received count yet",
+    "clearLabel": "Accounted for",
+    "clearMeta": "Returns with matching counts",
+    "differencesTitle": "Differences found",
+    "differencesHelper": "Exact shortages and extras from checked returns.",
+    "waitingTitle": "Waiting for a return count",
+    "waitingHelper": "These are not missing yet—the return still needs to be counted.",
+    "noDifferences": "No missing or extra items have been found.",
+    "noWaiting": "No returns are waiting to be checked.",
+    "missingItem": "{{count}} missing",
+    "extraItem": "{{count}} extra",
+    "returnedOn": "Return checked {{date}}",
+    "sentOn": "Sent {{date}} · {{count}} items",
+    "reviewDifference": "Review difference",
+    "viewAll": "View all"
+  },
     "labels": {
       "property": "Property",
       "deliveryDate": "Delivery date",

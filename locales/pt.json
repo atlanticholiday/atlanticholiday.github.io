@@ -623,11 +623,12 @@
         "landing": {
             "description": "Roupa por alojamento."
         },
-        "views": {
-            "entryWorkspace": "Entrada",
-            "returnsWorkspace": "Devoluções",
-            "mismatchesWorkspace": "Diferenças",
-            "completedWorkspace": "Concluídos",
+    "views": {
+        "overviewWorkspace": "Resumo",
+        "entryWorkspace": "Enviar roupa",
+        "returnsWorkspace": "Conferir recolhas",
+        "mismatchesWorkspace": "Em falta / extra",
+        "completedWorkspace": "Histórico",
             "formTitle": "Nova entrega de lavandaria",
             "editTitle": "Atualizar entrega de lavandaria",
             "pendingTitle": "Devoluções pendentes",
@@ -637,15 +638,39 @@
             "completedTitle": "Devoluções concluídas",
             "sectionNavTitle": "Secções da roupa"
         },
-        "stats": {
+    "stats": {
             "totalRecords": "Registos",
             "pending": "Pendentes",
             "matched": "Conferidos",
             "unitsDelivered": "Unidades saída",
             "unitsReceived": "Unidades entrada",
             "summaryToggle": "Resumo Rápido",
-            "summaryHint": "{{count}} registos, {{pending}} pendentes"
-        },
+        "summaryHint": "{{count}} registos, {{pending}} pendentes"
+    },
+    "overview": {
+        "kicker": "Resumo de administração",
+        "title": "O que precisa de atenção",
+        "clearTitle": "Está tudo conferido",
+        "helper": "Em falta significa que uma recolha conferida veio incompleta. A aguardar significa que a recolha ainda não foi contada.",
+        "missingLabel": "Artigos em falta",
+        "missingMeta": "{{properties}} propriedades com diferenças · {{extra}} extra",
+        "waitingLabel": "A aguardar conferência",
+        "waitingMeta": "Recolhas ainda sem contagem de entrada",
+        "clearLabel": "Tudo conferido",
+        "clearMeta": "Recolhas com quantidades iguais",
+        "differencesTitle": "Diferenças encontradas",
+        "differencesHelper": "Faltas e extras exatos nas recolhas já conferidas.",
+        "waitingTitle": "A aguardar contagem da recolha",
+        "waitingHelper": "Estes artigos ainda não estão em falta—a recolha precisa de ser contada.",
+        "noDifferences": "Não foram encontrados artigos em falta nem extra.",
+        "noWaiting": "Não existem recolhas a aguardar conferência.",
+        "missingItem": "{{count}} em falta",
+        "extraItem": "{{count}} extra",
+        "returnedOn": "Recolha conferida em {{date}}",
+        "sentOn": "Enviado em {{date}} · {{count}} artigos",
+        "reviewDifference": "Rever diferença",
+        "viewAll": "Ver tudo"
+    },
         "labels": {
             "property": "Propriedade",
             "deliveryDate": "Data de entrega",

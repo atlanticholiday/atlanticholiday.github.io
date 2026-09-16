@@ -26,6 +26,8 @@ describe("Laundry Log utilities", () => {
         assert.equal(record.deliveredUnits, 10);
         assert.equal(record.receivedUnits, 9);
         assert.equal(record.differenceUnits, 1);
+        assert.equal(record.missingUnits, 1);
+        assert.equal(record.extraUnits, 0);
         assert.deepEqual(record.mismatchItemKeys, ["doubleFittedSheet"]);
         assert.equal(summary.mismatches[0].missing, 1);
         assert.equal(summary.mismatches[0].extra, 0);
@@ -114,6 +116,8 @@ describe("Laundry Log utilities", () => {
         assert.equal(summary.totals.mismatch, 1);
         assert.equal(summary.totals.deliveredUnits, 9);
         assert.equal(summary.totals.receivedUnits, 5);
+        assert.equal(summary.totals.missingUnits, 1);
+        assert.equal(summary.totals.extraUnits, 0);
     });
 
     test("filters records by query, month, and status", () => {
