@@ -41,6 +41,10 @@
           <i class="fas fa-arrow-left"></i>
           <span>Back</span>
         </button>
+        <button id="archive-property-btn" type="button" class="btn" style="display:none;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">
+          <i class="fas fa-box-archive"></i>
+          <span>Archive Property</span>
+        </button>
         <button id="save-settings" class="btn btn-primary">
           <i class="fas fa-save"></i>
           <span>Save Changes</span>
@@ -54,6 +58,11 @@
 
   <!-- Main Settings Container -->
   <div class="container">
+    <div id="archived-property-banner" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-800 text-sm">
+      <i class="fas fa-box-archive text-amber-600"></i>
+      <span>This property is currently <strong>archived</strong>. It is excluded from the active portfolio and will not be re-imported during sync.</span>
+    </div>
+
     <!-- Property Info -->
     <div id="section-basic-info" class="property-info">
       <div class="section-header">

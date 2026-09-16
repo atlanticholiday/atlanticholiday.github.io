@@ -63,6 +63,42 @@ export class PropertiesDashboardController {
             this.navigateToPropertySettings(propertyId);
         };
 
+        this.windowRef.archiveProperty = async (propertyId) => {
+            const property = this.getPropertyById(propertyId);
+            const name = property?.name ? ` "${property.name}"` : '';
+            const shouldArchive = this.windowRef.confirm?.(
+                `Are you sure you want to archive${name}? It will no longer appear in active lists and will not be re-imported during sync.`
+            );
+            if (!shouldArchive) {
+                return;
+            }
+
+            try {
+                await this.propertiesManager?.archiveProperty(propertyId);
+            } catch (error) {
+                console.error('Failed to archive property:', error);
+                this.windowRef.alert?.('Failed to archive property. Please try again.');
+            }
+        };
+
+        this.windowRef.unarchiveProperty = async (propertyId) => {
+            const property = this.getPropertyById(propertyId);
+            const name = property?.name ? ` "${property.name}"` : '';
+            const shouldUnarchive = this.windowRef.confirm?.(
+                `Are you sure you want to restore / unarchive${name}? It will be returned to active status.`
+            );
+            if (!shouldUnarchive) {
+                return;
+            }
+
+            try {
+                await this.propertiesManager?.unarchiveProperty(propertyId);
+            } catch (error) {
+                console.error('Failed to restore property:', error);
+                this.windowRef.alert?.('Failed to restore property. Please try again.');
+            }
+        };
+
         this.windowRef.deleteProperty = async (propertyId) => {
             const shouldDelete = this.windowRef.confirm?.('Are you sure you want to delete this property?');
             if (!shouldDelete) {

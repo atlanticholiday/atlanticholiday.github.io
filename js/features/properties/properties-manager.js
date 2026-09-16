@@ -27,6 +27,7 @@ export class PropertiesManager {
         this.currentDateFilter = '';
         this.currentWifiSpeedFilter = '';
         this.currentEnergySourceFilter = '';
+        this.currentArchiveFilter = 'active'; // 'active' (default) | 'archived' | 'all'
         this.currentView = 'cards'; // 'cards' or 'table'
         this.tableSortColumn = '';
         this.tableSortDirection = 'asc';
@@ -34,9 +35,15 @@ export class PropertiesManager {
         // Initialize event listeners after DOM is loaded
         setTimeout(() => this.initializeEventListeners(), 100);
 
-        // Start listening for property changes immediately
-        console.log(`📋 [INITIALIZATION] Starting property listener from constructor`);
-        this.listenForPropertyChanges();
+        // Start listening for property changes immediately if database is configured
+        if (this.db) {
+            console.log(`📋 [INITIALIZATION] Starting property listener from constructor`);
+            this.listenForPropertyChanges();
+        }
+    }
+
+    isPropertyArchived(property) {
+        return Boolean(property && (property.archived === true || property.status === 'archived'));
     }
 
     getPropertiesCollectionRef() {
@@ -79,6 +86,7 @@ export class PropertiesManager {
                 const snapshot = await getDocs(this.getPropertyDirectoryCollectionRef());
                 const existing = new Map(snapshot.docs.map((entry) => [entry.id, entry.data()?.name || '']));
                 const desired = new Map(this.properties
+                    .filter((property) => !this.isPropertyArchived(property))
                     .map((property) => [property.id, this.getPropertyDirectoryName(property)])
                     .filter(([id, name]) => id && name));
                 const operations = [];
@@ -197,6 +205,32 @@ export class PropertiesManager {
             await deleteDoc(propertyRef);
         } catch (error) {
             console.error('Error deleting property:', error);
+            throw error;
+        }
+    }
+
+    async archiveProperty(propertyId) {
+        try {
+            await this.updateProperty(propertyId, {
+                archived: true,
+                status: 'archived',
+                archivedAt: new Date()
+            });
+        } catch (error) {
+            console.error('Error archiving property:', error);
+            throw error;
+        }
+    }
+
+    async unarchiveProperty(propertyId) {
+        try {
+            await this.updateProperty(propertyId, {
+                archived: false,
+                status: 'available',
+                unarchivedAt: new Date()
+            });
+        } catch (error) {
+            console.error('Error unarchiving property:', error);
             throw error;
         }
     }
@@ -320,21 +354,41 @@ export class PropertiesManager {
         console.log(`🎨 DOM elements found: grid=${!!propertiesGrid}, table=${!!propertiesTable}, message=${!!noPropertiesMessage}`);
 
         // Update property counts
+        const activeTotal = this.properties.filter(p => !this.isPropertyArchived(p)).length;
         if (propertyCountElement) {
-            propertyCountElement.textContent = this.properties.length;
+            propertyCountElement.textContent = this.currentArchiveFilter === 'active' ? activeTotal : this.properties.length;
         }
         if (filteredCountElement) {
             filteredCountElement.textContent = this.filteredProperties.length;
         }
 
-        // Show/hide filters active indicator
+        // Show/hide filters active indicator and count badge
         const filtersActiveIndicator = document.getElementById('filters-active-indicator');
-        const hasActiveFilters = this.currentSearch || this.currentTypeFilter || this.currentBedroomsFilter || this.currentDataFilter || this.currentWifiSpeedFilter || this.currentEnergySourceFilter;
+        const filterBadge = document.getElementById('filter-count-badge');
+        let activeFilterCount = 0;
+        if (this.currentSearch) activeFilterCount++;
+        if (this.currentTypeFilter) activeFilterCount++;
+        if (this.currentBedroomsFilter) activeFilterCount++;
+        if (this.currentDataFilter) activeFilterCount++;
+        if (this.currentDateFilter) activeFilterCount++;
+        if (this.currentWifiSpeedFilter) activeFilterCount++;
+        if (this.currentEnergySourceFilter) activeFilterCount++;
+        if (this.currentArchiveFilter && this.currentArchiveFilter !== 'active') activeFilterCount++;
+
+        const hasActiveFilters = activeFilterCount > 0;
         if (filtersActiveIndicator) {
             if (hasActiveFilters) {
                 filtersActiveIndicator.classList.remove('hidden');
             } else {
                 filtersActiveIndicator.classList.add('hidden');
+            }
+        }
+        if (filterBadge) {
+            filterBadge.textContent = activeFilterCount;
+            if (activeFilterCount > 0) {
+                filterBadge.classList.remove('hidden');
+            } else {
+                filterBadge.classList.add('hidden');
             }
         }
 
@@ -402,7 +456,37 @@ export class PropertiesManager {
         }
     }
 
+    createPropertyActionButtons(property) {
+        const isArchived = this.isPropertyArchived(property);
+        const archiveButton = isArchived
+            ? `<button type="button" onclick="unarchiveProperty('${property.id}')" class="property-action-btn is-unarchive" title="Restore / Unarchive Property" aria-label="Restore property">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+            </button>`
+            : `<button type="button" onclick="archiveProperty('${property.id}')" class="property-action-btn is-archive" title="Archive Property" aria-label="Archive property">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                </svg>
+            </button>`;
+
+        return `
+            ${archiveButton}
+            <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+            </button>
+            <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+        `;
+    }
+
     createPropertyCard(property) {
+        const isArchived = this.isPropertyArchived(property);
         const displayType = property.typology || property.type || 'Property';
         const locationText = property.location || 'Location not set';
         const roomsText = property.rooms !== undefined && property.rooms !== null
@@ -423,11 +507,14 @@ export class PropertiesManager {
             : '';
 
         return `
-            <div class="property-card">
+            <div class="property-card ${isArchived ? 'is-archived' : ''}">
                 <div>
                     <div class="property-card__header">
                         <h3 class="property-card__title" title="${property.name}">${property.name}</h3>
-                        <span class="property-card__typology">${displayType}</span>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            ${isArchived ? `<span class="property-card__typology" style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;">Archived</span>` : ''}
+                            <span class="property-card__typology">${displayType}</span>
+                        </div>
                     </div>
                     <div class="property-card__location">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,16 +528,7 @@ export class PropertiesManager {
                 <div class="property-card__footer">
                     <span>${createdDate ? `Added ${createdDate}` : ''}</span>
                     <div class="property-card__actions">
-                        <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                        <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
+                        ${this.createPropertyActionButtons(property)}
                     </div>
                 </div>
             </div>
@@ -467,6 +545,7 @@ export class PropertiesManager {
         }
 
         tableBody.innerHTML = tableData.map(property => {
+            const isArchived = this.isPropertyArchived(property);
             const displayType = property.typology || property.type || 'Property';
 
             // Format values for table display
@@ -495,18 +574,22 @@ export class PropertiesManager {
                     ? '✓✓'
                     : '-';
 
-            const status = property.status || 'available';
+            const status = isArchived ? 'archived' : (property.status || 'available');
             const statusConfig = {
                 'available': { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' },
                 'occupied': { text: 'Occupied', bg: 'var(--property-blue-soft)', color: 'var(--property-blue)', border: 'var(--property-blue-border)' },
                 'maintenance': { text: 'Maintenance', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
                 'renovation': { text: 'Renovation', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
-                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' }
+                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' },
+                'archived': { text: 'Archived', bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' }
             }[status] || { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' };
 
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
-            const rowClass = hasMissingInfo ? 'has-missing' : '';
+            const rowClass = [
+                hasMissingInfo ? 'has-missing' : '',
+                isArchived ? 'is-archived' : ''
+            ].filter(Boolean).join(' ');
 
             return `
                 <tr class="${rowClass}">
@@ -536,16 +619,7 @@ export class PropertiesManager {
                     </td>
                     <td>
                         <div class="property-card__actions">
-                            <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                            </button>
-                            <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                            ${this.createPropertyActionButtons(property)}
                         </div>
                     </td>
                 </tr>
@@ -563,16 +637,18 @@ export class PropertiesManager {
         }
 
         listContainer.innerHTML = listData.map(property => {
+            const isArchived = this.isPropertyArchived(property);
             const displayType = property.typology || property.type || 'Property';
 
             // Status badge with appropriate colors
-            const status = property.status || 'available';
+            const status = isArchived ? 'archived' : (property.status || 'available');
             const statusConfig = {
                 'available': { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' },
                 'occupied': { text: 'Occupied', bg: 'var(--property-blue-soft)', color: 'var(--property-blue)', border: 'var(--property-blue-border)' },
                 'maintenance': { text: 'Maintenance', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
                 'renovation': { text: 'Renovation', bg: 'var(--property-amber-soft)', color: 'var(--property-amber)', border: 'var(--property-amber-border)' },
-                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' }
+                'inactive': { text: 'Inactive', bg: 'var(--property-surface-subtle)', color: 'var(--property-muted)', border: 'var(--property-line)' },
+                'archived': { text: 'Archived', bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' }
             }[status] || { text: 'Available', bg: 'var(--property-green-soft)', color: 'var(--property-green)', border: 'var(--property-green-border)' };
 
             // Format bedroom display
@@ -611,10 +687,14 @@ export class PropertiesManager {
 
             // Check if property has missing information
             const hasMissingInfo = this.hasIncompleteData(property);
-            const rowClass = hasMissingInfo ? 'has-missing' : '';
+            const rowClass = [
+                'properties-list-row',
+                hasMissingInfo ? 'has-missing' : '',
+                isArchived ? 'is-archived' : ''
+            ].filter(Boolean).join(' ');
 
             return `
-                <div class="properties-list-row ${rowClass}">
+                <div class="${rowClass}">
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                             <h3 style="font-size:13.5px;font-weight:700;color:var(--property-ink);margin:0;" class="truncate">${property.name}</h3>
@@ -653,16 +733,7 @@ export class PropertiesManager {
                     </div>
                     
                     <div class="property-card__actions" style="margin-left:12px;flex-shrink:0;">
-                        <button type="button" onclick="editProperty('${property.id}')" class="property-action-btn is-edit" title="Edit Property" aria-label="Edit property">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                        <button type="button" onclick="deleteProperty('${property.id}')" class="property-action-btn is-delete" title="Delete Property" aria-label="Delete property">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
+                        ${this.createPropertyActionButtons(property)}
                     </div>
                 </div>
             `;
@@ -912,16 +983,23 @@ export class PropertiesManager {
         const results = {
             successful: 0,
             failed: 0,
+            skippedArchived: 0,
             errors: []
         };
 
         for (let i = 0; i < properties.length; i++) {
             try {
-                // Check if property with same name already exists to avoid duplicates
-                const exists = this.properties.some(p => p.name?.toLowerCase() === properties[i].name?.toLowerCase());
-                if (exists) {
-                    results.errors.push(`Skipped "${properties[i].name}": Already exists`);
-                    results.failed++;
+                // Check if property with same name already exists to avoid duplicates or re-importing archived
+                const existing = this.properties.find(p => p.name?.toLowerCase().trim() === properties[i].name?.toLowerCase().trim());
+                if (existing) {
+                    if (this.isPropertyArchived(existing)) {
+                        results.errors.push(`Skipped "${properties[i].name}": Property is archived and cannot be imported`);
+                        results.skippedArchived = (results.skippedArchived || 0) + 1;
+                        results.failed++;
+                    } else {
+                        results.errors.push(`Skipped "${properties[i].name}": Already exists`);
+                        results.failed++;
+                    }
                 } else {
                     await this.addProperty(properties[i]);
                     results.successful++;
@@ -958,6 +1036,7 @@ export class PropertiesManager {
                 created: 0,
                 updated: 0,
                 unchanged: 0,
+                skippedArchived: 0,
                 errors: errors.length ? errors : ['No valid properties were found in the configured sheet range.']
             };
         }
@@ -970,6 +1049,7 @@ export class PropertiesManager {
         let created = 0;
         let updated = 0;
         let unchanged = 0;
+        let skippedArchived = 0;
 
         for (let index = 0; index < properties.length; index += 1) {
             const property = properties[index];
@@ -985,6 +1065,9 @@ export class PropertiesManager {
                         status: 'available'
                     });
                     created += 1;
+                } else if (this.isPropertyArchived(existing)) {
+                    // CRITICAL: Archived properties must NOT be imported or updated again
+                    skippedArchived += 1;
                 } else {
                     const changed = existing.location !== property.location
                         || existing.typology !== property.typology
@@ -1021,6 +1104,7 @@ export class PropertiesManager {
             created,
             updated,
             unchanged,
+            skippedArchived,
             errors
         };
     }
@@ -1102,6 +1186,15 @@ export class PropertiesManager {
         if (energySourceFilter) {
             energySourceFilter.addEventListener('change', (e) => {
                 this.currentEnergySourceFilter = e.target.value;
+                this.renderProperties();
+            });
+        }
+
+        // Archive status filter (in expanded filters section)
+        const archiveFilter = document.getElementById('property-archive-filter');
+        if (archiveFilter) {
+            archiveFilter.addEventListener('change', (e) => {
+                this.currentArchiveFilter = e.target.value;
                 this.renderProperties();
             });
         }
@@ -1208,7 +1301,7 @@ export class PropertiesManager {
                         resultEl.replaceChildren();
                         const summary = document.createElement('div');
                         summary.className = 'text-green-600 mt-2 font-medium';
-                        summary.textContent = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.unchanged} unchanged.`;
+                        summary.textContent = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.unchanged} unchanged${result.skippedArchived ? `, ${result.skippedArchived} archived (skipped)` : ''}.`;
                         resultEl.appendChild(summary);
 
                         if (result.errors.length) {
@@ -1331,6 +1424,14 @@ export class PropertiesManager {
             filtered = filtered.filter(property => property.energySource === this.currentEnergySourceFilter);
         }
 
+        // Apply archive filter
+        if (this.currentArchiveFilter === 'active') {
+            filtered = filtered.filter(property => !this.isPropertyArchived(property));
+        } else if (this.currentArchiveFilter === 'archived') {
+            filtered = filtered.filter(property => this.isPropertyArchived(property));
+        }
+        // 'all' includes both active and archived properties
+
         // Apply sorting
         filtered.sort((a, b) => {
             switch (this.currentSort) {
@@ -1421,6 +1522,10 @@ export class PropertiesManager {
 
         const energySourceFilter = document.getElementById('property-energy-source');
         if (energySourceFilter) energySourceFilter.value = '';
+
+        this.currentArchiveFilter = 'active';
+        const archiveFilter = document.getElementById('property-archive-filter');
+        if (archiveFilter) archiveFilter.value = 'active';
 
         // Re-render with cleared filters
         this.renderProperties();

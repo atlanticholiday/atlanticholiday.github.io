@@ -44,6 +44,7 @@ import "./unit/features/properties/google-sheets-sync.test.js";
 import "./unit/features/properties/property-form-utils.test.js";
 import "./unit/features/properties/property-import-utils.test.js";
 import "./unit/features/properties/properties-dashboard-controller.test.js";
+import "./unit/features/properties/properties-archive.test.js";
 import "./unit/features/properties/new-properties-utils.test.js";
 import "./unit/features/properties/new-properties-manager.test.js";
 import "./unit/features/search/quick-search-manager.test.js";

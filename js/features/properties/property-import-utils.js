@@ -756,6 +756,10 @@ export function compareAlojamentosProperties(existingProperties = [], importedPr
             return;
         }
 
+        if (existing.archived === true || existing.status === 'archived') {
+            return;
+        }
+
         matched.push({ existing, imported: property });
 
         const fieldChanges = [];
@@ -900,6 +904,10 @@ export function parseAhWorkbookImport(sheetRowsByName = {}, existingProperties =
                     sheet: sheetEntry.sheetName,
                     rowNumber: row.__rowNumber
                 });
+                return;
+            }
+
+            if (property.archived === true || property.status === 'archived') {
                 return;
             }
 

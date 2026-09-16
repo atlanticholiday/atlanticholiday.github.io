@@ -7,6 +7,8 @@ describe("PropertiesDashboardController", () => {
     resetDom("");
 
     const deletedIds = [];
+    const archivedIds = [];
+    const unarchivedIds = [];
     const sessionStorageRef = createStorageMock();
     const windowRef = {
       location: { href: "" },
@@ -21,6 +23,12 @@ describe("PropertiesDashboardController", () => {
       },
       async deleteProperty(id) {
         deletedIds.push(id);
+      },
+      async archiveProperty(id) {
+        archivedIds.push(id);
+      },
+      async unarchiveProperty(id) {
+        unarchivedIds.push(id);
       }
     };
 
@@ -34,10 +42,16 @@ describe("PropertiesDashboardController", () => {
     controller.init();
 
     windowRef.editProperty("p1");
+    await windowRef.archiveProperty("p1");
+    await windowRef.unarchiveProperty("p1");
     await windowRef.deleteProperty("p1");
 
     assert.equal(windowRef.location.href, "property-settings.html?propertyId=p1");
     assert.equal(sessionStorageRef.getItem("currentProperty"), null);
+    assert.equal(archivedIds.length, 1);
+    assert.equal(archivedIds[0], "p1");
+    assert.equal(unarchivedIds.length, 1);
+    assert.equal(unarchivedIds[0], "p1");
     assert.equal(deletedIds.length, 1);
     assert.equal(deletedIds[0], "p1");
   });

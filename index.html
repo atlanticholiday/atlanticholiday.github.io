@@ -1182,7 +1182,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
                     <div class="properties-form-group">
                         <label for="property-sort" class="properties-form-label">Sort By</label>
                         <select id="property-sort">
@@ -1196,6 +1196,14 @@
                             <option value="rooms-desc">Bedrooms (High-Low)</option>
                             <option value="date-newest">Date (Newest)</option>
                             <option value="date-oldest">Date (Oldest)</option>
+                        </select>
+                    </div>
+                    <div class="properties-form-group">
+                        <label for="property-archive-filter" class="properties-form-label">Archive Status</label>
+                        <select id="property-archive-filter">
+                            <option value="active" selected>Active Only</option>
+                            <option value="archived">Archived Only</option>
+                            <option value="all">All Properties</option>
                         </select>
                     </div>
                     <div class="properties-form-group">

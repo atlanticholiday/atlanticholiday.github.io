@@ -588,6 +588,18 @@ html[data-theme="dark"] #properties-page {
     transform: translateY(-1px);
 }
 
+.property-card.is-archived {
+    background: #fafbfc;
+    border-style: dashed;
+    border-color: #cbd5e1;
+    opacity: 0.8;
+}
+
+.property-card.is-archived:hover {
+    opacity: 1;
+    border-color: #94a3b8;
+}
+
 .property-card__header {
     display: flex;
     align-items: flex-start;
@@ -707,6 +719,27 @@ html[data-theme="dark"] #properties-page {
 .property-action-btn.is-delete:hover {
     color: var(--property-red);
     background: var(--property-red-soft);
+}
+
+.property-action-btn.is-archive:hover {
+    color: #d97706;
+    background: #fef3c7;
+}
+
+.property-action-btn.is-unarchive:hover {
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.properties-list-row.is-archived,
+tr.is-archived {
+    background: #fafbfc !important;
+    opacity: 0.8;
+}
+
+.properties-list-row.is-archived:hover,
+tr.is-archived:hover {
+    opacity: 1;
 }
 
 .property-action-btn svg {

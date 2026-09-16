@@ -583,6 +583,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
+    let loadedPropertyData = null;
+
+    const updateArchiveUI = (isArchived) => {
+        const banner = document.getElementById('archived-property-banner');
+        const archiveBtn = document.getElementById('archive-property-btn');
+        if (banner) {
+            if (isArchived) banner.classList.remove('hidden');
+            else banner.classList.add('hidden');
+        }
+        if (archiveBtn) {
+            archiveBtn.style.display = 'inline-flex';
+            if (isArchived) {
+                archiveBtn.innerHTML = '<i class="fas fa-box-open mr-1.5"></i><span>Restore / Unarchive</span>';
+                archiveBtn.style.background = '#ecfdf5';
+                archiveBtn.style.color = '#065f46';
+                archiveBtn.style.borderColor = '#a7f3d0';
+            } else {
+                archiveBtn.innerHTML = '<i class="fas fa-box-archive mr-1.5"></i><span>Archive Property</span>';
+                archiveBtn.style.background = '#fef3c7';
+                archiveBtn.style.color = '#92400e';
+                archiveBtn.style.borderColor = '#fde68a';
+            }
+        }
+    };
+
     const loadAndPopulate = async () => {
         try {
             console.log(`🔧 [PROPERTY SETTINGS] Loading property data for ID: ${propertyId}`);
@@ -597,6 +622,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : null;
 
             if (propertyData) {
+                loadedPropertyData = propertyData;
+                const isArchived = Boolean(propertyData.archived === true || propertyData.status === 'archived');
+                updateArchiveUI(isArchived);
                 populatePage(propertyData);
                 // Normalize and set canonical location selection if possible
                 const locEl = document.getElementById('settings-location');
@@ -669,6 +697,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Also handle form submission
     if (settingsForm) {
         settingsForm.addEventListener('submit', saveSettings);
+    }
+
+    const archiveBtn = document.getElementById('archive-property-btn');
+    if (archiveBtn) {
+        archiveBtn.addEventListener('click', async () => {
+            const isCurrentlyArchived = Boolean(loadedPropertyData?.archived === true || loadedPropertyData?.status === 'archived');
+            const propertyName = loadedPropertyData?.name ? ` "${loadedPropertyData.name}"` : '';
+
+            if (isCurrentlyArchived) {
+                if (!confirm(`Are you sure you want to restore / unarchive${propertyName}?`)) return;
+                try {
+                    await updateDoc(doc(db, 'properties', propertyId), {
+                        archived: false,
+                        status: 'available',
+                        unarchivedAt: new Date()
+                    });
+                    if (loadedPropertyData) {
+                        loadedPropertyData.archived = false;
+                        loadedPropertyData.status = 'available';
+                    }
+                    updateArchiveUI(false);
+                    alert('Property restored to active status.');
+                } catch (err) {
+                    console.error('Failed to unarchive property:', err);
+                    alert('Failed to restore property: ' + err.message);
+                }
+            } else {
+                if (!confirm(`Are you sure you want to archive${propertyName}? It will be excluded from the active portfolio and will not be re-imported during sync.`)) return;
+                try {
+                    await updateDoc(doc(db, 'properties', propertyId), {
+                        archived: true,
+                        status: 'archived',
+                        archivedAt: new Date()
+                    });
+                    if (loadedPropertyData) {
+                        loadedPropertyData.archived = true;
+                        loadedPropertyData.status = 'archived';
+                    }
+                    updateArchiveUI(true);
+                    alert('Property archived successfully.');
+                } catch (err) {
+                    console.error('Failed to archive property:', err);
+                    alert('Failed to archive property: ' + err.message);
+                }
+            }
+        });
     }
 
     // Initialize the in-page property switcher UI
