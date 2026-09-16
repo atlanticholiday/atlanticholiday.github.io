@@ -1,11 +1,22 @@
 import {
   calculatePortfolioSummary,
-  filterAndSortProperties
+  filterAndSortProperties,
+  isPropertyArchived
 } from './reviews-ratings-utils.js';
 import { renderReviewsRatingsDashboard } from './reviews-ratings-view.js';
 
 const STORAGE_KEY = 'atlantic_holiday_property_reviews_cache_v5';
 const STORAGE_KEY_OVERRIDES = 'atlantic_holiday_reviews_user_overrides_v1';
+
+function normalizePropName(name = '') {
+  return String(name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/by atlantic holiday/gi, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
 
 function mergePlatformReviews(serverReviews = [], localReviews = [], deletedIds = new Set()) {
   const sRevs = Array.isArray(serverReviews) ? serverReviews : [];
@@ -55,9 +66,12 @@ function mergePlatformData(serverPlat, localPlat, deletedIds = new Set()) {
 }
 
 export class ReviewsRatingsManager {
-  constructor(db = null, navigationManager = null) {
+  constructor(db = null, navigationManager = null, { getPropertiesManager = null } = {}) {
     this.db = db;
     this.navigationManager = navigationManager;
+    this.getPropertiesManager = getPropertiesManager;
+    this.propertiesManager = null;
+    this.archivedPropertiesList = [];
 
     this.state = {
       rawProperties: [],
@@ -79,10 +93,38 @@ export class ReviewsRatingsManager {
 
     this.userOverrides = {};
     this.unsubscribeOverrides = null;
+    this.unsubscribeProperties = null;
     this.initialized = false;
     this._toastTimer = null;
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('propertiesDataUpdated', () => {
+        const pm = this.getPropertiesManager?.() || this.propertiesManager || (typeof window !== 'undefined' ? window?.propertiesManager : null);
+        if (pm?.properties) {
+          this.archivedPropertiesList = pm.properties.filter(
+            (p) => p && (p.archived === true || p.status === 'archived')
+          );
+          this.syncArchivedStatusToRaw();
+          this.updateCalculations();
+          this.render();
+        }
+      });
+    }
+
     this.loadFromStorage();
     this.setupFirestoreSync();
+  }
+
+  setPropertiesManager(propertiesManager) {
+    this.propertiesManager = propertiesManager;
+    if (propertiesManager?.properties) {
+      this.archivedPropertiesList = propertiesManager.properties.filter(
+        (p) => p && (p.archived === true || p.status === 'archived')
+      );
+    }
+    this.syncArchivedStatusToRaw();
+    this.updateCalculations();
+    this.render();
   }
 
   setNavigationManager(navManager) {
@@ -159,7 +201,7 @@ export class ReviewsRatingsManager {
   async setupFirestoreSync() {
     if (!this.db) return;
     try {
-      const { doc, onSnapshot } = await import(
+      const { doc, collection, onSnapshot } = await import(
         'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
       );
       const docRef = doc(this.db, 'settings', 'propertyReviewOverrides');
@@ -179,6 +221,26 @@ export class ReviewsRatingsManager {
           console.warn('[ReviewsRatingsManager] Firestore overrides listener warning:', err?.message || err);
         }
       );
+
+      try {
+        const colRef = collection(this.db, 'properties');
+        this.unsubscribeProperties = onSnapshot(
+          colRef,
+          (snapshot) => {
+            this.archivedPropertiesList = snapshot.docs
+              .map((d) => ({ id: d.id, ...d.data() }))
+              .filter((p) => p && (p.archived === true || p.status === 'archived'));
+            this.syncArchivedStatusToRaw();
+            this.updateCalculations();
+            this.render();
+          },
+          (err) => {
+            console.warn('[ReviewsRatingsManager] Firestore properties listener warning:', err?.message || err);
+          }
+        );
+      } catch (err) {
+        console.warn('[ReviewsRatingsManager] Could not listen to properties collection:', err?.message || err);
+      }
     } catch (err) {
       console.warn('[ReviewsRatingsManager] Failed to init Firestore sync:', err);
     }
@@ -193,12 +255,16 @@ export class ReviewsRatingsManager {
       const docRef = doc(this.db, 'settings', 'propertyReviewOverrides');
       await setDoc(docRef, { [propId]: overrideData }, { merge: true });
 
-      // If matching property document exists in properties collection, update its listing URLs
+      // If matching property document exists in properties collection, update its listing URLs or archive state
       try {
         const propDoc = doc(this.db, 'properties', propId);
         const updatePayload = {};
         if (overrideData.bookingUrl !== undefined) updatePayload.bookingListingUrl = overrideData.bookingUrl;
         if (overrideData.airbnbUrl !== undefined) updatePayload.airbnbListingUrl = overrideData.airbnbUrl;
+        if (overrideData.archived !== undefined) {
+          updatePayload.archived = Boolean(overrideData.archived);
+          updatePayload.status = overrideData.archived ? 'archived' : 'active';
+        }
         if (Object.keys(updatePayload).length > 0) {
           updateDoc(propDoc, updatePayload).catch(() => {});
         }
@@ -215,6 +281,7 @@ export class ReviewsRatingsManager {
       const prop = this.state.rawProperties.find((p) => p.id === propId);
       if (!prop) continue;
 
+      if (override.archived !== undefined) prop.archived = Boolean(override.archived);
       if (override.bookingUrl !== undefined) prop.bookingUrl = override.bookingUrl;
       if (override.airbnbUrl !== undefined) prop.airbnbUrl = override.airbnbUrl;
 
@@ -384,7 +451,108 @@ export class ReviewsRatingsManager {
     }
   }
 
+  syncArchivedStatusToRaw() {
+    const archivedDocIds = new Set();
+    const archivedNames = new Set();
+    const archivedUrls = new Set();
+
+    const pm = this.getPropertiesManager?.() || this.propertiesManager || (typeof window !== 'undefined' ? window?.propertiesManager : null);
+    const sourceProperties = [
+      ...(this.archivedPropertiesList || []),
+      ...((pm?.properties || []).filter((p) => p && (p.archived === true || p.status === 'archived')))
+    ];
+
+    for (const p of sourceProperties) {
+      if (p.id) archivedDocIds.add(String(p.id));
+      if (p.name) archivedNames.add(normalizePropName(p.name));
+      if (p.displayName) archivedNames.add(normalizePropName(p.displayName));
+      if (p.title) archivedNames.add(normalizePropName(p.title));
+      if (p.bookingListingUrl) archivedUrls.add(p.bookingListingUrl.toLowerCase().trim());
+      if (p.airbnbListingUrl) archivedUrls.add(p.airbnbListingUrl.toLowerCase().trim());
+    }
+
+    for (const prop of (this.state.rawProperties || [])) {
+      if (this.userOverrides?.[prop.id]?.archived !== undefined) {
+        prop.archived = Boolean(this.userOverrides[prop.id].archived);
+        continue;
+      }
+
+      const normName = normalizePropName(prop.name);
+      const bUrl = (prop.bookingUrl || '').toLowerCase().trim();
+      const aUrl = (prop.airbnbUrl || '').toLowerCase().trim();
+
+      const matchesArchived =
+        archivedDocIds.has(String(prop.id)) ||
+        (normName && archivedNames.has(normName)) ||
+        (bUrl && archivedUrls.has(bUrl)) ||
+        (aUrl && archivedUrls.has(aUrl));
+
+      if (matchesArchived) {
+        prop.archived = true;
+      } else if (prop.status === 'archived') {
+        prop.archived = true;
+      } else if (prop.archived === undefined) {
+        prop.archived = false;
+      }
+    }
+  }
+
+  async toggleArchiveProperty(propertyId) {
+    if (!propertyId) return;
+    const prop = this.state.rawProperties.find((p) => p.id === propertyId);
+    if (!prop) return;
+
+    const newArchived = !isPropertyArchived(prop);
+    prop.archived = newArchived;
+    if (this.state.selectedProperty && this.state.selectedProperty.id === propertyId) {
+      this.state.selectedProperty.archived = newArchived;
+    }
+
+    if (!this.userOverrides[propertyId]) {
+      this.userOverrides[propertyId] = {};
+    }
+    this.userOverrides[propertyId].archived = newArchived;
+
+    this.saveOverridesToStorage();
+    await this.saveOverrideToFirestore(propertyId, this.userOverrides[propertyId]);
+
+    // Also update properties collection document if possible
+    if (this.db) {
+      try {
+        const { doc, updateDoc } = await import(
+          'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
+        );
+        const matching = (this.archivedPropertiesList || []).find((p) =>
+          p.id === propertyId ||
+          normalizePropName(p.name) === normalizePropName(prop.name)
+        );
+        const targetId = matching?.id || propertyId;
+        const propRef = doc(this.db, 'properties', targetId);
+        await updateDoc(propRef, {
+          archived: newArchived,
+          status: newArchived ? 'archived' : 'active'
+        });
+      } catch (err) {
+        console.warn('[ReviewsRatingsManager] Could not update properties doc archive state:', err?.message || err);
+      }
+    }
+
+    this.updateCalculations();
+    this.saveToStorage({
+      lastUpdated: this.state.lastUpdated,
+      properties: this.state.rawProperties
+    });
+
+    this.showToast(
+      newArchived
+        ? `Property "${prop.name}" has been archived.`
+        : `Property "${prop.name}" has been restored to active.`
+    );
+    this.render();
+  }
+
   updateCalculations() {
+    this.syncArchivedStatusToRaw();
     this.state.summary = calculatePortfolioSummary(this.state.rawProperties);
     this.state.filteredProperties = filterAndSortProperties(this.state.rawProperties, {
       search: this.state.searchQuery,
@@ -701,6 +869,11 @@ export class ReviewsRatingsManager {
         },
         onDeleteReview: (reviewId, propertyId) => {
           this.deletePropertyReview(reviewId, propertyId);
+        },
+        onToggleArchive: () => {
+          if (this.state.selectedProperty) {
+            this.toggleArchiveProperty(this.state.selectedProperty.id);
+          }
         }
       }
     );

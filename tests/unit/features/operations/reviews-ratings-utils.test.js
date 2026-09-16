@@ -11,7 +11,8 @@ import {
   getLatestReviewsAcrossProperties,
   filterPropertyReviews,
   getReviewResponse,
-  hasReviewResponse
+  hasReviewResponse,
+  isPropertyArchived
 } from "../../../../js/features/operations/reviews-ratings-utils.js";
 
 describe("reviews-ratings-utils", () => {
@@ -333,9 +334,85 @@ describe("reviews-ratings-utils", () => {
     assert.equal(limited[1].author, "B");
   });
 
-  test("getLatestReviewsAcrossProperties returns empty array for no properties", () => {
-    assert.deepEqual(getLatestReviewsAcrossProperties([], 5), []);
-    assert.deepEqual(getLatestReviewsAcrossProperties(null, 5), []);
-    assert.deepEqual(getLatestReviewsAcrossProperties(undefined), []);
+  test("isPropertyArchived identifies archived properties correctly", () => {
+    assert.equal(isPropertyArchived({ id: "p1", archived: true }), true);
+    assert.equal(isPropertyArchived({ id: "p2", status: "archived" }), true);
+    assert.equal(isPropertyArchived({ id: "p3", isArchived: true }), true);
+    assert.equal(isPropertyArchived({ id: "p4", archived: false, status: "active" }), false);
+    assert.equal(isPropertyArchived(null), false);
+    assert.equal(isPropertyArchived(undefined), false);
+  });
+
+  test("calculatePortfolioSummary excludes archived properties from totals and averages", () => {
+    const props = [
+      {
+        id: "active-1",
+        name: "Active 1",
+        booking: { score: 9.0, reviewCount: 10, subScores: { cleanliness: 9.0 } },
+        airbnb: { score: 5.0, reviewCount: 10, subScores: { cleanliness: 5.0 } }
+      },
+      {
+        id: "archived-1",
+        name: "Archived 1",
+        archived: true,
+        booking: { score: 5.0, reviewCount: 100, subScores: { cleanliness: 5.0 } },
+        airbnb: { score: 1.0, reviewCount: 100, subScores: { cleanliness: 1.0 } }
+      }
+    ];
+
+    const summary = calculatePortfolioSummary(props);
+    assert.equal(summary.totalProperties, 1, "Only active properties counted");
+    assert.equal(summary.totalReviews, 20, "Archived reviews excluded");
+    assert.equal(summary.bookingAvg, 9.0, "Archived booking score excluded");
+    assert.equal(summary.airbnbAvg, 5.0, "Archived airbnb score excluded");
+    assert.equal(summary.cleanlinessAvgBooking, 9.0);
+    assert.equal(summary.cleanlinessAvgAirbnb, 5.0);
+  });
+
+  test("filterAndSortProperties excludes archived properties by default and shows only archived when filter=archived", () => {
+    const props = [
+      { id: "active-1", name: "Active Alpha", archived: false },
+      { id: "archived-1", name: "Archived Beta", archived: true },
+      { id: "active-2", name: "Active Gamma", status: "active" },
+      { id: "archived-2", name: "Archived Delta", status: "archived" }
+    ];
+
+    // Default: 'all' filter excludes archived properties
+    const activeOnly = filterAndSortProperties(props, { filter: "all" });
+    assert.equal(activeOnly.length, 2);
+    assert.deepEqual(activeOnly.map(p => p.id), ["active-1", "active-2"]);
+
+    // Explicit 'archived' filter returns only archived properties
+    const archivedOnly = filterAndSortProperties(props, { filter: "archived" });
+    assert.equal(archivedOnly.length, 2);
+    assert.deepEqual(archivedOnly.map(p => p.id), ["archived-1", "archived-2"]);
+
+    // includeArchived: true returns both
+    const both = filterAndSortProperties(props, { filter: "all", includeArchived: true });
+    assert.equal(both.length, 4);
+  });
+
+  test("getLatestReviewsAcrossProperties skips reviews from archived properties", () => {
+    const props = [
+      {
+        id: "active-prop",
+        name: "Active Prop",
+        booking: {
+          reviews: [{ id: "r-active", author: "Active Guest", date: "2026-08-01", score: 10 }]
+        }
+      },
+      {
+        id: "archived-prop",
+        name: "Archived Prop",
+        archived: true,
+        booking: {
+          reviews: [{ id: "r-archived", author: "Archived Guest", date: "2026-09-01", score: 10 }]
+        }
+      }
+    ];
+
+    const feed = getLatestReviewsAcrossProperties(props, 10);
+    assert.equal(feed.length, 1);
+    assert.equal(feed[0].author, "Active Guest");
   });
 });

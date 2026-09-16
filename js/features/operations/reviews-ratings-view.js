@@ -2,6 +2,7 @@ import {
   formatScore,
   getCleanlinessStatus,
   isAttentionNeeded,
+  isPropertyArchived,
   getAllPropertyReviews,
   getLatestReviewSnippet,
   getLatestReviewsAcrossProperties,
@@ -30,6 +31,9 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     isAddingReview = false,
     activeTab = 'properties'
   } = state;
+
+  const activePropertiesCount = (rawProperties || []).filter((p) => !isPropertyArchived(p)).length;
+  const archivedPropertiesCount = (rawProperties || []).filter(isPropertyArchived).length;
 
   const lastUpdatedFormatted = lastUpdated
     ? new Date(lastUpdated).toLocaleString('en-GB', {
@@ -199,9 +203,12 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           <!-- Filter Pills & Sorting -->
           <div class="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-medium">
-              <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${properties.length})</button>
+              <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${activePropertiesCount})</button>
               <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'attention' ? 'bg-white text-rose-600 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-600'}" data-filter="attention">Needs Attention</button>
               <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'guest-favourite' ? 'bg-white text-amber-600 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-600'}" data-filter="guest-favourite">Guest Favourite</button>
+              ${archivedPropertiesCount > 0 ? `
+                <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'archived' ? 'bg-white text-amber-800 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-800'}" data-filter="archived"><i class="fas fa-box-archive mr-1 text-[10px]"></i>Archived (${archivedPropertiesCount})</button>
+              ` : ''}
             </div>
 
             <div class="flex items-center gap-2">
@@ -245,6 +252,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 }
 
 function renderPropertyCard(prop) {
+  const isArchived = isPropertyArchived(prop);
   const attention = isAttentionNeeded(prop);
   const cleanStatus = getCleanlinessStatus(prop);
 
@@ -274,7 +282,7 @@ function renderPropertyCard(prop) {
   const totalReviewsCount = (prop.booking?.reviewCount || 0) + (prop.airbnb?.reviewCount || 0) || allReviews.length;
 
   return `
-    <div class="bg-white rounded-3xl border ${attention ? 'border-rose-200 ring-2 ring-rose-100' : 'border-gray-200'} p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+    <div class="bg-white rounded-3xl border ${attention ? 'border-rose-200 ring-2 ring-rose-100' : (isArchived ? 'border-amber-200 bg-amber-50/10' : 'border-gray-200')} p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
       <div>
         <!-- Card Header -->
         <div class="flex items-start justify-between gap-3 mb-4">
@@ -282,6 +290,7 @@ function renderPropertyCard(prop) {
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-lg font-bold text-gray-900">${escapeHtml(prop.name)}</h3>
               ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
+              ${isArchived ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>` : ''}
             </div>
             <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
               <i class="fas fa-map-marker-alt text-gray-400"></i>
@@ -291,13 +300,15 @@ function renderPropertyCard(prop) {
 
           <div class="flex items-center gap-1.5">
             ${
-              attention
-                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
-                : (hasBookingData || hasAirbnbData)
-                  ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`
-                  : (prop.bookingUrl || prop.airbnbUrl)
-                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Listing linked, awaiting automated review sync"><i class="fas fa-clock text-[10px]"></i>Awaiting Sync</span>`
-                    : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
+              isArchived
+                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300"><i class="fas fa-box-archive text-[10px]"></i>Archived</span>`
+                : attention
+                  ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
+                  : (hasBookingData || hasAirbnbData)
+                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`
+                    : (prop.bookingUrl || prop.airbnbUrl)
+                      ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Listing linked, awaiting automated review sync"><i class="fas fa-clock text-[10px]"></i>Awaiting Sync</span>`
+                      : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
             }
           </div>
         </div>
@@ -452,6 +463,7 @@ function renderLatestReviewsPage(rawProperties, handlers) {
 }
 
 function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false, isAddingReview = false) {
+  const isArchived = isPropertyArchived(prop);
   const airbnbSubs = prop.airbnb?.subScores || {};
   const bookingSubs = prop.booking?.subScores || {};
   const allReviews = getAllPropertyReviews(prop);
@@ -477,9 +489,16 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
         <!-- Header -->
         <div class="mb-5 pb-4 border-b border-gray-100 pr-10 flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Reviews & Ratings</span>
-            ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
+          <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Reviews & Ratings</span>
+              ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
+              ${isArchived ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>` : ''}
+            </div>
+            <button id="modal-toggle-archive-btn" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-colors ${isArchived ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'}">
+              <i class="fas ${isArchived ? 'fa-box-open text-emerald-600' : 'fa-box-archive text-amber-600'} text-[11px]"></i>
+              <span>${isArchived ? 'Restore / Unarchive' : 'Archive Property'}</span>
+            </button>
           </div>
           <h2 class="text-2xl font-black text-gray-900 mt-1">${escapeHtml(prop.name)}</h2>
           <p class="text-xs text-gray-500 flex items-center gap-1 mt-1">
@@ -1047,6 +1066,11 @@ function bindViewEvents(container, handlers) {
   const modalSearchInput = container.querySelector('#modal-review-search');
   modalSearchInput?.addEventListener('input', (e) => {
     handlers.onModalReviewSearch?.(e.target.value);
+  });
+
+  // Modal Toggle Archive Button
+  container.querySelector('#modal-toggle-archive-btn')?.addEventListener('click', () => {
+    handlers.onToggleArchive?.();
   });
 
   // Modal Toggle Edit Links Button

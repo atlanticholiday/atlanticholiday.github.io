@@ -57,8 +57,19 @@ export function isAttentionNeeded(property) {
   return false;
 }
 
+export function isPropertyArchived(property) {
+  return Boolean(
+    property && (
+      property.archived === true ||
+      property.status === 'archived' ||
+      property.isArchived === true
+    )
+  );
+}
+
 export function calculatePortfolioSummary(properties = []) {
-  if (!Array.isArray(properties) || properties.length === 0) {
+  const activeProperties = (Array.isArray(properties) ? properties : []).filter((p) => !isPropertyArchived(p));
+  if (activeProperties.length === 0) {
     return {
       totalProperties: 0,
       airbnbAvg: null,
@@ -83,7 +94,7 @@ export function calculatePortfolioSummary(properties = []) {
   let totalReviews = 0;
   let attentionCount = 0;
 
-  properties.forEach((p) => {
+  activeProperties.forEach((p) => {
     if (p.airbnb?.score) {
       airbnbTotal += p.airbnb.score;
       airbnbCount += 1;
@@ -114,7 +125,7 @@ export function calculatePortfolioSummary(properties = []) {
   });
 
   return {
-    totalProperties: properties.length,
+    totalProperties: activeProperties.length,
     airbnbAvg: airbnbCount > 0 ? round(airbnbTotal / airbnbCount, 2) : null,
     bookingAvg: bookingCount > 0 ? round(bookingTotal / bookingCount, 2) : null,
     cleanlinessAvgAirbnb: cleanAirbnbCount > 0 ? round(cleanAirbnbTotal / cleanAirbnbCount, 2) : null,
@@ -288,6 +299,7 @@ export function getLatestReviewsAcrossProperties(properties = [], limit = 50) {
 
   const all = [];
   for (const prop of properties) {
+    if (isPropertyArchived(prop)) continue;
     const reviews = getAllPropertyReviews(prop);
     for (const r of reviews) {
       all.push({
@@ -317,8 +329,17 @@ export function getLatestReviewsAcrossProperties(properties = [], limit = 50) {
   return all.slice(0, limit);
 }
 
-export function filterAndSortProperties(properties = [], { search = '', filter = 'all', sort = 'name-asc' } = {}) {
+export function filterAndSortProperties(properties = [], { search = '', filter = 'all', sort = 'name-asc', includeArchived = false } = {}) {
   let list = [...properties];
+
+  // Archive filter handling:
+  // Explicit 'archived' filter shows only archived properties.
+  // Otherwise, unless includeArchived is true, archived properties are excluded.
+  if (filter === 'archived') {
+    list = list.filter(isPropertyArchived);
+  } else if (!includeArchived) {
+    list = list.filter((p) => !isPropertyArchived(p));
+  }
 
   // Search by name, location, or review comments/authors
   if (search) {

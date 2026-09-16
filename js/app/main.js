@@ -599,7 +599,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         operationalGuidelinesManager = new OperationalGuidelinesManager();
         window.operationalGuidelinesManager = operationalGuidelinesManager;
         operationalGuidelinesManager.init();
-        reviewsRatingsManager = new ReviewsRatingsManager(db, navigationManager);
+        reviewsRatingsManager = new ReviewsRatingsManager(db, navigationManager, {
+            getPropertiesManager: () => propertiesManager
+        });
         window.reviewsRatingsManager = reviewsRatingsManager;
 
 
@@ -898,6 +900,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         })
                     });
                     window.propertiesManager = propertiesManager;
+                    if (reviewsRatingsManager?.setPropertiesManager) {
+                        reviewsRatingsManager.setPropertiesManager(propertiesManager);
+                    }
                 }
 
                 console.log(`⚙️ [INITIALIZATION] Creating OperationsManager...`);

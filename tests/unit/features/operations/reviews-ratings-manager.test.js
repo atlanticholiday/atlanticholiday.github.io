@@ -201,4 +201,67 @@ describe("ReviewsRatingsManager", () => {
     assert.equal(updated.booking.reviews[0].id, "rev-book-2");
     assert.equal(updated.airbnb.reviews.length, 0, "rev-air-1 should remain deleted");
   });
+
+  test("syncs archived properties from PropertiesManager and hides them from active views", () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+
+    const mockPropertiesManager = {
+      properties: [
+        { id: "prop-active", name: "Active Villa", archived: false },
+        { id: "prop-archived", name: "Archived Penthouse", archived: true }
+      ]
+    };
+
+    const manager = new ReviewsRatingsManager(null, null, {
+      getPropertiesManager: () => mockPropertiesManager
+    });
+
+    manager.state.rawProperties = [
+      { id: "prop-active", name: "Active Villa", booking: { score: 9.2, reviewCount: 10 } },
+      { id: "prop-archived", name: "Archived Penthouse by Atlantic Holiday", booking: { score: 8.5, reviewCount: 5 } }
+    ];
+
+    manager.updateCalculations();
+
+    // Archived Penthouse must have been marked archived and excluded from active filteredProperties
+    assert.equal(manager.state.filteredProperties.length, 1);
+    assert.equal(manager.state.filteredProperties[0].id, "prop-active");
+    assert.equal(manager.state.summary.totalProperties, 1);
+
+    // If filter is set to 'archived', only the archived property appears
+    manager.state.filter = "archived";
+    manager.updateCalculations();
+    assert.equal(manager.state.filteredProperties.length, 1);
+    assert.equal(manager.state.filteredProperties[0].id, "prop-archived");
+  });
+
+  test("toggleArchiveProperty archives active property and restores it when clicked again", async () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+
+    const manager = new ReviewsRatingsManager();
+    manager.state.rawProperties = [
+      { id: "p1", name: "Sunny Stay", booking: { score: 9.0, reviewCount: 12 } },
+      { id: "p2", name: "Ocean Breeze", booking: { score: 9.5, reviewCount: 8 } }
+    ];
+    manager.updateCalculations();
+    assert.equal(manager.state.filteredProperties.length, 2);
+
+    // Archive p1
+    await manager.toggleArchiveProperty("p1");
+    assert.equal(manager.state.rawProperties.find(p => p.id === "p1").archived, true);
+    assert.equal(manager.state.filteredProperties.length, 1);
+    assert.equal(manager.state.filteredProperties[0].id, "p2");
+    assert.equal(manager.state.summary.totalProperties, 1);
+
+    // User override must be recorded
+    assert.equal(manager.userOverrides["p1"].archived, true);
+
+    // Restore p1
+    await manager.toggleArchiveProperty("p1");
+    assert.equal(manager.state.rawProperties.find(p => p.id === "p1").archived, false);
+    assert.equal(manager.state.filteredProperties.length, 2);
+    assert.equal(manager.userOverrides["p1"].archived, false);
+  });
 });
