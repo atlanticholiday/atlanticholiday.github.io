@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sync Booking.com Links to Properties - Atlantic Holiday</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #003580;
+      --primary-hover: #00224f;
+      --accent: #ef6b79;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .header-left h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--primary);
+    }
+    .header-left p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+    .auth-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    .auth-badge.signed-in {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .auth-badge.signed-out {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .controls {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 12px;
+      display: none;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--success);
+      transition: width 0.3s ease;
+    }
+    .stats {
+      display: flex;
+      gap: 16px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .stat-badge {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover {
+      background: #f8fafc;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-matched { background: #e0f2fe; color: #0369a1; }
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-skipped { background: #f1f5f9; color: #475569; }
+    .badge-error { background: #fee2e2; color: #b91c1c; }
+    .url-preview {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #2563eb;
+    }
+    .log-box {
+      margin-top: 24px;
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    .log-entry { margin-bottom: 4px; }
+    .log-entry.info { color: #38bdf8; }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.warn { color: #facc15; }
+    .log-entry.error { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <h1><i class="fas fa-building-circle-check"></i> Sync Booking.com Links to Properties</h1>
+        <p>Updates the <code>bookingListingUrl</code> field in live Firebase <code>properties</code> collection</p>
+      </div>
+      <div id="auth-status" class="auth-badge">
+        <i class="fas fa-spinner fa-spin"></i> Checking authentication...
+      </div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <button id="sync-btn" class="btn btn-primary" disabled>
+          <i class="fas fa-cloud-arrow-up"></i> Push 29 Booking Links to Firestore
+        </button>
+      </div>
+      <div class="stats">
+        <div>Total: <span id="stat-total" class="stat-badge">29</span></div>
+        <div>Matched in Firestore: <span id="stat-matched" class="stat-badge">0</span></div>
+        <div>Updated: <span id="stat-updated" class="stat-badge">0</span></div>
+      </div>
+      <div id="progress-container" class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Property Name</th>
+            <th>Firestore Match</th>
+            <th>Target Booking Listing URL</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="properties-table-body">
+        </tbody>
+      </table>
+    </div>
+
+    <div id="log-box" class="log-box">
+      <div class="log-entry info">Ready. Waiting for Firestore connection...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { Config } from "./js/core/config.js";
+
+    const PROPOSED_MAPPINGS = [
+      { id: "musa-d-ajuda", name: "Musa D'ajuda", url: "https://www.booking.com/hotel/pt/musa-d-ajuda-by-atlantic-holiday.html" },
+      { id: "sunny-stay-atlantic-gardens", name: "Sunny Stay Atlantic Gardens", url: "https://www.booking.com/hotel/pt/sunny-stay-atlantic-gardens-by-atlantic-holiday.html" },
+      { id: "porlamar-iii", name: "Porlamar III", url: "https://www.booking.com/hotel/pt/porlamar-iii-by-atlantic-holiday.html" },
+      { id: "monumental-grand-residence", name: "Monumental Grand Residence", url: "https://www.booking.com/hotel/pt/monumental-grand-residence.html" },
+      { id: "bellas-place-apartment", name: "Bellas Place Apartment", url: "https://www.booking.com/hotel/pt/bellas-place-apartment-by-atlantic-holiday.html" },
+      { id: "azure-atlantic-horizon", name: "Azure Atlantic Horizon", url: "https://www.booking.com/hotel/pt/azure-atlantic-horizon-by-atlantic-holiday.html" },
+      { id: "bays-secrets-apartment", name: "Bays Secrets Apartment", url: "https://www.booking.com/hotel/pt/bays-secrets-apartment-by-ah.html" },
+      { id: "barranca-studio", name: "Barranca Studio", url: "https://www.booking.com/hotel/pt/barranca-studio-by-atlantic-holiday.html" },
+      { id: "casa-barranca", name: "Casa Barranca", url: "https://www.booking.com/hotel/pt/casa-barranca-by-atlantic-holiday.html" },
+      { id: "villa-saudade", name: "Villa Saudade", url: "https://www.booking.com/hotel/pt/villa-saudade-by-atlantic-holiday.html" },
+      { id: "coastal-garden-apartment", name: "Coastal Garden Apartment", url: "https://www.booking.com/hotel/pt/coastal-garden-apartment-by-atlantic-holiday.html" },
+      { id: "pearl-of-madeira", name: "Pearl of Madeira", url: "https://www.booking.com/hotel/pt/pearl-of-madeira-by-atlantic-holiday.html" },
+      { id: "recanto-do-sol", name: "Recanto do Sol", url: "https://www.booking.com/hotel/pt/recanto-do-sol-by-atlantic-holiday.html" },
+      { id: "apartamento-calcada-encantada", name: "Apartamento Calçada Encantada", url: "https://www.booking.com/hotel/pt/apartamento-calcada-encantada-by-atlantic-holiday.html" },
+      { id: "laras-apartment", name: "Laras Apartment", url: "https://www.booking.com/hotel/pt/laras-apartment-by-atlantic-holiday.html" },
+      { id: "the-blue-atlantic-apartment", name: "The Blue Atlantic Apartment", url: "https://www.booking.com/hotel/pt/the-blue-atlantic-by-atlantic-holiday.html" },
+      { id: "aurora-atlantic-apartment", name: "Aurora Atlantic Apartment", url: "https://www.booking.com/hotel/pt/aurora-atlantic-apartment-by-atlantic-holiday.html" },
+      { id: "la-belle-vie", name: "La Belle Vie", url: "https://www.booking.com/hotel/pt/la-belle-vie-by-atlantic-holiday.html" },
+      { id: "infinity-blue", name: "Infinity Blue", url: "https://www.booking.com/hotel/pt/infinity-blue-by-atlantic-holiday.html" },
+      { id: "casinha-da-achada", name: "Casinha da Achada", url: "https://www.booking.com/hotel/pt/casinha-da-achada-by-atlantic-holiday.html" },
+      { id: "the-elements-of-savoy", name: "The Elements of Savoy", url: "https://www.booking.com/hotel/pt/the-elements-of-savoy-sea-view-by-atlantic-holiday.html" },
+      { id: "starfish-apartment", name: "Starfish Apartment", url: "https://www.booking.com/hotel/pt/starfish-apartment-by-atlantic-holiday.html" },
+      { id: "villa-emilia", name: "Villa Emília", url: "https://www.booking.com/hotel/pt/casa-emilia-cozy-family-villa-with-sea-view.html" },
+      { id: "villa-vista-atlantica", name: "Villa Vista Atlantica", url: "https://www.booking.com/hotel/pt/villa-vista-atlantica-by-atlantic-holiday.html" },
+      { id: "chill-house", name: "Chill House", url: "https://www.booking.com/hotel/pt/chill-house-by-atlantic-holiday.html" },
+      { id: "garajau-comfort-stay", name: "Garajau Comfort Stay", url: "https://www.booking.com/hotel/pt/garajau-comfort-stay-by-atlantic-holiday.html" },
+      { id: "lido-edge-view", name: "Lido Edge View", url: "https://www.booking.com/hotel/pt/lido-edge-view-ocean-view-by-atlantic-view.html" },
+      { id: "aqui-ha-casa", name: "Aqui Há Casa", url: "https://www.booking.com/hotel/pt/aqui-ha-casa-ocean-view-by-atlantic-holiday.html" },
+      { id: "richelieu-apartment", name: "Richelieu Apartment", url: "https://www.booking.com/hotel/pt/richelieu-apartment-by-atlantic-holiday.html" }
+    ];
+
+    const app = initializeApp(Config.firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const authStatusEl = document.getElementById("auth-status");
+    const syncBtn = document.getElementById("sync-btn");
+    const tbody = document.getElementById("properties-table-body");
+    const logBox = document.getElementById("log-box");
+    const progressContainer = document.getElementById("progress-container");
+    const progressBar = document.getElementById("progress-bar");
+    const statMatched = document.getElementById("stat-matched");
+    const statUpdated = document.getElementById("stat-updated");
+
+    let firestoreProperties = [];
+    let matchedItems = [];
+
+    function log(msg, type = "info") {
+      const entry = document.createElement("div");
+      entry.className = "log-entry " + type;
+      entry.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function norm(str) {
+      return String(str || "")
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, " ")
+        .replace(/s+/g, " ")
+        .trim();
+    }
+
+    function renderTable() {
+      tbody.innerHTML = "";
+      matchedItems.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.id = "row-" + index;
+        
+        let matchLabel = '<span style="color:#94a3b8;">Searching...</span>';
+        let statusBadge = '<span class="badge badge-pending">Pending</span>';
+
+        if (item.doc) {
+          matchLabel = "<strong>" + (item.doc.name || item.doc.id) + "</strong><br><small style='color:#64748b;'>ID: " + item.doc.id + "</small>";
+          if (item.doc.bookingListingUrl === item.url) {
+            statusBadge = '<span class="badge badge-skipped">Already up-to-date</span>';
+          } else {
+            statusBadge = '<span class="badge badge-matched">Ready to sync</span>';
+          }
+        } else {
+          matchLabel = '<span style="color:#ef4444;"><i class="fas fa-circle-exclamation"></i> Not found in Firestore</span>';
+          statusBadge = '<span class="badge badge-error">Missing</span>';
+        }
+
+        tr.innerHTML = "<td>" + (index + 1) + "</td>" +
+          "<td><strong>" + item.name + "</strong></td>" +
+          "<td>" + matchLabel + "</td>" +
+          "<td><a href='" + item.url + "' target='_blank' class='url-preview'>" + item.url + "</a></td>" +
+          "<td id='status-" + index + "'>" + statusBadge + "</td>";
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadFirestoreData() {
+      try {
+        log("Querying properties from Firestore...", "info");
+        const snap = await getDocs(collection(db, "properties"));
+        firestoreProperties = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        log("Loaded " + firestoreProperties.length + " properties from Firestore.", "success");
+
+        let matchedCount = 0;
+        matchedItems = PROPOSED_MAPPINGS.map(item => {
+          const normTarget = norm(item.name);
+          const docMatch = firestoreProperties.find(p => {
+            if (p.id === item.id) return true;
+            const normP = norm(p.name);
+            return normP === normTarget || (normP.length > 5 && (normTarget.includes(normP) || normP.includes(normTarget)));
+          });
+
+          if (docMatch) matchedCount++;
+          return { ...item, doc: docMatch };
+        });
+
+        statMatched.textContent = matchedCount;
+        renderTable();
+
+        if (matchedCount > 0) {
+          syncBtn.disabled = false;
+        }
+      } catch (err) {
+        log("Error loading Firestore properties: " + err.message, "error");
+        console.error(err);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        authStatusEl.className = "auth-badge signed-in";
+        authStatusEl.innerHTML = "<i class='fas fa-check-circle'></i> Authenticated: " + (user.email || user.displayName || "Admin");
+        log("User authenticated as " + (user.email || user.uid), "success");
+        await loadFirestoreData();
+      } else {
+        authStatusEl.className = "auth-badge signed-out";
+        authStatusEl.innerHTML = "<i class='fas fa-exclamation-triangle'></i> Not signed in";
+        log("Please log in to Atlantic Holiday in this browser session to enable sync.", "warn");
+      }
+    });
+
+    syncBtn.addEventListener("click", async () => {
+      syncBtn.disabled = true;
+      progressContainer.style.display = "block";
+      let updated = 0;
+      const total = matchedItems.filter(i => i.doc).length;
+
+      log("Starting update of " + total + " matching properties in Firestore...", "info");
+
+      for (let i = 0; i < matchedItems.length; i++) {
+        const item = matchedItems[i];
+        if (!item.doc) continue;
+
+        const statusTd = document.getElementById("status-" + i);
+        try {
+          statusTd.innerHTML = '<span class="badge badge-pending"><i class="fas fa-spinner fa-spin"></i> Updating...</span>';
+          
+          await updateDoc(doc(db, "properties", item.doc.id), {
+            bookingListingUrl: item.url,
+            updatedAt: new Date().toISOString()
+          });
+
+          updated++;
+          item.doc.bookingListingUrl = item.url;
+          statusTd.innerHTML = '<span class="badge badge-success"><i class="fas fa-check"></i> Updated</span>';
+          log("[" + updated + "/" + total + "] Updated " + item.name + " (" + item.doc.id + ")", "success");
+        } catch (err) {
+          statusTd.innerHTML = '<span class="badge badge-error">Failed</span>';
+          log("Failed to update " + item.name + ": " + err.message, "error");
+        }
+
+        const pct = Math.round((updated / total) * 100);
+        progressBar.style.width = pct + "%";
+        statUpdated.textContent = updated;
+      }
+
+      log("🎉 Sync completed! Successfully updated " + updated + " properties in Firestore.", "success");
+      syncBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
