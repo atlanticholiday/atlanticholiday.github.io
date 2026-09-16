@@ -283,7 +283,7 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
  * with `propertyName` and `propertyId` so the dashboard can render a
  * cross-portfolio "Latest Reviews" feed.
  */
-export function getLatestReviewsAcrossProperties(properties = [], limit = 8) {
+export function getLatestReviewsAcrossProperties(properties = [], limit = 50) {
   if (!Array.isArray(properties) || properties.length === 0) return [];
 
   const all = [];

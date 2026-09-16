@@ -27,7 +27,8 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     reviewModalFilter = 'all',
     reviewModalSearch = '',
     isEditingLinks = false,
-    isAddingReview = false
+    isAddingReview = false,
+    activeTab = 'properties'
   } = state;
 
   const lastUpdatedFormatted = lastUpdated
@@ -98,11 +99,21 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
               </button>
             </div>
           </div>
+
+          <!-- Tab Navigation -->
+          <div class="flex items-center gap-1 -mb-px">
+            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
+              <i class="fas fa-building text-xs mr-1.5"></i>Properties
+            </button>
+            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
+              <i class="fas fa-stream text-xs mr-1.5"></i>Latest Reviews
+            </button>
+          </div>
         </div>
       </header>
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <!-- KPI Summary Cards -->
+        <!-- KPI Summary Cards (always visible) -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Airbnb Rating Card -->
           <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow transition-shadow">
@@ -170,6 +181,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           </div>
         </section>
 
+        ${activeTab === 'properties' ? `
         <!-- Filter & Search Toolbar -->
         <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           <!-- Search -->
@@ -205,9 +217,6 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           </div>
         </div>
 
-        <!-- Latest Reviews Feed -->
-        ${renderLatestReviewsSection(rawProperties, handlers)}
-
         <!-- Properties Scorecard Grid -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
           ${properties.length === 0
@@ -220,6 +229,10 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                </div>`
             : properties.map((prop) => renderPropertyCard(prop)).join('')}
         </section>
+        ` : `
+        <!-- Latest Reviews Full Page Tab -->
+        ${renderLatestReviewsPage(rawProperties)}
+        `}
       </main>
 
       <!-- Property Details Modal / Drawer -->
@@ -394,82 +407,47 @@ function renderPropertyCard(prop) {
   `;
 }
 
-function renderLatestReviewsSection(rawProperties, handlers) {
-  const latestReviews = getLatestReviewsAcrossProperties(rawProperties, 8);
-  if (latestReviews.length === 0) return '';
+function renderLatestReviewsPage(rawProperties, handlers) {
+  const latestReviews = getLatestReviewsAcrossProperties(rawProperties, 50);
+
+  if (latestReviews.length === 0) {
+    return `
+      <div class="text-center py-16 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mx-auto mb-3">
+          <i class="fas fa-comments text-lg"></i>
+        </div>
+        <h3 class="text-base font-bold text-gray-800">No reviews found</h3>
+        <p class="text-sm text-gray-500 mt-1">Sync reviews from OTAs or add a review manually to get started.</p>
+      </div>
+    `;
+  }
 
   return `
-    <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div class="px-5 pt-5 pb-3 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
-            <i class="fas fa-stream text-sm"></i>
+    <div class="space-y-6">
+      <!-- Section Header Banner -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fas fa-stream"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-gray-900">Latest Reviews</h3>
-            <p class="text-[11px] text-gray-500">Most recent guest feedback across all properties</p>
+            <h2 class="text-base font-bold text-gray-900 leading-tight">Latest Guest Reviews</h2>
+            <p class="text-xs text-gray-500">Most recent feedback submitted across all properties, sorted by date (newest first)</p>
           </div>
         </div>
-        <span class="text-[11px] text-gray-400 font-medium">${latestReviews.length} reviews</span>
-      </div>
-
-      <div class="px-5 pb-5 overflow-x-auto">
-        <div class="flex gap-3" style="min-width: max-content;">
-          ${latestReviews.map((r) => {
-            const isAirbnb = r.platform === 'Airbnb';
-            const scoreText = typeof r.score === 'number' ? (isAirbnb ? `${r.score} ★` : `${r.score}/10`) : '—';
-            const commentText = r.comment || r.positive || r.title || '';
-            const snippet = commentText.length > 100 ? commentText.slice(0, 100) + '…' : commentText;
-            const answered = hasReviewResponse(r);
-            const initials = getInitials(r.author);
-            const dateStr = formatReviewDate(r);
-
-            return `
-              <div class="latest-review-card flex-shrink-0 w-72 rounded-2xl border ${isAirbnb ? 'border-rose-100 bg-rose-50/30' : 'border-blue-100 bg-blue-50/30'} p-4 cursor-pointer hover:shadow-md transition-all group" data-property-id="${escapeHtml(r.propertyId)}">
-                <!-- Review Header -->
-                <div class="flex items-start justify-between gap-2 mb-2.5">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-9 h-9 rounded-xl ${isAirbnb ? 'bg-rose-100 text-rose-600 border border-rose-200' : 'bg-blue-100 text-blue-600 border border-blue-200'} flex items-center justify-center font-bold text-xs flex-shrink-0">
-                      ${initials}
-                    </div>
-                    <div class="min-w-0">
-                      <h4 class="text-xs font-bold text-gray-900 truncate">${escapeHtml(r.author || 'Guest')}</h4>
-                      <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold ${isAirbnb ? 'text-rose-600' : 'text-blue-600'}">
-                          ${isAirbnb ? '<i class="fab fa-airbnb"></i>' : '<i class="fas fa-hotel"></i>'}
-                        </span>
-                        <span class="text-[10px] text-gray-400">${escapeHtml(dateStr)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black ${isAirbnb ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
-                    ${scoreText}
-                  </span>
-                </div>
-
-                <!-- Comment Snippet -->
-                ${snippet
-                  ? `<p class="text-[11px] text-gray-600 leading-relaxed line-clamp-3 mb-2.5 italic">"${escapeHtml(snippet)}"</p>`
-                  : '<p class="text-[11px] text-gray-400 italic mb-2.5">No written feedback</p>'
-                }
-
-                <!-- Footer: Property Name + Status -->
-                <div class="flex items-center justify-between pt-2 border-t ${isAirbnb ? 'border-rose-100/80' : 'border-blue-100/80'}">
-                  <span class="text-[10px] font-semibold text-gray-700 truncate max-w-[140px] group-hover:text-gray-900 flex items-center gap-1">
-                    <i class="fas fa-building text-gray-400 text-[9px]"></i>
-                    ${escapeHtml(r.propertyName)}
-                  </span>
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${answered ? 'text-emerald-600' : 'text-amber-600'}">
-                    <i class="fas ${answered ? 'fa-reply' : 'fa-clock'} text-[8px]"></i>
-                    ${answered ? 'Replied' : 'Pending'}
-                  </span>
-                </div>
-              </div>
-            `;
-          }).join('')}
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl">
+            <i class="fas fa-history text-gray-400"></i>
+            <span>${latestReviews.length} most recent reviews</span>
+          </span>
         </div>
       </div>
-    </section>
+
+      <!-- Reviews Feed Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${latestReviews.map((r) => renderReviewItem(r)).join('')}
+      </div>
+    </div>
   `;
 }
 
@@ -893,6 +871,15 @@ function renderReviewItem(r) {
               <span class="text-gray-300">•</span>
               <span class="text-[11px] text-gray-400">${escapeHtml(formatReviewDate(r))}</span>
             </div>
+            ${r.propertyName ? `
+              <div class="mt-1">
+                <button class="latest-review-prop-btn inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-medium transition-colors border border-amber-200" data-property-id="${escapeHtml(r.propertyId || '')}" title="View property details">
+                  <i class="fas fa-building text-amber-600 text-[10px]"></i>
+                  <span>${escapeHtml(r.propertyName)}</span>
+                  <i class="fas fa-arrow-right text-[8px] opacity-60"></i>
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -905,7 +892,7 @@ function renderReviewItem(r) {
             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
               ${scoreText}
             </span>
-            <button class="review-delete-btn text-gray-400 hover:text-rose-600 transition-colors text-xs p-1" data-review-id="${escapeHtml(r.id)}" title="Delete review">
+            <button class="review-delete-btn text-gray-400 hover:text-rose-600 transition-colors text-xs p-1" data-review-id="${escapeHtml(r.id)}" ${r.propertyId ? `data-property-id="${escapeHtml(r.propertyId)}"` : ''} title="Delete review">
               <i class="fas fa-trash-alt"></i>
             </button>
           </div>
@@ -1012,6 +999,13 @@ function bindViewEvents(container, handlers) {
     handlers.onSort?.(e.target.value);
   });
 
+  // Tab buttons (Properties vs Latest Reviews)
+  container.querySelectorAll('.reviews-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      handlers.onTabChange?.(btn.dataset.tab);
+    });
+  });
+
   // Details buttons on property cards
   container.querySelectorAll('.reviews-details-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1019,10 +1013,10 @@ function bindViewEvents(container, handlers) {
     });
   });
 
-  // Latest Reviews feed — clicking a card opens that property's detail modal
-  container.querySelectorAll('.latest-review-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const propId = card.dataset.propertyId;
+  // Property link buttons on Latest Reviews feed
+  container.querySelectorAll('.latest-review-prop-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const propId = btn.dataset.propertyId;
       if (propId) handlers.onSelectProperty?.(propId, false);
     });
   });
@@ -1122,8 +1116,9 @@ function bindViewEvents(container, handlers) {
   container.querySelectorAll('.review-delete-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const reviewId = btn.dataset.reviewId;
+      const propertyId = btn.dataset.propertyId;
       if (reviewId) {
-        handlers.onDeleteReview?.(reviewId);
+        handlers.onDeleteReview?.(reviewId, propertyId);
       }
     });
   });

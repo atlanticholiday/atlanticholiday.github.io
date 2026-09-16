@@ -73,7 +73,8 @@ export class ReviewsRatingsManager {
       reviewModalFilter: 'all',
       reviewModalSearch: '',
       isEditingLinks: false,
-      isAddingReview: false
+      isAddingReview: false,
+      activeTab: 'properties'
     };
 
     this.userOverrides = {};
@@ -523,9 +524,19 @@ export class ReviewsRatingsManager {
     this.render();
   }
 
-  deletePropertyReview(reviewId) {
-    if (!this.state.selectedProperty) return;
-    const prop = this.state.selectedProperty;
+  deletePropertyReview(reviewId, propertyId = null) {
+    let prop = this.state.selectedProperty;
+    if (!prop && propertyId) {
+      prop = this.state.rawProperties.find((p) => p.id === propertyId);
+    }
+    if (!prop) {
+      prop = this.state.rawProperties.find((p) =>
+        (p.reviews || []).some((r) => r.id === reviewId || r.sourceId === reviewId) ||
+        (p.booking?.reviews || []).some((r) => r.id === reviewId || r.sourceId === reviewId) ||
+        (p.airbnb?.reviews || []).some((r) => r.id === reviewId || r.sourceId === reviewId)
+      );
+    }
+    if (!prop) return;
     const propId = prop.id;
 
     if (!this.userOverrides[propId]) this.userOverrides[propId] = {};
@@ -617,13 +628,18 @@ export class ReviewsRatingsManager {
         reviewModalFilter: this.state.reviewModalFilter,
         reviewModalSearch: this.state.reviewModalSearch,
         isEditingLinks: this.state.isEditingLinks,
-        isAddingReview: this.state.isAddingReview
+        isAddingReview: this.state.isAddingReview,
+        activeTab: this.state.activeTab
       },
       {
         onBack: () => {
           if (this.navigationManager) {
             this.navigationManager.showPreviousPage('landing');
           }
+        },
+        onTabChange: (tab) => {
+          this.state.activeTab = tab;
+          this.render();
         },
         onSyncReviews: () => {
           this.syncReviews();
@@ -683,8 +699,8 @@ export class ReviewsRatingsManager {
         onAddReview: (reviewData) => {
           this.addPropertyReview(reviewData);
         },
-        onDeleteReview: (reviewId) => {
-          this.deletePropertyReview(reviewId);
+        onDeleteReview: (reviewId, propertyId) => {
+          this.deletePropertyReview(reviewId, propertyId);
         }
       }
     );
