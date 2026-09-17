@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-09-16T22:08:54.132Z",
+  "lastUpdated": "2026-09-17T07:22:32.174Z",
   "properties": [
     {
       "id": "acanto-loft",
@@ -892,8 +892,8 @@
         "subScores": {},
         "reviews": [],
         "fetchedReviewCount": 0,
-        "finalUrl": "https://www.booking.com/searchresults.html?label=gen173nr-10CAsouwFCJ2FwYXJ0YW1lbnRvLWFtYXJlbG8tYnktYXRsYW50aWMtaG9saWRheUgzWARouwGIAQGYATO4ARfIAQzYAQPoAQH4AQGIAgGoAgG4Atz0ptUGwAIB0gIkMWJiZGEwZTMtNWY0Zi00ZTU3LTg2MTUtMDcwMzIwYWQ1OTE02AIB4AIB&sid=4653293fbade53c05060f94b884fa4df&closed_msg=9036502&dest_id=-2176176&dest_type=city&hlrd=14&",
-        "lastChecked": "2026-09-15T21:37:02.353Z"
+        "finalUrl": "https://www.booking.com/searchresults.html?label=gen173nr-10CAsouwFCJ2FwYXJ0YW1lbnRvLWFtYXJlbG8tYnktYXRsYW50aWMtaG9saWRheUgzWARouwGIAQGYATO4ARfIAQzYAQPoAQH4AQGIAgGoAgG4Ap-qrtUGwAIB0gIkMzlhNzU4NjYtMTY2OS00N2I4LWFmMDAtMjlkMTEyN2YyNjYy2AIB4AIB&sid=efe3c85b694eff9e6ac45467548675a2&closed_msg=9036502&dest_id=-2176176&dest_type=city&hlrd=14&",
+        "lastChecked": "2026-09-17T07:22:12.110Z"
       },
       "airbnb": null,
       "reviews": []
@@ -906,13 +906,50 @@
       "airbnbUrl": "",
       "booking": {
         "status": "success",
-        "score": null,
-        "reviewCount": null,
+        "score": 10,
+        "reviewCount": 2,
         "subScores": {},
-        "reviews": [],
-        "fetchedReviewCount": 0,
-        "finalUrl": "https://www.booking.com/searchresults.html?label=gen173nr-10CAsouwFCIGFxdWktaGEtY2FzYS1ieS1hdGxhbnRpYy1ob2xpZGF5SDNYBGi7AYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgCgPWm1QbAAgHSAiQ2NzFjM2QxYS0xODMzLTQwZmUtOGJmYS0xZDY1MThhYjU5YjnYAgHgAgE&sid=4653293fbade53c05060f94b884fa4df&closed_msg=13545328&dest_id=-2166488&dest_type=city&hlrd=14&",
-        "lastChecked": "2026-09-15T21:37:09.916Z"
+        "reviews": [
+          {
+            "id": "booking-3b60ce0928367d31",
+            "sourceId": "3b60ce0928367d31",
+            "platform": "Booking.com",
+            "author": "Victorino",
+            "country": "Spain",
+            "date": "2026-08-24",
+            "score": 10,
+            "maxScore": 10,
+            "title": "Fenomenal lugar madeira",
+            "comment": "",
+            "positive": "Todo muy arreglado",
+            "negative": "Si tuvieras aire acondicionado mucho mejor",
+            "response": "",
+            "responseAuthor": "",
+            "responseDate": "",
+            "hasResponse": false
+          },
+          {
+            "id": "booking-374f4124a0f6eb89",
+            "sourceId": "374f4124a0f6eb89",
+            "platform": "Booking.com",
+            "author": "Andrii",
+            "country": "Ukraine",
+            "date": "2026-06-28",
+            "score": 10,
+            "maxScore": 10,
+            "title": "СУУУУУУУУУУУПЕР!!!!!!!!",
+            "comment": "",
+            "positive": "Гарне місце, тихо і атмосферно. Особливий вайп - це вечірнє джакузі з келихом прохолодного вина. Чистота апартаментів на високому рівні. Все необхідне для комфортного проживання - в наявності. Дуже крута локація, одразу виїзд на швидкісну трасу. Обовʼязково потрібно орендувати авто, без нього на Мадейрі нічого робити. До Фуншала 15 хв, до аеропорта 5 хв, ресторани та магазини поряд… Обслуговуюча команда апартаментів - на рівні. Завжди були на зв’язку, допомагали зі всіма питаннями. Дякуємо за гарно проведений час 🙏🙏🙏",
+            "negative": "",
+            "response": "Dear Andrii,\n\nthank you very much for your kind and positive review.\n\nWe are delighted to read that your stay was relaxing and enjoyable. It is especially rewarding to know that the jacuzzi added something special to your holiday and made your time with us even more memorable.\n\nWe are also pleased to read that our location made it easy for you to explore Madeira and discover everything the island has to offer. \n\nThank you once again for choosing to stay with us. It was a pleasure to host you, and we hope to have the opportunity to welcome you back to Madeira in the near future.\n\nKind regards,\nAtlantic Holiday Team",
+            "responseAuthor": "",
+            "responseDate": "",
+            "hasResponse": true
+          }
+        ],
+        "fetchedReviewCount": 2,
+        "finalUrl": "https://www.booking.com/hotel/pt/aqui-ha-casa-ocean-view-by-atlantic-holiday.html",
+        "lastChecked": "2026-09-17T07:22:24.168Z"
       },
       "airbnb": null,
       "reviews": []
@@ -1458,8 +1495,8 @@
         "subScores": {},
         "reviews": [],
         "fetchedReviewCount": 0,
-        "finalUrl": "https://www.booking.com/searchresults.html?label=gen173nr-10CAsouwFCI2F0bGFudGljLWJyZWV6ZS1ieS1hdGxhbnRpYy1ob2xpZGF5SDNYBGi7AYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgCh_Wm1QbAAgHSAiQ4NzAwZjBjNy1kMzc0LTRkZjAtYWEwMy0zMWM0NjI4MGM4MWPYAgHgAgE&sid=4653293fbade53c05060f94b884fa4df&closed_msg=9838199&dest_id=-2173164&dest_type=city&hlrd=14&",
-        "lastChecked": "2026-09-15T21:37:17.666Z"
+        "finalUrl": "https://www.booking.com/searchresults.html?label=gen173nr-10CAsouwFCI2F0bGFudGljLWJyZWV6ZS1ieS1hdGxhbnRpYy1ob2xpZGF5SDNYBGi7AYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgCsaqu1QbAAgHSAiRiMTI5NmQ3YS1lNGNiLTRiMDItODQ2OS1jYjU3ZGFhNDNkNWPYAgHgAgE&sid=efe3c85b694eff9e6ac45467548675a2&closed_msg=9838199&dest_id=-2173164&dest_type=city&hlrd=14&",
+        "lastChecked": "2026-09-17T07:22:32.155Z"
       },
       "airbnb": null,
       "reviews": []
