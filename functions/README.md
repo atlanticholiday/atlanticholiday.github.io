@@ -29,6 +29,9 @@ The URL uses Nodemailer's standard `smtp://` or `smtps://` connection format.
 The sender defaults to `Atlantic Holiday <info@atlanticholiday.net>` and can be
 overridden during deployment with the `HEATED_POOL_EMAIL_FROM` parameter.
 
+Laundry disparity alerts use the no-Blaze Google Apps Script worker documented in
+`scripts/google-apps-script/laundry-disparity-alerts/README.md`.
+
 ## Retired door integration
 
 The Nuki Doors app and its backend handlers have been removed. Source changes alone do not remove previously deployed resources. When releasing this change:

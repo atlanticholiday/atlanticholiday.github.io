@@ -1086,6 +1086,15 @@ service cloud.firestore {
       allow delete: if privileged();
     }
 
+    match /laundryLogSettings/{settingId} {
+      allow read, write: if privileged();
+    }
+
+    match /laundryDisparityAlertDeliveries/{deliveryId} {
+      allow read: if privileged();
+      allow write: if false;
+    }
+
     match /linenInventoryRecords/{recordId} {
       allow read: if privileged()
         || (hasApp('linenInventory') && ownsExistingLinenInventoryRecord());
