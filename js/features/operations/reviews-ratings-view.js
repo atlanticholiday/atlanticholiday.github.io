@@ -30,7 +30,8 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     reviewModalSearch = '',
     isEditingLinks = false,
     isAddingReview = false,
-    activeTab = 'properties'
+    activeTab = 'properties',
+    activeModalTab = 'overview'
   } = state;
 
   const activePropertiesCount = (rawProperties || []).filter((p) => !isPropertyArchived(p)).length;
@@ -244,7 +245,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
       </main>
 
       <!-- Property Details Modal / Drawer -->
-      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch, isEditingLinks, isAddingReview) : ''}
+      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch, isEditingLinks, isAddingReview, activeModalTab) : ''}
     </div>
   `;
 
@@ -463,7 +464,7 @@ function renderLatestReviewsPage(rawProperties, handlers) {
   `;
 }
 
-function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false, isAddingReview = false) {
+function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false, isAddingReview = false, activeModalTab = 'overview') {
   const isArchived = isPropertyArchived(prop);
   const airbnbSubs = prop.airbnb?.subScores || {};
   const bookingSubs = prop.booking?.subScores || {};
@@ -480,384 +481,411 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
     search: searchQuery
   });
 
+  const TABS = [
+    { key: 'overview',  label: 'Overview',  icon: 'chart-bar' },
+    { key: 'insights',  label: 'Insights',  icon: 'lightbulb' },
+    { key: 'reviews',   label: `Reviews (${allReviews.length})`, icon: 'comments' },
+    { key: 'settings',  label: 'Settings',  icon: 'cog' }
+  ];
+
+  const tabBtn = (t) => `
+    <button class="modal-tab-btn flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+      activeModalTab === t.key
+        ? 'border-amber-500 text-amber-700'
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+    }" data-tab="${t.key}">
+      <i class="fas fa-${t.icon} text-[11px]"></i>
+      <span>${t.label}</span>
+    </button>`;
+
+  // ── TAB: OVERVIEW ──────────────────────────────────────────────────────────
+  const overviewTab = `
+    <div class="space-y-4">
+      <!-- Score summary row -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Booking.com -->
+        <${prop.bookingUrl ? `a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'}
+          class="rounded-2xl p-4 bg-blue-50/60 border border-blue-100 flex flex-col justify-between ${prop.bookingUrl ? 'hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
+          <div class="flex items-center justify-between text-blue-700 text-xs font-semibold mb-3">
+            <span class="flex items-center gap-1.5 ${prop.bookingUrl ? 'group-hover:underline' : ''}">
+              <i class="fas fa-hotel"></i> Booking.com
+            </span>
+            ${prop.bookingUrl ? `<i class="fas fa-external-link-alt text-[10px] text-blue-400 group-hover:text-blue-600"></i>` : ''}
+          </div>
+          <div class="flex items-baseline gap-1.5 mb-1">
+            <span class="text-3xl font-black text-gray-900">${prop.booking?.score != null ? prop.booking.score.toFixed(1) : (prop.bookingUrl ? '—' : '—')}</span>
+            <span class="text-xs text-gray-500">/ 10</span>
+            ${prop.booking?.reviewCount ? `<span class="text-xs text-gray-400 ml-1">(${prop.booking.reviewCount} reviews)</span>` : ''}
+          </div>
+          ${prop.booking?.score != null
+            ? `<div class="w-full bg-blue-100 rounded-full h-1.5 mt-2">
+                 <div class="bg-blue-500 h-1.5 rounded-full" style="width:${Math.min(100, (prop.booking.score / 10) * 100)}%"></div>
+               </div>`
+            : `<p class="text-[11px] text-amber-600 italic mt-1">${prop.bookingUrl ? 'No score yet' : 'No listing linked'}</p>`
+          }
+        </${prop.bookingUrl ? 'a' : 'div'}>
+
+        <!-- Airbnb -->
+        <${prop.airbnbUrl ? `a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'}
+          class="rounded-2xl p-4 bg-rose-50/60 border border-rose-100 flex flex-col justify-between ${prop.airbnbUrl ? 'hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
+          <div class="flex items-center justify-between text-rose-700 text-xs font-semibold mb-3">
+            <span class="flex items-center gap-1.5 ${prop.airbnbUrl ? 'group-hover:underline' : ''}">
+              <i class="fab fa-airbnb text-sm"></i> Airbnb
+            </span>
+            ${prop.airbnbUrl ? `<i class="fas fa-external-link-alt text-[10px] text-rose-400 group-hover:text-rose-600"></i>` : ''}
+          </div>
+          <div class="flex items-baseline gap-1.5 mb-1">
+            <span class="text-3xl font-black text-gray-900">${prop.airbnb?.score != null ? prop.airbnb.score.toFixed(2) : '—'}</span>
+            <span class="text-xs text-gray-500">★ / 5.0</span>
+            ${prop.airbnb?.reviewCount ? `<span class="text-xs text-gray-400 ml-1">(${prop.airbnb.reviewCount} reviews)</span>` : ''}
+          </div>
+          ${prop.airbnb?.score != null
+            ? `<div class="w-full bg-rose-100 rounded-full h-1.5 mt-2">
+                 <div class="bg-rose-500 h-1.5 rounded-full" style="width:${Math.min(100, (prop.airbnb.score / 5) * 100)}%"></div>
+               </div>`
+            : `<p class="text-[11px] text-amber-600 italic mt-1">${prop.airbnbUrl ? 'No score yet' : 'No listing linked'}</p>`
+          }
+          ${prop.airbnb?.badge ? `<span class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 w-fit"><i class="fas fa-trophy text-[9px]"></i>${escapeHtml(prop.airbnb.badge)}</span>` : ''}
+        </${prop.airbnbUrl ? 'a' : 'div'}>
+      </div>
+
+      <!-- Booking.com Sub-scores -->
+      <div class="rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 class="text-xs font-bold text-blue-900 flex items-center gap-2">
+            <i class="fas fa-hotel text-blue-600"></i>
+            Booking.com Sub-scores
+          </h3>
+          <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score != null ? `${prop.booking.score} / 10` : (prop.bookingUrl ? 'Awaiting sync' : '—')}</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          ${renderSubScorePill('Cleanliness', bookingSubs.cleanliness, 10, 'broom')}
+          ${renderSubScorePill('Staff', bookingSubs.staff, 10, 'user-tie')}
+          ${renderSubScorePill('Facilities', bookingSubs.facilities, 10, 'concierge-bell')}
+          ${renderSubScorePill('Comfort', bookingSubs.comfort, 10, 'couch')}
+          ${renderSubScorePill('Value', bookingSubs.value, 10, 'tag')}
+          ${renderSubScorePill('Location', bookingSubs.location, 10, 'map-marker-alt')}
+        </div>
+      </div>
+
+      <!-- Airbnb Sub-scores -->
+      <div class="rounded-2xl border border-rose-100 bg-rose-50/30 p-4">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 class="text-xs font-bold text-rose-900 flex items-center gap-2">
+            <i class="fab fa-airbnb text-rose-600"></i>
+            Airbnb Sub-scores
+          </h3>
+          <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score != null ? `${prop.airbnb.score} ★` : (prop.airbnbUrl ? 'Awaiting sync' : '—')}</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          ${renderSubScorePill('Cleanliness', airbnbSubs.cleanliness, 5, 'broom')}
+          ${renderSubScorePill('Accuracy', airbnbSubs.accuracy, 5, 'check-double')}
+          ${renderSubScorePill('Check-in', airbnbSubs.checkin, 5, 'key')}
+          ${renderSubScorePill('Communication', airbnbSubs.communication, 5, 'comment-dots')}
+          ${renderSubScorePill('Location', airbnbSubs.location, 5, 'map-marker-alt')}
+          ${renderSubScorePill('Value', airbnbSubs.value, 5, 'tag')}
+        </div>
+      </div>
+    </div>`;
+
+  // ── TAB: INSIGHTS ──────────────────────────────────────────────────────────
+  const insightsTab = `
+    <div>
+      ${renderInsightsPanel(prop) || `
+        <div class="text-center py-12 text-gray-500">
+          <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3 text-gray-400">
+            <i class="fas fa-lightbulb text-lg"></i>
+          </div>
+          <p class="text-sm font-medium text-gray-700">Not enough data yet</p>
+          <p class="text-xs text-gray-400 mt-1">Insights appear once scores or written reviews are available.</p>
+        </div>
+      `}
+    </div>`;
+
+  // ── TAB: REVIEWS ──────────────────────────────────────────────────────────
+  const reviewsTab = `
+    <div class="space-y-4">
+      <!-- Counters row -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-xl">
+          <i class="fas fa-hotel text-[10px]"></i> Booking.com: ${bookingReviewsCount}
+        </span>
+        <span class="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-100 text-rose-700 font-semibold px-2.5 py-1 rounded-xl">
+          <i class="fab fa-airbnb text-[10px]"></i> Airbnb: ${airbnbReviewsCount}
+        </span>
+        ${unansweredReviewsCount > 0
+          ? `<span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 font-semibold px-2.5 py-1 rounded-xl">
+               <i class="fas fa-clock text-[10px]"></i> ${unansweredReviewsCount} unanswered
+             </span>`
+          : `<span class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-2.5 py-1 rounded-xl">
+               <i class="fas fa-check-circle text-[10px]"></i> All answered
+             </span>`
+        }
+        <button id="modal-toggle-add-review-btn" class="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold text-xs transition-colors border border-amber-200">
+          <i class="fas ${isAddingReview ? 'fa-times' : 'fa-plus'} text-[10px]"></i>
+          <span>${isAddingReview ? 'Cancel' : 'Add Review'}</span>
+        </button>
+      </div>
+
+      <!-- Add Review Form -->
+      ${isAddingReview ? `
+        <form id="add-review-form" class="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 space-y-3">
+          <h4 class="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+            <i class="fas fa-edit text-amber-600"></i> Add Guest Review for ${escapeHtml(prop.name)}
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Guest Name *</label>
+              <input type="text" id="review-author-input" required placeholder="e.g. Charlotte M." class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Country</label>
+              <input type="text" id="review-country-input" placeholder="e.g. United Kingdom" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Platform</label>
+              <select id="review-platform-input" class="w-full p-2 rounded-xl border border-gray-300 bg-white">
+                <option value="Booking.com">Booking.com (/ 10)</option>
+                <option value="Airbnb">Airbnb (/ 5.0)</option>
+                <option value="Direct">Direct Guest (/ 10)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Overall Score *</label>
+              <input type="number" step="0.1" id="review-score-input" required placeholder="10 or 5.0" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Cleanliness Score</label>
+              <input type="number" step="0.1" id="review-clean-input" placeholder="9.5 or 5.0" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-700 mb-1">Date</label>
+              <input type="date" id="review-date-input" value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-700 mb-1">Review Title</label>
+            <input type="text" id="review-title-input" placeholder="e.g. Fantastic stay, super clean!" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-700 mb-1">Full Comment</label>
+            <textarea id="review-comment-input" rows="2" placeholder="Guest feedback..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-emerald-800 mb-1">Liked (positive)</label>
+              <input type="text" id="review-positive-input" placeholder="e.g. Spotlessly clean, great terrace" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-amber-800 mb-1">Room for improvement</label>
+              <input type="text" id="review-negative-input" placeholder="e.g. Could use more coffee pods" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-700 mb-1">Host Response (optional)</label>
+            <textarea id="review-response-input" rows="2" placeholder="Paste the host reply sent to the guest..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
+              <i class="fas fa-check text-[11px]"></i> Save Review
+            </button>
+          </div>
+        </form>
+      ` : ''}
+
+      <!-- Search + Filter Pills -->
+      <div class="space-y-2">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input
+            type="text"
+            id="modal-review-search"
+            value="${escapeHtml(searchQuery)}"
+            placeholder="Search in reviews..."
+            class="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
+          />
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-medium">
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${allReviews.length})</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'booking' ? 'bg-white text-blue-700 shadow-sm font-bold' : 'text-gray-600 hover:text-blue-700'}" data-filter="booking">Booking.com (${bookingReviewsCount})</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'airbnb' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="airbnb">Airbnb (${airbnbReviewsCount})</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'positive' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="positive">Positive</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'attention' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="attention">Needs Attention</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'answered' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="answered">Answered (${answeredReviewsCount})</button>
+          <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'unanswered' ? 'bg-white text-amber-700 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-700'}" data-filter="unanswered">Unanswered (${unansweredReviewsCount})</button>
+        </div>
+      </div>
+
+      <!-- Review Cards -->
+      <div class="space-y-4">
+        ${filteredReviews.length === 0
+          ? `<div class="text-center py-10 bg-gray-50 rounded-2xl border border-gray-200 p-6 text-gray-500 text-xs">
+               <i class="fas fa-comment-slash text-2xl text-gray-400 mb-2"></i>
+               <p class="font-medium text-gray-700">No reviews match this filter</p>
+               <p class="mt-0.5 text-gray-400">Try clearing the search or switching filters.</p>
+             </div>`
+          : filteredReviews.map((r) => renderReviewItem(r)).join('')
+        }
+      </div>
+      <p class="text-xs text-gray-400 text-right">Showing ${filteredReviews.length} of ${allReviews.length} reviews</p>
+    </div>`;
+
+  // ── TAB: SETTINGS ──────────────────────────────────────────────────────────
+  const settingsTab = `
+    <div class="space-y-4">
+      <!-- Listing URLs -->
+      <div class="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+            <i class="fas fa-link text-amber-500"></i>
+            Listing URLs
+          </h4>
+          <button id="modal-toggle-edit-links-btn" class="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
+            ${isEditingLinks ? '<i class="fas fa-times mr-1"></i>Cancel' : '<i class="fas fa-pen mr-1"></i>Edit Links & Scores'}
+          </button>
+        </div>
+
+        ${!isEditingLinks ? `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
+              <div class="flex items-center gap-2 truncate pr-2">
+                <i class="fas fa-hotel text-blue-600 flex-shrink-0"></i>
+                <span class="truncate text-gray-700">${prop.bookingUrl ? escapeHtml(prop.bookingUrl) : '<span class="text-gray-400 italic">No Booking.com link added</span>'}</span>
+              </div>
+              ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener" class="text-blue-500 hover:text-blue-700 p-1 flex-shrink-0"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+            </div>
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
+              <div class="flex items-center gap-2 truncate pr-2">
+                <i class="fab fa-airbnb text-rose-600 flex-shrink-0"></i>
+                <span class="truncate text-gray-700">${prop.airbnbUrl ? escapeHtml(prop.airbnbUrl) : '<span class="text-gray-400 italic">No Airbnb link added</span>'}</span>
+              </div>
+              ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener" class="text-rose-500 hover:text-rose-700 p-1 flex-shrink-0"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
+            </div>
+          </div>
+        ` : `
+          <div class="space-y-4 pt-1">
+            <div class="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
+              <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5"><i class="fas fa-hotel text-blue-600"></i> Booking.com</span>
+              <div>
+                <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
+                <input type="url" id="edit-booking-url-input" value="${escapeHtml(prop.bookingUrl || '')}" placeholder="https://www.booking.com/hotel/pt/..." class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white" />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/10)</label>
+                  <input type="number" step="0.1" min="1" max="10" id="edit-booking-score-input" value="${prop.booking?.score != null ? prop.booking.score : ''}" placeholder="e.g. 9.2" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/10)</label>
+                  <input type="number" step="0.1" min="1" max="10" id="edit-booking-clean-input" value="${prop.booking?.subScores?.cleanliness != null ? prop.booking.subScores.cleanliness : ''}" placeholder="e.g. 9.5" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Review Count</label>
+                  <input type="number" min="0" id="edit-booking-count-input" value="${prop.booking?.reviewCount != null ? prop.booking.reviewCount : ''}" placeholder="e.g. 15" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+              </div>
+            </div>
+            <div class="rounded-xl border border-rose-100 bg-rose-50/40 p-3 space-y-2.5">
+              <span class="text-xs font-bold text-rose-900 flex items-center gap-1.5"><i class="fab fa-airbnb text-rose-600"></i> Airbnb</span>
+              <div>
+                <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
+                <input type="url" id="edit-airbnb-url-input" value="${escapeHtml(prop.airbnbUrl || '')}" placeholder="https://www.airbnb.pt/rooms/..." class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white" />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/5.0)</label>
+                  <input type="number" step="0.01" min="1" max="5" id="edit-airbnb-score-input" value="${prop.airbnb?.score != null ? prop.airbnb.score : ''}" placeholder="e.g. 4.88" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/5.0)</label>
+                  <input type="number" step="0.1" min="1" max="5" id="edit-airbnb-clean-input" value="${prop.airbnb?.subScores?.cleanliness != null ? prop.airbnb.subScores.cleanliness : ''}" placeholder="e.g. 4.9" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Review Count</label>
+                  <input type="number" min="0" id="edit-airbnb-count-input" value="${prop.airbnb?.reviewCount != null ? prop.airbnb.reviewCount : ''}" placeholder="e.g. 24" class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white" />
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button id="modal-save-links-btn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
+                <i class="fas fa-save text-[11px]"></i> Save Details & Scores
+              </button>
+            </div>
+          </div>
+        `}
+        <div class="mt-3 pt-2.5 border-t border-gray-200/70 flex items-start gap-2 text-[11px] text-gray-500">
+          <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
+          <span>Run <code class="bg-gray-200/80 px-1 py-0.5 rounded text-gray-800 font-mono text-[10px]">sync-reviews.cmd</code> to pull latest scores and guest reviews.</span>
+        </div>
+      </div>
+
+      <!-- Archive / Restore -->
+      <div class="rounded-2xl border ${isArchived ? 'border-emerald-200 bg-emerald-50/40' : 'border-amber-200 bg-amber-50/30'} p-4">
+        <h4 class="text-xs font-bold ${isArchived ? 'text-emerald-900' : 'text-amber-900'} mb-1 flex items-center gap-1.5">
+          <i class="fas ${isArchived ? 'fa-box-open text-emerald-600' : 'fa-box-archive text-amber-600'}"></i>
+          ${isArchived ? 'Property Archived' : 'Archive Property'}
+        </h4>
+        <p class="text-[11px] ${isArchived ? 'text-emerald-700' : 'text-amber-700'} mb-3 leading-snug">
+          ${isArchived
+            ? 'This property is currently archived and hidden from the active portfolio. Restore it to make it visible again.'
+            : 'Archiving removes this property from the active portfolio view. Scores and reviews are preserved and it can be restored at any time.'}
+        </p>
+        <button id="modal-toggle-archive-btn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-colors ${isArchived ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600' : 'bg-white hover:bg-amber-50 text-amber-800 border-amber-300'}">
+          <i class="fas ${isArchived ? 'fa-box-open' : 'fa-box-archive'} text-[11px]"></i>
+          ${isArchived ? 'Restore to Active' : 'Archive Property'}
+        </button>
+      </div>
+    </div>`;
+
+  const tabContent = {
+    overview: overviewTab,
+    insights: insightsTab,
+    reviews: reviewsTab,
+    settings: settingsTab
+  };
+
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[92vh] flex flex-col">
+      <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative max-h-[92vh] flex flex-col">
         <!-- Close Button -->
-        <button id="modal-close-btn" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
+        <button id="modal-close-btn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
           <i class="fas fa-times text-sm"></i>
         </button>
 
-        <!-- Header -->
-        <div class="mb-5 pb-4 border-b border-gray-100 pr-10 flex-shrink-0">
-          <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Reviews & Ratings</span>
-              ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
-              ${isArchived ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>` : ''}
+        <!-- Header (fixed) -->
+        <div class="px-6 pt-6 pb-0 flex-shrink-0">
+          <div class="flex items-start gap-3 pr-10 mb-1">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                <span class="text-xs font-semibold uppercase tracking-wider text-amber-600">Property Reviews & Ratings</span>
+                ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
+                ${isArchived ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>` : ''}
+              </div>
+              <h2 class="text-2xl font-black text-gray-900 truncate">${escapeHtml(prop.name)}</h2>
+              <p class="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                <i class="fas fa-map-marker-alt text-gray-400"></i>
+                <span>${escapeHtml(prop.location || 'Madeira')}</span>
+                <span class="mx-1.5">•</span>
+                <span>${allReviews.length} fetched review${allReviews.length !== 1 ? 's' : ''}</span>
+              </p>
             </div>
-            <button id="modal-toggle-archive-btn" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-colors ${isArchived ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'}">
-              <i class="fas ${isArchived ? 'fa-box-open text-emerald-600' : 'fa-box-archive text-amber-600'} text-[11px]"></i>
-              <span>${isArchived ? 'Restore / Unarchive' : 'Archive Property'}</span>
-            </button>
           </div>
-          <h2 class="text-2xl font-black text-gray-900 mt-1">${escapeHtml(prop.name)}</h2>
-          <p class="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            <i class="fas fa-map-marker-alt text-gray-400"></i>
-            <span>${escapeHtml(prop.location || 'Madeira')}</span>
-            <span class="mx-1.5">•</span>
-            <span>${allReviews.length} full guest reviews</span>
-          </p>
+
+          <!-- Tab Bar -->
+          <div class="flex items-center gap-0 -mb-px mt-4 border-b border-gray-200 overflow-x-auto">
+            ${TABS.map(tabBtn).join('')}
+          </div>
         </div>
 
-        <!-- Scrollable Modal Body -->
-        <div class="overflow-y-auto space-y-6 flex-grow pr-1">
-          <!-- OTA Listing Links Section -->
-          <div class="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
-            <div class="flex items-center justify-between mb-2.5">
-              <h4 class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                <i class="fas fa-link text-amber-500"></i>
-                <span>Listing URLs (for Automated Review Sync)</span>
-              </h4>
-              <button id="modal-toggle-edit-links-btn" class="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
-                ${isEditingLinks ? '<i class="fas fa-times mr-1"></i>Cancel' : '<i class="fas fa-pen mr-1"></i>Edit Links & Scores'}
-              </button>
-            </div>
-
-            ${
-              !isEditingLinks
-                ? `
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
-                  <div class="flex items-center gap-2 truncate pr-2">
-                    <i class="fas fa-hotel text-blue-600 flex-shrink-0"></i>
-                    <span class="truncate text-gray-700">${prop.bookingUrl ? escapeHtml(prop.bookingUrl) : '<span class="text-gray-400 italic">No Booking.com link added</span>'}</span>
-                  </div>
-                  ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener" class="text-blue-500 hover:text-blue-700 p-1 flex-shrink-0" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
-                </div>
-
-                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm">
-                  <div class="flex items-center gap-2 truncate pr-2">
-                    <i class="fab fa-airbnb text-rose-600 flex-shrink-0"></i>
-                    <span class="truncate text-gray-700">${prop.airbnbUrl ? escapeHtml(prop.airbnbUrl) : '<span class="text-gray-400 italic">No Airbnb link added</span>'}</span>
-                  </div>
-                  ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener" class="text-rose-500 hover:text-rose-700 p-1 flex-shrink-0" title="Open listing"><i class="fas fa-external-link-alt text-[10px]"></i></a>` : ''}
-                </div>
-              </div>
-            `
-                : `
-              <div class="space-y-4 pt-1">
-                <!-- Booking.com Configuration -->
-                <div class="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2.5">
-                  <span class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                    <i class="fas fa-hotel text-blue-600"></i> Booking.com Listing & Ratings
-                  </span>
-                  <div>
-                    <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
-                    <input
-                      type="url"
-                      id="edit-booking-url-input"
-                      value="${escapeHtml(prop.bookingUrl || '')}"
-                      placeholder="https://www.booking.com/hotel/pt/..."
-                      class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                    />
-                  </div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/10)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="1"
-                        max="10"
-                        id="edit-booking-score-input"
-                        value="${prop.booking?.score !== undefined && prop.booking?.score !== null ? prop.booking.score : ''}"
-                        placeholder="e.g. 9.2"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/10)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="1"
-                        max="10"
-                        id="edit-booking-clean-input"
-                        value="${prop.booking?.subScores?.cleanliness !== undefined && prop.booking?.subScores?.cleanliness !== null ? prop.booking.subScores.cleanliness : ''}"
-                        placeholder="e.g. 9.5"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Reviews Count</label>
-                      <input
-                        type="number"
-                        min="0"
-                        id="edit-booking-count-input"
-                        value="${prop.booking?.reviewCount !== undefined && prop.booking?.reviewCount !== null ? prop.booking.reviewCount : ''}"
-                        placeholder="e.g. 15"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Airbnb Configuration -->
-                <div class="rounded-xl border border-rose-100 bg-rose-50/40 p-3 space-y-2.5">
-                  <span class="text-xs font-bold text-rose-900 flex items-center gap-1.5">
-                    <i class="fab fa-airbnb text-rose-600"></i> Airbnb Listing & Ratings
-                  </span>
-                  <div>
-                    <label class="block text-[10px] font-semibold text-gray-600 mb-1">Listing URL</label>
-                    <input
-                      type="url"
-                      id="edit-airbnb-url-input"
-                      value="${escapeHtml(prop.airbnbUrl || '')}"
-                      placeholder="https://www.airbnb.pt/rooms/..."
-                      class="w-full text-xs p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-white"
-                    />
-                  </div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Score (/5.0)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="1"
-                        max="5"
-                        id="edit-airbnb-score-input"
-                        value="${prop.airbnb?.score !== undefined && prop.airbnb?.score !== null ? prop.airbnb.score : ''}"
-                        placeholder="e.g. 4.88"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Cleanliness (/5.0)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="1"
-                        max="5"
-                        id="edit-airbnb-clean-input"
-                        value="${prop.airbnb?.subScores?.cleanliness !== undefined && prop.airbnb?.subScores?.cleanliness !== null ? prop.airbnb.subScores.cleanliness : ''}"
-                        placeholder="e.g. 4.9"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 mb-0.5">Reviews Count</label>
-                      <input
-                        type="number"
-                        min="0"
-                        id="edit-airbnb-count-input"
-                        value="${prop.airbnb?.reviewCount !== undefined && prop.airbnb?.reviewCount !== null ? prop.airbnb.reviewCount : ''}"
-                        placeholder="e.g. 24"
-                        class="w-full text-xs p-2 rounded-lg border border-gray-300 bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-1">
-                  <button id="modal-save-links-btn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
-                    <i class="fas fa-save text-[11px]"></i>
-                    <span>Save Details & Scores</span>
-                  </button>
-                </div>
-              </div>
-            `
-            }
-            <div class="mt-3 pt-2.5 border-t border-gray-200/70 flex items-start gap-2 text-[11px] text-gray-500">
-              <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-              <span>Listing links are synced by the background scraper. Run <code class="bg-gray-200/80 px-1 py-0.5 rounded text-gray-800 font-mono text-[10px]">sync-reviews.cmd</code> to pull latest scores and guest reviews, or await the weekly auto-sync.</span>
-            </div>
-          </div>
-
-          <!-- Subscores Overview -->
-          <div class="space-y-4">
-            <!-- Booking.com Subscores -->
-            <div class="rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
-              <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h3 class="text-xs font-bold text-blue-900 flex items-center gap-2">
-                  <i class="fas fa-hotel text-blue-600"></i>
-                  <span>Booking.com Sub-category Ratings</span>
-                  ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Booking.com"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
-                </h3>
-                <span class="text-xs font-bold text-blue-700">Overall: ${prop.booking?.score ? `${prop.booking.score} / 10` : (prop.bookingUrl ? 'Awaiting sync' : '—')}</span>
-              </div>
-
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                ${renderSubScorePill('Cleanliness', bookingSubs.cleanliness, 10, 'broom')}
-                ${renderSubScorePill('Staff', bookingSubs.staff, 10, 'user-tie')}
-                ${renderSubScorePill('Facilities', bookingSubs.facilities, 10, 'concierge-bell')}
-                ${renderSubScorePill('Comfort', bookingSubs.comfort, 10, 'couch')}
-                ${renderSubScorePill('Value', bookingSubs.value, 10, 'tag')}
-                ${renderSubScorePill('Location', bookingSubs.location, 10, 'map-marker-alt')}
-              </div>
-            </div>
-
-            <!-- Airbnb Subscores -->
-            <div class="rounded-2xl border border-rose-100 bg-rose-50/30 p-4">
-              <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h3 class="text-xs font-bold text-rose-900 flex items-center gap-2">
-                  <i class="fab fa-airbnb text-rose-600"></i>
-                  <span>Airbnb Sub-category Ratings</span>
-                  ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer" class="text-rose-600 hover:text-rose-800 text-[11px] font-semibold underline flex items-center gap-1 ml-1" title="Open listing on Airbnb"><i class="fas fa-external-link-alt text-[9px]"></i>View listing</a>` : ''}
-                </h3>
-                <span class="text-xs font-bold text-rose-700">Overall: ${prop.airbnb?.score ? `${prop.airbnb.score} ★` : (prop.airbnbUrl ? 'Awaiting sync' : '—')}</span>
-              </div>
-
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                ${renderSubScorePill('Cleanliness', airbnbSubs.cleanliness, 5, 'broom')}
-                ${renderSubScorePill('Accuracy', airbnbSubs.accuracy, 5, 'check-double')}
-                ${renderSubScorePill('Check-in', airbnbSubs.checkin, 5, 'key')}
-                ${renderSubScorePill('Communication', airbnbSubs.communication, 5, 'comment-dots')}
-                ${renderSubScorePill('Location', airbnbSubs.location, 5, 'map-marker-alt')}
-                ${renderSubScorePill('Value', airbnbSubs.value, 5, 'tag')}
-              </div>
-            </div>
-          </div>
-
-          <!-- Guest Insights & Recommendations Panel -->
-          ${renderInsightsPanel(prop)}
-
-          <!-- Guest Reviews & Feedback Section -->
-          <div class="pt-2">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <i class="fas fa-comments text-amber-500"></i>
-                    <span>Guest Reviews & Feedback (${allReviews.length})</span>
-                  </h3>
-                  <button id="modal-toggle-add-review-btn" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold text-xs transition-colors">
-                    <i class="fas ${isAddingReview ? 'fa-times' : 'fa-plus'} text-[10px]"></i>
-                    <span>${isAddingReview ? 'Cancel' : 'Add Review'}</span>
-                  </button>
-                </div>
-                <p class="text-xs text-gray-500 mt-0.5">Read detailed feedback, comments, and positive/negative points</p>
-              </div>
-
-              <!-- Search in reviews -->
-              <div class="relative w-full sm:w-60">
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                <input
-                  type="text"
-                  id="modal-review-search"
-                  value="${escapeHtml(searchQuery)}"
-                  placeholder="Search in reviews..."
-                  class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
-                />
-              </div>
-            </div>
-
-            <!-- Add Review Inline Form -->
-            ${
-              isAddingReview
-                ? `
-              <form id="add-review-form" class="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 space-y-3 mb-4">
-                <h4 class="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                  <i class="fas fa-edit text-amber-600"></i> Add Guest Review for ${escapeHtml(prop.name)}
-                </h4>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Guest Name *</label>
-                    <input type="text" id="review-author-input" required placeholder="e.g. Charlotte M." class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Country</label>
-                    <input type="text" id="review-country-input" placeholder="e.g. United Kingdom" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Platform</label>
-                    <select id="review-platform-input" class="w-full p-2 rounded-xl border border-gray-300 bg-white">
-                      <option value="Booking.com">Booking.com (Score / 10)</option>
-                      <option value="Airbnb">Airbnb (Score / 5.0)</option>
-                      <option value="Direct">Direct Guest (Score / 10)</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Overall Score *</label>
-                    <input type="number" step="0.1" id="review-score-input" required placeholder="10 or 5.0" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Cleanliness Score</label>
-                    <input type="number" step="0.1" id="review-clean-input" placeholder="9.5 or 5.0" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-gray-700 mb-1">Date</label>
-                    <input type="date" id="review-date-input" value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-[11px] font-semibold text-gray-700 mb-1">Review Title</label>
-                  <input type="text" id="review-title-input" placeholder="e.g. Fantastic stay, super clean and stunning view!" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                </div>
-                <div>
-                  <label class="block text-[11px] font-semibold text-gray-700 mb-1">Full Comment</label>
-                  <textarea id="review-comment-input" rows="2" placeholder="Write the guest feedback or comments here..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
-                </div>
-                <div>
-                  <label class="block text-[11px] font-semibold text-gray-700 mb-1">Host Answer (optional)</label>
-                  <textarea id="review-response-input" rows="2" placeholder="Paste the answer sent to the guest, if any..." class="w-full p-2 rounded-xl border border-gray-300 bg-white"></textarea>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-emerald-800 mb-1">What was liked (positive)</label>
-                    <input type="text" id="review-positive-input" placeholder="e.g. Spotlessly clean, quiet area, great terrace view" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-amber-800 mb-1">Room for improvement (negative)</label>
-                    <input type="text" id="review-negative-input" placeholder="e.g. Could use a few more coffee pods" class="w-full p-2 rounded-xl border border-gray-300 bg-white" />
-                  </div>
-                </div>
-                <div class="flex justify-end gap-2 pt-1">
-                  <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm">
-                    <i class="fas fa-check text-[11px]"></i>
-                    <span>Save Review</span>
-                  </button>
-                </div>
-              </form>
-            `
-                : ''
-            }
-
-            <!-- Review Filter Pills -->
-            <div class="flex flex-wrap items-center gap-1.5 mb-4 bg-gray-100 p-1 rounded-xl text-xs font-medium">
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${allReviews.length})</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'booking' ? 'bg-white text-blue-700 shadow-sm font-bold' : 'text-gray-600 hover:text-blue-700'}" data-filter="booking">Booking.com (${bookingReviewsCount})</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'airbnb' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="airbnb">Airbnb (${airbnbReviewsCount})</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'positive' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="positive">Positive (9-10 / 5★)</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'attention' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-700'}" data-filter="attention">Needs Attention</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'answered' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-gray-600 hover:text-emerald-700'}" data-filter="answered">Answered (${answeredReviewsCount})</button>
-              <button class="modal-review-filter-btn px-3 py-1.5 rounded-lg transition-colors ${activeFilter === 'unanswered' ? 'bg-white text-amber-700 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-700'}" data-filter="unanswered">Unanswered (${unansweredReviewsCount})</button>
-            </div>
-
-            <!-- Review Cards List -->
-            <div class="space-y-4">
-              ${
-                filteredReviews.length === 0
-                  ? `
-                <div class="text-center py-10 bg-gray-50 rounded-2xl border border-gray-200 p-6 text-gray-500 text-xs">
-                  <i class="fas fa-comment-slash text-2xl text-gray-400 mb-2"></i>
-                  <p class="font-medium text-gray-700">No reviews match this filter</p>
-                  <p class="mt-0.5 text-gray-400">Try clearing the search or switching review filters.</p>
-                </div>
-              `
-                  : filteredReviews.map((r) => renderReviewItem(r)).join('')
-              }
-            </div>
-          </div>
+        <!-- Scrollable Tab Content -->
+        <div class="overflow-y-auto flex-grow px-6 pt-5 pb-6">
+          ${tabContent[activeModalTab] || overviewTab}
         </div>
 
         <!-- Footer -->
-        <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-          <span class="text-xs text-gray-400">
-            Showing ${filteredReviews.length} of ${allReviews.length} reviews
-          </span>
+        <div class="px-6 pb-5 pt-3 border-t border-gray-100 flex justify-end flex-shrink-0">
           <button id="modal-ok-btn" class="px-5 py-2.5 rounded-xl bg-gray-900 hover:bg-black text-white font-medium text-sm transition-colors shadow-sm">
             Close
           </button>
@@ -866,6 +894,9 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
     </div>
   `;
 }
+
+
+
 
 function renderReviewItem(r) {
   const isAirbnb = r.platform === 'Airbnb';
@@ -1175,6 +1206,13 @@ function bindViewEvents(container, handlers) {
   });
   container.querySelector('#modal-ok-btn')?.addEventListener('click', () => {
     handlers.onCloseDetailModal?.();
+  });
+
+  // Modal Tab Buttons
+  container.querySelectorAll('.modal-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      handlers.onModalTabChange?.(btn.dataset.tab);
+    });
   });
 
   // Modal Review Filter Buttons

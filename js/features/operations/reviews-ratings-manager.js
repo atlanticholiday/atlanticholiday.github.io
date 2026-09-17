@@ -88,7 +88,8 @@ export class ReviewsRatingsManager {
       reviewModalSearch: '',
       isEditingLinks: false,
       isAddingReview: false,
-      activeTab: 'properties'
+      activeTab: 'properties',
+      activeModalTab: 'overview'
     };
 
     this.userOverrides = {};
@@ -797,7 +798,8 @@ export class ReviewsRatingsManager {
         reviewModalSearch: this.state.reviewModalSearch,
         isEditingLinks: this.state.isEditingLinks,
         isAddingReview: this.state.isAddingReview,
-        activeTab: this.state.activeTab
+        activeTab: this.state.activeTab,
+        activeModalTab: this.state.activeModalTab
       },
       {
         onBack: () => {
@@ -807,6 +809,10 @@ export class ReviewsRatingsManager {
         },
         onTabChange: (tab) => {
           this.state.activeTab = tab;
+          this.render();
+        },
+        onModalTabChange: (tab) => {
+          this.state.activeModalTab = tab;
           this.render();
         },
         onSyncReviews: () => {
@@ -837,6 +843,7 @@ export class ReviewsRatingsManager {
           this.state.reviewModalSearch = '';
           this.state.isEditingLinks = Boolean(openInEditLinks);
           this.state.isAddingReview = false;
+          this.state.activeModalTab = openInEditLinks ? 'settings' : 'overview';
           this.render();
         },
         onCloseDetailModal: () => {
