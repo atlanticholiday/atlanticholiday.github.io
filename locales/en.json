@@ -1989,6 +1989,7 @@
       "batchDate": "Date for all rows",
       "batchRatePerKg": "Rate / kg for all rows",
       "batchHint": "Use batch entry for same-day laundry across many properties. If needed, you can link rows to cleanings later.",
+      "keyboardHint": "Press Enter on Kg to add next row",
       "activityKicker": "Laundry activity",
       "activityTitle": "Combined laundry register",
       "reviewKicker": "Needs review",
@@ -2145,6 +2146,7 @@
       "reset": "Reset",
       "openCleaning": "Open cleaning",
       "addRow": "Add row",
+      "add5Rows": "+ 5 rows",
       "removeRow": "Remove row",
       "fillForm": "Fill form"
     },

@@ -1999,6 +1999,7 @@
             "batchDate": "Data para todas as linhas",
             "batchRatePerKg": "Preço / kg para todas as linhas",
             "batchHint": "Use o registo em lote para lavandaria do mesmo dia em várias propriedades. Se for preciso, pode associar as linhas às limpezas mais tarde.",
+            "keyboardHint": "Prima Enter no campo Kg para adicionar nova linha",
             "activityKicker": "Atividade de lavandaria",
             "activityTitle": "Registo combinado de lavandaria",
             "reviewKicker": "Rever",
@@ -2150,6 +2151,7 @@
             "reset": "Repor",
             "openCleaning": "Abrir limpeza",
             "addRow": "Adicionar linha",
+            "add5Rows": "+ 5 linhas",
             "removeRow": "Remover linha",
             "fillForm": "Preencher"
         },
