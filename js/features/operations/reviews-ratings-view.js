@@ -8,7 +8,8 @@ import {
   getLatestReviewsAcrossProperties,
   filterPropertyReviews,
   getReviewResponse,
-  hasReviewResponse
+  hasReviewResponse,
+  analysePropertyInsights
 } from './reviews-ratings-utils.js';
 
 export function renderReviewsRatingsDashboard(container, state, handlers) {
@@ -718,6 +719,9 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
             </div>
           </div>
 
+          <!-- Guest Insights & Recommendations Panel -->
+          ${renderInsightsPanel(prop)}
+
           <!-- Guest Reviews & Feedback Section -->
           <div class="pt-2">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
@@ -965,6 +969,124 @@ function renderReviewItem(r) {
       `
           : ''
       }
+    </div>
+  `;
+}
+
+function renderInsightsPanel(prop) {
+  const insights = analysePropertyInsights(prop);
+  if (!insights.hasData) return '';
+
+  const { issues, positives, recommendations, reviewsAnalysed } = insights;
+
+  const severityClasses = {
+    high: 'bg-rose-50 border-rose-200 text-rose-800',
+    medium: 'bg-amber-50 border-amber-200 text-amber-800',
+    low: 'bg-gray-50 border-gray-200 text-gray-600'
+  };
+  const severityIconClasses = {
+    high: 'text-rose-500',
+    medium: 'text-amber-500',
+    low: 'text-gray-400'
+  };
+  const severityDotClasses = {
+    high: 'bg-rose-500',
+    medium: 'bg-amber-400',
+    low: 'bg-gray-300'
+  };
+
+  const noIssues = issues.length === 0;
+  const noPositives = positives.length === 0;
+
+  return `
+    <div class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-4 space-y-4">
+      <!-- Panel Header -->
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <h4 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-lightbulb text-xs"></i>
+          </span>
+          Guest Insights &amp; Recommendations
+        </h4>
+        ${reviewsAnalysed > 0
+          ? `<span class="text-[11px] text-indigo-500 font-medium bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+               Based on ${reviewsAnalysed} review${reviewsAnalysed > 1 ? 's' : ''} with written feedback
+             </span>`
+          : `<span class="text-[11px] text-indigo-400 font-medium">Based on scores &amp; sub-scores</span>`
+        }
+      </div>
+
+      <!-- Issues + Positives two-column grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Issues Column -->
+        <div class="rounded-xl border ${noIssues ? 'border-emerald-100 bg-emerald-50/50' : 'border-rose-100 bg-rose-50/30'} p-3">
+          <div class="flex items-center gap-1.5 mb-2.5">
+            <i class="fas ${noIssues ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-triangle text-rose-500'} text-xs"></i>
+            <span class="text-xs font-bold ${noIssues ? 'text-emerald-800' : 'text-rose-800'}">
+              ${noIssues ? 'No Issues Detected' : `Issues Reported (${issues.length})`}
+            </span>
+          </div>
+          ${noIssues
+            ? `<p class="text-[11px] text-emerald-700">All guest feedback is positive — great work! Keep maintaining current standards.</p>`
+            : `<ul class="space-y-1.5">
+                ${issues.map((issue) => `
+                  <li class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-[11px] font-medium ${severityClasses[issue.severity]}">
+                    <span class="flex items-center gap-1.5 truncate">
+                      <i class="fas fa-${issue.icon} ${severityIconClasses[issue.severity]} flex-shrink-0"></i>
+                      <span class="truncate">${escapeHtml(issue.label)}</span>
+                    </span>
+                    <span class="flex items-center gap-1 flex-shrink-0">
+                      <span class="w-1.5 h-1.5 rounded-full ${severityDotClasses[issue.severity]}"></span>
+                      <span>${issue.count}×</span>
+                    </span>
+                  </li>
+                `).join('')}
+              </ul>`
+          }
+        </div>
+
+        <!-- Positives Column -->
+        <div class="rounded-xl border border-emerald-100 bg-emerald-50/30 p-3">
+          <div class="flex items-center gap-1.5 mb-2.5">
+            <i class="fas fa-thumbs-up text-emerald-500 text-xs"></i>
+            <span class="text-xs font-bold text-emerald-800">
+              ${noPositives ? 'No Praise Detected' : `What Guests Love (${positives.length})`}
+            </span>
+          </div>
+          ${noPositives
+            ? `<p class="text-[11px] text-emerald-600 italic">No specific praise keywords detected in written reviews.</p>`
+            : `<ul class="space-y-1.5">
+                ${positives.map((pos) => `
+                  <li class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border border-emerald-100 bg-white text-[11px] font-medium text-emerald-800">
+                    <span class="flex items-center gap-1.5 truncate">
+                      <i class="fas fa-${pos.icon} text-emerald-500 flex-shrink-0"></i>
+                      <span class="truncate">${escapeHtml(pos.label)}</span>
+                    </span>
+                    <span class="text-emerald-600 font-bold flex-shrink-0">${pos.count}×</span>
+                  </li>
+                `).join('')}
+              </ul>`
+          }
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      ${recommendations.length > 0 ? `
+        <div class="rounded-xl border border-indigo-100 bg-white p-3 space-y-2">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i class="fas fa-clipboard-list text-indigo-500 text-xs"></i>
+            <span class="text-xs font-bold text-indigo-900">Recommendations (${recommendations.length})</span>
+          </div>
+          <ul class="space-y-1.5">
+            ${recommendations.map((rec) => `
+              <li class="flex items-start gap-2 text-[11px] text-gray-700">
+                <i class="fas fa-${rec.icon} text-indigo-400 mt-0.5 flex-shrink-0"></i>
+                <span class="leading-snug">${escapeHtml(rec.text)}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      ` : ''}
     </div>
   `;
 }

@@ -289,6 +289,273 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
   return list;
 }
 
+// ---------------------------------------------------------------------------
+// Guest Insights & Recommendations — pure analysis, no external API
+// ---------------------------------------------------------------------------
+
+const ISSUE_BUCKETS = [
+  {
+    key: 'cleanliness',
+    label: 'Cleanliness',
+    icon: 'broom',
+    patterns: [/\b(dirt|dirty|clean|unclean|dust|dusty|stain|smelly|smell|mould|mold|cockroach|bug|ant|spider|hair|grime|grimy|hygiene|filth|filthy)\b/i]
+  },
+  {
+    key: 'noise',
+    label: 'Noise',
+    icon: 'volume-up',
+    patterns: [/\b(noise|noisy|loud|loudness|traffic|party|parties|disturb|disturbing|thin wall|street noise|barking)\b/i]
+  },
+  {
+    key: 'wifi',
+    label: 'WiFi / Internet',
+    icon: 'wifi',
+    patterns: [/\b(wifi|wi-fi|internet|connection|connectivity|network|slow speed|no internet|disconnect)\b/i]
+  },
+  {
+    key: 'water',
+    label: 'Water / Shower',
+    icon: 'shower',
+    patterns: [/\b(hot water|cold water|shower|water pressure|pressure|damp|leak|plumbing|tap|faucet)\b/i]
+  },
+  {
+    key: 'beds',
+    label: 'Beds / Comfort',
+    icon: 'bed',
+    patterns: [/\b(bed|mattress|pillow|sofa|couch|uncomfortable|hard bed|soft bed|sleep|lumpy)\b/i]
+  },
+  {
+    key: 'kitchen',
+    label: 'Kitchen / Appliances',
+    icon: 'utensils',
+    patterns: [/\b(kitchen|oven|microwave|fridge|refrigerator|utensil|cutlery|pot|pan|dish|dishwasher|stovetop|hob|kettle|coffee|toaster)\b/i]
+  },
+  {
+    key: 'parking',
+    label: 'Parking',
+    icon: 'car',
+    patterns: [/\b(parking|park|garage)\b/i]
+  },
+  {
+    key: 'checkin',
+    label: 'Check-in / Access',
+    icon: 'key',
+    patterns: [/\b(check-in|check in|checkin|lockbox|access code|late arrival|key collection|entry|door code)\b/i]
+  },
+  {
+    key: 'ac',
+    label: 'AC / Heating',
+    icon: 'thermometer-half',
+    patterns: [/\b(air con|aircon|air conditioning|a\/c|heating|heater|cold room|hot room|freezing|no heat)\b/i]
+  },
+  {
+    key: 'description',
+    label: 'Listing Accuracy',
+    icon: 'image',
+    patterns: [/\b(mislead|misleading|different from photo|not as described|as advertised|inaccurate|false advertising|not what we expect)\b/i]
+  },
+  {
+    key: 'location',
+    label: 'Location / Access',
+    icon: 'map-marker-alt',
+    patterns: [/\b(far from|very remote|steep hill|long walk|hard to find|difficult to reach|no transport)\b/i]
+  },
+  {
+    key: 'host',
+    label: 'Host Communication',
+    icon: 'comment-slash',
+    patterns: [/\b(no response|didn't reply|unresponsive|not respond|slow response|ignored|never replied|hard to contact|communication issue)\b/i]
+  },
+  {
+    key: 'space',
+    label: 'Space / Size',
+    icon: 'expand',
+    patterns: [/\b(too small|very small|tiny space|cramped|very cramped|no space|limited space)\b/i]
+  },
+  {
+    key: 'maintenance',
+    label: 'Maintenance',
+    icon: 'tools',
+    patterns: [/\b(broken|not working|malfunction|needs repair|damage|damaged|cracked|faulty|out of order|needs fixing)\b/i]
+  }
+];
+
+const POSITIVE_BUCKETS = [
+  { key: 'cleanliness', label: 'Cleanliness', icon: 'broom', patterns: [/\b(spotless|very clean|immaculate|perfectly clean|sparkling|pristine)\b/i] },
+  { key: 'location', label: 'Location', icon: 'map-marker-alt', patterns: [/\b(great location|perfect location|excellent location|well located|convenient location|ideal location|location)\b/i] },
+  { key: 'view', label: 'View', icon: 'mountain', patterns: [/\b(stunning view|amazing view|beautiful view|ocean view|sea view|incredible view|breathtaking view|panoramic view|gorgeous view)\b/i] },
+  { key: 'host', label: 'Host / Communication', icon: 'user-check', patterns: [/\b(great host|amazing host|wonderful host|excellent communication|very responsive|super helpful|friendly host|attentive host)\b/i] },
+  { key: 'value', label: 'Value for Money', icon: 'tag', patterns: [/\b(great value|excellent value|value for money|worth every|good price|very affordable|well priced)\b/i] },
+  { key: 'comfort', label: 'Comfort', icon: 'couch', patterns: [/\b(very comfortable|super comfortable|cosy|cozy|well equipped|fully equipped|very spacious|nicely furnished)\b/i] },
+  { key: 'checkin', label: 'Easy Check-in', icon: 'key', patterns: [/\b(easy check-in|smooth check.in|straightforward check|simple check.in|easy access|seamless arrival)\b/i] },
+  { key: 'quiet', label: 'Peaceful / Quiet', icon: 'leaf', patterns: [/\b(very quiet|nice and quiet|peaceful|tranquil|calm and|serene)\b/i] }
+];
+
+function matchesBuckets(text, buckets) {
+  const results = {};
+  for (const bucket of buckets) {
+    for (const pattern of bucket.patterns) {
+      if (pattern.test(text)) {
+        results[bucket.key] = (results[bucket.key] || 0) + 1;
+        break;
+      }
+    }
+  }
+  return results;
+}
+
+export function analysePropertyInsights(property) {
+  if (!property) return { issues: [], positives: [], recommendations: [], hasData: false };
+
+  const reviews = getAllPropertyReviews(property);
+  const reviewsWithText = reviews.filter((r) =>
+    (r.negative && r.negative.trim()) ||
+    (r.comment && r.comment.trim()) ||
+    (r.positive && r.positive.trim()) ||
+    (r.title && r.title.trim())
+  );
+
+  const hasScoreData = (property.booking?.score != null) || (property.airbnb?.score != null);
+
+  // Need score data OR at least 2 reviews with text
+  if (!hasScoreData && reviewsWithText.length < 2) {
+    return { issues: [], positives: [], recommendations: [], hasData: false };
+  }
+
+  // --- Issue counting from review text ---
+  const issueCounts = {};  // key -> { count, highCount }
+  const positiveCounts = {}; // key -> count
+
+  for (const review of reviews) {
+    const negText = [review.negative || '', review.comment || ''].join(' ');
+    const posText = [review.positive || '', review.comment || '', review.title || ''].join(' ');
+    const isAirbnb = review.platform === 'Airbnb';
+    const isLowScore = typeof review.score === 'number' &&
+      ((isAirbnb && review.score < 3.5) || (!isAirbnb && review.score < 7));
+
+    if (negText.trim()) {
+      const matched = matchesBuckets(negText, ISSUE_BUCKETS);
+      for (const [key, cnt] of Object.entries(matched)) {
+        if (!issueCounts[key]) issueCounts[key] = { count: 0, highCount: 0 };
+        issueCounts[key].count += cnt;
+        if (isLowScore) issueCounts[key].highCount += cnt;
+      }
+    }
+
+    if (posText.trim()) {
+      const matched = matchesBuckets(posText, POSITIVE_BUCKETS);
+      for (const [key, cnt] of Object.entries(matched)) {
+        positiveCounts[key] = (positiveCounts[key] || 0) + cnt;
+      }
+    }
+  }
+
+  // --- Score-based issue detection (from sub-scores) ---
+  const bookingClean = property.booking?.subScores?.cleanliness;
+  const airbnbClean = property.airbnb?.subScores?.cleanliness;
+  const bookingValue = property.booking?.subScores?.value;
+  const bookingStaff = property.booking?.subScores?.staff;
+  const airbnbCheckin = property.airbnb?.subScores?.checkin;
+  const airbnbComm = property.airbnb?.subScores?.communication;
+
+  if (typeof bookingClean === 'number' && bookingClean < 8.5) {
+    if (!issueCounts.cleanliness) issueCounts.cleanliness = { count: 0, highCount: 0 };
+    issueCounts.cleanliness.count += 1;
+    if (bookingClean < 7.5) issueCounts.cleanliness.highCount += 1;
+  }
+  if (typeof airbnbClean === 'number' && airbnbClean < 4.0) {
+    if (!issueCounts.cleanliness) issueCounts.cleanliness = { count: 0, highCount: 0 };
+    issueCounts.cleanliness.count += 1;
+    if (airbnbClean < 3.5) issueCounts.cleanliness.highCount += 1;
+  }
+  if (typeof bookingValue === 'number' && bookingValue < 8.0) {
+    if (!issueCounts.value) issueCounts.value = { count: 0, highCount: 0 };
+    issueCounts.value.count += 1;
+  }
+  if ((typeof bookingStaff === 'number' && bookingStaff < 8.0) ||
+      (typeof airbnbComm === 'number' && airbnbComm < 4.0)) {
+    if (!issueCounts.host) issueCounts.host = { count: 0, highCount: 0 };
+    issueCounts.host.count += 1;
+  }
+  if (typeof airbnbCheckin === 'number' && airbnbCheckin < 4.0) {
+    if (!issueCounts.checkin) issueCounts.checkin = { count: 0, highCount: 0 };
+    issueCounts.checkin.count += 1;
+  }
+
+  // Build issues list
+  const issues = Object.entries(issueCounts)
+    .map(([key, { count, highCount }]) => {
+      const bucket = ISSUE_BUCKETS.find((b) => b.key === key);
+      const severity = highCount > 0 ? 'high' : (count >= 3 ? 'medium' : 'low');
+      return { key, label: bucket?.label || key, icon: bucket?.icon || 'exclamation-circle', count, severity };
+    })
+    .filter((i) => i.count > 0)
+    .sort((a, b) => {
+      const sevOrder = { high: 0, medium: 1, low: 2 };
+      const sevDiff = sevOrder[a.severity] - sevOrder[b.severity];
+      return sevDiff !== 0 ? sevDiff : b.count - a.count;
+    });
+
+  // Build positives list
+  const positives = Object.entries(positiveCounts)
+    .map(([key, count]) => {
+      const bucket = POSITIVE_BUCKETS.find((b) => b.key === key);
+      return { key, label: bucket?.label || key, icon: bucket?.icon || 'thumbs-up', count };
+    })
+    .filter((p) => p.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  // --- Recommendations ---
+  const recommendations = [];
+
+  const unansweredCount = reviews.filter((r) => {
+    const resp = r.response ?? r.hostResponse ?? r.reply ?? '';
+    return !resp || !String(resp).trim();
+  }).length;
+  const unansweredPct = reviews.length > 0 ? unansweredCount / reviews.length : 0;
+
+  if (unansweredCount > 0 && unansweredPct > 0.2) {
+    recommendations.push({
+      icon: 'reply',
+      text: `Respond to ${unansweredCount} unanswered guest review${unansweredCount > 1 ? 's' : ''} — host replies improve future bookings`
+    });
+  }
+  if (typeof bookingClean === 'number' && bookingClean < 8.5) {
+    recommendations.push({
+      icon: 'broom',
+      text: `Booking.com cleanliness score (${bookingClean.toFixed(1)}/10) is below the 8.5 target — review the cleaning checklist`
+    });
+  }
+  if (typeof airbnbClean === 'number' && airbnbClean < 4.0) {
+    recommendations.push({
+      icon: 'broom',
+      text: `Airbnb cleanliness score (${airbnbClean.toFixed(1)}/5.0) needs attention — coordinate with the cleaning team`
+    });
+  }
+  if (issueCounts.wifi?.count >= 2) {
+    recommendations.push({ icon: 'wifi', text: `WiFi issues mentioned in ${issueCounts.wifi.count} review${issueCounts.wifi.count > 1 ? 's' : ''} — consider upgrading router or checking signal coverage` });
+  }
+  if (issueCounts.noise?.count >= 2) {
+    recommendations.push({ icon: 'volume-mute', text: `Noise complaints in ${issueCounts.noise.count} reviews — consider adding earplugs or updating the listing description` });
+  }
+  if (issueCounts.maintenance?.count >= 2) {
+    recommendations.push({ icon: 'tools', text: `Maintenance issues flagged in ${issueCounts.maintenance.count} reviews — schedule a property inspection` });
+  }
+  if (issueCounts.checkin?.count >= 2) {
+    recommendations.push({ icon: 'key', text: `Check-in difficulties mentioned in ${issueCounts.checkin.count} reviews — review guest arrival instructions` });
+  }
+  if (issueCounts.water?.count >= 2) {
+    recommendations.push({ icon: 'shower', text: `Water/shower issues in ${issueCounts.water.count} reviews — check plumbing and hot water system` });
+  }
+  if (typeof bookingValue === 'number' && bookingValue < 8.0) {
+    recommendations.push({ icon: 'tag', text: `Value-for-money score (${bookingValue.toFixed(1)}/10) is low — consider reviewing pricing or adding amenities` });
+  }
+
+  const hasData = issues.length > 0 || positives.length > 0 || recommendations.length > 0 || hasScoreData;
+
+  return { issues, positives, recommendations, hasData, reviewsAnalysed: reviewsWithText.length };
+}
 /**
  * Returns the N most recent reviews across ALL properties, each tagged
  * with `propertyName` and `propertyId` so the dashboard can render a
