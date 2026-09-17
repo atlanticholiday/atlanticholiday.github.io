@@ -293,7 +293,7 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
 // Guest Insights & Recommendations — pure analysis, no external API
 // ---------------------------------------------------------------------------
 
-const ISSUE_BUCKETS = [
+export const ISSUE_BUCKETS = [
   {
     key: 'cleanliness',
     label: 'Cleanliness',
@@ -664,4 +664,152 @@ export function filterAndSortProperties(properties = [], { search = '', filter =
   });
 
   return list;
+}
+
+/**
+ * Compiles a portfolio-wide list of property improvement opportunities and recommendations.
+ * Groups findings per property and calculates cross-portfolio category tallies for filtering.
+ */
+export function getAllPropertyImprovements(properties = [], { category = 'all', search = '', includeArchived = false } = {}) {
+  const activeProps = (Array.isArray(properties) ? properties : []).filter((p) => {
+    if (!includeArchived && isPropertyArchived(p)) return false;
+    return true;
+  });
+
+  const categoryCounts = {};
+  const allPropertiesWithImprovements = [];
+  const allClear = [];
+  const unrated = [];
+
+  for (const prop of activeProps) {
+    const insights = analysePropertyInsights(prop);
+    const reviews = getAllPropertyReviews(prop);
+    const unansweredCount = reviews.filter((r) => !hasReviewResponse(r)).length;
+    const attentionNeeded = isAttentionNeeded(prop);
+
+    // Extract recent negative feedback snippets
+    const guestFeedback = [];
+    for (const r of reviews) {
+      const neg = (r.negative || '').trim();
+      const comment = (r.comment || '').trim();
+      const isLowScore = (r.platform === 'Airbnb' && (r.score || 5) < 4.0) ||
+        (r.platform !== 'Airbnb' && (r.score || 10) < 8.0);
+
+      if (neg) {
+        guestFeedback.push({
+          author: r.author || 'Guest',
+          date: r.date,
+          platform: r.platform || 'OTA',
+          score: r.score,
+          text: neg,
+          isNegativeField: true
+        });
+      } else if (isLowScore && comment) {
+        guestFeedback.push({
+          author: r.author || 'Guest',
+          date: r.date,
+          platform: r.platform || 'OTA',
+          score: r.score,
+          text: comment,
+          isNegativeField: false
+        });
+      }
+      if (guestFeedback.length >= 3) break;
+    }
+
+    const hasIssues = insights.issues.length > 0;
+    const hasRecs = insights.recommendations.length > 0;
+    const hasData = insights.hasData || reviews.length > 0 || prop.booking?.score != null || prop.airbnb?.score != null;
+
+    if (!hasData) {
+      unrated.push(prop);
+      continue;
+    }
+
+    const needsImprovement = hasIssues || hasRecs || attentionNeeded;
+
+    if (!needsImprovement) {
+      allClear.push({
+        property: prop,
+        insights,
+        totalReviews: reviews.length
+      });
+      continue;
+    }
+
+    // Determine overall urgency severity
+    let severity = 'low';
+    const hasHighIssue = insights.issues.some((i) => i.severity === 'high');
+    const hasMedIssue = insights.issues.some((i) => i.severity === 'medium');
+
+    if (attentionNeeded || hasHighIssue) {
+      severity = 'high';
+    } else if (hasMedIssue || unansweredCount >= 3) {
+      severity = 'medium';
+    }
+
+    // Tally issue categories across the portfolio
+    const touchedCategories = new Set();
+    for (const issue of insights.issues) {
+      touchedCategories.add(issue.key);
+    }
+    for (const catKey of touchedCategories) {
+      categoryCounts[catKey] = (categoryCounts[catKey] || 0) + 1;
+    }
+
+    allPropertiesWithImprovements.push({
+      property: prop,
+      severity,
+      insights,
+      guestFeedback,
+      unansweredCount,
+      attentionNeeded,
+      totalReviews: reviews.length
+    });
+  }
+
+  // Sort with most critical first
+  const sevWeight = { high: 0, medium: 1, low: 2 };
+  allPropertiesWithImprovements.sort((a, b) => {
+    const sevDiff = sevWeight[a.severity] - sevWeight[b.severity];
+    if (sevDiff !== 0) return sevDiff;
+    const countA = a.insights.issues.length + a.insights.recommendations.length;
+    const countB = b.insights.issues.length + b.insights.recommendations.length;
+    if (countB !== countA) return countB - countA;
+    return (a.property.name || '').localeCompare(b.property.name || '');
+  });
+
+  const totalWithIssues = allPropertiesWithImprovements.length;
+  const totalAllClear = allClear.length;
+
+  // Filter by category and search
+  let filtered = allPropertiesWithImprovements;
+
+  if (category && category !== 'all') {
+    filtered = filtered.filter((item) => {
+      return item.insights.issues.some((issue) => issue.key === category);
+    });
+  }
+
+  if (search) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter((item) => {
+      const prop = item.property;
+      if (prop.name && prop.name.toLowerCase().includes(q)) return true;
+      if (prop.location && prop.location.toLowerCase().includes(q)) return true;
+      if (item.insights.issues.some((i) => i.label.toLowerCase().includes(q))) return true;
+      if (item.insights.recommendations.some((r) => r.text.toLowerCase().includes(q))) return true;
+      if (item.guestFeedback.some((f) => f.text.toLowerCase().includes(q))) return true;
+      return false;
+    });
+  }
+
+  return {
+    items: filtered,
+    allClear,
+    unrated,
+    categoryCounts,
+    totalWithIssues,
+    totalAllClear
+  };
 }

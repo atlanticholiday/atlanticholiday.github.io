@@ -89,7 +89,9 @@ export class ReviewsRatingsManager {
       isEditingLinks: false,
       isAddingReview: false,
       activeTab: 'properties',
-      activeModalTab: 'overview'
+      activeModalTab: 'overview',
+      improvementsFilter: 'all',
+      improvementsSearch: ''
     };
 
     this.userOverrides = {};
@@ -799,7 +801,9 @@ export class ReviewsRatingsManager {
         isEditingLinks: this.state.isEditingLinks,
         isAddingReview: this.state.isAddingReview,
         activeTab: this.state.activeTab,
-        activeModalTab: this.state.activeModalTab
+        activeModalTab: this.state.activeModalTab,
+        improvementsFilter: this.state.improvementsFilter,
+        improvementsSearch: this.state.improvementsSearch
       },
       {
         onBack: () => {
@@ -809,6 +813,14 @@ export class ReviewsRatingsManager {
         },
         onTabChange: (tab) => {
           this.state.activeTab = tab;
+          this.render();
+        },
+        onImprovementsFilter: (category) => {
+          this.state.improvementsFilter = category;
+          this.render();
+        },
+        onImprovementsSearch: (query) => {
+          this.state.improvementsSearch = query;
           this.render();
         },
         onModalTabChange: (tab) => {

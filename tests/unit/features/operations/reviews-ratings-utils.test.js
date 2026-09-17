@@ -12,7 +12,9 @@ import {
   filterPropertyReviews,
   getReviewResponse,
   hasReviewResponse,
-  isPropertyArchived
+  isPropertyArchived,
+  getAllPropertyImprovements,
+  ISSUE_BUCKETS
 } from "../../../../js/features/operations/reviews-ratings-utils.js";
 
 describe("reviews-ratings-utils", () => {
@@ -414,5 +416,129 @@ describe("reviews-ratings-utils", () => {
     const feed = getLatestReviewsAcrossProperties(props, 10);
     assert.equal(feed.length, 1);
     assert.equal(feed[0].author, "Active Guest");
+  });
+
+  describe("getAllPropertyImprovements", () => {
+    const props = [
+      {
+        id: "prop-clean-alert",
+        name: "Apartment Clean Alert",
+        location: "Funchal",
+        booking: {
+          score: 8.0,
+          subScores: { cleanliness: 7.9 }, // Alert
+          reviews: [
+            { id: "r1", author: "Bob", date: "2026-08-10", negative: "The kitchen was dirty and dusty", score: 6.0 }
+          ]
+        }
+      },
+      {
+        id: "prop-wifi-issues",
+        name: "Villa WiFi Lag",
+        location: "Calheta",
+        booking: {
+          score: 9.2,
+          subScores: { cleanliness: 9.5 },
+          reviews: [
+            { id: "r2", author: "Alice", date: "2026-08-12", comment: "Great place but wifi was slow and disconnected often", score: 8.0 },
+            { id: "r3", author: "Charlie", date: "2026-08-15", negative: "No internet in the bedroom", score: 8.0 }
+          ]
+        }
+      },
+      {
+        id: "prop-all-clear",
+        name: "Perfect Sea View",
+        location: "Ponta do Sol",
+        airbnb: {
+          score: 5.0,
+          subScores: { cleanliness: 5.0 },
+          reviews: [
+            { id: "r4", author: "David", date: "2026-08-20", positive: "Spotlessly clean, stunning view!", comment: "Loved everything", score: 5.0, response: "Thank you David!" }
+          ]
+        }
+      },
+      {
+        id: "prop-archived",
+        name: "Old Archived Villa",
+        archived: true,
+        booking: {
+          score: 7.0,
+          subScores: { cleanliness: 6.0 },
+          reviews: [
+            { id: "r5", author: "Eve", date: "2026-08-01", negative: "Very dirty", score: 5.0 }
+          ]
+        }
+      }
+    ];
+
+    test("separates properties needing improvements from all clear and archived", () => {
+      const res = getAllPropertyImprovements(props);
+
+      assert.equal(res.totalWithIssues, 2);
+      assert.equal(res.totalAllClear, 1);
+      assert.equal(res.items.length, 2);
+
+      const itemIds = res.items.map((i) => i.property.id);
+      assert.ok(itemIds.includes("prop-clean-alert"));
+      assert.ok(itemIds.includes("prop-wifi-issues"));
+      assert.ok(!itemIds.includes("prop-archived"));
+
+      assert.equal(res.allClear.length, 1);
+      assert.equal(res.allClear[0].property.id, "prop-all-clear");
+    });
+
+    test("ranks high priority / attention needed properties first", () => {
+      const res = getAllPropertyImprovements(props);
+      // Clean alert is an alert (<8.5 or cleanliness alert) so severity is high
+      assert.equal(res.items[0].property.id, "prop-clean-alert");
+      assert.equal(res.items[0].severity, "high");
+    });
+
+    test("computes categoryCounts and filters by category", () => {
+      const res = getAllPropertyImprovements(props);
+      assert.ok((res.categoryCounts.cleanliness || 0) >= 1);
+      assert.ok((res.categoryCounts.wifi || 0) >= 1);
+
+      const wifiOnly = getAllPropertyImprovements(props, { category: "wifi" });
+      assert.equal(wifiOnly.items.length, 1);
+      assert.equal(wifiOnly.items[0].property.id, "prop-wifi-issues");
+
+      const cleanOnly = getAllPropertyImprovements(props, { category: "cleanliness" });
+      assert.equal(cleanOnly.items.length, 1);
+      assert.equal(cleanOnly.items[0].property.id, "prop-clean-alert");
+    });
+
+    test("filters by search query", () => {
+      const searchRes = getAllPropertyImprovements(props, { search: "Calheta" });
+      assert.equal(searchRes.items.length, 1);
+      assert.equal(searchRes.items[0].property.id, "prop-wifi-issues");
+
+      const searchIssue = getAllPropertyImprovements(props, { search: "kitchen" });
+      assert.equal(searchIssue.items.length, 1);
+      assert.equal(searchIssue.items[0].property.id, "prop-clean-alert");
+    });
+
+    test("extracts guest feedback snippets", () => {
+      const res = getAllPropertyImprovements(props);
+      const cleanItem = res.items.find((i) => i.property.id === "prop-clean-alert");
+      assert.ok(cleanItem.guestFeedback.length > 0);
+      assert.equal(cleanItem.guestFeedback[0].text, "The kitchen was dirty and dusty");
+    });
+
+    test("handles unrated properties with no reviews or score data", () => {
+      const propsWithUnrated = [
+        ...props,
+        { id: "prop-unrated", name: "Brand New Villa", booking: null, airbnb: null }
+      ];
+      const res = getAllPropertyImprovements(propsWithUnrated);
+      assert.equal(res.unrated.length, 1);
+      assert.equal(res.unrated[0].id, "prop-unrated");
+    });
+
+    test("supports includeArchived to inspect archived properties", () => {
+      const res = getAllPropertyImprovements(props, { includeArchived: true });
+      assert.equal(res.totalWithIssues, 3);
+      assert.ok(res.items.some((i) => i.property.id === "prop-archived"));
+    });
   });
 });

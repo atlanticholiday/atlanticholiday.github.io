@@ -264,4 +264,39 @@ describe("ReviewsRatingsManager", () => {
     assert.equal(manager.state.filteredProperties.length, 2);
     assert.equal(manager.userOverrides["p1"].archived, false);
   });
+
+  test("supports improvements tab and category filtering in render", () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+
+    const manager = new ReviewsRatingsManager();
+    manager.state.rawProperties = [
+      {
+        id: "p1",
+        name: "WiFi Issues Apartment",
+        booking: {
+          score: 8.5,
+          subScores: { cleanliness: 9.0 },
+          reviews: [
+            { id: "r1", author: "Sam", negative: "wifi was broken and very slow", score: 7.0 }
+          ]
+        }
+      }
+    ];
+    manager.updateCalculations();
+    manager.render();
+
+    // Verify Improvements tab button is rendered in the DOM
+    const container = document.getElementById("reviews-ratings-page");
+    const improvementsTabBtn = container.querySelector('[data-tab="improvements"]');
+    assert.ok(improvementsTabBtn, "Improvements tab button should exist");
+
+    // Click Improvements tab
+    improvementsTabBtn.click();
+    assert.equal(manager.state.activeTab, "improvements");
+
+    // Container should now show the improvements section
+    assert.ok(container.innerHTML.includes("Improvements &amp; Recommendations") || container.innerHTML.includes("Improvements & Recommendations"));
+    assert.ok(container.innerHTML.includes("WiFi Issues Apartment"));
+  });
 });

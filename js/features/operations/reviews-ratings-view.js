@@ -9,7 +9,9 @@ import {
   filterPropertyReviews,
   getReviewResponse,
   hasReviewResponse,
-  analysePropertyInsights
+  analysePropertyInsights,
+  getAllPropertyImprovements,
+  ISSUE_BUCKETS
 } from './reviews-ratings-utils.js';
 
 export function renderReviewsRatingsDashboard(container, state, handlers) {
@@ -31,8 +33,16 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     isEditingLinks = false,
     isAddingReview = false,
     activeTab = 'properties',
-    activeModalTab = 'overview'
+    activeModalTab = 'overview',
+    improvementsFilter = 'all',
+    improvementsSearch = ''
   } = state;
+
+  const improvementsData = getAllPropertyImprovements(rawProperties, {
+    category: improvementsFilter,
+    search: improvementsSearch
+  });
+  const improvementsCount = improvementsData.totalWithIssues;
 
   const activePropertiesCount = (rawProperties || []).filter((p) => !isPropertyArchived(p)).length;
   const archivedPropertiesCount = (rawProperties || []).filter(isPropertyArchived).length;
@@ -110,6 +120,14 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           <div class="flex items-center gap-1 -mb-px">
             <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
               <i class="fas fa-building text-xs mr-1.5"></i>Properties
+            </button>
+            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'improvements' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center gap-2" data-tab="improvements">
+              <span class="inline-flex items-center"><i class="fas fa-lightbulb text-xs mr-1.5"></i>Improvements</span>
+              ${improvementsCount > 0 ? `
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'improvements' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'}">
+                  ${improvementsCount}
+                </span>
+              ` : ''}
             </button>
             <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
               <i class="fas fa-stream text-xs mr-1.5"></i>Latest Reviews
@@ -238,6 +256,9 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                </div>`
             : properties.map((prop) => renderPropertyCard(prop)).join('')}
         </section>
+        ` : activeTab === 'improvements' ? `
+        <!-- Improvements & Recommendations Full Page Tab -->
+        ${renderImprovementsPage(improvementsData, state, handlers)}
         ` : `
         <!-- Latest Reviews Full Page Tab -->
         ${renderLatestReviewsPage(rawProperties)}
@@ -414,6 +435,261 @@ function renderPropertyCard(prop) {
             <span>Read reviews</span>
             <i class="fas fa-chevron-right text-[10px]"></i>
           </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderImprovementsPage(improvementsData, state, handlers) {
+  const {
+    items = [],
+    allClear = [],
+    unrated = [],
+    categoryCounts = {},
+    totalWithIssues = 0,
+    totalAllClear = 0
+  } = improvementsData;
+
+  const { improvementsFilter = 'all', improvementsSearch = '' } = state;
+
+  const activeCategoryKeys = Object.keys(categoryCounts).filter((k) => categoryCounts[k] > 0);
+
+  return `
+    <div class="space-y-6">
+      <!-- Section Header Banner -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fas fa-lightbulb"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-gray-900 leading-tight">Improvements &amp; Recommendations</h2>
+            <p class="text-xs text-gray-500">Action items, recurring complaints, and operational suggestions grouped per property</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl ${totalWithIssues > 0 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}">
+            <i class="fas fa-exclamation-circle text-amber-500"></i>
+            <span>${totalWithIssues} ${totalWithIssues === 1 ? 'property' : 'properties'} with action items</span>
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <i class="fas fa-check-circle text-emerald-500"></i>
+            <span>${totalAllClear} all clear</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Search -->
+        <div class="relative w-full md:w-80">
+          <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input
+            type="text"
+            id="improvements-search-input"
+            value="${escapeHtml(improvementsSearch)}"
+            placeholder="Search properties, locations, or issues..."
+            class="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
+          />
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="flex flex-wrap items-center gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-medium w-full md:w-auto overflow-x-auto">
+          <button class="improvements-filter-btn px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${improvementsFilter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-category="all">
+            All Issues (${totalWithIssues})
+          </button>
+          ${activeCategoryKeys.map((catKey) => {
+            const bucket = ISSUE_BUCKETS.find((b) => b.key === catKey);
+            const label = bucket?.label || catKey;
+            const icon = bucket?.icon || 'tag';
+            const count = categoryCounts[catKey] || 0;
+            const isActive = improvementsFilter === catKey;
+            return `
+              <button class="improvements-filter-btn px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${isActive ? 'bg-white text-amber-800 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-category="${catKey}">
+                <i class="fas fa-${icon} text-[10px] mr-1 ${isActive ? 'text-amber-600' : 'text-gray-400'}"></i>${label} (${count})
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Property Improvement Cards List -->
+      <div class="space-y-4">
+        ${items.length === 0 ? `
+          <div class="text-center py-16 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+            <div class="w-12 h-12 rounded-full ${totalWithIssues === 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-gray-100 text-gray-400'} flex items-center justify-center mx-auto mb-3 text-xl">
+              <i class="fas ${totalWithIssues === 0 ? 'fa-check' : 'fa-search'}"></i>
+            </div>
+            <h3 class="text-base font-bold text-gray-800">
+              ${totalWithIssues === 0 ? 'All properties are running smoothly!' : 'No matching properties found'}
+            </h3>
+            <p class="text-sm text-gray-500 mt-1">
+              ${totalWithIssues === 0 ? 'No recurring complaints, critical score dips, or unresolved issues detected.' : 'Try changing your search query or selecting "All Issues".'}
+            </p>
+          </div>
+        ` : items.map((item) => renderImprovementCard(item)).join('')}
+      </div>
+
+      <!-- All Clear Properties Collapsible Section -->
+      ${allClear.length > 0 ? `
+        <details class="group bg-white rounded-2xl border border-gray-200 p-4 shadow-sm transition-all">
+          <summary class="flex items-center justify-between cursor-pointer text-xs font-bold text-gray-700 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>All Clear Properties (${allClear.length}) — No Issues Reported</span>
+            </div>
+            <div class="flex items-center gap-1 text-gray-400 group-open:rotate-180 transition-transform text-xs">
+              <i class="fas fa-chevron-down"></i>
+            </div>
+          </summary>
+          <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            ${allClear.map((ac) => `
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-50/70 border border-gray-200/70 text-xs">
+                <div class="truncate mr-2">
+                  <strong class="font-bold text-gray-800 truncate block">${escapeHtml(ac.property.name)}</strong>
+                  <span class="text-[11px] text-gray-400">${escapeHtml(ac.property.location || 'Madeira')}</span>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <i class="fas fa-check-circle text-[10px]"></i> 100% Positive
+                  </span>
+                  <button class="improvements-view-prop-btn text-xs text-amber-600 hover:text-amber-700 font-semibold px-2 py-1 rounded-lg hover:bg-amber-50 transition-colors" data-id="${escapeHtml(ac.property.id)}">
+                    View
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderImprovementCard(item) {
+  const { property: prop, severity, insights, guestFeedback = [], unansweredCount = 0 } = item;
+  const { issues = [], recommendations = [] } = insights;
+
+  const severityBadge = {
+    high: `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-triangle text-[10px]"></i>High Priority</span>`,
+    medium: `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200"><i class="fas fa-exclamation-circle text-[10px]"></i>Needs Attention</span>`,
+    low: `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200"><i class="fas fa-lightbulb text-[10px]"></i>Optimization</span>`
+  }[severity] || '';
+
+  const bookingScore = prop.booking?.score != null ? `${prop.booking.score.toFixed(1)} / 10` : '—';
+  const airbnbScore = prop.airbnb?.score != null ? `${prop.airbnb.score.toFixed(1)} ★` : '—';
+
+  return `
+    <div class="bg-white rounded-2xl border ${severity === 'high' ? 'border-rose-200 ring-1 ring-rose-100 shadow-sm' : (severity === 'medium' ? 'border-amber-200 ring-1 ring-amber-100 shadow-sm' : 'border-gray-200 shadow-sm')} p-5 transition-all">
+      <!-- Card Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl ${severity === 'high' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'} flex items-center justify-center text-base font-bold flex-shrink-0">
+            <i class="fas ${severity === 'high' ? 'fa-tools' : 'fa-clipboard-list'}"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-base font-bold text-gray-900">${escapeHtml(prop.name)}</h3>
+              ${severityBadge}
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+              <i class="fas fa-map-marker-alt text-gray-400"></i>
+              <span>${escapeHtml(prop.location || 'Madeira')}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-shrink-0 self-start sm:self-center">
+          <div class="flex items-center gap-2 text-xs bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200/80">
+            <div class="flex items-center gap-1 text-blue-700 font-semibold" title="Booking.com Score">
+              <i class="fas fa-hotel text-[10px]"></i>
+              <span>${bookingScore}</span>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1 text-rose-700 font-semibold" title="Airbnb Score">
+              <i class="fab fa-airbnb text-[11px]"></i>
+              <span>${airbnbScore}</span>
+            </div>
+          </div>
+          <button class="improvements-view-prop-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition-colors border border-amber-200" data-id="${escapeHtml(prop.id)}">
+            <span>View Property</span>
+            <i class="fas fa-arrow-right text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body: Action Items + Issues Tags -->
+      <div class="py-4 space-y-3.5">
+        <!-- Recommendations -->
+        ${recommendations.length > 0 ? `
+          <div class="rounded-xl bg-amber-50/50 border border-amber-100 p-3.5 space-y-2">
+            <div class="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+              <i class="fas fa-check-circle text-amber-600"></i>
+              <span>Recommended Actions (${recommendations.length})</span>
+            </div>
+            <ul class="space-y-1.5">
+              ${recommendations.map((rec) => `
+                <li class="flex items-start gap-2 text-xs text-gray-800">
+                  <i class="fas fa-${rec.icon} text-amber-600 mt-0.5 flex-shrink-0"></i>
+                  <span class="leading-relaxed">${escapeHtml(rec.text)}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <!-- Reported Issues Tags -->
+        ${issues.length > 0 ? `
+          <div>
+            <div class="text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fas fa-tags text-gray-400"></i>
+              <span>Reported Issues in Reviews (${issues.length})</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${issues.map((iss) => `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${iss.severity === 'high' ? 'bg-rose-50 text-rose-700 border border-rose-200' : (iss.severity === 'medium' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-700 border border-gray-200')}">
+                  <i class="fas fa-${iss.icon} text-[10px]"></i>
+                  <span>${escapeHtml(iss.label)}</span>
+                  <span class="font-bold opacity-75">(${iss.count}×)</span>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Direct Guest Feedback Quotes -->
+        ${guestFeedback.length > 0 ? `
+          <div>
+            <div class="text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fas fa-quote-left text-gray-400"></i>
+              <span>Direct Guest Feedback</span>
+            </div>
+            <div class="space-y-2">
+              ${guestFeedback.map((fb) => `
+                <div class="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-xs text-gray-700 flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-[11px] text-gray-500">
+                    <span class="font-semibold text-gray-800 flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full ${fb.platform === 'Airbnb' ? 'bg-rose-500' : 'bg-blue-500'}"></span>
+                      ${escapeHtml(fb.author)} (${escapeHtml(fb.platform)})
+                    </span>
+                    ${fb.score ? `<span class="font-bold ${fb.platform === 'Airbnb' ? 'text-rose-700' : 'text-blue-700'}">${fb.score} ${fb.platform === 'Airbnb' ? '★' : '/ 10'}</span>` : ''}
+                  </div>
+                  <p class="italic text-gray-700 leading-relaxed">“${escapeHtml(fb.text)}”</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Card Footer -->
+      <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+        <div class="flex items-center gap-3">
+          <span><i class="fas fa-comments text-gray-300 mr-1"></i>${item.totalReviews} total reviews</span>
+          ${unansweredCount > 0 ? `<span class="text-amber-600 font-semibold"><i class="fas fa-reply-all text-amber-500 mr-1"></i>${unansweredCount} awaiting reply</span>` : ''}
         </div>
       </div>
     </div>
@@ -1171,10 +1447,31 @@ function bindViewEvents(container, handlers) {
     handlers.onSort?.(e.target.value);
   });
 
-  // Tab buttons (Properties vs Latest Reviews)
+  // Tab buttons (Properties vs Improvements vs Latest Reviews)
   container.querySelectorAll('.reviews-tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       handlers.onTabChange?.(btn.dataset.tab);
+    });
+  });
+
+  // Improvements search input
+  const impSearchInput = container.querySelector('#improvements-search-input');
+  impSearchInput?.addEventListener('input', (e) => {
+    handlers.onImprovementsSearch?.(e.target.value);
+  });
+
+  // Improvements category filter buttons
+  container.querySelectorAll('.improvements-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      handlers.onImprovementsFilter?.(btn.dataset.category);
+    });
+  });
+
+  // Improvements View Property buttons
+  container.querySelectorAll('.improvements-view-prop-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const propId = btn.dataset.id;
+      if (propId) handlers.onSelectProperty?.(propId, false);
     });
   });
 
