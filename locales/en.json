@@ -1949,6 +1949,7 @@
       "batchDate": "Date for all rows",
       "batchCategory": "Category for all rows",
       "batchHint": "Use batch entry when you have many same-day check-outs. You can still adjust notes, guest amount, and laundry kg on each row before saving, while Platform or Direct applies to the whole batch.",
+      "keyboardHint": "Press Enter on Amount to add next row",
       "quickLaundryHint": "This adds the received kg to this cleaning. The laundry received date can be later than the cleaning date.",
       "quickLaundryEditHint": "This updates the existing laundry amount for this cleaning instead of adding a duplicate row.",
       "inlineEditHint": "Edit the selected cleaning directly in the Stored data table, then save beside that row.",

@@ -91,7 +91,8 @@ export class ReviewsRatingsManager {
       activeTab: 'properties',
       activeModalTab: 'overview',
       improvementsFilter: 'all',
-      improvementsSearch: ''
+      improvementsSearch: '',
+      viewMode: (typeof localStorage !== 'undefined' && localStorage.getItem('atlantic_holiday_reviews_view_mode')) || 'cards'
     };
 
     this.userOverrides = {};
@@ -803,13 +804,21 @@ export class ReviewsRatingsManager {
         activeTab: this.state.activeTab,
         activeModalTab: this.state.activeModalTab,
         improvementsFilter: this.state.improvementsFilter,
-        improvementsSearch: this.state.improvementsSearch
+        improvementsSearch: this.state.improvementsSearch,
+        viewMode: this.state.viewMode
       },
       {
         onBack: () => {
           if (this.navigationManager) {
             this.navigationManager.showPreviousPage('landing');
           }
+        },
+        onViewModeChange: (mode) => {
+          this.state.viewMode = mode;
+          try {
+            localStorage.setItem('atlantic_holiday_reviews_view_mode', mode);
+          } catch {}
+          this.render();
         },
         onTabChange: (tab) => {
           this.state.activeTab = tab;

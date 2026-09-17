@@ -390,7 +390,11 @@ export class CleaningAhManager {
             date: getTodayIsoDate(),
             categoryKey: DEFAULT_CLEANING_CATEGORY_KEY,
             reservationSource: CLEANING_AH_RESERVATION_SOURCES.platform,
-            rows: [this.createCleaningBatchRow()]
+            rows: [
+                this.createCleaningBatchRow(),
+                this.createCleaningBatchRow(),
+                this.createCleaningBatchRow()
+            ]
         };
     }
 
@@ -3403,14 +3407,7 @@ export class CleaningAhManager {
                 </div>
 
                 ${isBatchMode ? `
-                    <div class="p-6 bg-white border border-[#e1e4e8] rounded-2xl shadow-sm">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="text-base font-bold text-slate-900">${escapeHtml(this.tr("cleanings.batchTitle"))}</h3>
-                                <p class="text-xs text-slate-500">${escapeHtml(this.tr("cleanings.batchDescription"))}</p>
-                            </div>
-                            <button type="submit" form="cleaning-ah-cleaning-batch-form" class="cleaning-btn-create">${escapeHtml(this.tr("actions.saveCleaningBatch"))}</button>
-                        </div>
+                    <div class="cleaning-batch-card">
                         ${this.renderCleaningBatchForm(this.getCleaningBatchPreview())}
                     </div>
                 ` : `
@@ -3575,10 +3572,37 @@ export class CleaningAhManager {
         `;
     }
 
+    renderCleaningBatchRowHtml(row, index, categoryKey) {
+        const guestAmountField = this.getCleaningGuestAmountFieldState({
+            ...row,
+            categoryKey
+        });
+
+        return `
+            <div class="cleaning-batch-table-row" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
+                <div class="cleaning-batch-cell cleaning-batch-cell--idx">${index}</div>
+                <div class="cleaning-batch-cell">
+                    <input type="text" name="propertyName" class="cleaning-batch-input" value="${escapeHtml(row.propertyName || "")}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder") || "Escolha uma propriedade")}">
+                </div>
+                <div class="cleaning-batch-cell">
+                    <input type="text" inputmode="decimal" name="guestAmount" class="cleaning-batch-input text-right font-mono" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0.00">
+                </div>
+                <div class="cleaning-batch-cell">
+                    <input type="text" name="notes" class="cleaning-batch-input text-xs" value="${escapeHtml(row.notes || "")}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder") || "Notas opcionais...")}">
+                </div>
+                <div class="cleaning-batch-cell flex justify-center">
+                    <button type="button" data-action="remove-cleaning-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="cleaning-batch-row-remove" title="${escapeHtml(this.tr("actions.removeRow") || "Remover linha")}">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
     renderCleaningBatchForm(preview) {
         const rows = this.cleaningBatchDraft.rows.length
             ? this.cleaningBatchDraft.rows
-            : [this.createCleaningBatchRow()];
+            : [this.createCleaningBatchRow(), this.createCleaningBatchRow(), this.createCleaningBatchRow()];
         const categoryKey = this.getCleaningCategoryKey(this.cleaningBatchDraft.categoryKey || this.cleaningBatchDraft.category);
         const categoryOptions = this.getKnownCategories()
             .map((category) => `<option value="${escapeHtml(category.key)}" ${category.key === categoryKey ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
@@ -3589,68 +3613,90 @@ export class CleaningAhManager {
         ];
 
         return `
-            <form id="cleaning-ah-cleaning-batch-form" class="mt-5 space-y-4">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchDate"))}</span>
-                        <input type="date" name="date" class="mt-1 w-full" value="${escapeHtml(this.cleaningBatchDraft.date)}" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("cleanings.batchCategory"))}</span>
-                        <select name="categoryKey" class="mt-1 w-full">
-                            ${categoryOptions}
-                        </select>
-                    </label>
-                    <label class="block">
-                        <span class="text-sm text-slate-600">${escapeHtml(this.tr("forms.reservationSource"))}</span>
-                        <select name="reservationSource" class="mt-1 w-full" ${this.categoryUsesReservationSource(categoryKey) ? "" : "disabled"}>
-                            ${reservationSourceOptions.map(([value, label]) => `
-                                <option value="${escapeHtml(value)}" ${this.cleaningBatchDraft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
-                            `).join("")}
-                        </select>
-                    </label>
-                </div>
-                <div class="rounded-2xl border border-slate-200">
-                    <div class="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 lg:grid lg:grid-cols-[minmax(16rem,1.35fr)_150px_minmax(14rem,1fr)_auto] lg:gap-3">
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.tr("forms.property"))}</div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">${escapeHtml(t("common.notes"))}</div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 text-right">${escapeHtml(this.tr("tables.actions"))}</div>
+            <form id="cleaning-ah-cleaning-batch-form" class="cleaning-batch-form" onsubmit="return false;">
+                <!-- Header Toolbar -->
+                <div class="cleaning-batch-toolbar">
+                    <div class="cleaning-batch-toolbar-left">
+                        <div class="cleaning-batch-field">
+                            <label for="cleaning-batch-date">${escapeHtml(this.tr("cleanings.batchDate") || "Data")}:</label>
+                            <input id="cleaning-batch-date" type="date" name="date" class="cleaning-batch-date-input" value="${escapeHtml(this.cleaningBatchDraft.date)}" required>
+                        </div>
+                        <div class="cleaning-batch-field">
+                            <label for="cleaning-batch-category">${escapeHtml(this.tr("cleanings.batchCategory") || "Categoria")}:</label>
+                            <select id="cleaning-batch-category" name="categoryKey" class="cleaning-batch-select">
+                                ${categoryOptions}
+                            </select>
+                        </div>
+                        <div class="cleaning-batch-field">
+                            <label for="cleaning-batch-source">${escapeHtml(this.tr("forms.reservationSource") || "Origem")}:</label>
+                            <select id="cleaning-batch-source" name="reservationSource" class="cleaning-batch-select" ${this.categoryUsesReservationSource(categoryKey) ? "" : "disabled"}>
+                                ${reservationSourceOptions.map(([value, label]) => `
+                                    <option value="${escapeHtml(value)}" ${this.cleaningBatchDraft.reservationSource === value ? "selected" : ""}>${escapeHtml(label)}</option>
+                                `).join("")}
+                            </select>
+                        </div>
                     </div>
-                    <div class="divide-y divide-slate-200">
-                        ${rows.map((row, index) => {
-                            const guestAmountField = this.getCleaningGuestAmountFieldState({
-                                ...row,
-                                categoryKey
-                            });
-                            return `
-                                <div class="grid grid-cols-1 gap-3 px-4 py-4 lg:grid-cols-[minmax(16rem,1.35fr)_150px_minmax(14rem,1fr)_auto] lg:items-start" data-cleaning-batch-row="${escapeHtml(row.rowId)}">
-                                    <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.tr("forms.property"))} ${index + 1}</span>
-                                        <input type="text" name="propertyName" class="w-full" value="${escapeHtml(row.propertyName)}" list="cleaning-ah-property-options" placeholder="${escapeHtml(this.tr("forms.propertyPlaceholder"))}">
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</span>
-                                        <input type="number" name="guestAmount" class="w-full" step="0.01" min="0" value="${escapeHtml(guestAmountField.inputValue)}" data-auto-suggested-value="${escapeHtml(guestAmountField.suggestedInputValue)}" placeholder="0">
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 lg:hidden">${escapeHtml(t("common.notes"))}</span>
-                                        <input type="text" name="notes" class="w-full" value="${escapeHtml(row.notes)}" placeholder="${escapeHtml(this.tr("forms.notesPlaceholder"))}">
-                                    </label>
-                                    <div class="flex items-center justify-end lg:pt-0.5">
-                                        <button type="button" data-action="remove-cleaning-batch-row" data-row-id="${escapeHtml(row.rowId)}" class="text-sm text-rose-600 hover:text-rose-800">${escapeHtml(this.tr("actions.removeRow"))}</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join("")}
+
+                    <!-- Live Stat Pills -->
+                    <div id="cleaning-ah-cleaning-batch-preview" class="cleaning-batch-preview-container">
+                        ${this.renderCleaningBatchPreview(preview)}
+                    </div>
+
+                    <!-- Top Action Buttons -->
+                    <div class="cleaning-batch-toolbar-actions">
+                        <button type="submit" class="cleaning-btn-create">
+                            <i class="fas fa-check"></i>
+                            <span>${escapeHtml(this.tr("actions.saveCleaningBatch") || "Guardar limpezas")}</span>
+                        </button>
+                        <button type="button" id="cleaning-ah-reset-cleaning-batch-form" class="cleaning-btn-secondary text-xs" title="${escapeHtml(this.tr("actions.reset") || "Limpar")}">
+                            <i class="fas fa-rotate-left"></i>
+                            <span>${escapeHtml(this.tr("actions.reset") || "Limpar")}</span>
+                        </button>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-sm text-slate-500">${escapeHtml(this.getCleaningCategoryRuleText(categoryKey))}</p>
-                    <button type="button" id="cleaning-ah-add-cleaning-batch-row" class="view-btn">${escapeHtml(this.tr("actions.addRow"))}</button>
+
+                <!-- Category rule hint info banner -->
+                <div class="text-[11px] text-slate-500 px-4 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5">
+                    <i class="fas fa-info-circle text-slate-400"></i>
+                    <span>${escapeHtml(this.getCleaningCategoryRuleText(categoryKey))}</span>
                 </div>
-                <div id="cleaning-ah-cleaning-batch-preview">
-                    ${this.renderCleaningBatchPreview(preview)}
+
+                <!-- Spreadsheet Grid -->
+                <div class="cleaning-batch-table-wrap">
+                    <div class="cleaning-batch-table-header">
+                        <div class="cleaning-batch-th text-center">#</div>
+                        <div class="cleaning-batch-th">${escapeHtml(this.tr("forms.property") || "Propriedade")}</div>
+                        <div class="cleaning-batch-th text-right" id="cleaning-ah-cleaning-batch-amount-header">${escapeHtml(this.getCleaningAmountLabel(categoryKey))}</div>
+                        <div class="cleaning-batch-th">${escapeHtml(t("common.notes") || "Notas")}</div>
+                        <div class="cleaning-batch-th text-center"></div>
+                    </div>
+                    <div id="cleaning-ah-cleaning-batch-rows" class="cleaning-batch-rows-list">
+                        ${rows.map((row, index) => this.renderCleaningBatchRowHtml(row, index + 1, categoryKey)).join("")}
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="cleaning-batch-footer">
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="cleaning-ah-add-cleaning-batch-row" class="cleaning-batch-btn-add">
+                            <i class="fas fa-plus"></i>
+                            <span>${escapeHtml(this.tr("actions.addRow") || "Adicionar linha")}</span>
+                        </button>
+                        <button type="button" id="cleaning-ah-add-5-cleaning-batch-rows" class="cleaning-batch-btn-add">
+                            <i class="fas fa-layer-group"></i>
+                            <span>${escapeHtml(this.tr("actions.add5Rows") || "+ 5 linhas")}</span>
+                        </button>
+                    </div>
+                    <div class="cleaning-batch-hint">
+                        <i class="fas fa-keyboard"></i>
+                        <span>${escapeHtml(this.tr("cleanings.keyboardHint") || "Prima Enter no campo Valor para adicionar nova linha")}</span>
+                    </div>
+                    <div class="cleaning-batch-footer-actions">
+                        <button type="submit" class="cleaning-btn-create">
+                            <i class="fas fa-check"></i>
+                            <span>${escapeHtml(this.tr("actions.saveCleaningBatch") || "Guardar limpezas")}</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         `;
@@ -3956,13 +4002,23 @@ export class CleaningAhManager {
     }
 
     renderCleaningBatchPreview(preview) {
+        const count = preview?.count || 0;
+        const guestAmount = preview?.guestAmount || 0;
+        const totalToAh = preview?.totalToAh || 0;
+
         return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(this.tr("preview.title"))}</div>
-                <div class="mt-3 grid grid-cols-1 gap-3">
-                    ${this.renderPreviewMetricCard(this.tr("metrics.rows"), String(preview.count))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.guestTotal"), this.formatCurrency(preview.guestAmount))}
-                    ${this.renderPreviewMetricCard(this.tr("metrics.currentNet"), this.formatCurrency(preview.totalToAh), "emphasis")}
+            <div class="cleaning-batch-pills">
+                <div class="cleaning-batch-pill" title="${escapeHtml(this.tr("metrics.rows") || "Limpezas")}">
+                    <span class="cleaning-batch-pill__label">${escapeHtml(this.tr("metrics.rows") || "Limpezas")}</span>
+                    <strong class="cleaning-batch-pill__val">${count}</strong>
+                </div>
+                <div class="cleaning-batch-pill" title="${escapeHtml(this.tr("metrics.guestTotal") || "Total Hóspede")}">
+                    <span class="cleaning-batch-pill__label">${escapeHtml(this.tr("metrics.guestTotal") || "Total Hóspede")}</span>
+                    <strong class="cleaning-batch-pill__val">${escapeHtml(this.formatCurrency(guestAmount))}</strong>
+                </div>
+                <div class="cleaning-batch-pill is-highlight" title="${escapeHtml(this.tr("metrics.currentNet") || "Líquido AH")}">
+                    <span class="cleaning-batch-pill__label">${escapeHtml(this.tr("metrics.currentNet") || "Líquido AH")}</span>
+                    <strong class="cleaning-batch-pill__val text-rose-600">${escapeHtml(this.formatCurrency(totalToAh))}</strong>
                 </div>
             </div>
         `;
@@ -4823,42 +4879,104 @@ export class CleaningAhManager {
         document.getElementById("cleaning-ah-cancel-inline-cleaning-edit")?.addEventListener("click", () => this.resetCleaningForm());
 
         const cleaningBatchForm = document.getElementById("cleaning-ah-cleaning-batch-form");
-        cleaningBatchForm?.addEventListener("input", (event) => {
-            if (event.target?.name === "categoryKey") {
+        if (cleaningBatchForm) {
+            cleaningBatchForm.addEventListener("input", (event) => {
+                if (event.target?.name === "categoryKey") {
+                    this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                    this.render();
+                    return;
+                }
+                if (event.target?.name === "reservationSource") {
+                    this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                    this.updateCleaningBatchPreview();
+                    return;
+                }
+                if (event.target?.name === "propertyName") {
+                    this.applyCleaningSuggestionToBatchRow(event.target.closest("[data-cleaning-batch-row]"));
+                }
                 this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
-                this.render();
-                return;
-            }
-            if (event.target?.name === "propertyName") {
-                this.applyCleaningSuggestionToBatchRow(event.target.closest("[data-cleaning-batch-row]"));
-            }
-            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
-            this.updateCleaningBatchPreview();
-        });
-        cleaningBatchForm?.addEventListener("submit", (event) => {
-            event.preventDefault();
-            this.saveCleaningBatchRecords();
-        });
-        document.getElementById("cleaning-ah-add-cleaning-batch-row")?.addEventListener("click", () => {
-            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
-            this.cleaningBatchDraft = {
-                ...this.cleaningBatchDraft,
-                rows: [...this.cleaningBatchDraft.rows, this.createCleaningBatchRow()]
-            };
-            this.render();
-        });
-        document.getElementById("cleaning-ah-reset-cleaning-batch-form")?.addEventListener("click", () => this.resetCleaningBatchForm());
-        document.querySelectorAll("[data-action='remove-cleaning-batch-row']").forEach((button) => {
-            button.addEventListener("click", () => {
-                this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
-                const remainingRows = this.cleaningBatchDraft.rows.filter((row) => row.rowId !== (button.dataset.rowId || ""));
-                this.cleaningBatchDraft = {
-                    ...this.cleaningBatchDraft,
-                    rows: remainingRows.length ? remainingRows : [this.createCleaningBatchRow()]
-                };
-                this.render();
+                this.updateCleaningBatchPreview();
             });
-        });
+
+            cleaningBatchForm.addEventListener("change", (event) => {
+                if (event.target?.name === "categoryKey") {
+                    this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                    this.render();
+                    return;
+                }
+                if (event.target?.name === "reservationSource" || event.target?.name === "date") {
+                    this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+                    this.updateCleaningBatchPreview();
+                }
+            });
+
+            cleaningBatchForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                this.saveCleaningBatchRecords();
+            });
+
+            // Enter key navigation inside the batch form
+            cleaningBatchForm.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter") return;
+
+                if (event.ctrlKey || event.metaKey) {
+                    event.preventDefault();
+                    this.saveCleaningBatchRecords();
+                    return;
+                }
+
+                const target = event.target;
+                if (!target) return;
+
+                if (target.name === "date" || target.name === "categoryKey" || target.name === "reservationSource") {
+                    event.preventDefault();
+                    const rowsContainer = document.getElementById("cleaning-ah-cleaning-batch-rows");
+                    const firstProp = rowsContainer?.querySelector('[name="propertyName"]');
+                    firstProp?.focus();
+                    firstProp?.select();
+                } else if (target.name === "propertyName") {
+                    event.preventDefault();
+                    const rowEl = target.closest("[data-cleaning-batch-row]");
+                    const amountInput = rowEl?.querySelector('[name="guestAmount"]');
+                    amountInput?.focus();
+                    amountInput?.select();
+                } else if (target.name === "guestAmount" || target.name === "notes") {
+                    event.preventDefault();
+                    const rowEl = target.closest("[data-cleaning-batch-row]");
+                    const rowsContainer = document.getElementById("cleaning-ah-cleaning-batch-rows");
+                    const allRows = [...(rowsContainer?.querySelectorAll("[data-cleaning-batch-row]") || [])];
+                    const currentIndex = allRows.indexOf(rowEl);
+                    if (currentIndex === allRows.length - 1) {
+                        this.addCleaningBatchRow(1, true);
+                    } else if (currentIndex !== -1 && currentIndex < allRows.length - 1) {
+                        const nextProp = allRows[currentIndex + 1]?.querySelector('[name="propertyName"]');
+                        nextProp?.focus();
+                        nextProp?.select();
+                    }
+                }
+            });
+
+            document.getElementById("cleaning-ah-add-cleaning-batch-row")?.addEventListener("click", () => {
+                this.addCleaningBatchRow(1, true);
+            });
+            document.getElementById("cleaning-ah-add-5-cleaning-batch-rows")?.addEventListener("click", () => {
+                this.addCleaningBatchRow(5, true);
+            });
+            document.getElementById("cleaning-ah-reset-cleaning-batch-form")?.addEventListener("click", () => {
+                this.resetCleaningBatchForm();
+            });
+
+            // Event delegation for row removal
+            cleaningBatchForm.addEventListener("click", (event) => {
+                const removeBtn = event.target.closest("[data-action='remove-cleaning-batch-row']");
+                if (removeBtn) {
+                    const rowId = removeBtn.dataset.rowId || removeBtn.closest("[data-cleaning-batch-row]")?.dataset.cleaningBatchRow;
+                    if (rowId) {
+                        this.removeCleaningBatchRow(rowId);
+                    }
+                }
+            });
+        }
 
         const laundryForm = document.getElementById("cleaning-ah-laundry-form");
         laundryForm?.addEventListener("input", () => {
@@ -5245,10 +5363,14 @@ export class CleaningAhManager {
                 notes: String(rowElement.querySelector('[name="notes"]')?.value || "").trim()
             }));
 
+        const categorySelect = form.querySelector('[name="categoryKey"]');
+        const reservationSourceSelect = form.querySelector('[name="reservationSource"]');
+        const dateInput = form.querySelector('[name="date"]');
+
         return {
-            date: String(formData.get("date") || "").trim(),
-            categoryKey: this.getCleaningCategoryKey(formData.get("categoryKey")),
-            reservationSource: String(formData.get("reservationSource") || this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
+            date: String(dateInput?.value || formData.get("date") || "").trim(),
+            categoryKey: this.getCleaningCategoryKey(categorySelect?.value || formData.get("categoryKey")),
+            reservationSource: String(reservationSourceSelect?.value || formData.get("reservationSource") || this.cleaningBatchDraft.reservationSource || CLEANING_AH_RESERVATION_SOURCES.platform).trim(),
             rows: rows.length ? rows : [this.createCleaningBatchRow()]
         };
     }
@@ -5428,6 +5550,69 @@ export class CleaningAhManager {
             this.laundryBatchDraft = {
                 ...this.laundryBatchDraft,
                 rows: remainingRows.length ? remainingRows : [this.createLaundryBatchRow()]
+            };
+            this.render();
+        }
+    }
+
+    addCleaningBatchRow(count = 1, focusFirst = true) {
+        const rowsContainer = document.getElementById("cleaning-ah-cleaning-batch-rows");
+        if (!rowsContainer) {
+            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+            for (let i = 0; i < count; i += 1) {
+                this.cleaningBatchDraft.rows.push(this.createCleaningBatchRow());
+            }
+            this.render();
+            return;
+        }
+
+        this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+        const categoryKey = this.getCleaningCategoryKey(this.cleaningBatchDraft.categoryKey || this.cleaningBatchDraft.category);
+        const currentCount = rowsContainer.querySelectorAll("[data-cleaning-batch-row]").length;
+        let targetRowEl = null;
+
+        for (let i = 0; i < count; i += 1) {
+            const newRow = this.createCleaningBatchRow();
+            this.cleaningBatchDraft.rows.push(newRow);
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = this.renderCleaningBatchRowHtml(newRow, currentCount + i + 1, categoryKey).trim();
+            const newRowEl = tempDiv.firstElementChild;
+            rowsContainer.appendChild(newRowEl);
+            if (!targetRowEl) {
+                targetRowEl = newRowEl;
+            }
+        }
+
+        this.updateCleaningBatchPreview();
+
+        if (focusFirst && targetRowEl) {
+            const propInput = targetRowEl.querySelector('[name="propertyName"]');
+            propInput?.focus();
+        }
+    }
+
+    removeCleaningBatchRow(rowId) {
+        const rowsContainer = document.getElementById("cleaning-ah-cleaning-batch-rows");
+        const rowEl = rowsContainer?.querySelector(`[data-cleaning-batch-row="${rowId}"]`);
+        if (rowEl && rowsContainer) {
+            rowEl.remove();
+            const allRows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+            if (!allRows.length) {
+                this.addCleaningBatchRow(1, true);
+                return;
+            }
+            allRows.forEach((el, idx) => {
+                const idxEl = el.querySelector(".cleaning-batch-cell--idx");
+                if (idxEl) idxEl.textContent = String(idx + 1);
+            });
+            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+            this.updateCleaningBatchPreview();
+        } else {
+            this.cleaningBatchDraft = this.readCleaningBatchDraftFromDom();
+            const remainingRows = this.cleaningBatchDraft.rows.filter((row) => row.rowId !== rowId);
+            this.cleaningBatchDraft = {
+                ...this.cleaningBatchDraft,
+                rows: remainingRows.length ? remainingRows : [this.createCleaningBatchRow()]
             };
             this.render();
         }

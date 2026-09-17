@@ -890,9 +890,10 @@ html:has(.cleaning-ah-property-dialog[open]) {
 }
 
 /* ==========================================================================
-   Laundry Batch Entry (Compact Spreadsheet Design)
+   Batch Entry (Compact Spreadsheet Design for Laundry and Cleanings)
    ========================================================================== */
-.laundry-batch-card {
+.laundry-batch-card,
+.cleaning-batch-card {
     background: #ffffff;
     border: 1px solid var(--cleaning-line);
     border-radius: 16px;
@@ -900,13 +901,15 @@ html:has(.cleaning-ah-property-dialog[open]) {
     overflow: hidden;
 }
 
-.laundry-batch-form {
+.laundry-batch-form,
+.cleaning-batch-form {
     display: flex;
     flex-direction: column;
     margin: 0;
 }
 
-.laundry-batch-toolbar {
+.laundry-batch-toolbar,
+.cleaning-batch-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -917,14 +920,16 @@ html:has(.cleaning-ah-property-dialog[open]) {
     border-bottom: 1px solid var(--cleaning-line);
 }
 
-.laundry-batch-toolbar-left {
+.laundry-batch-toolbar-left,
+.cleaning-batch-toolbar-left {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 16px;
 }
 
-.laundry-batch-field {
+.laundry-batch-field,
+.cleaning-batch-field {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -933,11 +938,13 @@ html:has(.cleaning-ah-property-dialog[open]) {
     color: #57606a;
 }
 
-.laundry-batch-field label {
+.laundry-batch-field label,
+.cleaning-batch-field label {
     white-space: nowrap;
 }
 
-.laundry-batch-date-input {
+.laundry-batch-date-input,
+.cleaning-batch-date-input {
     height: 32px;
     padding: 0 8px;
     font-size: 12px;
@@ -949,9 +956,35 @@ html:has(.cleaning-ah-property-dialog[open]) {
     transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.laundry-batch-date-input:focus {
+.laundry-batch-date-input:focus,
+.cleaning-batch-date-input:focus {
     border-color: var(--cleaning-accent);
     box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-batch-select {
+    height: 32px;
+    padding: 0 24px 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cleaning-ink);
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cleaning-batch-select:focus {
+    border-color: var(--cleaning-accent);
+    box-shadow: 0 0 0 3px var(--cleaning-accent-soft);
+}
+
+.cleaning-batch-select:disabled {
+    background: #f6f8fa;
+    color: #8c959f;
+    cursor: not-allowed;
 }
 
 .laundry-batch-rate-wrap {
@@ -988,14 +1021,16 @@ html:has(.cleaning-ah-property-dialog[open]) {
     pointer-events: none;
 }
 
-.laundry-batch-pills {
+.laundry-batch-pills,
+.cleaning-batch-pills {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
 }
 
-.laundry-batch-pill {
+.laundry-batch-pill,
+.cleaning-batch-pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -1007,7 +1042,8 @@ html:has(.cleaning-ah-property-dialog[open]) {
     color: #57606a;
 }
 
-.laundry-batch-pill__label {
+.laundry-batch-pill__label,
+.cleaning-batch-pill__label {
     font-size: 10px;
     font-weight: 600;
     color: #8c959f;
@@ -1015,35 +1051,41 @@ html:has(.cleaning-ah-property-dialog[open]) {
     letter-spacing: 0.04em;
 }
 
-.laundry-batch-pill__val {
+.laundry-batch-pill__val,
+.cleaning-batch-pill__val {
     font-weight: 700;
     color: var(--cleaning-ink);
     font-variant-numeric: tabular-nums;
 }
 
-.laundry-batch-pill.is-highlight {
+.laundry-batch-pill.is-highlight,
+.cleaning-batch-pill.is-highlight {
     background: #fff0f2;
     border-color: #ffccd3;
 }
 
-.laundry-batch-pill.is-highlight .laundry-batch-pill__label {
+.laundry-batch-pill.is-highlight .laundry-batch-pill__label,
+.cleaning-batch-pill.is-highlight .cleaning-batch-pill__label {
     color: #ef5b6c;
 }
 
-.laundry-batch-toolbar-actions {
+.laundry-batch-toolbar-actions,
+.cleaning-batch-toolbar-actions {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 /* Batch Table */
-.laundry-batch-table-wrap {
+.laundry-batch-table-wrap,
+.cleaning-batch-table-wrap {
     width: 100%;
     overflow-x: auto;
     background: #ffffff;
 }
 
-.laundry-batch-table-header {
+.laundry-batch-table-header,
+.cleaning-batch-table-header {
     display: grid;
     grid-template-columns: 44px minmax(220px, 2fr) 120px minmax(180px, 1.5fr) 48px;
     min-width: 600px;
@@ -1058,15 +1100,18 @@ html:has(.cleaning-ah-property-dialog[open]) {
     border-bottom: 1px solid var(--cleaning-line);
 }
 
-.laundry-batch-th {
+.laundry-batch-th,
+.cleaning-batch-th {
     padding: 6px 10px;
 }
 
-.laundry-batch-rows-list {
+.laundry-batch-rows-list,
+.cleaning-batch-rows-list {
     min-width: 600px;
 }
 
-.laundry-batch-table-row {
+.laundry-batch-table-row,
+.cleaning-batch-table-row {
     display: grid;
     grid-template-columns: 44px minmax(220px, 2fr) 120px minmax(180px, 1.5fr) 48px;
     align-items: center;
@@ -1075,15 +1120,18 @@ html:has(.cleaning-ah-property-dialog[open]) {
     transition: background-color 100ms ease;
 }
 
-.laundry-batch-table-row:hover {
+.laundry-batch-table-row:hover,
+.cleaning-batch-table-row:hover {
     background: #fafbfc;
 }
 
-.laundry-batch-cell {
+.laundry-batch-cell,
+.cleaning-batch-cell {
     padding: 0 4px;
 }
 
-.laundry-batch-cell--idx {
+.laundry-batch-cell--idx,
+.cleaning-batch-cell--idx {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1094,7 +1142,8 @@ html:has(.cleaning-ah-property-dialog[open]) {
     user-select: none;
 }
 
-.laundry-batch-input {
+.laundry-batch-input,
+.cleaning-batch-input {
     width: 100%;
     height: 32px;
     padding: 0 10px;
@@ -1107,17 +1156,20 @@ html:has(.cleaning-ah-property-dialog[open]) {
     transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.laundry-batch-input:focus {
+.laundry-batch-input:focus,
+.cleaning-batch-input:focus {
     background: #ffffff;
     border-color: var(--cleaning-accent);
     box-shadow: 0 0 0 2.5px var(--cleaning-accent-soft);
 }
 
-.laundry-batch-input::placeholder {
+.laundry-batch-input::placeholder,
+.cleaning-batch-input::placeholder {
     color: #afb8c1;
 }
 
-.laundry-batch-row-remove {
+.laundry-batch-row-remove,
+.cleaning-batch-row-remove {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1133,13 +1185,15 @@ html:has(.cleaning-ah-property-dialog[open]) {
     transition: background-color 120ms ease, color 120ms ease;
 }
 
-.laundry-batch-row-remove:hover {
+.laundry-batch-row-remove:hover,
+.cleaning-batch-row-remove:hover {
     color: #cf222e;
     background: #ffebe9;
 }
 
 /* Footer Actions */
-.laundry-batch-footer {
+.laundry-batch-footer,
+.cleaning-batch-footer {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1150,7 +1204,8 @@ html:has(.cleaning-ah-property-dialog[open]) {
     border-top: 1px solid var(--cleaning-line);
 }
 
-.laundry-batch-btn-add {
+.laundry-batch-btn-add,
+.cleaning-batch-btn-add {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -1166,12 +1221,14 @@ html:has(.cleaning-ah-property-dialog[open]) {
     transition: background-color 120ms ease, border-color 120ms ease;
 }
 
-.laundry-batch-btn-add:hover {
+.laundry-batch-btn-add:hover,
+.cleaning-batch-btn-add:hover {
     background: #f3f4f6;
     border-color: #afb8c1;
 }
 
-.laundry-batch-hint {
+.laundry-batch-hint,
+.cleaning-batch-hint {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1179,7 +1236,8 @@ html:has(.cleaning-ah-property-dialog[open]) {
     color: #8c959f;
 }
 
-.laundry-batch-hint kbd {
+.laundry-batch-hint kbd,
+.cleaning-batch-hint kbd {
     display: inline-block;
     padding: 1px 5px;
     font-size: 10px;

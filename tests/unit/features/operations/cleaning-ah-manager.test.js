@@ -1919,5 +1919,73 @@ describe("CleaningAhManager", () => {
 
     resetDom();
   });
+
+  test("renders compact cleanings batch table and supports adding rows and keyboard navigation", () => {
+    resetDom('<div id="cleaning-ah-page"><div id="cleaning-ah-root"></div></div>');
+    const manager = new CleaningAhManager(null);
+    manager.activeTab = "cleanings";
+    manager.cleaningEntryMode = "batch";
+    manager.render();
+
+    const form = document.getElementById("cleaning-ah-cleaning-batch-form");
+    assert.ok(form, "Batch cleanings form should exist in DOM");
+
+    const rowsContainer = document.getElementById("cleaning-ah-cleaning-batch-rows");
+    assert.ok(rowsContainer, "Batch cleanings rows container should exist");
+    let rows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+    assert.equal(rows.length, 3, "Default should start with 3 rows");
+
+    // Check preview container and stat pills
+    const previewContainer = document.getElementById("cleaning-ah-cleaning-batch-preview");
+    assert.ok(previewContainer, "Preview container should exist");
+    assert.includes(previewContainer.innerHTML, "cleaning-batch-pills");
+
+    // Add 1 row
+    const addRowBtn = document.getElementById("cleaning-ah-add-cleaning-batch-row");
+    addRowBtn.click();
+    rows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+    assert.equal(rows.length, 4, "Should have 4 rows after adding 1");
+
+    // Add 5 rows
+    const add5RowsBtn = document.getElementById("cleaning-ah-add-5-cleaning-batch-rows");
+    add5RowsBtn.click();
+    rows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+    assert.equal(rows.length, 9, "Should have 9 rows after adding 5");
+
+    // Fill row 1
+    const prop1 = rows[0].querySelector('input[name="propertyName"]');
+    const amount1 = rows[0].querySelector('input[name="guestAmount"]');
+    prop1.value = "Acqua Beach";
+    amount1.value = "80";
+    amount1.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // Preview should update live
+    assert.includes(previewContainer.innerHTML, "80");
+
+    // Remove row 2
+    const removeBtn = rows[1].querySelector("[data-action='remove-cleaning-batch-row']");
+    removeBtn.click();
+    rows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+    assert.equal(rows.length, 8, "Should have 8 rows after removing 1");
+
+    // Verify row 1 still has its value intact
+    assert.equal(rows[0].querySelector('input[name="propertyName"]').value, "Acqua Beach");
+    assert.equal(rows[0].querySelector('input[name="guestAmount"]').value, "80");
+
+    // Keyboard navigation: Enter on last row's guestAmount creates a new row
+    const lastRow = rows[rows.length - 1];
+    const lastAmount = lastRow.querySelector('input[name="guestAmount"]');
+    lastAmount.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    rows = rowsContainer.querySelectorAll("[data-cleaning-batch-row]");
+    assert.equal(rows.length, 9, "Pressing Enter on last guestAmount should append a new row");
+
+    // Saving: Ctrl+Enter triggers saving batch
+    let savedCleaningBatch = false;
+    manager.saveCleaningBatchRecords = async () => { savedCleaningBatch = true; };
+    form.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
+    assert.ok(savedCleaningBatch, "Ctrl+Enter should submit the cleanings batch form");
+
+    resetDom();
+  });
 });
 

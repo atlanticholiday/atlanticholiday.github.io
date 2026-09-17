@@ -299,4 +299,62 @@ describe("ReviewsRatingsManager", () => {
     assert.ok(container.innerHTML.includes("Improvements &amp; Recommendations") || container.innerHTML.includes("Improvements & Recommendations"));
     assert.ok(container.innerHTML.includes("WiFi Issues Apartment"));
   });
+
+  test("supports viewMode toggle between Asana cards and list table", () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+
+    const manager = new ReviewsRatingsManager();
+    manager.state.rawProperties = [
+      {
+        id: "p-asana",
+        name: "Asana Villa",
+        location: "Funchal",
+        booking: { score: 9.4, reviewCount: 15, subScores: { cleanliness: 9.8 } },
+        airbnb: { score: 4.85, reviewCount: 22, subScores: { cleanliness: 4.9 } },
+        reviews: []
+      }
+    ];
+    manager.updateCalculations();
+    manager.render();
+
+    const container = document.getElementById("reviews-ratings-page");
+
+    // Default view mode is cards
+    assert.equal(manager.state.viewMode, "cards");
+    assert.ok(container.querySelector('[data-mode="cards"]'), "Cards view button should exist");
+    const listBtn = container.querySelector('[data-mode="list"]');
+    assert.ok(listBtn, "List view button should exist");
+
+    // Card should render with compact Asana styling
+    assert.ok(container.querySelector('.reviews-details-btn'), "Card details button exists");
+    assert.ok(container.innerHTML.includes("Asana Villa"));
+
+    // Switch to List view
+    listBtn.click();
+    assert.equal(manager.state.viewMode, "list");
+    assert.equal(localStorage.getItem("atlantic_holiday_reviews_view_mode"), "list");
+
+    // Table should now be rendered
+    const table = container.querySelector("table");
+    assert.ok(table, "Table element should be present in list mode");
+    assert.ok(container.querySelector("th")?.textContent.includes("Property"), "Table header includes Property");
+    assert.ok(container.querySelector(".reviews-details-btn"), "Action buttons exist in list row");
+
+    // Switch back to cards
+    const cardsBtn = container.querySelector('[data-mode="cards"]');
+    cardsBtn.click();
+    assert.equal(manager.state.viewMode, "cards");
+    assert.equal(localStorage.getItem("atlantic_holiday_reviews_view_mode"), "cards");
+  });
+
+  test("restores viewMode from localStorage on initialization", () => {
+    resetDom(`<div id="reviews-ratings-page"></div>`);
+    localStorage.clear();
+    localStorage.setItem("atlantic_holiday_reviews_view_mode", "list");
+
+    const manager = new ReviewsRatingsManager();
+    assert.equal(manager.state.viewMode, "list");
+  });
 });
+

@@ -35,7 +35,8 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     activeTab = 'properties',
     activeModalTab = 'overview',
     improvementsFilter = 'all',
-    improvementsSearch = ''
+    improvementsSearch = '',
+    viewMode = 'cards'
   } = state;
 
   const improvementsData = getAllPropertyImprovements(rawProperties, {
@@ -58,15 +59,15 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     : 'Not yet synchronized';
 
   container.innerHTML = `
-    <div class="reviews-page-wrapper bg-slate-50 min-h-screen pb-16">
+    <div class="reviews-page-wrapper bg-[#f6f8fb] min-h-screen pb-16 font-sans">
       <!-- Sync Status Toast -->
       ${
         syncToastMessage
           ? `
-        <div id="reviews-sync-toast" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2.5 shadow-md flex items-center justify-between text-xs sm:text-sm font-medium sticky top-0 z-30 animate-fade-in">
+        <div id="reviews-sync-toast" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2 shadow-md flex items-center justify-between text-xs sm:text-sm font-medium sticky top-0 z-30 animate-fade-in">
           <div class="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <i class="fas fa-check-circle text-emerald-200 text-base"></i>
+              <i class="fas fa-check-circle text-emerald-200 text-sm"></i>
               <span>${escapeHtml(syncToastMessage)}</span>
             </div>
             <button id="toast-close-btn" class="text-white/80 hover:text-white text-xs px-2 py-1 rounded">
@@ -78,161 +79,163 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           : ''
       }
 
-      <!-- Top Navigation Bar -->
-      <header class="bg-white border-b border-gray-200 sticky ${syncToastMessage ? 'top-10' : 'top-0'} z-20 transition-all">
+      <!-- Top Navigation Bar (Asana Workspace style) -->
+      <header class="bg-white border-b border-gray-200 sticky ${syncToastMessage ? 'top-10' : 'top-0'} z-20 transition-all shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-4">
-              <button id="reviews-back-btn" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium transition-colors shadow-sm">
-                <i class="fas fa-arrow-left text-xs"></i>
+          <div class="flex items-center justify-between h-14">
+            <div class="flex items-center gap-3">
+              <button id="reviews-back-btn" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-xs font-semibold transition-colors shadow-xs" title="Back to Dashboard">
+                <i class="fas fa-arrow-left text-[11px]"></i>
                 <span>Back</span>
               </button>
+              <div class="w-px h-4 bg-gray-200"></div>
               <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 font-bold">
+                <div class="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-600 font-bold text-xs shadow-xs">
                   <i class="fas fa-star"></i>
                 </div>
-                <div>
-                  <h1 class="text-lg font-bold text-gray-900 leading-tight">Reviews & Ratings</h1>
-                  <p class="text-xs text-gray-500">Live guest satisfaction and verified OTA performance</p>
+                <div class="flex items-center gap-2">
+                  <h1 class="text-sm sm:text-base font-bold text-gray-900 leading-tight">Reviews &amp; Ratings</h1>
+                  <span class="text-xs text-gray-300 hidden sm:inline">•</span>
+                  <p class="text-xs text-gray-500 hidden sm:inline">Guest satisfaction &amp; verified OTA performance</p>
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
-              <div class="hidden sm:flex items-center gap-2 text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
-                <i class="fas fa-clock text-gray-400"></i>
-                <span>Last updated: <strong class="text-gray-700">${lastUpdatedFormatted}</strong></span>
+            <div class="flex items-center gap-2.5">
+              <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">
+                <i class="fas fa-clock text-gray-400 text-[11px]"></i>
+                <span>Updated: <strong class="text-gray-700 font-semibold">${lastUpdatedFormatted}</strong></span>
               </div>
               <button
                 id="reviews-sync-btn"
                 ${isSyncing ? 'disabled' : ''}
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold shadow-sm transition-all ${
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition-all ${
                   isSyncing ? 'opacity-70 cursor-not-allowed' : 'active:scale-95'
                 }"
               >
-                <i class="fas fa-sync-alt ${isSyncing ? 'fa-spin' : ''}"></i>
-                <span>${isSyncing ? 'Syncing Reviews...' : 'Sync Reviews'}</span>
+                <i class="fas fa-sync-alt text-[11px] ${isSyncing ? 'fa-spin' : ''}"></i>
+                <span>${isSyncing ? 'Syncing...' : 'Sync Reviews'}</span>
               </button>
             </div>
           </div>
 
           <!-- Tab Navigation -->
-          <div class="flex items-center gap-1 -mb-px">
-            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
-              <i class="fas fa-building text-xs mr-1.5"></i>Properties
+          <div class="flex items-center gap-1 -mb-px border-t border-gray-100 sm:border-0">
+            <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
+              <i class="fas fa-building text-[11px] mr-1.5"></i>Properties
             </button>
-            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'improvements' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center gap-2" data-tab="improvements">
-              <span class="inline-flex items-center"><i class="fas fa-lightbulb text-xs mr-1.5"></i>Improvements</span>
+            <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'improvements' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center gap-1.5" data-tab="improvements">
+              <span class="inline-flex items-center"><i class="fas fa-lightbulb text-[11px] mr-1.5"></i>Improvements</span>
               ${improvementsCount > 0 ? `
                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'improvements' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'}">
                   ${improvementsCount}
                 </span>
               ` : ''}
             </button>
-            <button class="reviews-tab-btn px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
-              <i class="fas fa-stream text-xs mr-1.5"></i>Latest Reviews
+            <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
+              <i class="fas fa-stream text-[11px] mr-1.5"></i>Latest Reviews
             </button>
           </div>
         </div>
       </header>
 
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
-        <!-- KPI Summary Cards (always visible) -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
+        <!-- KPI Summary Cards (Compact Asana cards) -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <!-- Airbnb Rating Card -->
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow transition-shadow">
-            <div class="flex items-center justify-between text-rose-600 mb-3">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Airbnb Average</span>
-              <i class="fab fa-airbnb text-xl"></i>
+          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
+            <div class="flex items-center justify-between text-rose-600 mb-1">
+              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Airbnb Average</span>
+              <i class="fab fa-airbnb text-base sm:text-lg"></i>
             </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-gray-900">${summary.airbnbAvg ? `${summary.airbnbAvg} ★` : '—'}</span>
-              <span class="text-xs text-gray-500 font-medium">/ 5.0</span>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.airbnbAvg ? `${summary.airbnbAvg} ★` : '—'}</span>
+              <span class="text-[11px] text-gray-500 font-medium">/ 5.0</span>
             </div>
-            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full ${summary.airbnbAvg ? (summary.airbnbAvg >= 4.8 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
-              Superhost benchmark: 4.80
+            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
+              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.airbnbAvg ? (summary.airbnbAvg >= 4.8 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
+              Superhost target: 4.80
             </p>
           </div>
 
           <!-- Booking.com Score Card -->
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow transition-shadow">
-            <div class="flex items-center justify-between text-blue-600 mb-3">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Booking.com Score</span>
-              <i class="fas fa-hotel text-xl"></i>
+          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
+            <div class="flex items-center justify-between text-blue-600 mb-1">
+              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Booking.com Score</span>
+              <i class="fas fa-hotel text-base sm:text-lg"></i>
             </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-gray-900">${summary.bookingAvg ? `${summary.bookingAvg}` : '—'}</span>
-              <span class="text-xs text-gray-500 font-medium">/ 10.0</span>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.bookingAvg ? `${summary.bookingAvg}` : '—'}</span>
+              <span class="text-[11px] text-gray-500 font-medium">/ 10.0</span>
             </div>
-            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full ${summary.bookingAvg ? (summary.bookingAvg >= 9.0 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
+            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
+              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.bookingAvg ? (summary.bookingAvg >= 9.0 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
               Target benchmark: 9.00
             </p>
           </div>
 
           <!-- Cleanliness Benchmark Card -->
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow transition-shadow">
-            <div class="flex items-center justify-between text-emerald-600 mb-3">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Cleanliness Index</span>
-              <i class="fas fa-broom text-xl"></i>
+          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
+            <div class="flex items-center justify-between text-emerald-600 mb-1">
+              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Cleanliness Index</span>
+              <i class="fas fa-broom text-base sm:text-lg"></i>
             </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-gray-900">${summary.cleanlinessAvgAirbnb ? `${summary.cleanlinessAvgAirbnb} ★` : (summary.cleanlinessAvgBooking ? `${summary.cleanlinessAvgBooking}` : '—')}</span>
-              <span class="text-xs text-gray-500 font-medium">${summary.cleanlinessAvgAirbnb ? '/ 5.0' : '/ 10.0'}</span>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.cleanlinessAvgAirbnb ? `${summary.cleanlinessAvgAirbnb} ★` : (summary.cleanlinessAvgBooking ? `${summary.cleanlinessAvgBooking}` : '—')}</span>
+              <span class="text-[11px] text-gray-500 font-medium">${summary.cleanlinessAvgAirbnb ? '/ 5.0' : '/ 10.0'}</span>
             </div>
-            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
-              <span class="inline-block w-2 h-2 rounded-full ${summary.cleanlinessAvgAirbnb || summary.cleanlinessAvgBooking ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
-              Directly aligned with Cleaning AH
+            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
+              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.cleanlinessAvgAirbnb || summary.cleanlinessAvgBooking ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
+              Aligned with Cleaning AH
             </p>
           </div>
 
           <!-- Total Reviews Card -->
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow transition-shadow">
-            <div class="flex items-center justify-between text-indigo-600 mb-3">
-              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Reviews</span>
-              <i class="fas fa-comments text-xl"></i>
+          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
+            <div class="flex items-center justify-between text-indigo-600 mb-1">
+              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Total Reviews</span>
+              <i class="fas fa-comments text-base sm:text-lg"></i>
             </div>
-            <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-extrabold text-gray-900">${summary.totalReviews || 0}</span>
-              <span class="text-xs text-gray-500 font-medium">verified guest reviews</span>
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.totalReviews || 0}</span>
+              <span class="text-[11px] text-gray-500 font-medium">guest reviews</span>
             </div>
-            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
               ${summary.attentionNeededCount > 0
-                ? `<span class="text-rose-600 font-semibold"><i class="fas fa-exclamation-triangle text-xs mr-1"></i>${summary.attentionNeededCount} need attention</span>`
-                : `<span class="text-emerald-600 font-medium"><i class="fas fa-check-circle text-xs mr-1"></i>All rated properties on track</span>`}
+                ? `<span class="text-rose-600 font-semibold"><i class="fas fa-exclamation-triangle text-[9px] mr-1"></i>${summary.attentionNeededCount} need attention</span>`
+                : `<span class="text-emerald-600 font-medium"><i class="fas fa-check-circle text-[9px] mr-1"></i>All properties on track</span>`}
             </p>
           </div>
         </section>
 
         ${activeTab === 'properties' ? `
-        <!-- Filter & Search Toolbar -->
-        <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Filter & Search Toolbar (Asana Style) -->
+        <div class="bg-white rounded-xl border border-gray-200 p-2.5 sm:p-3 shadow-xs flex flex-col md:flex-row items-center justify-between gap-2.5">
           <!-- Search -->
-          <div class="relative w-full md:w-80">
-            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <div class="relative w-full md:w-72">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             <input
               type="text"
               id="reviews-search-input"
               value="${escapeHtml(searchQuery)}"
               placeholder="Search properties or locations..."
-              class="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
+              class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
             />
           </div>
 
-          <!-- Filter Pills & Sorting -->
-          <div class="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
-            <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-medium">
-              <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${activePropertiesCount})</button>
-              <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'attention' ? 'bg-white text-rose-600 shadow-sm font-bold' : 'text-gray-600 hover:text-rose-600'}" data-filter="attention">Needs Attention</button>
-              <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'guest-favourite' ? 'bg-white text-amber-600 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-600'}" data-filter="guest-favourite">Guest Favourite</button>
+          <!-- Filter Pills, Sorting & View Mode Switcher -->
+          <div class="flex flex-wrap items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium overflow-x-auto">
+              <button class="reviews-filter-btn px-2.5 py-1 rounded-md transition-colors ${filter === 'all' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'}" data-filter="all">All (${activePropertiesCount})</button>
+              <button class="reviews-filter-btn px-2.5 py-1 rounded-md transition-colors ${filter === 'attention' ? 'bg-white text-rose-700 shadow-xs font-semibold' : 'text-gray-600 hover:text-rose-600'}" data-filter="attention">Needs Attention</button>
+              <button class="reviews-filter-btn px-2.5 py-1 rounded-md transition-colors ${filter === 'guest-favourite' ? 'bg-white text-amber-700 shadow-xs font-semibold' : 'text-gray-600 hover:text-amber-600'}" data-filter="guest-favourite">Guest Favourite</button>
               ${archivedPropertiesCount > 0 ? `
-                <button class="reviews-filter-btn px-3 py-1.5 rounded-lg transition-colors ${filter === 'archived' ? 'bg-white text-amber-800 shadow-sm font-bold' : 'text-gray-600 hover:text-amber-800'}" data-filter="archived"><i class="fas fa-box-archive mr-1 text-[10px]"></i>Archived (${archivedPropertiesCount})</button>
+                <button class="reviews-filter-btn px-2.5 py-1 rounded-md transition-colors ${filter === 'archived' ? 'bg-white text-amber-800 shadow-xs font-semibold' : 'text-gray-600 hover:text-amber-800'}" data-filter="archived"><i class="fas fa-box-archive mr-1 text-[9px]"></i>Archived (${archivedPropertiesCount})</button>
               ` : ''}
             </div>
 
             <div class="flex items-center gap-2">
-              <select id="reviews-sort-select" class="px-3 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+              <select id="reviews-sort-select" class="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
                 <option value="name-asc" ${sort === 'name-asc' ? 'selected' : ''}>Name (A-Z)</option>
                 <option value="name-desc" ${sort === 'name-desc' ? 'selected' : ''}>Name (Z-A)</option>
                 <option value="airbnb-desc" ${sort === 'airbnb-desc' ? 'selected' : ''}>Highest Airbnb Score</option>
@@ -240,22 +243,36 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                 <option value="cleanliness-desc" ${sort === 'cleanliness-desc' ? 'selected' : ''}>Highest Cleanliness</option>
                 <option value="reviews-desc" ${sort === 'reviews-desc' ? 'selected' : ''}>Most Reviews</option>
               </select>
+
+              <!-- Asana View Switcher: Board (Cards) vs List (Table) -->
+              <div class="inline-flex items-center gap-0.5 border border-gray-200 rounded-lg p-0.5 bg-gray-50 text-xs" title="Switch layout view">
+                <button class="reviews-view-mode-btn inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${viewMode === 'cards' ? 'bg-white text-gray-900 shadow-xs font-bold' : 'text-gray-500 hover:text-gray-800'}" data-mode="cards" title="Board / Cards view" aria-label="Cards view">
+                  <i class="fas fa-th-large text-xs"></i>
+                </button>
+                <button class="reviews-view-mode-btn inline-flex items-center justify-center w-7 h-7 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-gray-900 shadow-xs font-bold' : 'text-gray-500 hover:text-gray-800'}" data-mode="list" title="List / Table view" aria-label="List view">
+                  <i class="fas fa-list text-xs"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Properties Scorecard Grid -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          ${properties.length === 0
-            ? `<div class="col-span-2 text-center py-16 bg-white rounded-3xl border border-gray-200 p-8">
-                 <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mx-auto mb-3">
-                   <i class="fas fa-search text-lg"></i>
-                 </div>
-                 <h3 class="text-base font-bold text-gray-800">No properties match your filter</h3>
-                 <p class="text-sm text-gray-500 mt-1">Try clearing your search query or switching filters.</p>
-               </div>`
-            : properties.map((prop) => renderPropertyCard(prop)).join('')}
-        </section>
+        ${properties.length === 0
+          ? `<div class="text-center py-16 bg-white rounded-xl border border-gray-200 p-8 shadow-xs">
+               <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mx-auto mb-2.5">
+                 <i class="fas fa-search text-base"></i>
+               </div>
+               <h3 class="text-sm font-bold text-gray-800">No properties match your filter</h3>
+               <p class="text-xs text-gray-500 mt-1">Try clearing your search query or switching filters.</p>
+             </div>`
+          : (viewMode === 'list'
+              ? renderPropertiesTable(properties)
+              : `<!-- Properties Scorecard Grid (3 columns on desktop, compact Asana style) -->
+                 <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                   ${properties.map((prop) => renderPropertyCard(prop)).join('')}
+                 </section>`
+            )
+        }
         ` : activeTab === 'improvements' ? `
         <!-- Improvements & Recommendations Full Page Tab -->
         ${renderImprovementsPage(improvementsData, state, handlers)}
@@ -283,21 +300,21 @@ function renderPropertyCard(prop) {
   const isBookingAwaitingSync = Boolean(prop.bookingUrl && !hasBookingData);
   const bookingScore = hasBookingData
     ? `${prop.booking.score.toFixed(1)}`
-    : (isBookingAwaitingSync ? 'Awaiting sync' : '—');
+    : (isBookingAwaitingSync ? 'Syncing' : '—');
   const bookingCount = prop.booking?.reviewCount ? `(${prop.booking.reviewCount})` : '';
-  const bookingClean = prop.booking?.subScores?.cleanliness
-    ? `${prop.booking.subScores.cleanliness.toFixed(1)} / 10`
-    : (isBookingAwaitingSync ? 'Pending sync' : '— / 10');
+  const bookingClean = prop.booking?.subScores?.cleanliness != null
+    ? `${prop.booking.subScores.cleanliness.toFixed(1)}`
+    : (isBookingAwaitingSync ? 'Pending' : '—');
 
   const hasAirbnbData = prop.airbnb?.score !== undefined && prop.airbnb?.score !== null;
   const isAirbnbAwaitingSync = Boolean(prop.airbnbUrl && !hasAirbnbData);
   const airbnbScore = hasAirbnbData
     ? `${prop.airbnb.score.toFixed(1)} ★`
-    : (isAirbnbAwaitingSync ? 'Awaiting sync' : '—');
+    : (isAirbnbAwaitingSync ? 'Syncing' : '—');
   const airbnbCount = prop.airbnb?.reviewCount ? `(${prop.airbnb.reviewCount})` : '';
-  const airbnbClean = prop.airbnb?.subScores?.cleanliness
-    ? `${prop.airbnb.subScores.cleanliness.toFixed(1)} / 5.0`
-    : (isAirbnbAwaitingSync ? 'Pending sync' : '— / 5.0');
+  const airbnbClean = prop.airbnb?.subScores?.cleanliness != null
+    ? `${prop.airbnb.subScores.cleanliness.toFixed(1)}`
+    : (isAirbnbAwaitingSync ? 'Pending' : '—');
 
   const latestReview = getLatestReviewSnippet(prop);
   const allReviews = getAllPropertyReviews(prop);
@@ -305,115 +322,107 @@ function renderPropertyCard(prop) {
   const totalReviewsCount = (prop.booking?.reviewCount || 0) + (prop.airbnb?.reviewCount || 0) || allReviews.length;
 
   return `
-    <div class="bg-white rounded-3xl border ${attention ? 'border-rose-200 ring-2 ring-rose-100' : (isArchived ? 'border-amber-200 bg-amber-50/10' : 'border-gray-200')} p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+    <div class="bg-white rounded-xl border ${
+      attention
+        ? 'border-l-[3px] border-l-rose-500 border-t-gray-200 border-r-gray-200 border-b-gray-200 ring-1 ring-rose-100/60 shadow-xs'
+        : (isArchived ? 'border-amber-200 bg-amber-50/10 shadow-xs' : 'border-gray-200 shadow-xs')
+    } p-3.5 hover:border-gray-300 hover:shadow-md transition-all duration-150 flex flex-col justify-between">
       <div>
         <!-- Card Header -->
-        <div class="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="text-lg font-bold text-gray-900">${escapeHtml(prop.name)}</h3>
-              ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><i class="fas fa-trophy text-[9px]"></i>Guest Favourite</span>` : ''}
-              ${isArchived ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>` : ''}
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h3 class="text-sm font-semibold text-gray-900 truncate" title="${escapeHtml(prop.name)}">${escapeHtml(prop.name)}</h3>
+              ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 flex-shrink-0" title="Airbnb Guest Favourite"><i class="fas fa-trophy text-[9px]"></i>Favourite</span>` : ''}
             </div>
-            <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-              <i class="fas fa-map-marker-alt text-gray-400"></i>
+            <p class="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1 truncate">
+              <i class="fas fa-map-marker-alt text-gray-400 text-[10px]"></i>
               <span>${escapeHtml(prop.location || 'Madeira')}</span>
             </p>
           </div>
 
-          <div class="flex items-center gap-1.5">
+          <div class="flex-shrink-0">
             ${
               isArchived
-                ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300"><i class="fas fa-box-archive text-[10px]"></i>Archived</span>`
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300"><i class="fas fa-box-archive text-[9px]"></i>Archived</span>`
                 : attention
-                  ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle"></i>Attention</span>`
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-exclamation-circle text-[9px]"></i>Attention</span>`
                   : (hasBookingData || hasAirbnbData)
-                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle"></i>Good</span>`
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle text-[9px]"></i>Good</span>`
                     : (prop.bookingUrl || prop.airbnbUrl)
-                      ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Listing linked, awaiting automated review sync"><i class="fas fa-clock text-[10px]"></i>Awaiting Sync</span>`
-                      : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-200"><i class="far fa-circle text-[10px]"></i>Unrated</span>`
+                      ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Listing linked, awaiting automated review sync"><i class="fas fa-clock text-[9px]"></i>Syncing</span>`
+                      : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-500 border border-gray-200">Unrated</span>`
             }
           </div>
         </div>
 
-        <!-- OTA Scores Comparison Grid -->
-        <div class="grid grid-cols-2 gap-3 mb-4">
-          <!-- Booking.com Box (Clickable) -->
-          <${prop.bookingUrl ? `a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-2xl p-4 bg-blue-50/50 border border-blue-100 flex flex-col justify-between ${prop.bookingUrl ? 'hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
-            <div>
-              <div class="flex items-center justify-between text-blue-700 text-xs font-semibold mb-2">
-                <span class="flex items-center gap-1.5 ${prop.bookingUrl ? 'group-hover:text-blue-900 group-hover:underline' : ''}">
-                  <i class="fas fa-hotel"></i>
-                  <span>Booking.com</span>
-                </span>
-                ${
-                  prop.bookingUrl
-                    ? `<span class="text-blue-500 group-hover:text-blue-700 transition-colors flex items-center gap-1 text-[11px] font-medium" title="Open listing in new tab">
-                        <span class="text-[10px] hidden sm:group-hover:inline">Open</span>
-                        <i class="fas fa-external-link-alt text-[10px]"></i>
-                      </span>`
-                    : `<span class="text-[10px] text-gray-400 font-normal">No link</span>`
-                }
-              </div>
-              <div class="flex items-baseline gap-1.5">
-                <span class="${isBookingAwaitingSync ? 'text-xs font-bold text-amber-600 italic' : 'text-2xl font-black text-gray-900'}">${bookingScore}</span>
-                <span class="text-xs text-gray-500">${bookingCount}</span>
-              </div>
+        <!-- OTA Scores Comparison Grid (Compact Asana style side-by-side tiles) -->
+        <div class="grid grid-cols-2 gap-2 mb-2.5">
+          <!-- Booking.com Tile -->
+          <${prop.bookingUrl ? `a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-lg p-2 bg-blue-50/40 border border-blue-100 flex flex-col justify-between ${prop.bookingUrl ? 'hover:bg-blue-50 hover:border-blue-200 transition-colors cursor-pointer group' : ''}">
+            <div class="flex items-center justify-between text-blue-700 text-[11px] font-semibold mb-1">
+              <span class="flex items-center gap-1 ${prop.bookingUrl ? 'group-hover:underline' : ''}">
+                <i class="fas fa-hotel text-[10px]"></i>
+                <span>Booking.com</span>
+              </span>
+              ${
+                prop.bookingUrl
+                  ? `<i class="fas fa-external-link-alt text-[9px] text-blue-400 group-hover:text-blue-600 transition-colors" title="Open listing in new tab"></i>`
+                  : `<span class="text-[9px] text-gray-400 font-normal">—</span>`
+              }
             </div>
-            <div class="mt-3 pt-2 border-t border-blue-100/80 text-[11px] text-gray-600 flex items-center justify-between">
-              <span>Cleanliness:</span>
-              <strong class="font-semibold text-gray-800">${bookingClean}</strong>
+            <div class="flex items-baseline justify-between gap-1">
+              <div class="flex items-baseline gap-1 truncate">
+                <span class="${isBookingAwaitingSync ? 'text-[11px] font-bold text-amber-600 italic' : 'text-base font-bold text-gray-900'}">${bookingScore}</span>
+                ${bookingCount ? `<span class="text-[10px] text-gray-500">${bookingCount}</span>` : ''}
+              </div>
+              <span class="text-[10px] text-gray-500 flex-shrink-0" title="Cleanliness score (out of 10)">
+                🧹 <strong class="font-semibold text-gray-700">${bookingClean}</strong>
+              </span>
             </div>
           </${prop.bookingUrl ? 'a' : 'div'}>
 
-          <!-- Airbnb Box (Clickable) -->
-          <${prop.airbnbUrl ? `a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-2xl p-4 bg-rose-50/50 border border-rose-100 flex flex-col justify-between ${prop.airbnbUrl ? 'hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm transition-all cursor-pointer group' : ''}">
-            <div>
-              <div class="flex items-center justify-between text-rose-700 text-xs font-semibold mb-2">
-                <span class="flex items-center gap-1.5 ${prop.airbnbUrl ? 'group-hover:text-rose-900 group-hover:underline' : ''}">
-                  <i class="fab fa-airbnb text-sm"></i>
-                  <span>Airbnb</span>
-                </span>
-                ${
-                  prop.airbnbUrl
-                    ? `<span class="text-rose-500 group-hover:text-rose-700 transition-colors flex items-center gap-1 text-[11px] font-medium" title="Open listing in new tab">
-                        <span class="text-[10px] hidden sm:group-hover:inline">Open</span>
-                        <i class="fas fa-external-link-alt text-[10px]"></i>
-                      </span>`
-                    : `<span class="text-[10px] text-gray-400 font-normal">No link</span>`
-                }
-              </div>
-              <div class="flex items-baseline gap-1.5">
-                <span class="${isAirbnbAwaitingSync ? 'text-xs font-bold text-amber-600 italic' : 'text-2xl font-black text-gray-900'}">${airbnbScore}</span>
-                <span class="text-xs text-gray-500">${airbnbCount}</span>
-              </div>
+          <!-- Airbnb Tile -->
+          <${prop.airbnbUrl ? `a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer"` : 'div'} class="rounded-lg p-2 bg-rose-50/40 border border-rose-100 flex flex-col justify-between ${prop.airbnbUrl ? 'hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer group' : ''}">
+            <div class="flex items-center justify-between text-rose-700 text-[11px] font-semibold mb-1">
+              <span class="flex items-center gap-1 ${prop.airbnbUrl ? 'group-hover:underline' : ''}">
+                <i class="fab fa-airbnb text-[11px]"></i>
+                <span>Airbnb</span>
+              </span>
+              ${
+                prop.airbnbUrl
+                  ? `<i class="fas fa-external-link-alt text-[9px] text-rose-400 group-hover:text-rose-600 transition-colors" title="Open listing in new tab"></i>`
+                  : `<span class="text-[9px] text-gray-400 font-normal">—</span>`
+              }
             </div>
-            <div class="mt-3 pt-2 border-t border-rose-100/80 text-[11px] text-gray-600 flex items-center justify-between">
-              <span>Cleanliness:</span>
-              <strong class="font-semibold text-gray-800">${airbnbClean}</strong>
+            <div class="flex items-baseline justify-between gap-1">
+              <div class="flex items-baseline gap-1 truncate">
+                <span class="${isAirbnbAwaitingSync ? 'text-[11px] font-bold text-amber-600 italic' : 'text-base font-bold text-gray-900'}">${airbnbScore}</span>
+                ${airbnbCount ? `<span class="text-[10px] text-gray-500">${airbnbCount}</span>` : ''}
+              </div>
+              <span class="text-[10px] text-gray-500 flex-shrink-0" title="Cleanliness score (out of 5.0)">
+                🧹 <strong class="font-semibold text-gray-700">${airbnbClean}</strong>
+              </span>
             </div>
           </${prop.airbnbUrl ? 'a' : 'div'}>
         </div>
 
-        <!-- Latest Guest Review Snippet -->
+        <!-- Latest Guest Review Snippet (Compact Asana quote) -->
         ${
           latestReview
             ? `
-          <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-4 text-xs text-gray-700">
-            <div class="flex items-center justify-between mb-1.5">
-              <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-800 truncate">
-                <span class="w-5 h-5 rounded-full ${latestReview.platform === 'Airbnb' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'} flex items-center justify-center text-[10px] flex-shrink-0">
-                  ${latestReview.platform === 'Airbnb' ? '<i class="fab fa-airbnb"></i>' : '<i class="fas fa-hotel"></i>'}
-                </span>
+          <div class="bg-gray-50 border-l-2 ${latestReview.platform === 'Airbnb' ? 'border-rose-400' : 'border-blue-400'} rounded-r-md px-2.5 py-1.5 mb-2.5 text-xs text-gray-700">
+            <div class="flex items-center justify-between gap-1 text-[10px] text-gray-500 mb-0.5">
+              <span class="font-semibold text-gray-800 truncate flex items-center gap-1">
+                <i class="${latestReview.platform === 'Airbnb' ? 'fab fa-airbnb text-rose-600' : 'fas fa-hotel text-blue-600'} text-[9px]"></i>
                 <span class="truncate">${escapeHtml(latestReview.author || 'Guest')}</span>
-                ${latestReview.country ? `<span class="text-gray-400 font-normal">(${escapeHtml(latestReview.country)})</span>` : ''}
-              </div>
-              <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${latestReview.platform === 'Airbnb' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
-                ${latestReview.platform === 'Airbnb' ? `${latestReview.score} ★` : `${latestReview.score} / 10`}
+                ${latestReview.country ? `<span class="text-gray-400 font-normal truncate">(${escapeHtml(latestReview.country)})</span>` : ''}
+              </span>
+              <span class="font-bold flex-shrink-0 ${latestReview.platform === 'Airbnb' ? 'text-rose-700' : 'text-blue-700'}">
+                ${latestReview.platform === 'Airbnb' ? `${latestReview.score} ★` : `${latestReview.score}/10`}
               </span>
             </div>
-            <p class="text-xs text-gray-600 line-clamp-2 italic">“${escapeHtml(latestReview.comment || latestReview.title || '')}”</p>
-            ${latestReview.positive ? `<p class="text-[11px] text-emerald-700 font-medium mt-1 truncate"><i class="fas fa-check text-emerald-500 mr-1 text-[10px]"></i>${escapeHtml(latestReview.positive)}</p>` : ''}
+            <p class="text-[11px] text-gray-600 line-clamp-1 italic">“${escapeHtml(latestReview.comment || latestReview.title || latestReview.positive || '')}”</p>
           </div>
         `
             : ''
@@ -421,23 +430,159 @@ function renderPropertyCard(prop) {
       </div>
 
       <!-- Footer Actions -->
-      <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-        <span class="text-[11px] text-gray-400 flex items-center gap-1 truncate">
-          <i class="fas fa-comments text-gray-300"></i>
-          <span>${allReviews.length > 0 ? `${allReviews.length} fetched reviews` : (totalReviewsCount > 0 ? `${totalReviewsCount} reviews` : '0 reviews')}${unansweredReviewsCount > 0 ? ` · <strong class="text-amber-600">${unansweredReviewsCount} unanswered</strong>` : ''}</span>
-        </span>
+      <div class="pt-2 border-t border-gray-100 flex items-center justify-between gap-2 mt-auto">
+        <div class="text-[11px] text-gray-500 flex items-center gap-1.5 truncate">
+          <span>${allReviews.length > 0 ? `${allReviews.length} reviews` : (totalReviewsCount > 0 ? `${totalReviewsCount} reviews` : '0 reviews')}</span>
+          ${unansweredReviewsCount > 0 ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0" title="${unansweredReviewsCount} unanswered reviews"><i class="fas fa-clock text-[9px]"></i>${unansweredReviewsCount} unans.</span>` : ''}
+        </div>
+
         <div class="flex items-center gap-1.5 flex-shrink-0">
-          <button class="reviews-card-edit-links-btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}" title="Edit Listing URLs">
+          <button class="reviews-card-edit-links-btn inline-flex items-center gap-1 px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium transition-colors" data-id="${escapeHtml(prop.id)}" title="Edit Listing URLs">
             <i class="fas fa-link text-amber-500 text-[10px]"></i>
             <span>Links</span>
           </button>
-          <button class="reviews-details-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}">
-            <span>Read reviews</span>
-            <i class="fas fa-chevron-right text-[10px]"></i>
+          <button class="reviews-details-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/80 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}">
+            <span>Reviews</span>
+            <i class="fas fa-chevron-right text-[9px]"></i>
           </button>
         </div>
       </div>
     </div>
+  `;
+}
+
+function renderPropertiesTable(properties = []) {
+  return `
+    <div class="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-semibold select-none">
+              <th class="py-2.5 px-3.5">Property</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3">Booking.com</th>
+              <th class="py-2.5 px-3">Airbnb</th>
+              <th class="py-2.5 px-3">Latest Feedback</th>
+              <th class="py-2.5 px-3">Reviews</th>
+              <th class="py-2.5 px-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            ${properties.map((prop) => renderPropertyTableRow(prop)).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderPropertyTableRow(prop) {
+  const isArchived = isPropertyArchived(prop);
+  const attention = isAttentionNeeded(prop);
+
+  const hasBookingData = prop.booking?.score !== undefined && prop.booking?.score !== null;
+  const isBookingAwaitingSync = Boolean(prop.bookingUrl && !hasBookingData);
+  const bookingScore = hasBookingData
+    ? `${prop.booking.score.toFixed(1)}`
+    : (isBookingAwaitingSync ? 'Syncing' : '—');
+  const bookingCount = prop.booking?.reviewCount ? `(${prop.booking.reviewCount})` : '';
+  const bookingClean = prop.booking?.subScores?.cleanliness != null
+    ? `${prop.booking.subScores.cleanliness.toFixed(1)}`
+    : '—';
+
+  const hasAirbnbData = prop.airbnb?.score !== undefined && prop.airbnb?.score !== null;
+  const isAirbnbAwaitingSync = Boolean(prop.airbnbUrl && !hasAirbnbData);
+  const airbnbScore = hasAirbnbData
+    ? `${prop.airbnb.score.toFixed(1)} ★`
+    : (isAirbnbAwaitingSync ? 'Syncing' : '—');
+  const airbnbCount = prop.airbnb?.reviewCount ? `(${prop.airbnb.reviewCount})` : '';
+  const airbnbClean = prop.airbnb?.subScores?.cleanliness != null
+    ? `${prop.airbnb.subScores.cleanliness.toFixed(1)}`
+    : '—';
+
+  const latestReview = getLatestReviewSnippet(prop);
+  const allReviews = getAllPropertyReviews(prop);
+  const unansweredReviewsCount = allReviews.filter((review) => !hasReviewResponse(review)).length;
+  const totalReviewsCount = (prop.booking?.reviewCount || 0) + (prop.airbnb?.reviewCount || 0) || allReviews.length;
+
+  return `
+    <tr class="hover:bg-gray-50/80 transition-colors ${attention ? 'bg-rose-50/20' : ''}">
+      <!-- Property -->
+      <td class="py-2.5 px-3.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="font-semibold text-gray-900">${escapeHtml(prop.name)}</span>
+          ${prop.airbnb?.badge === 'Guest favourite' ? `<span class="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-800 rounded"><i class="fas fa-trophy text-[8px]"></i>Favourite</span>` : ''}
+        </div>
+        <span class="text-[11px] text-gray-400 block">${escapeHtml(prop.location || 'Madeira')}</span>
+      </td>
+
+      <!-- Status -->
+      <td class="py-2.5 px-3 whitespace-nowrap">
+        ${
+          isArchived
+            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">Archived</span>`
+            : attention
+              ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Attention</span>`
+              : (hasBookingData || hasAirbnbData)
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Good</span>`
+                : (prop.bookingUrl || prop.airbnbUrl)
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Syncing</span>`
+                  : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-500 border border-gray-200">Unrated</span>`
+        }
+      </td>
+
+      <!-- Booking.com -->
+      <td class="py-2.5 px-3 whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+          <span class="font-bold text-gray-900">${bookingScore}</span>
+          ${bookingCount ? `<span class="text-[10px] text-gray-400">${bookingCount}</span>` : ''}
+          ${hasBookingData ? `<span class="text-[10px] text-gray-500" title="Cleanliness score">🧹 ${bookingClean}</span>` : ''}
+          ${prop.bookingUrl ? `<a href="${escapeHtml(prop.bookingUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 ml-0.5" title="Open Booking.com listing"><i class="fas fa-external-link-alt text-[9px]"></i></a>` : ''}
+        </div>
+      </td>
+
+      <!-- Airbnb -->
+      <td class="py-2.5 px-3 whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+          <span class="font-bold text-gray-900">${airbnbScore}</span>
+          ${airbnbCount ? `<span class="text-[10px] text-gray-400">${airbnbCount}</span>` : ''}
+          ${hasAirbnbData ? `<span class="text-[10px] text-gray-500" title="Cleanliness score">🧹 ${airbnbClean}</span>` : ''}
+          ${prop.airbnbUrl ? `<a href="${escapeHtml(prop.airbnbUrl)}" target="_blank" rel="noopener noreferrer" class="text-rose-500 hover:text-rose-700 ml-0.5" title="Open Airbnb listing"><i class="fas fa-external-link-alt text-[9px]"></i></a>` : ''}
+        </div>
+      </td>
+
+      <!-- Latest Review -->
+      <td class="py-2.5 px-3 max-w-xs">
+        ${
+          latestReview
+            ? `<div class="truncate text-[11px] text-gray-600" title="${escapeHtml(latestReview.comment || latestReview.title || '')}">
+                 <strong class="font-semibold text-gray-800">${escapeHtml(latestReview.author || 'Guest')}:</strong>
+                 <span class="italic">“${escapeHtml(latestReview.comment || latestReview.title || latestReview.positive || '')}”</span>
+               </div>`
+            : `<span class="text-[11px] text-gray-400">—</span>`
+        }
+      </td>
+
+      <!-- Reviews -->
+      <td class="py-2.5 px-3 whitespace-nowrap">
+        <div class="flex items-center gap-1">
+          <span class="text-gray-700">${allReviews.length > 0 ? allReviews.length : totalReviewsCount}</span>
+          ${unansweredReviewsCount > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="${unansweredReviewsCount} unanswered">${unansweredReviewsCount} unans.</span>` : ''}
+        </div>
+      </td>
+
+      <!-- Actions -->
+      <td class="py-2.5 px-3 text-right whitespace-nowrap">
+        <div class="inline-flex items-center gap-1">
+          <button class="reviews-card-edit-links-btn px-2 py-1 rounded border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-medium transition-colors" data-id="${escapeHtml(prop.id)}" title="Edit Listing URLs">
+            <i class="fas fa-link text-amber-500 text-[10px]"></i>
+          </button>
+          <button class="reviews-details-btn px-2.5 py-1 rounded bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-semibold transition-colors" data-id="${escapeHtml(prop.id)}">
+            <span>Reviews</span>
+          </button>
+        </div>
+      </td>
+    </tr>
   `;
 }
 
@@ -456,47 +601,47 @@ function renderImprovementsPage(improvementsData, state, handlers) {
   const activeCategoryKeys = Object.keys(categoryCounts).filter((k) => categoryCounts[k] > 0);
 
   return `
-    <div class="space-y-6">
+    <div class="space-y-4">
       <!-- Section Header Banner -->
-      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-base flex-shrink-0 shadow-xs">
             <i class="fas fa-lightbulb"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold text-gray-900 leading-tight">Improvements &amp; Recommendations</h2>
+            <h2 class="text-sm sm:text-base font-bold text-gray-900 leading-tight">Improvements &amp; Recommendations</h2>
             <p class="text-xs text-gray-500">Action items, recurring complaints, and operational suggestions grouped per property</p>
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl ${totalWithIssues > 0 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}">
-            <i class="fas fa-exclamation-circle text-amber-500"></i>
-            <span>${totalWithIssues} ${totalWithIssues === 1 ? 'property' : 'properties'} with action items</span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${totalWithIssues > 0 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}">
+            <i class="fas fa-exclamation-circle text-amber-500 text-[11px]"></i>
+            <span>${totalWithIssues} with action items</span>
           </span>
-          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <i class="fas fa-check-circle text-emerald-500"></i>
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <i class="fas fa-check-circle text-emerald-500 text-[11px]"></i>
             <span>${totalAllClear} all clear</span>
           </span>
         </div>
       </div>
 
       <!-- Filter & Search Toolbar -->
-      <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 p-2.5 sm:p-3 shadow-xs flex flex-col md:flex-row items-center justify-between gap-2.5">
         <!-- Search -->
-        <div class="relative w-full md:w-80">
-          <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <div class="relative w-full md:w-72">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
           <input
             type="text"
             id="improvements-search-input"
             value="${escapeHtml(improvementsSearch)}"
             placeholder="Search properties, locations, or issues..."
-            class="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
+            class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-gray-50/50"
           />
         </div>
 
         <!-- Category Filter Pills -->
-        <div class="flex flex-wrap items-center gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-medium w-full md:w-auto overflow-x-auto">
-          <button class="improvements-filter-btn px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${improvementsFilter === 'all' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-category="all">
+        <div class="flex flex-wrap items-center gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium w-full md:w-auto overflow-x-auto">
+          <button class="improvements-filter-btn px-2.5 py-1 rounded-md transition-colors whitespace-nowrap ${improvementsFilter === 'all' ? 'bg-white text-gray-900 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'}" data-category="all">
             All Issues (${totalWithIssues})
           </button>
           ${activeCategoryKeys.map((catKey) => {
@@ -506,7 +651,7 @@ function renderImprovementsPage(improvementsData, state, handlers) {
             const count = categoryCounts[catKey] || 0;
             const isActive = improvementsFilter === catKey;
             return `
-              <button class="improvements-filter-btn px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${isActive ? 'bg-white text-amber-800 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'}" data-category="${catKey}">
+              <button class="improvements-filter-btn px-2.5 py-1 rounded-md transition-colors whitespace-nowrap ${isActive ? 'bg-white text-amber-800 shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'}" data-category="${catKey}">
                 <i class="fas fa-${icon} text-[10px] mr-1 ${isActive ? 'text-amber-600' : 'text-gray-400'}"></i>${label} (${count})
               </button>
             `;
@@ -1182,51 +1327,51 @@ function renderReviewItem(r) {
   const answered = hasReviewResponse(r);
 
   return `
-    <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all space-y-2.5">
       <!-- Review Header -->
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl ${isAirbnb ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-blue-50 text-blue-600 border border-blue-100'} flex items-center justify-center font-bold text-sm flex-shrink-0">
+      <div class="flex items-start justify-between gap-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg ${isAirbnb ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-blue-50 text-blue-600 border border-blue-100'} flex items-center justify-center font-bold text-xs flex-shrink-0">
             ${initials}
           </div>
           <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h4 class="text-sm font-bold text-gray-900">${escapeHtml(r.author || 'Guest')}</h4>
-              ${r.country ? `<span class="text-xs text-gray-500 font-normal">(${escapeHtml(r.country)})</span>` : ''}
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <h4 class="text-xs sm:text-sm font-bold text-gray-900">${escapeHtml(r.author || 'Guest')}</h4>
+              ${r.country ? `<span class="text-[11px] text-gray-500 font-normal">(${escapeHtml(r.country)})</span>` : ''}
             </div>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="inline-flex items-center gap-1 text-[11px] font-semibold ${isAirbnb ? 'text-rose-600' : 'text-blue-600'}">
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="inline-flex items-center gap-1 text-[10px] font-semibold ${isAirbnb ? 'text-rose-600' : 'text-blue-600'}">
                 ${isAirbnb ? '<i class="fab fa-airbnb"></i> Airbnb' : '<i class="fas fa-hotel"></i> Booking.com'}
               </span>
               <span class="text-gray-300">•</span>
-              <span class="text-[11px] text-gray-400">${escapeHtml(formatReviewDate(r))}</span>
+              <span class="text-[10px] text-gray-400">${escapeHtml(formatReviewDate(r))}</span>
             </div>
             ${r.propertyName ? `
               <div class="mt-1">
-                <button class="latest-review-prop-btn inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-medium transition-colors border border-amber-200" data-property-id="${escapeHtml(r.propertyId || '')}" title="View property details">
-                  <i class="fas fa-building text-amber-600 text-[10px]"></i>
+                <button class="latest-review-prop-btn inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-medium transition-colors border border-amber-200" data-property-id="${escapeHtml(r.propertyId || '')}" title="View property details">
+                  <i class="fas fa-building text-amber-600 text-[9px]"></i>
                   <span>${escapeHtml(r.propertyName)}</span>
-                  <i class="fas fa-arrow-right text-[8px] opacity-60"></i>
+                  <i class="fas fa-arrow-right text-[7px] opacity-60"></i>
                 </button>
               </div>
             ` : ''}
           </div>
         </div>
 
-        <div class="flex flex-col items-end flex-shrink-0 gap-1.5">
-          <div class="flex items-center gap-1.5">
-            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold ${answered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-              <i class="fas ${answered ? 'fa-reply' : 'fa-clock'}"></i>
+        <div class="flex flex-col items-end flex-shrink-0 gap-1">
+          <div class="flex items-center gap-1">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${answered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+              <i class="fas ${answered ? 'fa-reply' : 'fa-clock'} text-[8px]"></i>
               ${answered ? 'Answered' : 'Unanswered'}
             </span>
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
               ${scoreText}
             </span>
             <button class="review-delete-btn text-gray-400 hover:text-rose-600 transition-colors text-xs p-1" data-review-id="${escapeHtml(r.id)}" ${r.propertyId ? `data-property-id="${escapeHtml(r.propertyId)}"` : ''} title="Delete review">
-              <i class="fas fa-trash-alt"></i>
+              <i class="fas fa-trash-alt text-[11px]"></i>
             </button>
           </div>
-          ${r.cleanlinessScore ? `<span class="text-[10px] text-emerald-700 font-semibold"><i class="fas fa-broom mr-1"></i>Cleanliness ${r.cleanlinessScore}</span>` : ''}
+          ${r.cleanlinessScore ? `<span class="text-[10px] text-emerald-700 font-semibold">🧹 Cleanliness ${r.cleanlinessScore}</span>` : ''}
         </div>
       </div>
 
@@ -1445,6 +1590,13 @@ function bindViewEvents(container, handlers) {
   // Sort select
   container.querySelector('#reviews-sort-select')?.addEventListener('change', (e) => {
     handlers.onSort?.(e.target.value);
+  });
+
+  // View mode switcher buttons (Cards vs List)
+  container.querySelectorAll('.reviews-view-mode-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      handlers.onViewModeChange?.(btn.dataset.mode);
+    });
   });
 
   // Tab buttons (Properties vs Improvements vs Latest Reviews)
