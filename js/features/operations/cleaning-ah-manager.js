@@ -71,7 +71,8 @@ function toOptionalNumber(value) {
         return null;
     }
 
-    const numeric = Number(value);
+    const normalized = typeof value === "string" ? value.trim().replace(",", ".") : value;
+    const numeric = Number(normalized);
     return Number.isFinite(numeric) ? numeric : null;
 }
 
@@ -1548,9 +1549,9 @@ export class CleaningAhManager {
         if (type === "laundry") {
             const draft = this.laundryDraft;
             const quantity = Number(draft.quantity) || 1;
-            const kg = Number(draft.kg) || 0;
-            const rate = Number(draft.laundryRatePerKg) || CLEANING_AH_DEFAULTS.laundryRatePerKg;
-            const total = roundCurrency(kg > 0 ? kg * rate : quantity * rate);
+            const kg = toOptionalNumber(draft.kg) || 0;
+            const rate = toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+            const total = roundCurrency(kg * rate);
 
             return `
                 <div class="cleaning-detail-overlay is-open" data-action="close-drawer"></div>
@@ -1584,11 +1585,11 @@ export class CleaningAhManager {
                             </div>
                             <div class="cleaning-metadata-field">
                                 <label>${escapeHtml(this.tr("metrics.kg"))}</label>
-                                <input type="number" name="kg" class="cleaning-metadata-input" min="0" step="0.01" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0.00">
+                                <input type="text" inputmode="decimal" name="kg" class="cleaning-metadata-input" value="${escapeHtml(toInputNumber(draft.kg))}" placeholder="0.00">
                             </div>
                             <div class="cleaning-metadata-field">
                                 <label>${escapeHtml(this.tr("tables.ratePerKg"))}</label>
-                                <input type="number" name="laundryRatePerKg" class="cleaning-metadata-input" min="0" step="0.01" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" placeholder="2.30">
+                                <input type="text" inputmode="decimal" name="laundryRatePerKg" class="cleaning-metadata-input" value="${escapeHtml(toInputNumber(draft.laundryRatePerKg))}" placeholder="2.30">
                             </div>
                         </div>
 
@@ -1596,7 +1597,7 @@ export class CleaningAhManager {
                         <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
                             <div>
                                 <small class="text-xs font-semibold uppercase tracking-wider text-rose-700">Despesa Total de Lavandaria</small>
-                                <div class="text-xl font-bold text-rose-800">${escapeHtml(this.formatCurrency(total))}</div>
+                                <div class="text-xl font-bold text-rose-800" data-laundry-drawer-total>${escapeHtml(this.formatCurrency(total))}</div>
                             </div>
                             <i class="fas fa-tshirt text-2xl text-rose-300"></i>
                         </div>
@@ -3306,7 +3307,8 @@ export class CleaningAhManager {
                     propertyName: record.propertyName || "",
                     quantity: String(record.quantity ?? 1),
                     kg: toInputNumber(record.kg),
-                    laundryRatePerKg: toInputNumber(record.laundryRatePerKg || this.getLaundryRateForProperty(record.propertyName)),
+                    amount: toInputNumber(record.amount),
+                    laundryRatePerKg: toInputNumber(record.laundryRatePerKg ?? CLEANING_AH_DEFAULTS.laundryRatePerKg),
                     notes: record.notes || ""
                 };
                 this.activeDrawer = { type: "laundry", id: record.id };
@@ -4993,6 +4995,10 @@ export class CleaningAhManager {
             this.saveCleaningRecord();
             this.closeDrawer();
         });
+        document.getElementById("cleaning-ah-drawer-laundry-form")?.addEventListener("input", () => {
+            this.laundryDraft = this.readLaundryDraftFromDom();
+            this.updateLaundryDrawerLiveCalc();
+        });
         document.getElementById("cleaning-ah-drawer-laundry-form")?.addEventListener("submit", (event) => {
             event.preventDefault();
             this.laundryDraft = this.readLaundryDraftFromDom();
@@ -5022,6 +5028,41 @@ export class CleaningAhManager {
                 this.deleteSpecialCleaning(button.dataset.id || "");
                 this.closeDrawer();
             });
+        });
+
+        const container = document.getElementById("cleaning-ah-page") || document.getElementById("cleaning-ah-root");
+        const decimalFieldNames = ["kg", "laundryRatePerKg", "guestAmount", "cost"];
+        container?.addEventListener("keydown", (event) => {
+            const input = event.target;
+            if (!input || !decimalFieldNames.includes(input.name)) return;
+            if (event.key === "," || event.key === ".") {
+                const val = input.value || "";
+                const start = input.selectionStart ?? val.length;
+                const end = input.selectionEnd ?? val.length;
+                const selectedText = val.slice(start, end);
+                const hasDot = val.includes(".") && !selectedText.includes(".");
+                if (hasDot) {
+                    event.preventDefault();
+                    return;
+                }
+                if (event.key === ",") {
+                    event.preventDefault();
+                    input.value = val.slice(0, start) + "." + val.slice(end);
+                    input.setSelectionRange(start + 1, start + 1);
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                }
+            }
+        });
+        container?.addEventListener("input", (event) => {
+            const input = event.target;
+            if (!input || !decimalFieldNames.includes(input.name)) return;
+            if (input.value && input.value.includes(",")) {
+                const start = input.selectionStart;
+                input.value = input.value.replace(/,/g, ".");
+                if (start !== null) {
+                    input.setSelectionRange(start, start);
+                }
+            }
         });
     }
 
@@ -5054,6 +5095,20 @@ export class CleaningAhManager {
                     </div>
                 </div>
             `;
+        }
+    }
+
+    updateLaundryDrawerLiveCalc() {
+        const form = document.getElementById("cleaning-ah-drawer-laundry-form");
+        if (!form) return;
+        const draft = this.readLaundryDraftFromDom();
+        const kg = toOptionalNumber(draft.kg) || 0;
+        const rate = toOptionalNumber(draft.laundryRatePerKg) ?? CLEANING_AH_DEFAULTS.laundryRatePerKg;
+        const total = roundCurrency(kg * rate);
+
+        const totalEl = form.querySelector("[data-laundry-drawer-total]");
+        if (totalEl) {
+            totalEl.textContent = this.formatCurrency(total);
         }
     }
 

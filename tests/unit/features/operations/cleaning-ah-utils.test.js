@@ -46,6 +46,8 @@ describe("Cleaning AH utilities", () => {
     test("resolves laundry amount from kg and rate", () => {
         assert.equal(resolveLaundryAmount({ kg: 5, amount: 0, laundryRatePerKg: 2.3 }), 11.5);
         assert.equal(resolveLaundryAmount({ kg: 5, amount: 15, laundryRatePerKg: 2.3 }), 15);
+        assert.equal(resolveLaundryAmount({ kg: "10,5", laundryRatePerKg: "2,3" }), 24.15);
+        assert.equal(resolveLaundryAmount({ kg: 0, laundryRatePerKg: 2.3 }), 0);
     });
 
     test("sets platform commission to zero for direct reservations", () => {

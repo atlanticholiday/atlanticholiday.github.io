@@ -9720,6 +9720,13 @@ body:has(#landing-page:not(.hidden)) .quick-search-trigger {
     display: none;
 }
 
+/* Hide floating search trigger when drawer or dialog is open so it does not block save actions. */
+body:has(.cleaning-detail.is-open) .quick-search-trigger,
+body:has(.cleaning-detail-overlay.is-open) .quick-search-trigger,
+body:has(.cleaning-ah-property-dialog[open]) .quick-search-trigger {
+    display: none !important;
+}
+
 @media (pointer: coarse) {
     .landing-search-btn kbd,
     .quick-search-trigger kbd,

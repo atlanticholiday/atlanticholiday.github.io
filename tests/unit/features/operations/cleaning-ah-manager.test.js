@@ -1788,5 +1788,58 @@ describe("CleaningAhManager", () => {
     assert.equal(manager.activeDrawer, null);
     resetDom();
   });
+
+  test("laundry drawer initializes with 0 total expense when kg is empty and live-calculates on input", () => {
+    resetDom('<div id="cleaning-ah-root"></div>');
+    const manager = new CleaningAhManager(null);
+    manager.render();
+    manager.openLaundryDrawer(null, { propertyName: "Acqua Beach" });
+
+    const root = document.getElementById("cleaning-ah-root");
+    assert.ok(root);
+
+    const totalEl = root.querySelector("[data-laundry-drawer-total]");
+    assert.ok(totalEl);
+    assert.equal(totalEl.textContent, manager.formatCurrency(0));
+
+    const kgInput = root.querySelector('input[name="kg"]');
+    const rateInput = root.querySelector('input[name="laundryRatePerKg"]');
+    assert.ok(kgInput);
+    assert.ok(rateInput);
+
+    kgInput.value = "10";
+    kgInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(totalEl.textContent, manager.formatCurrency(23));
+
+    rateInput.value = "3";
+    rateInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(totalEl.textContent, manager.formatCurrency(30));
+
+    // Typing comma turns into dot automatically
+    kgInput.value = "10";
+    kgInput.setSelectionRange(2, 2);
+    kgInput.dispatchEvent(new KeyboardEvent("keydown", { key: ",", bubbles: true, cancelable: true }));
+    assert.equal(kgInput.value, "10.");
+
+    // Prevent second dot or comma
+    const secondDotEvent = new KeyboardEvent("keydown", { key: ",", bubbles: true, cancelable: true });
+    kgInput.dispatchEvent(secondDotEvent);
+    assert.ok(secondDotEvent.defaultPrevented);
+
+    // Completing decimal part and verifying live calc
+    kgInput.value = "10.5";
+    rateInput.value = "2.3";
+    kgInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(totalEl.textContent, manager.formatCurrency(24.15));
+
+    // Entering or pasting comma automatically converts to dot
+    kgInput.value = "12,5";
+    kgInput.dispatchEvent(new Event("input", { bubbles: true }));
+    assert.equal(kgInput.value, "12.5");
+    assert.equal(totalEl.textContent, manager.formatCurrency(28.75));
+
+    manager.closeDrawer();
+    resetDom();
+  });
 });
 

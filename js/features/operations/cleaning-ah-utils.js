@@ -66,7 +66,8 @@ const CSV_COLUMN_INDEXES = Object.freeze({
 });
 
 function toFiniteNumber(value, fallback = 0) {
-    const numeric = Number(value);
+    const normalized = typeof value === 'string' ? value.trim().replace(',', '.') : value;
+    const numeric = Number(normalized);
     return Number.isFinite(numeric) ? numeric : fallback;
 }
 
@@ -79,7 +80,8 @@ function toNullableFiniteNumber(value) {
         return null;
     }
 
-    const numeric = Number(value);
+    const normalized = typeof value === 'string' ? value.trim().replace(',', '.') : value;
+    const numeric = Number(normalized);
     return Number.isFinite(numeric) ? numeric : null;
 }
 

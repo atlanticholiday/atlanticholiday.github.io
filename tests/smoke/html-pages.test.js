@@ -62,6 +62,28 @@ describe("HTML smoke", () => {
     }
   });
 
+  test("cleaning AH styles hide floating quick search trigger when drawer is open", async () => {
+    const response = await fetch("../styles/cleaning-ah.css");
+    assert.ok(response.ok, "Failed to fetch Cleaning AH styles");
+
+    const style = document.createElement("style");
+    style.textContent = await response.text();
+    const drawer = document.createElement("aside");
+    drawer.className = "cleaning-detail is-open";
+    const trigger = document.createElement("button");
+    trigger.className = "quick-search-trigger";
+    document.head.appendChild(style);
+    document.body.append(drawer, trigger);
+
+    try {
+      assert.equal(getComputedStyle(trigger).display, "none", "Quick search must not cover the cleaning drawer save button");
+    } finally {
+      trigger.remove();
+      drawer.remove();
+      style.remove();
+    }
+  });
+
   test("main pages are present and contain expected anchors", async () => {
     const pages = [
       { path: "../index.html", markers: ["main-app", "landing-page", "time-clock-page", "schedule-vacation-center-btn", "schedule-access-banner", "go-to-tasks-btn", "tasks-page", "vacation-center-page", "vacation-center-root", "vacation-type-select", "go-to-airbnb-reservation-invoices-btn", "airbnb-reservation-invoices-page", "go-to-operational-guidelines-btn", "operational-guidelines-page", "operational-guidelines-root", "go-to-build-planner-btn", "build-planner-page"] },

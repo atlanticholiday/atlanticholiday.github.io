@@ -459,10 +459,18 @@
 /* ==========================================================================
    Asana Slide-Over Detail Drawer (Right Panel)
    ========================================================================== */
+/* The global quick-search trigger is fixed to the bottom-right corner, which
+   is where drawer and dialog save actions live. Hide it while open. */
+body:has(.cleaning-detail.is-open) .quick-search-trigger,
+body:has(.cleaning-detail-overlay.is-open) .quick-search-trigger,
+body:has(.cleaning-ah-property-dialog[open]) .quick-search-trigger {
+    display: none !important;
+}
+
 .cleaning-detail-overlay {
     position: fixed;
     inset: 0;
-    z-index: 45;
+    z-index: 95;
     background: rgba(0, 0, 0, 0.25);
     backdrop-filter: blur(2px);
     opacity: 0;
@@ -477,7 +485,7 @@
 
 .cleaning-detail {
     position: fixed;
-    z-index: 50;
+    z-index: 100;
     top: 0;
     right: 0;
     display: grid;
