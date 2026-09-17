@@ -217,7 +217,7 @@ describe("LaundryLogManager", () => {
     assert.equal(payload.status, "matched");
   });
 
-  test("renders a focused three-step manager workflow", () => {
+  test("renders separate differences and manual-entry sections for managers", () => {
     resetDom(`
       <div id="landing-page"></div>
       <button id="go-to-welcome-packs-btn"></button>
@@ -245,10 +245,12 @@ describe("LaundryLogManager", () => {
 
     assert.ok(document.getElementById("laundry-log-search-input"));
     assert.ok(!document.getElementById("laundry-log-property-input"));
-
-    manager.switchWorkspace("returns");
-    assert.ok(document.querySelector("[data-laundry-action='review-return']"));
-    assert.ok(!document.getElementById("laundry-log-property-input"));
+    assert.equal(manager.activeWorkspace, "mismatches");
+    assert.equal(document.querySelectorAll("[data-workspace]").length, 2);
+    assert.ok(document.querySelector("[data-workspace='mismatches']"));
+    assert.ok(document.querySelector("[data-workspace='entry']"));
+    assert.ok(!document.querySelector("[data-workspace='returns']"));
+    assert.ok(!document.querySelector("[data-workspace='completed']"));
 
     manager.switchWorkspace("entry");
 
@@ -261,7 +263,7 @@ describe("LaundryLogManager", () => {
     assert.ok(document.querySelector("[data-laundry-action='add-custom-item']"));
   });
 
-  test("keeps unchecked returns in step two and exact shortages in step three", () => {
+  test("keeps the manager differences section limited to checked mismatches", () => {
     resetDom(`
       <div id="landing-page"></div>
       <button id="go-to-welcome-packs-btn"></button>
@@ -296,23 +298,17 @@ describe("LaundryLogManager", () => {
     manager.ensureDomScaffold();
     manager.render();
 
-    assert.equal(manager.activeWorkspace, "entry");
+    assert.equal(manager.activeWorkspace, "mismatches");
     assert.ok(document.querySelector("[data-workspace='entry']"));
-    assert.ok(document.querySelector("[data-workspace='returns']"));
     assert.ok(document.querySelector("[data-workspace='mismatches']"));
-    assert.ok(document.querySelector("[data-workspace='completed']"));
-    assert.ok(!document.querySelector("[data-workspace='overview']"));
-
-    manager.switchWorkspace("returns");
-    assert.equal(document.querySelectorAll("[data-laundry-action='review-return']").length, 1);
-    assert.includes(document.getElementById("laundry-log-root").textContent, "Atlantic View");
-    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Art Studio"));
-
-    manager.switchWorkspace("mismatches");
     assert.includes(document.getElementById("laundry-log-root").textContent, "Art Studio");
     assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Atlantic View"));
     assert.ok(document.querySelector("[data-laundry-issue-key='bathTowel'][data-laundry-issue-kind='missing']"));
     assert.ok(document.querySelector("[data-laundry-issue-key='pillowCases'][data-laundry-issue-kind='extra']"));
+
+    document.querySelector("[data-laundry-action='review-return']").click();
+    assert.equal(manager.activeWorkspace, "mismatches");
+    assert.ok(document.getElementById("laundry-log-return-editor"));
   });
 
   test("adds manual other items without using the fixed item list", () => {
@@ -371,11 +367,11 @@ describe("LaundryLogManager", () => {
       }
     ];
 
-    manager.activeWorkspace = "returns";
+    manager.activeWorkspace = "mismatches";
     manager.render();
-    document.querySelector("[data-laundry-action='review-return']").click();
+    manager.startReturnReview("handoff-1");
 
-    assert.equal(manager.activeWorkspace, "returns");
+    assert.equal(manager.activeWorkspace, "mismatches");
     assert.ok(document.getElementById("laundry-log-return-editor"));
     assert.ok(document.getElementById("laundry-log-received-date-input"));
     assert.ok(!document.querySelector("#laundry-log-return-editor [data-laundry-item-field='delivered']"));
@@ -422,17 +418,12 @@ describe("LaundryLogManager", () => {
       }
     ];
 
-    manager.activeWorkspace = "returns";
+    manager.activeWorkspace = "mismatches";
     manager.render();
 
-    assert.includes(document.getElementById("laundry-log-root").textContent, "Atlantic View");
-    assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Art Studio"));
-    assert.ok(document.querySelector("[data-workspace='mismatches']").textContent.includes("1"));
-
-    manager.switchWorkspace("mismatches");
-
-    assert.includes(document.getElementById("laundry-log-root").textContent, "Art Studio");
     assert.ok(!document.getElementById("laundry-log-root").textContent.includes("Atlantic View"));
+    assert.includes(document.getElementById("laundry-log-root").textContent, "Art Studio");
+    assert.ok(document.querySelector("[data-workspace='mismatches']").textContent.includes("1"));
   });
 
   test("shows a clear saved confirmation banner", () => {

@@ -671,6 +671,15 @@
         "reviewDifference": "Conferir novamente",
         "viewAll": "Ver tudo"
     },
+    "adminNavigation": {
+        "ariaLabel": "Secções da lavandaria para administração",
+        "differencesLabel": "Diferenças",
+        "differencesHint": "Conferir artigos em falta ou a mais",
+        "differencesKicker": "Conferência da administração",
+        "reviewKicker": "Rever diferença",
+        "entryLabel": "Adicionar registo",
+        "entryHint": "Criar ou atualizar uma entrega"
+    },
     "workflow": {
         "ariaLabel": "Passos da lavandaria",
         "sendLabel": "Enviar",

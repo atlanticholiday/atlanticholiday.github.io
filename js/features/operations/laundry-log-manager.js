@@ -90,7 +90,7 @@ export class LaundryLogManager {
         this.records = [];
         this.unsubscribe = null;
         this.editingRecordId = null;
-        this.activeWorkspace = "entry";
+        this.activeWorkspace = "mismatches";
         this.searchQuery = "";
         this.selectedStatus = "all";
         this.selectedMonth = "all";
@@ -823,7 +823,7 @@ export class LaundryLogManager {
         if (!target) {
             return;
         }
-        this.activeWorkspace = "returns";
+        this.activeWorkspace = this.isCleanerView() ? "returns" : "mismatches";
         this.returnEditingRecordId = recordId;
         this.editingRecordId = recordId;
         this.draft = this.createDraftFromRecord(target);
@@ -2045,22 +2045,17 @@ export class LaundryLogManager {
     }
 
     renderWorkspaceTabs() {
-        const returnCount = filterLaundryLogRecords(this.records, {
-            status: "pending"
-        }).length;
         const mismatchCount = filterLaundryLogRecords(this.records, {
             status: "mismatch"
         }).length;
         const tabs = [
-            { key: "entry", step: "1", label: this.tr("workflow.sendLabel"), hint: this.tr("workflow.sendHint") },
-            { key: "returns", step: "2", label: this.tr("workflow.returnLabel"), hint: this.tr("workflow.returnHint"), count: returnCount },
-            { key: "mismatches", step: "3", label: this.tr("workflow.resolveLabel"), hint: this.tr("workflow.resolveHint"), count: mismatchCount, alert: mismatchCount > 0 },
-            { key: "completed", label: this.tr("workflow.historyLabel"), hint: this.tr("workflow.historyHint"), history: true }
+            { key: "mismatches", label: this.tr("adminNavigation.differencesLabel"), hint: this.tr("adminNavigation.differencesHint"), count: mismatchCount, alert: mismatchCount > 0 },
+            { key: "entry", label: this.tr("adminNavigation.entryLabel"), hint: this.tr("adminNavigation.entryHint") }
         ];
 
         return `
-            <nav class="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-label="${escapeHtml(this.tr("workflow.ariaLabel"))}">
-                <div class="grid sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_0.75fr]">
+            <nav class="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-label="${escapeHtml(this.tr("adminNavigation.ariaLabel"))}">
+                <div class="grid sm:grid-cols-2">
                     ${tabs.map((tab) => {
                         const active = this.activeWorkspace === tab.key;
                         return `
@@ -2068,11 +2063,13 @@ export class LaundryLogManager {
                                 type="button"
                                 data-laundry-action="workspace"
                                 data-workspace="${escapeHtml(tab.key)}"
-                                aria-current="${active ? "step" : "false"}"
-                                class="group flex min-h-[88px] items-center gap-3 border-t border-slate-200 px-4 py-4 text-left transition first:border-t-0 hover:bg-slate-50 sm:[&:nth-child(2)]:border-t-0 xl:border-l xl:border-t-0 xl:first:border-l-0 ${tab.history ? "xl:border-l-2" : ""} ${active ? "bg-slate-950 text-white hover:bg-slate-900" : "text-slate-800"}"
+                                aria-current="${active ? "page" : "false"}"
+                                class="group flex min-h-[88px] items-center gap-3 border-t border-slate-200 px-4 py-4 text-left transition first:border-t-0 hover:bg-slate-50 sm:border-l sm:border-t-0 sm:first:border-l-0 ${active ? "bg-slate-950 text-white hover:bg-slate-900" : "text-slate-800"}"
                             >
-                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${active ? "bg-white text-slate-950" : tab.history ? "bg-slate-100 text-slate-600" : "bg-slate-950 text-white"}">
-                                    ${escapeHtml(tab.step || "✓")}
+                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${active ? "bg-white text-slate-950" : "bg-slate-950 text-white"}">
+                                    ${tab.key === "mismatches"
+                                        ? `<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M7 16l4-4 3 3 5-7"/></svg>`
+                                        : `<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>`}
                                 </span>
                                 <span class="min-w-0 flex-1">
                                     <span class="block text-sm font-semibold">${escapeHtml(tab.label)}</span>
@@ -2375,7 +2372,7 @@ export class LaundryLogManager {
             <section id="laundry-log-return-editor" class="scroll-mt-28 rounded-[28px] border border-rose-200 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("views.returnsTitle"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr(this.activeWorkspace === "mismatches" ? "adminNavigation.reviewKicker" : "views.returnsTitle"))}</div>
                         <h2 class="mt-2 text-xl font-semibold text-slate-900">${escapeHtml(this.draft.propertyName || this.tr("labels.unnamedProperty"))}</h2>
                         <p class="mt-2 text-sm text-slate-600">${escapeHtml(this.tr("form.returnHelper"))}</p>
                     </div>
@@ -2451,10 +2448,12 @@ export class LaundryLogManager {
         const missingUnits = mismatchRecords.reduce((sum, record) => sum + record.summary.missingUnits, 0);
         const extraUnits = mismatchRecords.reduce((sum, record) => sum + record.summary.extraUnits, 0);
         return `
-            <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <section class="grid gap-6">
+                ${this.renderReturnEditor()}
+                <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("workflow.step3Kicker"))}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">${escapeHtml(this.tr("adminNavigation.differencesKicker"))}</div>
                         <h2 class="mt-2 text-xl font-semibold text-slate-950">${escapeHtml(this.tr("views.mismatchesTitle"))}</h2>
                         <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">${escapeHtml(this.tr("workflow.resolvePageHint"))}</p>
                         ${mismatchRecords.length ? `
@@ -2482,6 +2481,7 @@ export class LaundryLogManager {
                 <div class="mt-6 border-t border-slate-200 pt-5">
                     ${mismatchRecords.length ? mismatchRecords.map((record) => this.renderDifferenceRow(record)).join("") : `<p class="rounded-2xl bg-emerald-50 px-4 py-5 text-sm font-medium text-emerald-800">${escapeHtml(this.tr("empty.mismatches"))}</p>`}
                 </div>
+                </section>
             </section>
         `;
     }
@@ -2562,9 +2562,11 @@ export class LaundryLogManager {
             return;
         }
 
-        const returnRecords = this.getReturnRecords();
+        if (!["mismatches", "entry"].includes(this.activeWorkspace)) {
+            this.activeWorkspace = "mismatches";
+        }
+
         const mismatchRecords = this.getMismatchRecords();
-        const completedRecords = this.getCompletedRecords();
         const propertyOptions = this.getKnownPropertyNames();
         const monthOptions = this.getMonthOptions();
         const draftSummary = summarizeLaundryLogRecord(this.draft);
@@ -2588,11 +2590,7 @@ export class LaundryLogManager {
             ${this.renderWorkspaceTabs()}
             ${this.activeWorkspace === "entry"
                 ? this.renderEntryWorkspace({ draftSummary, propertyOptions, titleKey })
-                : this.activeWorkspace === "returns"
-                ? this.renderReturnsWorkspace({ returnRecords, monthOptions })
-                : this.activeWorkspace === "mismatches"
-                ? this.renderMismatchesWorkspace({ mismatchRecords, monthOptions })
-                : this.renderCompletedWorkspace({ completedRecords, monthOptions })}
+                : this.renderMismatchesWorkspace({ mismatchRecords, monthOptions })}
         `;
     }
 }

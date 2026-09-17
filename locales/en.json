@@ -667,6 +667,15 @@
     "reviewDifference": "Recheck return",
     "viewAll": "View all"
   },
+  "adminNavigation": {
+    "ariaLabel": "Admin laundry sections",
+    "differencesLabel": "Differences",
+    "differencesHint": "Check missing and extra items",
+    "differencesKicker": "Admin review",
+    "reviewKicker": "Recheck difference",
+    "entryLabel": "Add record",
+    "entryHint": "Create or update a handoff"
+  },
   "workflow": {
     "ariaLabel": "Laundry steps",
     "sendLabel": "Send",
