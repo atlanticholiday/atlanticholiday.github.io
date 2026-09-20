@@ -320,8 +320,9 @@ describe("ReviewsRatingsManager", () => {
 
     const container = document.getElementById("reviews-ratings-page");
 
-    // Default view mode is cards
-    assert.equal(manager.state.viewMode, "cards");
+    // Attention is the landing view; Properties defaults to a table.
+    container.querySelector('[data-tab="properties"]').click();
+    assert.equal(manager.state.viewMode, "list");
     assert.ok(container.querySelector('[data-mode="cards"]'), "Cards view button should exist");
     const listBtn = container.querySelector('[data-mode="list"]');
     assert.ok(listBtn, "List view button should exist");

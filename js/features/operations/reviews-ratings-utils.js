@@ -2,14 +2,8 @@
  * Pure utility functions for the Reviews & Ratings module.
  */
 
-export const RATING_THRESHOLDS = Object.freeze({
-  AIRBNB_TARGET: 4.8,
-  AIRBNB_ALERT: 4.6,
-  BOOKING_TARGET: 9.0,
-  BOOKING_ALERT: 8.5,
-  CLEANLINESS_AIRBNB_TARGET: 4.8,
-  CLEANLINESS_BOOKING_TARGET: 9.0
-});
+import { RATING_THRESHOLDS, classifyReviewIssues, platformMetrics, reviewNeedsAttention, validScore } from './review-quality-utils.js';
+export { RATING_THRESHOLDS } from './review-quality-utils.js';
 
 export function round(value, decimals = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
@@ -30,19 +24,19 @@ export function getCleanlinessStatus(property) {
   let isAlert = false;
   let isGood = false;
 
-  if (typeof airbnbClean === 'number') {
+  if (validScore(airbnbClean, 5)) {
     if (airbnbClean < RATING_THRESHOLDS.CLEANLINESS_AIRBNB_TARGET) isAlert = true;
     else if (airbnbClean >= 4.9) isGood = true;
   }
 
-  if (typeof bookingClean === 'number') {
+  if (validScore(bookingClean, 10)) {
     if (bookingClean < RATING_THRESHOLDS.CLEANLINESS_BOOKING_TARGET) isAlert = true;
     else if (bookingClean >= 9.5) isGood = true;
   }
 
   if (isAlert) return 'alert';
   if (isGood) return 'excellent';
-  if (typeof airbnbClean === 'number' || typeof bookingClean === 'number') return 'good';
+  if (validScore(airbnbClean, 5) || validScore(bookingClean, 10)) return 'good';
   return 'unrated';
 }
 
@@ -52,8 +46,8 @@ export function isAttentionNeeded(property) {
   const cleanliness = getCleanlinessStatus(property);
 
   if (cleanliness === 'alert') return true;
-  if (typeof airbnbScore === 'number' && airbnbScore < RATING_THRESHOLDS.AIRBNB_ALERT) return true;
-  if (typeof bookingScore === 'number' && bookingScore < RATING_THRESHOLDS.BOOKING_ALERT) return true;
+  if (validScore(airbnbScore, 5) && airbnbScore < RATING_THRESHOLDS.AIRBNB_ALERT) return true;
+  if (validScore(bookingScore, 10) && bookingScore < RATING_THRESHOLDS.BOOKING_ALERT) return true;
   return false;
 }
 
@@ -68,70 +62,16 @@ export function isPropertyArchived(property) {
 }
 
 export function calculatePortfolioSummary(properties = []) {
-  const activeProperties = (Array.isArray(properties) ? properties : []).filter((p) => !isPropertyArchived(p));
-  if (activeProperties.length === 0) {
-    return {
-      totalProperties: 0,
-      airbnbAvg: null,
-      bookingAvg: null,
-      cleanlinessAvgAirbnb: null,
-      cleanlinessAvgBooking: null,
-      totalReviews: 0,
-      attentionNeededCount: 0
-    };
-  }
-
-  let airbnbTotal = 0;
-  let airbnbCount = 0;
-  let bookingTotal = 0;
-  let bookingCount = 0;
-
-  let cleanAirbnbTotal = 0;
-  let cleanAirbnbCount = 0;
-  let cleanBookingTotal = 0;
-  let cleanBookingCount = 0;
-
-  let totalReviews = 0;
-  let attentionCount = 0;
-
-  activeProperties.forEach((p) => {
-    if (p.airbnb?.score) {
-      airbnbTotal += p.airbnb.score;
-      airbnbCount += 1;
-    }
-    if (p.airbnb?.reviewCount) {
-      totalReviews += p.airbnb.reviewCount;
-    }
-    if (p.airbnb?.subScores?.cleanliness) {
-      cleanAirbnbTotal += p.airbnb.subScores.cleanliness;
-      cleanAirbnbCount += 1;
-    }
-
-    if (p.booking?.score) {
-      bookingTotal += p.booking.score;
-      bookingCount += 1;
-    }
-    if (p.booking?.reviewCount) {
-      totalReviews += p.booking.reviewCount;
-    }
-    if (p.booking?.subScores?.cleanliness) {
-      cleanBookingTotal += p.booking.subScores.cleanliness;
-      cleanBookingCount += 1;
-    }
-
-    if (isAttentionNeeded(p)) {
-      attentionCount += 1;
-    }
-  });
-
+  const active = (Array.isArray(properties) ? properties : []).filter(p => !isPropertyArchived(p));
+  const airbnb = platformMetrics(active, 'airbnb', getAllPropertyReviews);
+  const booking = platformMetrics(active, 'booking', getAllPropertyReviews);
   return {
-    totalProperties: activeProperties.length,
-    airbnbAvg: airbnbCount > 0 ? round(airbnbTotal / airbnbCount, 2) : null,
-    bookingAvg: bookingCount > 0 ? round(bookingTotal / bookingCount, 2) : null,
-    cleanlinessAvgAirbnb: cleanAirbnbCount > 0 ? round(cleanAirbnbTotal / cleanAirbnbCount, 2) : null,
-    cleanlinessAvgBooking: cleanBookingCount > 0 ? round(cleanBookingTotal / cleanBookingCount, 2) : null,
-    totalReviews,
-    attentionNeededCount: attentionCount
+    totalProperties: active.length, airbnbAvg: airbnb.average, bookingAvg: booking.average,
+    cleanlinessAvgAirbnb: airbnb.cleanliness, cleanlinessAvgBooking: booking.cleanliness,
+    totalReviews: airbnb.platformReviews + booking.platformReviews,
+    importedReviews: airbnb.importedReviews + booking.importedReviews,
+    attentionNeededCount: active.filter(isAttentionNeeded).length,
+    airbnb, booking
   };
 }
 
@@ -184,6 +124,12 @@ export function getAllPropertyReviews(property) {
       key = r.sourceId ? `${platformNorm}|${r.sourceId}` : (r.id || `${platformNorm}|${authorNorm}|${r.date}`);
     }
 
+    // Distinct source IDs or dated stays must not collapse merely because the author matches.
+    const candidate = byKey.get(key);
+    if (candidate && ((r.sourceId && candidate.sourceId && r.sourceId !== candidate.sourceId) ||
+        (!r.sourceId && !candidate.sourceId && r.date && candidate.date && r.date !== candidate.date))) {
+      key += `|${r.sourceId || r.date}`;
+    }
     const existing = byKey.get(key);
     if (existing) {
       byKey.set(key, {
@@ -234,17 +180,12 @@ export function getLatestReviewSnippet(property) {
 
 export function getReviewResponse(review) {
   if (!review || typeof review !== 'object') return '';
-  const response = review.response
-    ?? review.hostResponse
-    ?? review.propertyResponse
-    ?? review.reply
-    ?? review.answer
-    ?? '';
-  return typeof response === 'string' ? response.trim() : '';
+  return [review.response, review.hostResponse, review.propertyResponse, review.reply, review.answer]
+    .find(value => typeof value === 'string' && value.trim())?.trim() || '';
 }
 
 export function hasReviewResponse(review) {
-  return getReviewResponse(review).length > 0;
+  return getReviewResponse(review).length > 0 || review?.hasResponse === true;
 }
 
 export function filterPropertyReviews(reviews = [], { platform = 'all', filter = 'all', search = '' } = {}) {
@@ -257,16 +198,11 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
 
   if (filter === 'positive') {
     list = list.filter((r) => {
-      if (r.platform === 'Airbnb') return (r.score || 0) >= 4.8;
-      return (r.score || 0) >= 9.0;
+      if (r.platform === 'Airbnb') return (r.score || 0) >= RATING_THRESHOLDS.AIRBNB_TARGET;
+      return (r.score || 0) >= RATING_THRESHOLDS.BOOKING_TARGET;
     });
   } else if (filter === 'attention') {
-    list = list.filter((r) => {
-      if (r.platform === 'Airbnb') {
-        return (r.score || 5) < 4.7 || (r.cleanlinessScore && r.cleanlinessScore < 4.8);
-      }
-      return (r.score || 10) < 8.5 || (r.cleanlinessScore && r.cleanlinessScore < 9.0);
-    });
+    list = list.filter(reviewNeedsAttention);
   } else if (filter === 'answered') {
     list = list.filter(hasReviewResponse);
   } else if (filter === 'unanswered') {
@@ -276,6 +212,7 @@ export function filterPropertyReviews(reviews = [], { platform = 'all', filter =
   if (search) {
     const q = search.toLowerCase();
     list = list.filter((r) =>
+      (r.id && String(r.id).toLowerCase() === q) ||
       (r.author && r.author.toLowerCase().includes(q)) ||
       (r.title && r.title.toLowerCase().includes(q)) ||
       (r.comment && r.comment.toLowerCase().includes(q)) ||
@@ -417,29 +354,29 @@ export function analysePropertyInsights(property) {
 
   const hasScoreData = (property.booking?.score != null) || (property.airbnb?.score != null);
 
-  // Need score data OR at least 2 reviews with text
-  if (!hasScoreData && reviewsWithText.length < 2) {
+  // A score or a single written review is sufficient for evidence.
+  if (!hasScoreData && reviewsWithText.length === 0) {
     return { issues: [], positives: [], recommendations: [], hasData: false };
   }
 
   // --- Issue counting from review text ---
   const issueCounts = {};  // key -> { count, highCount }
   const positiveCounts = {}; // key -> count
+  const evidence = [];
 
   for (const review of reviews) {
-    const negText = [review.negative || '', review.comment || ''].join(' ');
+    const findings = classifyReviewIssues(review, property.insightDecisions || {});
     const posText = [review.positive || '', review.comment || '', review.title || ''].join(' ');
     const isAirbnb = review.platform === 'Airbnb';
     const isLowScore = typeof review.score === 'number' &&
-      ((isAirbnb && review.score < 3.5) || (!isAirbnb && review.score < 7));
+      ((isAirbnb && review.score < RATING_THRESHOLDS.AIRBNB_ALERT) || (!isAirbnb && review.score < RATING_THRESHOLDS.BOOKING_ALERT));
 
-    if (negText.trim()) {
-      const matched = matchesBuckets(negText, ISSUE_BUCKETS);
-      for (const [key, cnt] of Object.entries(matched)) {
-        if (!issueCounts[key]) issueCounts[key] = { count: 0, highCount: 0 };
-        issueCounts[key].count += cnt;
-        if (isLowScore) issueCounts[key].highCount += cnt;
-      }
+    for (const finding of findings) {
+      evidence.push(finding);
+      if (finding.decision === 'dismissed' || (finding.confidence === 'uncertain' && finding.decision !== 'confirmed')) continue;
+      if (!issueCounts[finding.category]) issueCounts[finding.category] = { count: 0, highCount: 0 };
+      issueCounts[finding.category].count += 1;
+      if (isLowScore) issueCounts[finding.category].highCount += 1;
     }
 
     if (posText.trim()) {
@@ -450,37 +387,10 @@ export function analysePropertyInsights(property) {
     }
   }
 
-  // --- Score-based issue detection (from sub-scores) ---
+  // Score alerts are separate from review mentions: a low sub-score is not another complaint.
   const bookingClean = property.booking?.subScores?.cleanliness;
   const airbnbClean = property.airbnb?.subScores?.cleanliness;
   const bookingValue = property.booking?.subScores?.value;
-  const bookingStaff = property.booking?.subScores?.staff;
-  const airbnbCheckin = property.airbnb?.subScores?.checkin;
-  const airbnbComm = property.airbnb?.subScores?.communication;
-
-  if (typeof bookingClean === 'number' && bookingClean < 8.5) {
-    if (!issueCounts.cleanliness) issueCounts.cleanliness = { count: 0, highCount: 0 };
-    issueCounts.cleanliness.count += 1;
-    if (bookingClean < 7.5) issueCounts.cleanliness.highCount += 1;
-  }
-  if (typeof airbnbClean === 'number' && airbnbClean < 4.0) {
-    if (!issueCounts.cleanliness) issueCounts.cleanliness = { count: 0, highCount: 0 };
-    issueCounts.cleanliness.count += 1;
-    if (airbnbClean < 3.5) issueCounts.cleanliness.highCount += 1;
-  }
-  if (typeof bookingValue === 'number' && bookingValue < 8.0) {
-    if (!issueCounts.value) issueCounts.value = { count: 0, highCount: 0 };
-    issueCounts.value.count += 1;
-  }
-  if ((typeof bookingStaff === 'number' && bookingStaff < 8.0) ||
-      (typeof airbnbComm === 'number' && airbnbComm < 4.0)) {
-    if (!issueCounts.host) issueCounts.host = { count: 0, highCount: 0 };
-    issueCounts.host.count += 1;
-  }
-  if (typeof airbnbCheckin === 'number' && airbnbCheckin < 4.0) {
-    if (!issueCounts.checkin) issueCounts.checkin = { count: 0, highCount: 0 };
-    issueCounts.checkin.count += 1;
-  }
 
   // Build issues list
   const issues = Object.entries(issueCounts)
@@ -509,25 +419,22 @@ export function analysePropertyInsights(property) {
   // --- Recommendations ---
   const recommendations = [];
 
-  const unansweredCount = reviews.filter((r) => {
-    const resp = r.response ?? r.hostResponse ?? r.reply ?? '';
-    return !resp || !String(resp).trim();
-  }).length;
+  const unansweredCount = reviews.filter(r => !hasReviewResponse(r) && r.hasResponse !== true).length;
   const unansweredPct = reviews.length > 0 ? unansweredCount / reviews.length : 0;
 
   if (unansweredCount > 0 && unansweredPct > 0.2) {
     recommendations.push({
       icon: 'reply',
-      text: `Respond to ${unansweredCount} unanswered guest review${unansweredCount > 1 ? 's' : ''} — host replies improve future bookings`
+      text: `Respond to ${unansweredCount} unanswered guest review${unansweredCount > 1 ? 's' : ''} — check the platform for current reply status`
     });
   }
-  if (typeof bookingClean === 'number' && bookingClean < 8.5) {
+  if (validScore(bookingClean, 10) && bookingClean < RATING_THRESHOLDS.CLEANLINESS_BOOKING_TARGET) {
     recommendations.push({
       icon: 'broom',
-      text: `Booking.com cleanliness score (${bookingClean.toFixed(1)}/10) is below the 8.5 target — review the cleaning checklist`
+      text: `Booking.com cleanliness score (${bookingClean.toFixed(1)}/10) is below the ${RATING_THRESHOLDS.CLEANLINESS_BOOKING_TARGET} target — review the cleaning checklist`
     });
   }
-  if (typeof airbnbClean === 'number' && airbnbClean < 4.0) {
+  if (validScore(airbnbClean, 5) && airbnbClean < RATING_THRESHOLDS.CLEANLINESS_AIRBNB_TARGET) {
     recommendations.push({
       icon: 'broom',
       text: `Airbnb cleanliness score (${airbnbClean.toFixed(1)}/5.0) needs attention — coordinate with the cleaning team`
@@ -548,13 +455,21 @@ export function analysePropertyInsights(property) {
   if (issueCounts.water?.count >= 2) {
     recommendations.push({ icon: 'shower', text: `Water/shower issues in ${issueCounts.water.count} reviews — check plumbing and hot water system` });
   }
-  if (typeof bookingValue === 'number' && bookingValue < 8.0) {
+  if (validScore(bookingValue, 10) && bookingValue < 8.0) {
     recommendations.push({ icon: 'tag', text: `Value-for-money score (${bookingValue.toFixed(1)}/10) is low — consider reviewing pricing or adding amenities` });
+  }
+
+  for (const [label, value, max, target] of [
+    ['Booking.com staff', property.booking?.subScores?.staff, 10, 8],
+    ['Airbnb communication', property.airbnb?.subScores?.communication, 5, 4],
+    ['Airbnb check-in', property.airbnb?.subScores?.checkin, 5, 4]
+  ]) {
+    if (validScore(value, max) && value < target) recommendations.push({ icon: 'comment', text: `${label} score (${value}/${max}) is below the ${target} target — review the guest experience` });
   }
 
   const hasData = issues.length > 0 || positives.length > 0 || recommendations.length > 0 || hasScoreData;
 
-  return { issues, positives, recommendations, hasData, reviewsAnalysed: reviewsWithText.length };
+  return { issues, positives, recommendations, hasData, evidence, reviewsAnalysed: reviewsWithText.length };
 }
 /**
  * Returns the N most recent reviews across ALL properties, each tagged
@@ -634,6 +549,8 @@ export function filterAndSortProperties(properties = [], { search = '', filter =
     list = list.filter((p) => Boolean(p.airbnb?.score));
   } else if (filter === 'booking') {
     list = list.filter((p) => Boolean(p.booking?.score));
+  } else if (filter === 'cleanliness') {
+    list = list.filter(p => getCleanlinessStatus(p) !== 'unrated');
   } else if (filter === 'guest-favourite') {
     list = list.filter((p) => p.airbnb?.badge === 'Guest favourite');
   }
@@ -692,8 +609,7 @@ export function getAllPropertyImprovements(properties = [], { category = 'all', 
     for (const r of reviews) {
       const neg = (r.negative || '').trim();
       const comment = (r.comment || '').trim();
-      const isLowScore = (r.platform === 'Airbnb' && (r.score || 5) < 4.0) ||
-        (r.platform !== 'Airbnb' && (r.score || 10) < 8.0);
+      const isLowScore = reviewNeedsAttention(r);
 
       if (neg) {
         guestFeedback.push({

@@ -1,3 +1,4 @@
+import { reviewText as rt } from './reviews-ratings-copy.js';
 import {
   calculatePortfolioSummary,
   filterAndSortProperties,
@@ -36,7 +37,7 @@ function mergePlatformReviews(serverReviews = [], localReviews = [], deletedIds 
     const id = r.id || r.sourceId;
     if (id && deletedIds.has(id)) continue;
     if (id && map.has(id)) {
-      map.set(id, { ...map.get(id), ...r });
+      map.set(id, { ...r, ...map.get(id) });
     } else {
       map.set(id || `loc-${map.size}`, r);
     }
@@ -60,6 +61,7 @@ function mergePlatformData(serverPlat, localPlat, deletedIds = new Set()) {
       ...(localPlat.subScores || {}),
       ...(serverPlat.subScores || {})
     },
+    lastSuccessAt: serverPlat.lastSuccessAt || (serverPlat.status === 'success' ? serverPlat.lastChecked : null) || localPlat.lastSuccessAt || (localPlat.status === 'success' ? localPlat.lastChecked : null) || null,
     reviews: mergedReviews,
     fetchedReviewCount: mergedReviews.length
   };
@@ -83,16 +85,24 @@ export class ReviewsRatingsManager {
       lastUpdated: null,
       selectedProperty: null,
       isSyncing: false,
+      isLoading: false,
+      syncToastKind: 'info',
+      averageMode: 'property',
+      metricsExpanded: null,
+      attentionQueue: 'all',
+      attentionPlatform: 'all',
+      attentionSearch: '',
+      attentionPage: 1,
       syncToastMessage: null,
       reviewModalFilter: 'all',
       reviewModalSearch: '',
       isEditingLinks: false,
       isAddingReview: false,
-      activeTab: 'properties',
+      activeTab: 'attention',
       activeModalTab: 'overview',
       improvementsFilter: 'all',
       improvementsSearch: '',
-      viewMode: (typeof localStorage !== 'undefined' && localStorage.getItem('atlantic_holiday_reviews_view_mode')) || 'cards'
+      viewMode: (typeof localStorage !== 'undefined' && localStorage.getItem('atlantic_holiday_reviews_view_mode')) || 'list'
     };
 
     this.userOverrides = {};
@@ -115,6 +125,7 @@ export class ReviewsRatingsManager {
       });
     }
 
+    if (typeof window !== 'undefined') window.addEventListener('languageChanged', () => this.render());
     this.loadFromStorage();
     this.setupFirestoreSync();
   }
@@ -251,7 +262,7 @@ export class ReviewsRatingsManager {
   }
 
   async saveOverrideToFirestore(propId, overrideData) {
-    if (!this.db) return;
+    if (!this.db) return true;
     try {
       const { doc, setDoc, updateDoc } = await import(
         'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
@@ -273,8 +284,10 @@ export class ReviewsRatingsManager {
           updateDoc(propDoc, updatePayload).catch(() => {});
         }
       } catch {}
+      return true;
     } catch (err) {
       console.warn('[ReviewsRatingsManager] Could not save override to Firestore:', err?.message || err);
+      return false;
     }
   }
 
@@ -285,6 +298,7 @@ export class ReviewsRatingsManager {
       const prop = this.state.rawProperties.find((p) => p.id === propId);
       if (!prop) continue;
 
+      if (override.insightDecisions) prop.insightDecisions = { ...override.insightDecisions };
       if (override.archived !== undefined) prop.archived = Boolean(override.archived);
       if (override.bookingUrl !== undefined) prop.bookingUrl = override.bookingUrl;
       if (override.airbnbUrl !== undefined) prop.airbnbUrl = override.airbnbUrl;
@@ -334,8 +348,9 @@ export class ReviewsRatingsManager {
     }
   }
 
-  showToast(message) {
+  showToast(message, kind = 'info') {
     this.state.syncToastMessage = message;
+    this.state.syncToastKind = kind;
     this.render();
     if (this._toastTimer) clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => {
@@ -398,39 +413,22 @@ export class ReviewsRatingsManager {
   }
 
   async syncReviews() {
+    if (this.state.isSyncing || !this.hasAccess()) return;
     this.state.isSyncing = true;
     this.render();
-
     try {
-      const url = `./server-data/property-reviews.json?t=${Date.now()}`;
-      const response = await fetch(url, { cache: 'no-store' });
-      if (response.ok) {
-        const dataset = await response.json();
-        if (dataset && Array.isArray(dataset.properties)) {
-          this.mergeServerDataset(dataset);
-          this.updateCalculations();
-          const lastUpdatedFormatted = this.state.lastUpdated
-            ? new Date(this.state.lastUpdated).toLocaleString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            : null;
-          this.showToast(
-            lastUpdatedFormatted
-              ? `Reviews dataset refreshed from server (scraped: ${lastUpdatedFormatted})`
-              : 'Reviews dataset refreshed from server'
-          );
-        } else {
-          this.showToast('Reviews dataset refreshed.');
-        }
-      } else {
-        this.showToast('Unable to fetch latest reviews file. Displaying local data.');
-      }
+      const response = await fetch(`./server-data/property-reviews.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Dataset request failed');
+      const dataset = await response.json();
+      if (!dataset || !Array.isArray(dataset.properties) || dataset.properties.some(p => !p || typeof p.id !== 'string')) throw new Error('Invalid dataset');
+      const unchanged = Boolean(dataset.lastUpdated && dataset.lastUpdated === this.state.lastUpdated);
+      if (!this.hasAccess()) return;
+      this.mergeServerDataset(dataset);
+      this.updateCalculations();
+      this.showToast(rt(unchanged ? 'unchanged' : 'refreshed'));
     } catch (err) {
-      console.warn('[ReviewsRatingsManager] Sync error:', err);
-      this.showToast('Network error while refreshing reviews. Displaying local data.');
+      console.warn('[ReviewsRatingsManager] Refresh failed:', err);
+      this.showToast(rt('refreshFailed'), 'error');
     } finally {
       this.state.isSyncing = false;
       this.render();
@@ -438,21 +436,30 @@ export class ReviewsRatingsManager {
   }
 
   async loadFromServer() {
+    this.state.isLoading = true;
+    this.render();
     try {
-      // Load static JSON directly from server-data endpoint with cache busting
-      const url = `./server-data/property-reviews.json?t=${Date.now()}`;
-      const response = await fetch(url, { cache: 'no-store' });
-      if (response.ok) {
-        const dataset = await response.json();
-        if (dataset && Array.isArray(dataset.properties)) {
-          this.mergeServerDataset(dataset);
-          this.updateCalculations();
-          this.render();
-        }
-      }
-    } catch (err) {
-      console.log('[ReviewsRatingsManager] Could not load fresh reviews from server-data, using cached.');
+      await this.syncReviews();
+    } finally {
+      this.state.isLoading = false;
+      this.render();
     }
+  }
+
+  async setInsightDecision(propertyId, key, decision) {
+    if (!this.hasAccess() || !['confirmed', 'dismissed', 'pending'].includes(decision)) return;
+    const property = this.state.rawProperties.find(p => p.id === propertyId);
+    if (!property) return;
+    const override = this.userOverrides[propertyId] || {};
+    const insightDecisions = { ...override.insightDecisions, [key]: decision };
+    this.userOverrides[propertyId] = { ...override, insightDecisions };
+    property.insightDecisions = insightDecisions;
+    this.saveOverridesToStorage();
+    this.updateCalculations();
+    this.render();
+    // Merge only this decision so a stale local copy cannot overwrite a colleague's other decisions.
+    const saved = await this.saveOverrideToFirestore(propertyId, { insightDecisions: { [key]: decision } });
+    this.showToast(rt(saved ? 'decisionSaved' : 'decisionLocal'), saved ? 'info' : 'error');
   }
 
   syncArchivedStatusToRaw() {
@@ -661,6 +668,7 @@ export class ReviewsRatingsManager {
 
     const newRev = {
       id: `${prop.id}-rev-${Date.now()}`,
+      origin: 'manual',
       author: reviewData.author || 'Guest',
       country: reviewData.country || '',
       countryCode: '',
@@ -787,6 +795,7 @@ export class ReviewsRatingsManager {
     renderReviewsRatingsDashboard(
       container,
       {
+        ...this.state,
         properties: this.state.filteredProperties,
         rawProperties: this.state.rawProperties,
         summary: this.state.summary,
@@ -808,6 +817,29 @@ export class ReviewsRatingsManager {
         viewMode: this.state.viewMode
       },
       {
+        onMetricsExpanded: expanded => { this.state.metricsExpanded = expanded; this.render(); },
+        onAverageMode: mode => { this.state.averageMode = mode; this.render(); },
+        onAttentionFilter: (key, value) => { this.state[key] = value; this.state.attentionPage = 1; this.render(); },
+        onAttentionPage: page => { this.state.attentionPage = Math.max(1, page); this.render(); },
+        onMetric: metric => {
+          if (['airbnb', 'booking', 'cleanliness'].includes(metric)) {
+            this.state.activeTab = 'properties'; this.state.filter = metric; this.state.searchQuery = '';
+          } else {
+            this.state.activeTab = 'attention'; this.state.attentionQueue = metric === 'coverage' ? 'data' : 'ratings';
+            this.state.attentionPlatform = 'all'; this.state.attentionSearch = ''; this.state.attentionPage = 1;
+          }
+          this.updateCalculations(); this.render();
+        },
+        onAttentionProperty: (id, action, reviewId) => {
+          this.state.selectedProperty = this.state.rawProperties.find(p => p.id === id) || null;
+          this.state.activeModalTab = action;
+          this.state.isEditingLinks = action === 'settings';
+          this.state.isAddingReview = false;
+          this.state.reviewModalFilter = 'all';
+          this.state.reviewModalSearch = reviewId || '';
+          this.render();
+        },
+        onInsightDecision: (id, key, decision) => { void this.setInsightDecision(id, key, decision); },
         onBack: () => {
           if (this.navigationManager) {
             this.navigationManager.showPreviousPage('landing');

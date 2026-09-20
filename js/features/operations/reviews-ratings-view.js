@@ -1,3 +1,5 @@
+import { renderReviewWorkspaceStyles, renderReviewMetrics, renderAttentionWorkspace, renderPropertyDataHealth, renderPropertyEvidence } from './reviews-attention-view.js';
+import { reviewText as rt } from './reviews-ratings-copy.js';
 import {
   formatScore,
   getCleanlinessStatus,
@@ -11,7 +13,8 @@ import {
   hasReviewResponse,
   analysePropertyInsights,
   getAllPropertyImprovements,
-  ISSUE_BUCKETS
+  ISSUE_BUCKETS,
+  RATING_THRESHOLDS
 } from './reviews-ratings-utils.js';
 
 export function renderReviewsRatingsDashboard(container, state, handlers) {
@@ -32,11 +35,11 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     reviewModalSearch = '',
     isEditingLinks = false,
     isAddingReview = false,
-    activeTab = 'properties',
+    activeTab = 'attention',
     activeModalTab = 'overview',
     improvementsFilter = 'all',
     improvementsSearch = '',
-    viewMode = 'cards'
+    viewMode = 'list'
   } = state;
 
   const improvementsData = getAllPropertyImprovements(rawProperties, {
@@ -56,18 +59,26 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
         hour: '2-digit',
         minute: '2-digit'
       })
-    : 'Not yet synchronized';
+    : rt('unknownDate');
 
+  const focused = container.contains(document.activeElement) ? document.activeElement : null;
+  const focusId = focused?.id;
+  const focusAttributes = ['data-attention-queue', 'data-attention-page', 'data-attention-property', 'data-insight-key', 'data-insight-property', 'data-tab', 'data-mode', 'data-filter', 'data-metric'];
+  const focusSelector = focused ? focusAttributes.filter(attr => focused.hasAttribute(attr)).map(attr => `[${attr}="${CSS.escape(focused.getAttribute(attr))}"]`).join('') : '';
+  const selection = focused && ['text', 'search'].includes(focused.type) ? [focused.selectionStart, focused.selectionEnd] : null;
+  const previousDialog = container.querySelector('[role="dialog"]');
+  const modalScroll = previousDialog?.querySelector('.overflow-y-auto')?.scrollTop || 0;
   container.innerHTML = `
+    ${renderReviewWorkspaceStyles()}
     <div class="reviews-page-wrapper bg-[#f6f8fb] min-h-screen pb-16 font-sans">
       <!-- Sync Status Toast -->
       ${
         syncToastMessage
           ? `
-        <div id="reviews-sync-toast" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2 shadow-md flex items-center justify-between text-xs sm:text-sm font-medium sticky top-0 z-30 animate-fade-in">
+        <div id="reviews-sync-toast" role="status" class="${state.syncToastKind === 'error' ? 'bg-red-800' : 'bg-slate-800'} text-white px-4 py-2 shadow-md flex items-center justify-between text-xs sm:text-sm font-medium sticky top-0 z-30 animate-fade-in">
           <div class="max-w-7xl mx-auto px-4 w-full flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <i class="fas fa-check-circle text-emerald-200 text-sm"></i>
+              <i class="fas ${state.syncToastKind === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} text-white text-sm"></i>
               <span>${escapeHtml(syncToastMessage)}</span>
             </div>
             <button id="toast-close-btn" class="text-white/80 hover:text-white text-xs px-2 py-1 rounded">
@@ -82,11 +93,11 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
       <!-- Top Navigation Bar (Asana Workspace style) -->
       <header class="bg-white border-b border-gray-200 sticky ${syncToastMessage ? 'top-10' : 'top-0'} z-20 transition-all shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-14">
+          <div class="flex flex-wrap gap-2 items-center justify-between min-h-14 py-3">
             <div class="flex items-center gap-3">
               <button id="reviews-back-btn" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-xs font-semibold transition-colors shadow-xs" title="Back to Dashboard">
                 <i class="fas fa-arrow-left text-[11px]"></i>
-                <span>Back</span>
+                <span>${escapeHtml(rt('back'))}</span>
               </button>
               <div class="w-px h-4 bg-gray-200"></div>
               <div class="flex items-center gap-2.5">
@@ -94,9 +105,9 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                   <i class="fas fa-star"></i>
                 </div>
                 <div class="flex items-center gap-2">
-                  <h1 class="text-sm sm:text-base font-bold text-gray-900 leading-tight">Reviews &amp; Ratings</h1>
+                  <h1 class="text-sm sm:text-base font-bold text-gray-900 leading-tight">${escapeHtml(rt('title'))}</h1>
                   <span class="text-xs text-gray-300 hidden sm:inline">•</span>
-                  <p class="text-xs text-gray-500 hidden sm:inline">Guest satisfaction &amp; verified OTA performance</p>
+                  <p class="text-xs text-gray-500 hidden sm:inline">${escapeHtml(rt('subtitle'))}</p>
                 </div>
               </div>
             </div>
@@ -104,28 +115,29 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
             <div class="flex items-center gap-2.5">
               <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">
                 <i class="fas fa-clock text-gray-400 text-[11px]"></i>
-                <span>Updated: <strong class="text-gray-700 font-semibold">${lastUpdatedFormatted}</strong></span>
+                <span>${escapeHtml(rt('dataset'))}: <strong class="text-gray-700 font-semibold">${lastUpdatedFormatted}</strong></span>
               </div>
               <button
-                id="reviews-sync-btn"
+                id="reviews-sync-btn" title="${escapeHtml(rt('refreshHelp'))}"
                 ${isSyncing ? 'disabled' : ''}
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition-all ${
                   isSyncing ? 'opacity-70 cursor-not-allowed' : 'active:scale-95'
                 }"
               >
                 <i class="fas fa-sync-alt text-[11px] ${isSyncing ? 'fa-spin' : ''}"></i>
-                <span>${isSyncing ? 'Syncing...' : 'Sync Reviews'}</span>
+                <span>${escapeHtml(rt(isSyncing ? 'refreshing' : 'refresh'))}</span>
               </button>
             </div>
           </div>
 
           <!-- Tab Navigation -->
-          <div class="flex items-center gap-1 -mb-px border-t border-gray-100 sm:border-0">
+          <div class="flex items-center gap-1 overflow-x-auto -mb-px border-t border-gray-100 sm:border-0">
+            <button class="reviews-tab-btn px-3.5 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${activeTab === 'attention' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-600'}" data-tab="attention">${escapeHtml(rt('attention'))}</button>
             <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
-              <i class="fas fa-building text-[11px] mr-1.5"></i>Properties
+              <i class="fas fa-building text-[11px] mr-1.5"></i>${escapeHtml(rt('properties'))}
             </button>
             <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'improvements' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center gap-1.5" data-tab="improvements">
-              <span class="inline-flex items-center"><i class="fas fa-lightbulb text-[11px] mr-1.5"></i>Improvements</span>
+              <span class="inline-flex items-center"><i class="fas fa-lightbulb text-[11px] mr-1.5"></i>${escapeHtml(rt('improvements'))}</span>
               ${improvementsCount > 0 ? `
                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'improvements' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'}">
                   ${improvementsCount}
@@ -133,80 +145,15 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
               ` : ''}
             </button>
             <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
-              <i class="fas fa-stream text-[11px] mr-1.5"></i>Latest Reviews
+              <i class="fas fa-stream text-[11px] mr-1.5"></i>${escapeHtml(rt('reviews'))}
             </button>
           </div>
         </div>
       </header>
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
-        <!-- KPI Summary Cards (Compact Asana cards) -->
-        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <!-- Airbnb Rating Card -->
-          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
-            <div class="flex items-center justify-between text-rose-600 mb-1">
-              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Airbnb Average</span>
-              <i class="fab fa-airbnb text-base sm:text-lg"></i>
-            </div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.airbnbAvg ? `${summary.airbnbAvg} ★` : '—'}</span>
-              <span class="text-[11px] text-gray-500 font-medium">/ 5.0</span>
-            </div>
-            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
-              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.airbnbAvg ? (summary.airbnbAvg >= 4.8 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
-              Superhost target: 4.80
-            </p>
-          </div>
-
-          <!-- Booking.com Score Card -->
-          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
-            <div class="flex items-center justify-between text-blue-600 mb-1">
-              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Booking.com Score</span>
-              <i class="fas fa-hotel text-base sm:text-lg"></i>
-            </div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.bookingAvg ? `${summary.bookingAvg}` : '—'}</span>
-              <span class="text-[11px] text-gray-500 font-medium">/ 10.0</span>
-            </div>
-            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
-              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.bookingAvg ? (summary.bookingAvg >= 9.0 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-gray-300'}"></span>
-              Target benchmark: 9.00
-            </p>
-          </div>
-
-          <!-- Cleanliness Benchmark Card -->
-          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
-            <div class="flex items-center justify-between text-emerald-600 mb-1">
-              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Cleanliness Index</span>
-              <i class="fas fa-broom text-base sm:text-lg"></i>
-            </div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.cleanlinessAvgAirbnb ? `${summary.cleanlinessAvgAirbnb} ★` : (summary.cleanlinessAvgBooking ? `${summary.cleanlinessAvgBooking}` : '—')}</span>
-              <span class="text-[11px] text-gray-500 font-medium">${summary.cleanlinessAvgAirbnb ? '/ 5.0' : '/ 10.0'}</span>
-            </div>
-            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
-              <span class="inline-block w-1.5 h-1.5 rounded-full ${summary.cleanlinessAvgAirbnb || summary.cleanlinessAvgBooking ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
-              Aligned with Cleaning AH
-            </p>
-          </div>
-
-          <!-- Total Reviews Card -->
-          <div class="bg-white rounded-xl border border-gray-200 p-3 sm:p-3.5 shadow-xs hover:border-gray-300 transition-all">
-            <div class="flex items-center justify-between text-indigo-600 mb-1">
-              <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-gray-500">Total Reviews</span>
-              <i class="fas fa-comments text-base sm:text-lg"></i>
-            </div>
-            <div class="flex items-baseline gap-1.5">
-              <span class="text-xl sm:text-2xl font-bold text-gray-900">${summary.totalReviews || 0}</span>
-              <span class="text-[11px] text-gray-500 font-medium">guest reviews</span>
-            </div>
-            <p class="text-[10px] sm:text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 truncate">
-              ${summary.attentionNeededCount > 0
-                ? `<span class="text-rose-600 font-semibold"><i class="fas fa-exclamation-triangle text-[9px] mr-1"></i>${summary.attentionNeededCount} need attention</span>`
-                : `<span class="text-emerald-600 font-medium"><i class="fas fa-check-circle text-[9px] mr-1"></i>All properties on track</span>`}
-            </p>
-          </div>
-        </section>
+        ${state.isLoading ? `<p role="status" class="rr-note">${escapeHtml(rt('loading'))}</p>` : ''}
+        ${renderReviewMetrics(summary, state.averageMode, state.metricsExpanded)}
 
         ${activeTab === 'properties' ? `
         <!-- Filter & Search Toolbar (Asana Style) -->
@@ -273,7 +220,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                  </section>`
             )
         }
-        ` : activeTab === 'improvements' ? `
+        ` : activeTab === 'attention' ? renderAttentionWorkspace(rawProperties, state) : activeTab === 'improvements' ? `
         <!-- Improvements & Recommendations Full Page Tab -->
         ${renderImprovementsPage(improvementsData, state, handlers)}
         ` : `
@@ -289,6 +236,27 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 
   // Bind Events
   bindViewEvents(container, handlers);
+  container.querySelectorAll('.reviews-tab-btn').forEach(button => button.setAttribute('aria-current', button.dataset.tab === activeTab ? 'page' : 'false'));
+  const nextFocus = focusId ? document.getElementById(focusId) : focusSelector ? container.querySelector(focusSelector) || container.querySelector('[data-attention-queue][aria-pressed="true"]') : null;
+  if (nextFocus && container.contains(nextFocus)) {
+    nextFocus.focus({ preventScroll: true });
+    if (selection) nextFocus.setSelectionRange(...selection);
+  }
+  const dialog = container.querySelector('[role="dialog"]');
+  if (dialog && !previousDialog) dialog.querySelector('#modal-close-btn')?.focus({ preventScroll: true });
+  if (dialog && previousDialog) dialog.querySelector('.overflow-y-auto').scrollTop = modalScroll;
+  if (!dialog && previousDialog) container.querySelector('.reviews-tab-btn[aria-current="page"]')?.focus({ preventScroll: true });
+  container.onkeydown = event => {
+    const currentDialog = container.querySelector('[role="dialog"]');
+    if (!currentDialog) return;
+    if (event.key === 'Escape') { event.preventDefault(); handlers.onCloseDetailModal?.(); }
+    if (event.key === 'Tab') {
+      const focusable = [...currentDialog.querySelectorAll('button:not([disabled]), input, select, textarea, a[href], summary')].filter(el => el.getClientRects().length);
+      const first = focusable[0], last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  };
 }
 
 function renderPropertyCard(prop) {
@@ -300,7 +268,7 @@ function renderPropertyCard(prop) {
   const isBookingAwaitingSync = Boolean(prop.bookingUrl && !hasBookingData);
   const bookingScore = hasBookingData
     ? `${prop.booking.score.toFixed(1)}`
-    : (isBookingAwaitingSync ? 'Syncing' : '—');
+    : (isBookingAwaitingSync ? 'Pending' : '—');
   const bookingCount = prop.booking?.reviewCount ? `(${prop.booking.reviewCount})` : '';
   const bookingClean = prop.booking?.subScores?.cleanliness != null
     ? `${prop.booking.subScores.cleanliness.toFixed(1)}`
@@ -667,16 +635,16 @@ function renderImprovementsPage(improvementsData, state, handlers) {
               <i class="fas ${totalWithIssues === 0 ? 'fa-check' : 'fa-search'}"></i>
             </div>
             <h3 class="text-base font-bold text-gray-800">
-              ${totalWithIssues === 0 ? 'All properties are running smoothly!' : 'No matching properties found'}
+              ${totalWithIssues === 0 ? 'No issues detected in available feedback' : 'No matching properties found'}
             </h3>
             <p class="text-sm text-gray-500 mt-1">
-              ${totalWithIssues === 0 ? 'No recurring complaints, critical score dips, or unresolved issues detected.' : 'Try changing your search query or selecting "All Issues".'}
+              ${totalWithIssues === 0 ? 'No issues detected in the imported feedback. Check Attention for missing or stale data.' : 'Try changing your search query or selecting "All Issues".'}
             </p>
           </div>
         ` : items.map((item) => renderImprovementCard(item)).join('')}
       </div>
 
-      <!-- All Clear Properties Collapsible Section -->
+      <!-- No detected issues Properties Collapsible Section -->
       ${allClear.length > 0 ? `
         <details class="group bg-white rounded-2xl border border-gray-200 p-4 shadow-sm transition-all">
           <summary class="flex items-center justify-between cursor-pointer text-xs font-bold text-gray-700 select-none">
@@ -791,7 +759,7 @@ function renderImprovementCard(item) {
           <div>
             <div class="text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <i class="fas fa-tags text-gray-400"></i>
-              <span>Reported Issues in Reviews (${issues.length})</span>
+              <span>Detected issues in imported reviews (${issues.length})</span>
             </div>
             <div class="flex flex-wrap gap-2">
               ${issues.map((iss) => `
@@ -1238,7 +1206,7 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
         `}
         <div class="mt-3 pt-2.5 border-t border-gray-200/70 flex items-start gap-2 text-[11px] text-gray-500">
           <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-          <span>Run <code class="bg-gray-200/80 px-1 py-0.5 rounded text-gray-800 font-mono text-[10px]">sync-reviews.cmd</code> to pull latest scores and guest reviews.</span>
+          <span>${escapeHtml(rt('refreshHelp'))}</span>
         </div>
       </div>
 
@@ -1269,9 +1237,9 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative max-h-[92vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-label="${escapeHtml(prop.name)}" class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative max-h-[92vh] flex flex-col">
         <!-- Close Button -->
-        <button id="modal-close-btn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
+        <button id="modal-close-btn" aria-label="${escapeHtml(rt('close'))}" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
           <i class="fas fa-times text-sm"></i>
         </button>
 
@@ -1302,7 +1270,9 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
 
         <!-- Scrollable Tab Content -->
         <div class="overflow-y-auto flex-grow px-6 pt-5 pb-6">
+          ${activeModalTab === 'overview' ? renderPropertyDataHealth(prop) : ''}
           ${tabContent[activeModalTab] || overviewTab}
+          ${activeModalTab === 'overview' ? renderPropertyEvidence(prop) : ''}
         </div>
 
         <!-- Footer -->
@@ -1362,7 +1332,7 @@ function renderReviewItem(r) {
           <div class="flex items-center gap-1">
             <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${answered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
               <i class="fas ${answered ? 'fa-reply' : 'fa-clock'} text-[8px]"></i>
-              ${answered ? 'Answered' : 'Unanswered'}
+              ${answered ? 'Reply recorded' : 'No reply captured'}
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${isAirbnb ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
               ${scoreText}
@@ -1409,7 +1379,7 @@ function renderReviewItem(r) {
       }
 
       ${
-        answered
+        answered && response
           ? `
         <div class="rounded-xl bg-sky-50/80 border border-sky-100 p-3 text-xs text-sky-950">
           <div class="flex items-center justify-between gap-2 mb-1.5">
@@ -1475,7 +1445,7 @@ function renderInsightsPanel(prop) {
           <div class="flex items-center gap-1.5 mb-2.5">
             <i class="fas ${noIssues ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-triangle text-rose-500'} text-xs"></i>
             <span class="text-xs font-bold ${noIssues ? 'text-emerald-800' : 'text-rose-800'}">
-              ${noIssues ? 'No Issues Detected' : `Issues Reported (${issues.length})`}
+              ${noIssues ? 'No Issues Detected' : `Detected issues (${issues.length})`}
             </span>
           </div>
           ${noIssues
@@ -1545,7 +1515,7 @@ function renderInsightsPanel(prop) {
 
 function renderSubScorePill(label, value, max, icon) {
   const valText = typeof value === 'number' ? value.toFixed(1) : '—';
-  const isHigh = typeof value === 'number' && (max === 5 ? value >= 4.8 : value >= 9.0);
+  const isHigh = typeof value === 'number' && (max === 5 ? value >= RATING_THRESHOLDS.AIRBNB_TARGET : value >= RATING_THRESHOLDS.BOOKING_TARGET);
 
   return `
     <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 flex items-center justify-between">
@@ -1559,6 +1529,16 @@ function renderSubScorePill(label, value, max, icon) {
 }
 
 function bindViewEvents(container, handlers) {
+  container.querySelector('#reviews-metrics-toggle')?.addEventListener('click', event => { event.preventDefault(); handlers.onMetricsExpanded?.(!event.currentTarget.parentElement.open); });
+  container.querySelector('#reviews-average-mode')?.addEventListener('change', e => handlers.onAverageMode?.(e.target.value));
+  container.querySelectorAll('[data-metric]').forEach(button => button.addEventListener('click', () => handlers.onMetric?.(button.dataset.metric)));
+  container.querySelector('#attention-search')?.addEventListener('input', e => handlers.onAttentionFilter?.('attentionSearch', e.target.value));
+  container.querySelector('#attention-platform')?.addEventListener('change', e => handlers.onAttentionFilter?.('attentionPlatform', e.target.value));
+  container.querySelectorAll('[data-attention-queue]').forEach(button => button.addEventListener('click', () => handlers.onAttentionFilter?.('attentionQueue', button.dataset.attentionQueue)));
+  container.querySelectorAll('[data-attention-page]').forEach(button => button.addEventListener('click', () => handlers.onAttentionPage?.(Number(button.dataset.attentionPage))));
+  container.querySelectorAll('[data-attention-property]').forEach(button => button.addEventListener('click', () => handlers.onAttentionProperty?.(button.dataset.attentionProperty, button.dataset.action, button.dataset.reviewId)));
+  container.querySelectorAll('[data-insight-key]').forEach(button => button.addEventListener('click', () => handlers.onInsightDecision?.(button.dataset.insightProperty, button.dataset.insightKey, button.dataset.decision)));
+
   // Back button
   container.querySelector('#reviews-back-btn')?.addEventListener('click', () => {
     handlers.onBack?.();

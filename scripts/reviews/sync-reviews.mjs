@@ -1,3 +1,4 @@
+import { mergeCollectedPlatform } from '../../js/features/operations/review-quality-utils.js';
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-core";
@@ -589,13 +590,7 @@ async function main() {
         const page = await context.newPage();
         try {
           const bookingResult = await scrapeBooking(page, property.bookingUrl, { fetchReviews: options.fetchReviews });
-          const previousBookingReviews = property.booking?.reviews || [];
-          property.booking = {
-            ...bookingResult,
-            reviews: options.fetchReviews && bookingResult.status === "success"
-              ? bookingResult.reviews
-              : previousBookingReviews
-          };
+          property.booking = mergeCollectedPlatform(property.booking, bookingResult, options.fetchReviews);
           if (bookingResult.status === "success") {
             console.log(`     ✅ Score: ${bookingResult.score}/10 (${bookingResult.reviewCount || "?"} reviews)`);
             if (options.fetchReviews) console.log(`     💬 Fetched ${bookingResult.fetchedReviewCount} review records`);
@@ -622,13 +617,7 @@ async function main() {
         const page = await context.newPage();
         try {
           const airbnbResult = await scrapeAirbnb(page, property.airbnbUrl, { fetchReviews: options.fetchReviews });
-          const previousAirbnbReviews = property.airbnb?.reviews || [];
-          property.airbnb = {
-            ...airbnbResult,
-            reviews: options.fetchReviews && airbnbResult.status === "success"
-              ? airbnbResult.reviews
-              : previousAirbnbReviews
-          };
+          property.airbnb = mergeCollectedPlatform(property.airbnb, airbnbResult, options.fetchReviews);
           if (airbnbResult.status === "success") {
             console.log(`     ✅ Score: ${airbnbResult.score}/5 ★ (${airbnbResult.reviewCount || "?"} reviews)`);
             if (options.fetchReviews) console.log(`     💬 Fetched ${airbnbResult.fetchedReviewCount} review records`);
