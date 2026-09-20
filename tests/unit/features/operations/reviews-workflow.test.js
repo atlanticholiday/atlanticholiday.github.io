@@ -4,6 +4,7 @@ import { createWorkSeed, applyWorkChange, workId, reviewKey, followUpId, workSig
 import { ReviewsWorkflowStore } from '../../../../js/features/operations/reviews-workflow-store.js';
 import { ReviewsRatingsManager } from '../../../../js/features/operations/reviews-ratings-manager.js';
 import { buildAttentionQueue } from '../../../../js/features/operations/reviews-attention-utils.js';
+import { renderWorkBoard, renderWorkEditor } from '../../../../js/features/operations/reviews-workflow-view.js';
 
 const actor = { uid: 'manager-1', email: 'manager@example.test', name: 'Manager' };
 const guestReview = (id, extras = {}) => ({ id, sourceId: id, platform: 'Airbnb', author: id, comment: 'The wifi was slow.', score: 3, date: '2026-09-10', ...extras });
@@ -49,6 +50,18 @@ function databaseFixture() {
 }
 
 describe('Reviews Release 2 workflow', () => {
+  test('failed or pending shared loading never claims that the improvement list is empty', () => {
+    for (const flags of [{ workflowError: 'Connection failed', workflowConnected: true }, { workflowLoading: true, workflowConnected: true }, { workflowConnected: false }]) {
+      const state = { ...flags, canManageWork: true, workItems: [] };
+      const board = renderWorkBoard([property()], state);
+      const editor = renderWorkEditor(property(), state);
+      assert.ok(!board.includes('No improvements match'));
+      assert.ok(!editor.includes('No improvements match'));
+      assert.ok(!board.includes('data-work-page'));
+      assert.ok(!board.includes('data-work-create-form'));
+      if (flags.workflowError) assert.ok(board.includes('data-workflow-retry'));
+    }
+  });
   test('groups evidence under one property/category identity across platforms', () => {
     const p = property([guestReview('r1'), guestReview('r2')]);
     const draft = createWorkSeed(p, 'wifi', 'Fix internet');

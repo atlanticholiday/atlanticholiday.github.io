@@ -41,6 +41,9 @@ export function renderSharedStatus(state) {
 }
 
 export function renderWorkBoard(properties, state) {
+  if (state.workflowError || state.workflowLoading || !state.workflowConnected) {
+    return `<section><h2 class="text-xl font-semibold">${tx('workBoard')}</h2><p class="rr-note my-2">${tx('workHelp')}</p>${renderSharedStatus(state)}</section>`;
+  }
   const active = properties.filter(p => !isPropertyArchived(p));
   let items = (state.workItems || []).filter(w => active.some(p => p.id === w.propertyId)).map(work => ({ work, ...workSignals(work, active.find(p => p.id === work.propertyId), state.linkedTasks) }));
   const query = (state.workSearch || '').toLowerCase();
@@ -64,6 +67,7 @@ export function renderWorkBoard(properties, state) {
 export function renderWorkEditor(property, state) {
   const draft = state.workDraft?.propertyId === property.id ? state.workDraft : null;
   if (!draft) {
+    if (state.workflowError || state.workflowLoading || !state.workflowConnected) return renderSharedStatus(state);
     const items = (state.workItems || []).filter(w => w.propertyId === property.id);
     return `<section><h3 class="font-semibold text-lg mb-3">${tx('workBoard')}</h3>${renderSharedStatus(state)}
       ${state.canManageWork ? `<form data-work-create-form class="rr-controls my-4"><input type="hidden" name="propertyId" value="${h(property.id)}"><select name="category" aria-label="${tx('category')}">${options(WORK_CATEGORIES.map(c=>[c,t(`${c}Category`)]),'cleanliness')}</select><button class="rr-action" ${state.workflowLoading || state.workflowError ? 'disabled' : ''}>${tx('newImprovement')}</button></form>` : ''}

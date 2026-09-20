@@ -27,6 +27,8 @@ The property inspector uses a right-hand drawer on desktop and the full width on
 
 ## Shared data and rollout
 
+Deployment update: the Release 2 rules have now been published to `my-work-schedule-4dc10`. Before deployment, the live rules were verified to match the local rules exactly except for the missing `reviewWorkflows` block. The UI now distinguishes a failed, pending or disconnected load from an empty improvement list, and hides its creation controls and pagination until shared data is available. All 585 browser tests passed after this fix.
+
 The new `reviewWorkflows` collection contains improvement and follow-up records. Reads require management privileges or Reviews & Ratings access; writes require management privileges, the current actor and an incremented revision. Record deletion is disabled. Existing task permissions remain in force.
 
 **Deploy the updated `firestore.rules` before releasing the frontend.** No production rules or frontend deployment was performed during implementation. Until those rules are deployed, the UI reports shared work as unavailable and disables editing. There is no browser-only fallback for shared saves, and no migration of Release 1 review classifications is required.
