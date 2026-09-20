@@ -1,3 +1,4 @@
+import { ReviewsWorkflowController } from './reviews-workflow-controller.js';
 import { reviewText as rt } from './reviews-ratings-copy.js';
 import {
   calculatePortfolioSummary,
@@ -68,7 +69,7 @@ function mergePlatformData(serverPlat, localPlat, deletedIds = new Set()) {
 }
 
 export class ReviewsRatingsManager {
-  constructor(db = null, navigationManager = null, { getPropertiesManager = null } = {}) {
+  constructor(db = null, navigationManager = null, { getPropertiesManager = null, getDataManager = () => null, getTaskManager = () => null, workflowStore = null } = {}) {
     this.db = db;
     this.navigationManager = navigationManager;
     this.getPropertiesManager = getPropertiesManager;
@@ -105,6 +106,7 @@ export class ReviewsRatingsManager {
       viewMode: (typeof localStorage !== 'undefined' && localStorage.getItem('atlantic_holiday_reviews_view_mode')) || 'list'
     };
 
+    this.workflow = new ReviewsWorkflowController(this, { getDataManager, getTaskManager, store: workflowStore });
     this.userOverrides = {};
     this.unsubscribeOverrides = null;
     this.unsubscribeProperties = null;
@@ -152,7 +154,9 @@ export class ReviewsRatingsManager {
   }
 
   syncAccessVisibility() {
+    this.workflow.start();
     if (!this.hasAccess()) {
+      this.releaseDrawer();
       const container = document.getElementById('reviews-ratings-page');
       if (container) container.innerHTML = '';
       this.state.rawProperties = [];
@@ -160,7 +164,21 @@ export class ReviewsRatingsManager {
     }
   }
 
+  releaseDrawer() {
+    const container = document.getElementById('reviews-ratings-page');
+    if (container?.querySelector('.rr-drawer')) document.body.style.overflow = container._rrBodyOverflow || '';
+    this.state.selectedProperty = null;
+  }
+
+  endSession() {
+    this.workflow.start();
+    this.releaseDrawer();
+    const container = document.getElementById('reviews-ratings-page');
+    if (container) container.innerHTML = '';
+  }
+
   init() {
+    this.workflow.start();
     if (!this.hasAccess()) {
       this.render();
       return;
@@ -769,6 +787,7 @@ export class ReviewsRatingsManager {
     if (!container) return;
 
     if (!this.hasAccess()) {
+      this.releaseDrawer();
       container.innerHTML = `
         <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
           <div class="bg-white rounded-2xl border border-gray-200 p-8 max-w-md w-full text-center shadow-sm space-y-4">
@@ -796,6 +815,7 @@ export class ReviewsRatingsManager {
       container,
       {
         ...this.state,
+        ...this.workflow.viewState(),
         properties: this.state.filteredProperties,
         rawProperties: this.state.rawProperties,
         summary: this.state.summary,
@@ -817,6 +837,8 @@ export class ReviewsRatingsManager {
         viewMode: this.state.viewMode
       },
       {
+        ...this.workflow.handlers(),
+        onWorkflowRetry: () => { this.workflow.start(true); this.render(); },
         onMetricsExpanded: expanded => { this.state.metricsExpanded = expanded; this.render(); },
         onAverageMode: mode => { this.state.averageMode = mode; this.render(); },
         onAttentionFilter: (key, value) => { this.state[key] = value; this.state.attentionPage = 1; this.render(); },

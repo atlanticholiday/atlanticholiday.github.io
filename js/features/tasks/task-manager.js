@@ -4,6 +4,7 @@ import {
     deleteDoc,
     doc,
     FieldPath,
+    getDoc,
     onSnapshot,
     query,
     updateDoc,
@@ -471,6 +472,19 @@ export class TaskManager {
     assigneesTemplate(assignees = []) {
         if (!assignees.length) return `<span class="task-unassigned">${translate('tasks.unassigned', 'Unassigned')}</span>`;
         return `<span class="task-avatar-stack">${assignees.slice(0, 3).map((assignee) => `<i title="${escapeHtml(assignee.name)}">${escapeHtml(initials(assignee.name))}</i>`).join('')}${assignees.length > 3 ? `<b>+${assignees.length - 3}</b>` : ''}</span><span class="task-assignee-name">${escapeHtml(assignees[0].name)}${assignees.length > 1 ? ` +${assignees.length - 1}` : ''}</span>`;
+    }
+
+    async openLinkedTask(taskId) {
+        this.open();
+        if (!this.user) return;
+        const uid = this.user.uid;
+        try {
+            const snapshot = await getDoc(doc(this.db, 'tasks', taskId));
+            if (this.user?.uid !== uid || !snapshot.exists()) return;
+            const task = normalizeTaskRecord({ id: snapshot.id, ...snapshot.data() });
+            this.tasks = [...this.tasks.filter(entry => entry.id !== task.id), task];
+            this.openTask(task.id);
+        } catch (error) { this.showError(error); }
     }
 
     openTask(taskId = null, defaults = {}) {

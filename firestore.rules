@@ -1310,6 +1310,20 @@ service cloud.firestore {
       allow read, write: if privileged();
     }
 
+    // Shared improvement work and internal guest follow-up notes.
+    match /reviewWorkflows/{workflowId} {
+      allow read: if privileged() || hasApp('reviewsRatings');
+      allow create: if privileged()
+        && request.resource.data.updatedBy.uid == request.auth.uid
+        && request.resource.data.revision == 1;
+      allow update: if privileged()
+        && request.resource.data.updatedBy.uid == request.auth.uid
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.recordType == resource.data.recordType
+        && request.resource.data.propertyId == resource.data.propertyId;
+      allow delete: if false;
+    }
+
     match /settings/{settingId} {
       allow read: if approved();
       allow write: if privileged();

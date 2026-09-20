@@ -1,7 +1,8 @@
+import { workSignals, reviewKey } from './reviews-workflow-utils.js';
 import { getAllPropertyReviews, hasReviewResponse, isPropertyArchived, analysePropertyInsights } from './reviews-ratings-utils.js';
 import { platformHealth, reviewTime, reviewNeedsAttention, validScore, RATING_THRESHOLDS } from './review-quality-utils.js';
 
-export function buildAttentionQueue(properties = [], { now = Date.now(), search = '', platform = 'all', queue = 'all' } = {}) {
+export function buildAttentionQueue(properties = [], { now = Date.now(), search = '', platform = 'all', queue = 'all', workItems = [], tasks = [], followUps = [] } = {}) {
   const rows = [];
   const day = 86400000;
   for (const property of properties.filter(p => !isPropertyArchived(p))) {
@@ -12,6 +13,7 @@ export function buildAttentionQueue(properties = [], { now = Date.now(), search 
     });
     const add = (row) => rows.push({ propertyId: property.id, propertyName: property.name || '', location: property.location || '', ...row });
     for (const review of recent) {
+      if (followUps.some(f => f.propertyId === property.id && f.reviewKey === reviewKey(review) && f.status === 'handled')) continue;
       if (hasReviewResponse(review) || review.hasResponse === true) continue;
       add({ queue: 'replies', platform: review.platform === 'Airbnb' ? 'airbnb' : 'booking',
         reason: 'replyReason', params: { days: Math.floor((now - reviewTime(review.date)) / day) },
@@ -62,10 +64,18 @@ export function buildAttentionQueue(properties = [], { now = Date.now(), search 
       }
     }
   }
+  for (const work of workItems) {
+    const property = properties.find(p => p.id === work.propertyId && !isPropertyArchived(p));
+    if (!property) continue;
+    const signals = workSignals(work, property, tasks, now);
+    const row = { propertyId: property.id, propertyName: property.name, location: property.location, platform: 'all', workId: work.id, category: work.category, action: 'work', priority: 0 };
+    if (signals.overdue) rows.push({ ...row, queue: 'overdue', reason: 'overdueReason', params: { date: signals.metadata.dueDate, owner: signals.metadata.assigneeName || '—' } });
+    if (signals.newComplaints.length) rows.push({ ...row, queue: 'reassess', reason: 'reassessReason', params: { count: signals.newComplaints.length } });
+  }
   const query = search.toLocaleLowerCase().trim();
-  const matching = rows.filter(r => (platform === 'all' || r.platform === platform) && (!query ||
+  const matching = rows.filter(r => (platform === 'all' || r.platform === platform || r.platform === 'all') && (!query ||
     [r.propertyName, r.location, r.excerpt, r.author].some(v => String(v || '').toLocaleLowerCase().includes(query))));
-  const counts = { all: matching.length, replies: 0, ratings: 0, recurring: 0, declining: 0, classifications: 0, data: 0 };
+  const counts = { all: matching.length, replies: 0, ratings: 0, recurring: 0, declining: 0, classifications: 0, data: 0, overdue: 0, reassess: 0 };
   for (const row of matching) counts[row.queue]++;
   const items = matching.filter(r => queue === 'all' || r.queue === queue).sort((a, b) =>
     a.priority - b.priority || (reviewTime(b.date) || 0) - (reviewTime(a.date) || 0) || a.propertyName.localeCompare(b.propertyName));

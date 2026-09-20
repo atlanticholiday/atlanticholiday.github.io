@@ -1,3 +1,4 @@
+import { renderSharedStatus, renderWorkflowStyles, renderWorkBoard, renderWorkEditor, renderReviewInbox, renderFollowUpEditor, bindWorkflowEvents } from './reviews-workflow-view.js';
 import { renderReviewWorkspaceStyles, renderReviewMetrics, renderAttentionWorkspace, renderPropertyDataHealth, renderPropertyEvidence } from './reviews-attention-view.js';
 import { reviewText as rt } from './reviews-ratings-copy.js';
 import {
@@ -63,13 +64,22 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 
   const focused = container.contains(document.activeElement) ? document.activeElement : null;
   const focusId = focused?.id;
-  const focusAttributes = ['data-attention-queue', 'data-attention-page', 'data-attention-property', 'data-insight-key', 'data-insight-property', 'data-tab', 'data-mode', 'data-filter', 'data-metric'];
+  const focusAttributes = ['data-attention-queue', 'data-attention-page', 'data-attention-property', 'data-insight-key', 'data-insight-property', 'data-tab', 'data-mode', 'data-filter', 'data-metric', 'data-inbox-key', 'data-inbox-property', 'data-work-id', 'data-work-property', 'data-work-new', 'data-work-category', 'data-inbox-page', 'data-work-page'];
   const focusSelector = focused ? focusAttributes.filter(attr => focused.hasAttribute(attr)).map(attr => `[${attr}="${CSS.escape(focused.getAttribute(attr))}"]`).join('') : '';
-  const selection = focused && ['text', 'search'].includes(focused.type) ? [focused.selectionStart, focused.selectionEnd] : null;
+  const selection = focused && (['text', 'search'].includes(focused.type) || focused.tagName === 'TEXTAREA') ? [focused.selectionStart, focused.selectionEnd] : null;
   const previousDialog = container.querySelector('[role="dialog"]');
-  const modalScroll = previousDialog?.querySelector('.overflow-y-auto')?.scrollTop || 0;
+  const panelKey = selectedProperty ? `${selectedProperty.id}|${activeModalTab}` : '';
+  const modalScroll = container._rrPanelKey === panelKey ? previousDialog?.querySelector('.overflow-y-auto')?.scrollTop || 0 : 0;
+  container._rrPanelKey = panelKey;
+  if (selectedProperty && !previousDialog) {
+    container._rrScroll = window.scrollY;
+    container._rrReturnFocus = focusId ? `#${CSS.escape(focusId)}` : focusSelector;
+    container._rrBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
   container.innerHTML = `
     ${renderReviewWorkspaceStyles()}
+    ${renderWorkflowStyles()}
     <div class="reviews-page-wrapper bg-[#f6f8fb] min-h-screen pb-16 font-sans">
       <!-- Sync Status Toast -->
       ${
@@ -220,22 +230,24 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                  </section>`
             )
         }
-        ` : activeTab === 'attention' ? renderAttentionWorkspace(rawProperties, state) : activeTab === 'improvements' ? `
+        ` : activeTab === 'attention' ? renderSharedStatus(state) + renderAttentionWorkspace(rawProperties, state) : activeTab === 'improvements' ? `
         <!-- Improvements & Recommendations Full Page Tab -->
-        ${renderImprovementsPage(improvementsData, state, handlers)}
+        ${renderWorkBoard(rawProperties, state)}
+        <details class="mt-6"><summary class="font-semibold cursor-pointer">${escapeHtml(rt('suggestions'))}</summary>${renderImprovementsPage(improvementsData, state, handlers)}</details>
         ` : `
         <!-- Latest Reviews Full Page Tab -->
-        ${renderLatestReviewsPage(rawProperties)}
+        ${renderReviewInbox(rawProperties, state)}
         `}
       </main>
 
       <!-- Property Details Modal / Drawer -->
-      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch, isEditingLinks, isAddingReview, activeModalTab) : ''}
+      ${selectedProperty ? renderPropertyDetailModal(selectedProperty, reviewModalFilter, reviewModalSearch, isEditingLinks, isAddingReview, activeModalTab, state) : ''}
     </div>
   `;
 
   // Bind Events
   bindViewEvents(container, handlers);
+  bindWorkflowEvents(container, handlers);
   container.querySelectorAll('.reviews-tab-btn').forEach(button => button.setAttribute('aria-current', button.dataset.tab === activeTab ? 'page' : 'false'));
   const nextFocus = focusId ? document.getElementById(focusId) : focusSelector ? container.querySelector(focusSelector) || container.querySelector('[data-attention-queue][aria-pressed="true"]') : null;
   if (nextFocus && container.contains(nextFocus)) {
@@ -244,8 +256,15 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
   }
   const dialog = container.querySelector('[role="dialog"]');
   if (dialog && !previousDialog) dialog.querySelector('#modal-close-btn')?.focus({ preventScroll: true });
-  if (dialog && previousDialog) dialog.querySelector('.overflow-y-auto').scrollTop = modalScroll;
-  if (!dialog && previousDialog) container.querySelector('.reviews-tab-btn[aria-current="page"]')?.focus({ preventScroll: true });
+  if (dialog && previousDialog) { dialog.style.animation = 'none'; dialog.querySelector('.overflow-y-auto').scrollTop = modalScroll; }
+  container.querySelector('main').inert = Boolean(dialog);
+  container.querySelector('header').inert = Boolean(dialog);
+  if (!dialog && previousDialog) {
+    document.body.style.overflow = container._rrBodyOverflow || '';
+    window.scrollTo({ top: container._rrScroll || 0, behavior: 'instant' });
+    const returnTarget = container._rrReturnFocus ? container.querySelector(container._rrReturnFocus) : null;
+    (returnTarget || container.querySelector('.reviews-tab-btn[aria-current="page"]'))?.focus({ preventScroll: true });
+  }
   container.onkeydown = event => {
     const currentDialog = container.querySelector('[role="dialog"]');
     if (!currentDialog) return;
@@ -641,7 +660,7 @@ function renderImprovementsPage(improvementsData, state, handlers) {
               ${totalWithIssues === 0 ? 'No issues detected in the imported feedback. Check Attention for missing or stale data.' : 'Try changing your search query or selecting "All Issues".'}
             </p>
           </div>
-        ` : items.map((item) => renderImprovementCard(item)).join('')}
+        ` : items.map((item) => renderImprovementCard(item, state.canManageWork)).join('')}
       </div>
 
       <!-- No detected issues Properties Collapsible Section -->
@@ -682,7 +701,7 @@ function renderImprovementsPage(improvementsData, state, handlers) {
   `;
 }
 
-function renderImprovementCard(item) {
+function renderImprovementCard(item, canManage = false) {
   const { property: prop, severity, insights, guestFeedback = [], unansweredCount = 0 } = item;
   const { issues = [], recommendations = [] } = insights;
 
@@ -763,6 +782,7 @@ function renderImprovementCard(item) {
             </div>
             <div class="flex flex-wrap gap-2">
               ${issues.map((iss) => `
+                <button class="rr-action" ${canManage ? '' : 'disabled'} data-work-new="${escapeHtml(prop.id)}" data-work-category="${escapeHtml(iss.key)}">${escapeHtml(rt('trackIssue'))}: ${escapeHtml(iss.label)}</button>
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${iss.severity === 'high' ? 'bg-rose-50 text-rose-700 border border-rose-200' : (iss.severity === 'medium' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-700 border border-gray-200')}">
                   <i class="fas fa-${iss.icon} text-[10px]"></i>
                   <span>${escapeHtml(iss.label)}</span>
@@ -853,7 +873,7 @@ function renderLatestReviewsPage(rawProperties, handlers) {
   `;
 }
 
-function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false, isAddingReview = false, activeModalTab = 'overview') {
+function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '', isEditingLinks = false, isAddingReview = false, activeModalTab = 'overview', state = {}) {
   const isArchived = isPropertyArchived(prop);
   const airbnbSubs = prop.airbnb?.subScores || {};
   const bookingSubs = prop.booking?.subScores || {};
@@ -871,6 +891,8 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
   });
 
   const TABS = [
+    { key: 'work', label: rt('workTab'), icon: 'clipboard-check' },
+    ...(state.selectedInboxReview?.propertyId === prop.id ? [{ key: 'followUp', label: rt('followUp'), icon: 'reply' }] : []),
     { key: 'overview',  label: 'Overview',  icon: 'chart-bar' },
     { key: 'insights',  label: 'Insights',  icon: 'lightbulb' },
     { key: 'reviews',   label: `Reviews (${allReviews.length})`, icon: 'comments' },
@@ -1232,12 +1254,14 @@ function renderPropertyDetailModal(prop, activeFilter = 'all', searchQuery = '',
     overview: overviewTab,
     insights: insightsTab,
     reviews: reviewsTab,
+    work: renderWorkEditor(prop, state),
+    followUp: renderFollowUpEditor(prop, state),
     settings: settingsTab
   };
 
   return `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-label="${escapeHtml(prop.name)}" class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative max-h-[92vh] flex flex-col">
+    <div class="rr-drawer-backdrop">
+      <div role="dialog" aria-modal="true" aria-label="${escapeHtml(prop.name)}" class="rr-drawer">
         <!-- Close Button -->
         <button id="modal-close-btn" aria-label="${escapeHtml(rt('close'))}" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors z-10">
           <i class="fas fa-times text-sm"></i>

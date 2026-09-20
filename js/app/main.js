@@ -600,7 +600,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.operationalGuidelinesManager = operationalGuidelinesManager;
         operationalGuidelinesManager.init();
         reviewsRatingsManager = new ReviewsRatingsManager(db, navigationManager, {
-            getPropertiesManager: () => propertiesManager
+            getPropertiesManager: () => propertiesManager,
+            getDataManager: () => dataManager,
+            getTaskManager: () => taskManager
         });
         window.reviewsRatingsManager = reviewsRatingsManager;
 
@@ -967,6 +969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 unsubscribeScheduleUiRefresh?.();
                 unsubscribeScheduleUiRefresh = null;
                 dataManager?.clearCurrentUserContext?.();
+                reviewsRatingsManager?.endSession?.();
                 taskManager?.setUser(null);
                 dataManager?.stopRealtimeListeners?.();
                 dataManager?.resetSessionState?.();

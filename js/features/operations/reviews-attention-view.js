@@ -5,7 +5,7 @@ import { reviewText as t } from './reviews-ratings-copy.js';
 
 const h = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tx = (key, values) => h(t(key, values));
-const platformName = platform => platform === 'airbnb' ? 'Airbnb' : 'Booking.com';
+const platformName = platform => platform === 'all' ? t('allPlatforms') : platform === 'airbnb' ? 'Airbnb' : 'Booking.com';
 const score = value => value === null || value === undefined ? '—' : Number(value).toFixed(2);
 export const reviewDate = value => reviewTime(value) === null ? t('unknownDate') : new Date(reviewTime(value)).toLocaleDateString(globalThis.window?.i18n?.currentLang === 'pt' ? 'pt-PT' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -67,7 +67,7 @@ export function renderAttentionWorkspace(properties, state) {
   const queue = state.attentionQueue || 'all';
   const platform = state.attentionPlatform || 'all';
   const search = state.attentionSearch || '';
-  const result = buildAttentionQueue(properties, { queue, platform, search });
+  const result = buildAttentionQueue(properties, { queue, platform, search, workItems: state.workItems || [], tasks: state.linkedTasks || [], followUps: state.followUps || [] });
   const pages = Math.max(1, Math.ceil(result.items.length / 25));
   const page = Math.min(state.attentionPage || 1, pages);
   return `<section class="rr-workspace" aria-label="${tx('attention')}">
@@ -83,7 +83,7 @@ export function renderAttentionWorkspace(properties, state) {
       <div><p>${tx(row.reason, row.params)}</p>${row.excerpt ? `<blockquote>${h(row.excerpt)}</blockquote>` : ''}${row.date || row.author ? `<p class="rr-note mt-1">${h(row.author || '')} · ${h(reviewDate(row.date))}${row.score != null ? ` · ${h(row.score)} / ${row.platform === 'airbnb' ? 5 : 10}` : ''}</p>` : ''}
       ${row.health ? `<p class="rr-note">${tx('lastSuccess')}: ${h(reviewDate(row.health.lastSuccess))}</p>` : ''}
       ${row.finding ? renderFindingActions(row.propertyId, row.finding) : ''}</div>
-      <button class="rr-action" data-attention-property="${h(row.propertyId)}" data-action="${row.action}" data-review-id="${h(row.reviewId || '')}">${tx(row.action === 'reviews' ? 'openReviews' : row.action === 'settings' ? 'openSettings' : 'openProperty')}</button>
+      <button class="rr-action" ${row.workId ? `data-work-id="${h(row.workId)}" data-work-property="${h(row.propertyId)}" data-work-category="${h(row.category)}"` : `data-attention-property="${h(row.propertyId)}"`} data-action="${row.action}" data-review-id="${h(row.reviewId || '')}">${tx(row.action === 'reviews' ? 'openReviews' : row.action === 'settings' ? 'openSettings' : 'openProperty')}</button>
     </article>`).join('') || `<div class="py-12 text-center"><h3 class="font-semibold">${tx('empty')}</h3><p class="rr-note mt-2">${tx('emptyHelp')}</p></div>`}
     <div class="rr-controls justify-end border-t border-gray-200 pt-4"><button class="rr-action" data-attention-page="${page - 1}" ${page === 1 ? 'disabled' : ''}>${tx('previous')}</button><span class="rr-note">${tx('page', { page, pages })}</span><button class="rr-action" data-attention-page="${page + 1}" ${page === pages ? 'disabled' : ''}>${tx('next')}</button></div>
   </section>`;
