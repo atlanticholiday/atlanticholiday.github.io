@@ -1,7 +1,9 @@
 import { WORKFLOW_COPY } from './reviews-workflow-copy.js';
+import { TRENDS_COPY } from './reviews-trends-copy.js';
 // English fallback also keeps isolated browser previews and tests usable before i18n init.
 export const REVIEWS_COPY = {
   ...WORKFLOW_COPY,
+  ...TRENDS_COPY,
   portfolio: 'Portfolio overview', target: 'Internal target: {{target}}',
   attention: 'Attention', properties: 'Properties', improvements: 'Improvements', reviews: 'Review inbox',
   title: 'Reviews & Ratings', subtitle: 'Guest feedback and property performance', back: 'Back',

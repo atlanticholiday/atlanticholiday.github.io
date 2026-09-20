@@ -1,4 +1,5 @@
 import { renderSharedStatus, renderWorkflowStyles, renderWorkBoard, renderWorkEditor, renderReviewInbox, renderFollowUpEditor, bindWorkflowEvents } from './reviews-workflow-view.js';
+import { renderTrends, bindTrendsEvents } from './reviews-trends-view.js';
 import { renderReviewWorkspaceStyles, renderReviewMetrics, renderAttentionWorkspace, renderPropertyDataHealth, renderPropertyEvidence } from './reviews-attention-view.js';
 import { reviewText as rt } from './reviews-ratings-copy.js';
 import {
@@ -64,9 +65,10 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
 
   const focused = container.contains(document.activeElement) ? document.activeElement : null;
   const focusId = focused?.id;
-  const focusAttributes = ['data-attention-queue', 'data-attention-page', 'data-attention-property', 'data-insight-key', 'data-insight-property', 'data-tab', 'data-mode', 'data-filter', 'data-metric', 'data-inbox-key', 'data-inbox-property', 'data-work-id', 'data-work-property', 'data-work-new', 'data-work-category', 'data-inbox-page', 'data-work-page'];
+  const focusAttributes = ['data-attention-queue', 'data-attention-page', 'data-attention-property', 'data-insight-key', 'data-insight-property', 'data-tab', 'data-mode', 'data-filter', 'data-metric', 'data-inbox-key', 'data-inbox-property', 'data-work-id', 'data-work-property', 'data-work-new', 'data-work-category', 'data-inbox-page', 'data-work-page', 'data-trend-platform'];
   const focusSelector = focused ? focusAttributes.filter(attr => focused.hasAttribute(attr)).map(attr => `[${attr}="${CSS.escape(focused.getAttribute(attr))}"]`).join('') : '';
   const selection = focused && (['text', 'search'].includes(focused.type) || focused.tagName === 'TEXTAREA') ? [focused.selectionStart, focused.selectionEnd] : null;
+  const navigationScroll = container.querySelector('.rr-navigation-tabs')?.scrollLeft || 0;
   const previousDialog = container.querySelector('[role="dialog"]');
   const panelKey = selectedProperty ? `${selectedProperty.id}|${activeModalTab}` : '';
   const modalScroll = container._rrPanelKey === panelKey ? previousDialog?.querySelector('.overflow-y-auto')?.scrollTop || 0 : 0;
@@ -141,7 +143,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
           </div>
 
           <!-- Tab Navigation -->
-          <div class="flex items-center gap-1 overflow-x-auto -mb-px border-t border-gray-100 sm:border-0">
+          <div class="rr-navigation-tabs flex items-center gap-1 overflow-x-auto -mb-px border-t border-gray-100 sm:border-0">
             <button class="reviews-tab-btn px-3.5 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${activeTab === 'attention' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-600'}" data-tab="attention">${escapeHtml(rt('attention'))}</button>
             <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'properties' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="properties">
               <i class="fas fa-building text-[11px] mr-1.5"></i>${escapeHtml(rt('properties'))}
@@ -157,13 +159,14 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
             <button class="reviews-tab-btn px-3.5 py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${activeTab === 'latest-reviews' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}" data-tab="latest-reviews">
               <i class="fas fa-stream text-[11px] mr-1.5"></i>${escapeHtml(rt('reviews'))}
             </button>
+            <button class="reviews-tab-btn px-3.5 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${activeTab === 'trends' ? 'border-amber-600 text-amber-800' : 'border-transparent text-gray-600'}" data-tab="trends">${escapeHtml(rt('trends'))}</button>
           </div>
         </div>
       </header>
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-4">
         ${state.isLoading ? `<p role="status" class="rr-note">${escapeHtml(rt('loading'))}</p>` : ''}
-        ${renderReviewMetrics(summary, state.averageMode, state.metricsExpanded)}
+        ${activeTab === 'trends' ? '' : renderReviewMetrics(summary, state.averageMode, state.metricsExpanded)}
 
         ${activeTab === 'properties' ? `
         <!-- Filter & Search Toolbar (Asana Style) -->
@@ -230,7 +233,7 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
                  </section>`
             )
         }
-        ` : activeTab === 'attention' ? renderSharedStatus(state) + renderAttentionWorkspace(rawProperties, state) : activeTab === 'improvements' ? `
+        ` : activeTab === 'trends' ? renderTrends(rawProperties, state) : activeTab === 'attention' ? renderSharedStatus(state) + renderAttentionWorkspace(rawProperties, state) : activeTab === 'improvements' ? `
         <!-- Improvements & Recommendations Full Page Tab -->
         ${renderWorkBoard(rawProperties, state)}
         <details class="mt-6"><summary class="font-semibold cursor-pointer">${escapeHtml(rt('suggestions'))}</summary>${renderImprovementsPage(improvementsData, state, handlers)}</details>
@@ -248,7 +251,16 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
   // Bind Events
   bindViewEvents(container, handlers);
   bindWorkflowEvents(container, handlers);
+  bindTrendsEvents(container, handlers);
   container.querySelectorAll('.reviews-tab-btn').forEach(button => button.setAttribute('aria-current', button.dataset.tab === activeTab ? 'page' : 'false'));
+  const nav = container.querySelector('.rr-navigation-tabs');
+  const activeNav = nav?.querySelector('[aria-current="page"]');
+  if (nav && activeNav) {
+    nav.scrollLeft = navigationScroll;
+    const bounds = nav.getBoundingClientRect(), activeBounds = activeNav.getBoundingClientRect();
+    if (activeBounds.right > bounds.right) nav.scrollLeft += activeBounds.right - bounds.right;
+    else if (activeBounds.left < bounds.left) nav.scrollLeft -= bounds.left - activeBounds.left;
+  }
   const nextFocus = focusId ? document.getElementById(focusId) : focusSelector ? container.querySelector(focusSelector) || container.querySelector('[data-attention-queue][aria-pressed="true"]') : null;
   if (nextFocus && container.contains(nextFocus)) {
     nextFocus.focus({ preventScroll: true });

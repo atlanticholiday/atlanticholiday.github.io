@@ -100,6 +100,7 @@ export class ReviewsRatingsManager {
       isEditingLinks: false,
       isAddingReview: false,
       activeTab: 'attention',
+      trends: { days: 90, property: 'all', platform: 'all', location: 'all', outcomePage: 1 },
       activeModalTab: 'overview',
       improvementsFilter: 'all',
       improvementsSearch: '',
@@ -838,6 +839,12 @@ export class ReviewsRatingsManager {
       },
       {
         ...this.workflow.handlers(),
+        onTrendsFilter: (key, value) => {
+          this.state.trends[key] = key === 'days' ? Number(value) : value;
+          if (key !== 'outcomePage') this.state.trends.outcomePage = 1;
+          if (key === 'location') this.state.trends.property = 'all';
+          this.render();
+        },
         onWorkflowRetry: () => { this.workflow.start(true); this.render(); },
         onMetricsExpanded: expanded => { this.state.metricsExpanded = expanded; this.render(); },
         onAverageMode: mode => { this.state.averageMode = mode; this.render(); },

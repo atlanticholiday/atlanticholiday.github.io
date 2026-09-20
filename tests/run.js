@@ -34,6 +34,7 @@ import "./unit/features/operations/property-calendar-manager.test.js";
 import "./unit/features/operations/reviews-ratings-utils.test.js";
 import "./unit/features/operations/reviews-release-one.test.js";
 import "./unit/features/operations/reviews-workflow.test.js";
+import "./unit/features/operations/reviews-trends.test.js";
 import "./unit/features/operations/reviews-ratings-manager.test.js";
 import "./unit/features/operations/review-scraper-utils.test.js";
 import "./unit/features/operations/welcome-pack-manager.test.js";
