@@ -18,7 +18,7 @@ export function buildAttentionQueue(properties = [], { now = Date.now(), search 
       add({ queue: 'replies', platform: review.platform === 'Airbnb' ? 'airbnb' : 'booking',
         reason: 'replyReason', params: { days: Math.floor((now - reviewTime(review.date)) / day) },
         score: review.score, date: review.date, excerpt: review.negative || review.comment || review.title || '',
-        author: review.author || 'Guest', reviewId: review.id, priority: reviewNeedsAttention(review) ? 0 : 3, action: 'reviews' });
+        author: review.author || 'Guest', reviewId: review.id, reviewKey: reviewKey(review), priority: reviewNeedsAttention(review) ? 0 : 3, action: 'reviews' });
     }
     for (const platform of ['airbnb', 'booking']) {
       const health = platformHealth(property, platform, now);
@@ -75,9 +75,10 @@ export function buildAttentionQueue(properties = [], { now = Date.now(), search 
   const query = search.toLocaleLowerCase().trim();
   const matching = rows.filter(r => (platform === 'all' || r.platform === platform || r.platform === 'all') && (!query ||
     [r.propertyName, r.location, r.excerpt, r.author].some(v => String(v || '').toLocaleLowerCase().includes(query))));
-  const counts = { all: matching.length, replies: 0, ratings: 0, recurring: 0, declining: 0, classifications: 0, data: 0, overdue: 0, reassess: 0 };
+  // Collection problems belong to the property data view, not the team's work queue.
+  const counts = { all: matching.filter(r => r.queue !== 'data').length, replies: 0, ratings: 0, recurring: 0, declining: 0, classifications: 0, data: 0, overdue: 0, reassess: 0 };
   for (const row of matching) counts[row.queue]++;
-  const items = matching.filter(r => queue === 'all' || r.queue === queue).sort((a, b) =>
+  const items = matching.filter(r => queue === 'all' ? r.queue !== 'data' : r.queue === queue).sort((a, b) =>
     a.priority - b.priority || (reviewTime(b.date) || 0) - (reviewTime(a.date) || 0) || a.propertyName.localeCompare(b.propertyName));
   return { items, counts };
 }

@@ -1,5 +1,6 @@
 import { WORKFLOW_COPY } from './reviews-workflow-copy.js';
 import { TRENDS_COPY } from './reviews-trends-copy.js';
+import { WORKSPACE_COPY } from './reviews-workspace-copy.js';
 // English fallback also keeps isolated browser previews and tests usable before i18n init.
 export const REVIEWS_COPY = {
   ...WORKFLOW_COPY,
@@ -37,7 +38,8 @@ export const REVIEWS_COPY = {
   evidenceHelp: 'Suggestions use phrase matching in English, Portuguese, Spanish, French and German. They can miss context; confirm before treating a suggestion as a recurring complaint.',
   decisionSaved: 'Classification saved.', decisionLocal: 'Saved on this device. Shared saving failed; retry when connected.',
   previous: 'Previous', next: 'Next', page: 'Page {{page}} of {{pages}}', close: 'Close',
-  cleanlinessCategory: 'Cleanliness', noiseCategory: 'Noise', wifiCategory: 'Wi-Fi / Internet', waterCategory: 'Water / Shower', bedsCategory: 'Beds / Comfort', kitchenCategory: 'Kitchen / Appliances', parkingCategory: 'Parking', checkinCategory: 'Check-in / Access', acCategory: 'AC / Heating', descriptionCategory: 'Listing accuracy', locationCategory: 'Location', hostCategory: 'Communication', spaceCategory: 'Space', maintenanceCategory: 'Maintenance'
+  cleanlinessCategory: 'Cleanliness', noiseCategory: 'Noise', wifiCategory: 'Wi-Fi / Internet', waterCategory: 'Water / Shower', bedsCategory: 'Beds / Comfort', kitchenCategory: 'Kitchen / Appliances', parkingCategory: 'Parking', checkinCategory: 'Check-in / Access', acCategory: 'AC / Heating', descriptionCategory: 'Listing accuracy', locationCategory: 'Location', hostCategory: 'Communication', spaceCategory: 'Space', maintenanceCategory: 'Maintenance',
+  ...WORKSPACE_COPY
 };
 
 export function reviewText(key, values = {}) {

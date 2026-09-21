@@ -265,7 +265,7 @@ describe("ReviewsRatingsManager", () => {
     assert.equal(manager.userOverrides["p1"].archived, false);
   });
 
-  test("supports improvements tab and category filtering in render", () => {
+  test("keeps suggestions out of shared improvement work when signed out", () => {
     resetDom(`<div id="reviews-ratings-page"></div>`);
     localStorage.clear();
 
@@ -295,9 +295,10 @@ describe("ReviewsRatingsManager", () => {
     improvementsTabBtn.click();
     assert.equal(manager.state.activeTab, "improvements");
 
-    // Container should now show the improvements section
-    assert.ok(container.innerHTML.includes("Improvements &amp; Recommendations") || container.innerHTML.includes("Improvements & Recommendations"));
-    assert.ok(container.innerHTML.includes("WiFi Issues Apartment"));
+    assert.ok(container.textContent.includes("Improvements"));
+    assert.ok(container.textContent.includes("Sign in"));
+    assert.equal(container.querySelector('.rr-nav-count'), null);
+    assert.equal(container.querySelector('.improvements-view-prop-btn'), null);
   });
 
   test("supports viewMode toggle between Asana cards and list table", () => {
@@ -358,4 +359,3 @@ describe("ReviewsRatingsManager", () => {
     assert.equal(manager.state.viewMode, "list");
   });
 });
-

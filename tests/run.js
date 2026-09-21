@@ -77,6 +77,7 @@ import "./unit/features/scheduling/vacation-2026-update.test.js";
 import "./unit/features/scheduling/vacation-planner-manager.test.js";
 import "./unit/features/scheduling/vacation-policy-utils.test.js";
 import "./unit/features/scheduling/vacation-records.test.js";
+import "./unit/features/operations/reviews-workspace.test.js";
 import "./smoke/html-pages.test.js";
 import "./smoke/attendance-security.test.js";
 import "./smoke/linen-inventory-security.test.js";

@@ -150,8 +150,9 @@ describe('Reviews Release 1', () => {
     assert.equal(document.activeElement, input); assert.equal(input.selectionStart, 4);
     document.querySelector('[data-attention-queue="replies"]').click();
     document.querySelector('[data-attention-property]').click();
-    assert.equal(manager.state.activeModalTab, 'reviews');
-    assert.equal(manager.state.reviewModalSearch, 'r1');
+    assert.equal(manager.state.activeModalTab, 'followUp');
+    assert.equal(manager.state.selectedInboxReview.id, 'r1');
+    assert.ok(document.querySelector('#follow-up-form'));
     assert.ok(document.querySelector('[role="dialog"]'));
     document.querySelector('#reviews-ratings-page').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     assert.equal(manager.state.selectedProperty, null);
@@ -222,6 +223,8 @@ describe('Reviews Release 1', () => {
       i18n.translations.pt = await (await fetch('/locales/pt.json')).json(); i18n.currentLang = 'pt';
       const manager = new ReviewsRatingsManager(); manager.updateCalculations(); manager.render();
       assert.includes(document.getElementById('reviews-ratings-page').textContent, 'Verificar respostas');
+      assert.equal(document.querySelector('.rr-metrics-panel'), null);
+      document.querySelector('[data-tab="properties"]').click();
       assert.includes(document.getElementById('reviews-ratings-page').textContent, 'Média por propriedade');
     } finally { i18n.currentLang = oldLang; }
   });

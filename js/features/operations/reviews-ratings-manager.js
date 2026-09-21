@@ -1,6 +1,8 @@
 import { ReviewsWorkflowController } from './reviews-workflow-controller.js';
 import { reviewText as rt } from './reviews-ratings-copy.js';
+import { reviewKey } from './reviews-workflow-utils.js';
 import {
+  getAllPropertyReviews,
   calculatePortfolioSummary,
   filterAndSortProperties,
   isPropertyArchived
@@ -94,6 +96,10 @@ export class ReviewsRatingsManager {
       attentionPlatform: 'all',
       attentionSearch: '',
       attentionPage: 1,
+      propertyDataView: false,
+      dataSearch: '',
+      dataPlatform: 'all',
+      dataPage: 1,
       syncToastMessage: null,
       reviewModalFilter: 'all',
       reviewModalSearch: '',
@@ -575,8 +581,8 @@ export class ReviewsRatingsManager {
 
     this.showToast(
       newArchived
-        ? `Property "${prop.name}" has been archived.`
-        : `Property "${prop.name}" has been restored to active.`
+        ? rt('propertyArchived', { name: prop.name })
+        : rt('propertyRestored', { name: prop.name })
     );
     this.render();
   }
@@ -672,7 +678,7 @@ export class ReviewsRatingsManager {
       properties: this.state.rawProperties
     });
 
-    this.showToast(`Details and ratings saved for ${prop.name}!`);
+    this.showToast(rt('detailsSaved', { name: prop.name }));
     this.render();
   }
 
@@ -719,7 +725,7 @@ export class ReviewsRatingsManager {
       properties: this.state.rawProperties
     });
 
-    this.showToast(`New review added for ${prop.name}!`);
+    this.showToast(rt('reviewAdded', { name: prop.name }));
     this.render();
   }
 
@@ -779,7 +785,7 @@ export class ReviewsRatingsManager {
       properties: this.state.rawProperties
     });
 
-    this.showToast('Review removed.');
+    this.showToast(rt('reviewRemoved'));
     this.render();
   }
 
@@ -795,13 +801,13 @@ export class ReviewsRatingsManager {
             <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl">
               <i class="fas fa-lock"></i>
             </div>
-            <h2 class="text-lg font-bold text-gray-900">Access Restricted</h2>
+            <h2 class="text-lg font-bold text-gray-900">${rt('accessRestricted')}</h2>
             <p class="text-sm text-gray-500 leading-relaxed">
-              You do not have permission to view Reviews & Ratings. Please contact an administrator if you require access.
+              ${rt('accessHelp')}
             </p>
             <button id="reviews-access-back-btn" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium transition-colors">
               <i class="fas fa-arrow-left text-xs"></i>
-              <span>Back to Dashboard</span>
+              <span>${rt('back')}</span>
             </button>
           </div>
         </div>
@@ -848,19 +854,33 @@ export class ReviewsRatingsManager {
         onWorkflowRetry: () => { this.workflow.start(true); this.render(); },
         onMetricsExpanded: expanded => { this.state.metricsExpanded = expanded; this.render(); },
         onAverageMode: mode => { this.state.averageMode = mode; this.render(); },
-        onAttentionFilter: (key, value) => { this.state[key] = value; this.state.attentionPage = 1; this.render(); },
-        onAttentionPage: page => { this.state.attentionPage = Math.max(1, page); this.render(); },
+        onPropertyView: view => { this.state.propertyDataView = view === 'data'; this.render(); },
+        onAttentionFilter: (key, value) => {
+          const dataView = this.state.activeTab === 'properties' && this.state.propertyDataView;
+          const target = dataView ? { attentionSearch: 'dataSearch', attentionPlatform: 'dataPlatform' }[key] : key;
+          if (target) this.state[target] = value;
+          this.state[dataView ? 'dataPage' : 'attentionPage'] = 1;
+          this.render();
+        },
+        onAttentionPage: page => { this.state[this.state.activeTab === 'properties' && this.state.propertyDataView ? 'dataPage' : 'attentionPage'] = Math.max(1, page); this.render(); },
         onMetric: metric => {
           if (['airbnb', 'booking', 'cleanliness'].includes(metric)) {
-            this.state.activeTab = 'properties'; this.state.filter = metric; this.state.searchQuery = '';
+            this.state.activeTab = 'properties'; this.state.propertyDataView = false; this.state.filter = metric; this.state.searchQuery = '';
+          } else if (metric === 'coverage') {
+            this.state.activeTab = 'properties'; this.state.propertyDataView = true;
+            this.state.dataSearch = ''; this.state.dataPlatform = 'all'; this.state.dataPage = 1;
           } else {
-            this.state.activeTab = 'attention'; this.state.attentionQueue = metric === 'coverage' ? 'data' : 'ratings';
+            this.state.activeTab = 'attention'; this.state.attentionQueue = 'ratings';
             this.state.attentionPlatform = 'all'; this.state.attentionSearch = ''; this.state.attentionPage = 1;
           }
           this.updateCalculations(); this.render();
         },
-        onAttentionProperty: (id, action, reviewId) => {
+        onAttentionProperty: (id, action, reviewId, key) => {
           this.state.selectedProperty = this.state.rawProperties.find(p => p.id === id) || null;
+          if (action === 'reviews' && (reviewId || key) && this.state.selectedProperty) {
+            const review = getAllPropertyReviews(this.state.selectedProperty).find(r => key ? reviewKey(r) === key : r.id === reviewId);
+            if (review) { this.workflow.openReview(id, reviewKey(review)); return; }
+          }
           this.state.activeModalTab = action;
           this.state.isEditingLinks = action === 'settings';
           this.state.isAddingReview = false;
