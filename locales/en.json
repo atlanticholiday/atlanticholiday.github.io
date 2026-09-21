@@ -3511,6 +3511,7 @@
     "startBlankDesc": "You can add your own colleagues manually."
   },
   "reviewsDashboard": {
+    "editLinks": "Edit links",
     "openImprovement": "Open improvement",
     "accessRestricted": "Access restricted",
     "accessHelp": "You do not have access to Reviews & Ratings. Contact an administrator to request access.",

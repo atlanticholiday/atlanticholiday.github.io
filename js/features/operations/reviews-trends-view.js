@@ -27,8 +27,8 @@ function chart(points, max, window, label) {
   if (segment.length) paths.push(segment);
   return `<svg viewBox="0 0 ${width} ${height}" class="rr-trend-chart" role="img" aria-label="${h(label)}">
     ${[0,max/2,max].map(n=>`<line x1="${left}" y1="${bottom-n/max*(bottom-top)}" x2="${right}" y2="${bottom-n/max*(bottom-top)}" stroke="#e5e7eb"/><text x="26" y="${bottom-n/max*(bottom-top)+4}" text-anchor="end">${n}</text>`).join('')}
-    ${paths.filter(path=>path.length>1).map(path=>`<polyline points="${path.map(p=>`${x(p)},${y(p)}`).join(' ')}" fill="none" stroke="#b45309" stroke-width="2"/>`).join('')}
-    ${points.filter(p=>p.value!==null).map(p=>`<circle cx="${x(p)}" cy="${y(p)}" r="4" fill="${p.count<5?'white':'#b45309'}" stroke="#b45309" stroke-width="2" tabindex="0" aria-label="${h(p.label)}"><title>${h(p.label)}</title></circle>`).join('')}
+    ${paths.filter(path=>path.length>1).map(path=>`<polyline points="${path.map(p=>`${x(p)},${y(p)}`).join(' ')}" fill="none" stroke="#e94b5a" stroke-width="2"/>`).join('')}
+    ${points.filter(p=>p.value!==null).map(p=>`<circle cx="${x(p)}" cy="${y(p)}" r="4" fill="${p.count<5?'white':'#e94b5a'}" stroke="#e94b5a" stroke-width="2" tabindex="0" aria-label="${h(p.label)}"><title>${h(p.label)}</title></circle>`).join('')}
     <text x="${left}" y="191">${date(window.start)}</text><text x="${right}" y="191" text-anchor="end">${date(window.end-1)}</text></svg>`;
 }
 

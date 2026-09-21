@@ -105,4 +105,20 @@ describe('Reviews workspace clarity', () => {
     assert.equal(manager.state.selectedProperty.reviews[0].score,4);
     clearTimeout(manager._toastTimer);manager.releaseDrawer();
   });
+
+  test('quick edit links button on property cards opens inspector directly in edit links mode', () => {
+    const manager = fixture();
+    manager.state.activeTab = 'properties';
+    manager.state.viewMode = 'cards';
+    manager.render();
+    const editBtn = document.querySelector('.reviews-card-edit-links-btn');
+    assert.ok(editBtn, 'Quick edit links button exists on property card');
+    editBtn.click();
+    assert.equal(manager.state.isEditingLinks, true, 'isEditingLinks should be set to true');
+    assert.ok(document.getElementById('edit-airbnb-url-input'), 'Listing URL input should be rendered');
+    assert.ok(document.getElementById('modal-save-links-btn'), 'Save links button should be rendered');
+    document.querySelector('#modal-close-btn').click();
+    assert.equal(manager.state.isEditingLinks, false);
+    manager.releaseDrawer();
+  });
 });

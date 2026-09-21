@@ -50,7 +50,14 @@ export function renderReviewsRatingsDashboard(container, state, handlers) {
     if (selection) nextFocus.setSelectionRange(...selection);
   }
   const dialog = container.querySelector('[role="dialog"]');
-  if (dialog && !previousDialog) dialog.querySelector('#modal-close-btn')?.focus({ preventScroll: true });
+  if (dialog && !previousDialog) {
+    if (state.isEditingLinks) {
+      const editInput = dialog.querySelector('#edit-airbnb-url-input, #edit-booking-url-input, #modal-toggle-edit-links-btn');
+      editInput?.focus({ preventScroll: true });
+    } else {
+      dialog.querySelector('#modal-close-btn')?.focus({ preventScroll: true });
+    }
+  }
   if (dialog && previousDialog) { dialog.style.animation = 'none'; dialog.querySelector('.overflow-y-auto').scrollTop = modalScroll; }
   container.querySelector('main').inert = Boolean(dialog);
   container.querySelector('header').inert = Boolean(dialog);

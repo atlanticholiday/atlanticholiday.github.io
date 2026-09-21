@@ -24,7 +24,7 @@ export const WORKSPACE_COPY = {
   noProperties: 'No properties match these filters.', latestFeedback: 'Latest feedback',
   importedCount: '{{count}} imported reviews', reviewCount: '{{count}} reviews',
   missingReplies: '{{count}} replies not captured', openListing: 'Open listing',
-  listingUrl: 'Listing URL', editDetails: 'Edit details', saveDetails: 'Save details', cancel: 'Cancel',
+  listingUrl: 'Listing URL', editDetails: 'Edit details', editLinks: 'Edit links', saveDetails: 'Save details', cancel: 'Cancel',
   overallScore: 'Overall rating', cleanlinessScore: 'Cleanliness', platformCount: 'Reviews on platform',
   archiveProperty: 'Archive property', restoreProperty: 'Restore property',
   guest: 'Guest', country: 'Country', date: 'Date', reviewTitle: 'Title', comment: 'Comment',

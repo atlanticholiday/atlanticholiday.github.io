@@ -22,10 +22,26 @@ export function renderPropertyList(properties, state) {
     <select id="reviews-sort-select" aria-label="${tx('sortProperties')}">${[['name-asc','nameAsc'],['name-desc','nameDesc'],['airbnb-desc','highestAirbnb'],['booking-desc','highestBooking'],['cleanliness-desc','highestCleanliness'],['reviews-desc','mostReviews']].map(([v,k]) => option(v,t(k),state.sort)).join('')}</select>
     <div class="rr-view-switch" aria-label="${tx('properties')}">${[['list','listView'],['cards','cardsView']].map(([v,k]) => `<button class="reviews-view-mode-btn" data-mode="${v}" aria-pressed="${state.viewMode === v}">${tx(k)}</button>`).join('')}</div>
   </div>${!properties.length ? `<p class="rr-empty">${tx('noProperties')}</p>` : state.viewMode === 'cards'
-    ? `<div class="rr-property-cards">${properties.map(p => `<article class="rr-property-card"><h3>${propertyButton(p)}</h3><p class="rr-note">${h(p.location)}</p><div class="rr-property-scores">${platformRating(p,'airbnb')}${platformRating(p,'booking')}</div><p class="rr-note">${tx('importedCount',{count:getAllPropertyReviews(p).filter(r=>r.origin!=='manual').length})}</p>${status(p)}</article>`).join('')}</div>`
-    : `<div class="rr-table-scroll" tabindex="0" role="region" aria-label="${tx('properties')}"><table class="rr-property-table"><thead><tr>${['property','status','Airbnb','Booking.com','latestFeedback','reviews'].map(k=>`<th scope="col">${k.includes('.') || k==='Airbnb' ? k : tx(k)}</th>`).join('')}</tr></thead><tbody>${properties.map(p => {
+    ? `<div class="rr-property-cards">${properties.map(p => `<article class="rr-property-card">
+        <div class="rr-card-header">
+          <div class="min-w-0">
+            <h3>${propertyButton(p)}</h3>
+            <p class="rr-note">${h(p.location)}</p>
+          </div>
+          <button type="button" class="reviews-card-edit-links-btn rr-card-quick-links-btn" data-id="${h(p.id)}" title="${tx('editLinks')}" aria-label="${tx('editLinks')} - ${h(p.name)}">
+            <svg class="w-3.5 h-3.5 inline mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z"/><path d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 105.656 5.656l3-3a4 4 0 00-.225-5.865z"/></svg>
+            <span>${tx('editLinks')}</span>
+          </button>
+        </div>
+        <div class="rr-property-scores">${platformRating(p,'airbnb')}${platformRating(p,'booking')}</div>
+        <div class="rr-card-footer">
+          <p class="rr-note">${tx('importedCount',{count:getAllPropertyReviews(p).filter(r=>r.origin!=='manual').length})}</p>
+          ${status(p)}
+        </div>
+      </article>`).join('')}</div>`
+    : `<div class="rr-table-scroll" tabindex="0" role="region" aria-label="${tx('properties')}"><table class="rr-property-table"><thead><tr>${['property','status','Airbnb','Booking.com','latestFeedback','reviews','actions'].map(k=>`<th scope="col">${k.includes('.') || ['Airbnb','actions'].includes(k) ? (k === 'actions' ? '' : k) : tx(k)}</th>`).join('')}</tr></thead><tbody>${properties.map(p => {
       const latest = getLatestReviewSnippet(p);
-      return `<tr><td>${propertyButton(p)}<span class="rr-note block">${h(p.location)}</span></td><td>${status(p)}</td>${['airbnb','booking'].map(platform=>`<td>${platformRating(p,platform,false)}</td>`).join('')}<td class="rr-feedback-cell">${latest ? `<p class="rr-clamp">${h(latest.comment || latest.positive || latest.negative || latest.title || t('noWrittenReview'))}</p><span class="rr-note">${h(latest.author || t('guest'))}</span>` : '—'}</td><td>${tx('reviewCount',{count:getAllPropertyReviews(p).length})}</td></tr>`;
+      return `<tr><td>${propertyButton(p)}<span class="rr-note block">${h(p.location)}</span></td><td>${status(p)}</td>${['airbnb','booking'].map(platform=>`<td>${platformRating(p,platform,false)}</td>`).join('')}<td class="rr-feedback-cell">${latest ? `<p class="rr-clamp">${h(latest.comment || latest.positive || latest.negative || latest.title || t('noWrittenReview'))}</p><span class="rr-note">${h(latest.author || t('guest'))}</span>` : '—'}</td><td>${tx('reviewCount',{count:getAllPropertyReviews(p).length})}</td><td><button type="button" class="reviews-card-edit-links-btn rr-action rr-table-edit-btn" data-id="${h(p.id)}" title="${tx('editLinks')}">${tx('editLinks')}</button></td></tr>`;
     }).join('')}</tbody></table></div>`}`;
 }
 
@@ -35,12 +51,16 @@ function propertyButton(p) {
 
 function status(p) {
   const key = isPropertyArchived(p) ? 'archived' : isAttentionNeeded(p) ? 'ratingAlert' : p.airbnb?.score || p.booking?.score ? 'withinThresholds' : p.airbnbUrl || p.bookingUrl ? 'awaitingData' : 'unrated';
-  return `<span class="rr-status ${key === 'ratingAlert' ? 'rr-status-alert' : ''}">${tx(key)}</span>`;
+  const alertClass = key === 'ratingAlert' ? 'rr-status-alert' : key === 'withinThresholds' ? 'rr-status-within' : key === 'guestFavourite' ? 'rr-status-favourite' : '';
+  return `<span class="rr-status ${alertClass}">${tx(key)}</span>`;
 }
 
 function platformRating(p, platform, label = true) {
   const data = p[platform], max = platform === 'airbnb' ? 5 : 10;
-  return `<div class="rr-platform-rating">${label ? `<h3>${platform === 'airbnb' ? 'Airbnb' : 'Booking.com'}</h3>` : ''}<strong>${score(data?.score,max)}</strong><span class="rr-note block">${tx('cleanlinessScore')}: ${score(data?.subScores?.cleanliness,max)}</span>${label ? `<span class="rr-note">${tx('platformCount')}: ${h(data?.reviewCount ?? '—')}</span>` : ''}</div>`;
+  const isHigh = data?.score != null && ((platform === 'airbnb' && data.score >= 4.8) || (platform === 'booking' && data.score >= 9.0));
+  const isAlert = data?.score != null && ((platform === 'airbnb' && data.score < 4.7) || (platform === 'booking' && data.score < 8.5));
+  const scoreClass = isHigh ? 'rr-score-high' : isAlert ? 'rr-score-alert' : '';
+  return `<div class="rr-platform-rating rr-platform-${platform}">${label ? `<div class="rr-platform-badge rr-badge-${platform}"><span class="rr-platform-dot"></span><span>${platform === 'airbnb' ? 'Airbnb' : 'Booking.com'}</span></div>` : ''}<strong class="${scoreClass}">${score(data?.score,max)}</strong><span class="rr-note block">${tx('cleanlinessScore')}: ${score(data?.subScores?.cleanliness,max)}</span>${label ? `<span class="rr-note">${tx('platformCount')}: ${h(data?.reviewCount ?? '—')}</span>` : ''}</div>`;
 }
 
 export function renderPropertyInspector(property, state) {
@@ -51,10 +71,10 @@ export function renderPropertyInspector(property, state) {
     : tab === 'work' ? renderWorkEditor(property,state) : tab === 'reviews' ? renderPropertyReviews(property,state) : `<div class="rr-property-scores">${platformRating(property,'airbnb')}${platformRating(property,'booking')}</div>
       <p class="rr-note mt-3">${tx('ratingHelp')}</p>
       ${property.airbnb?.badge === 'Guest favourite' ? `<p class="rr-note mt-3">Airbnb · ${tx('guestFavourite')}</p>` : ''}
+      <details data-rr-disclosure="property-settings" class="rr-disclosure ${state.isEditingLinks || current === 'settings' ? 'rr-highlight-section' : ''}" ${current === 'settings' || state.isEditingLinks ? 'open' : ''}><summary>${tx('listings')}</summary>${renderPropertySettings(property,state)}</details>
       <details data-rr-disclosure="property-scores" class="rr-disclosure"><summary>${tx('subScores')}</summary><div class="rr-property-scores">${['airbnb','booking'].map(platform=>`<div><h3>${platform==='airbnb'?'Airbnb':'Booking.com'}</h3><dl>${Object.entries(property[platform]?.subScores || {}).map(([key,value])=>`<div class="rr-section-heading my-3"><dt class="rr-note">${tx(({cleanliness:'cleanlinessScore',checkin:'checkIn',check_in:'checkIn',value_for_money:'value',free_wifi:'wifi'})[key] || key)}</dt><dd>${score(value,platform==='airbnb'?5:10)}</dd></div>`).join('') || '<p class="rr-note">—</p>'}</dl></div>`).join('')}</div></details>
       ${renderPropertyEvidence(property)}
-      <details data-rr-disclosure="property-health" class="rr-disclosure"><summary>${tx('dataHealth')}</summary>${renderPropertyDataHealth(property)}</details>
-      <details data-rr-disclosure="property-settings" class="rr-disclosure" ${current === 'settings' || state.isEditingLinks ? 'open' : ''}><summary>${tx('listings')}</summary>${renderPropertySettings(property,state)}</details>`;
+      <details data-rr-disclosure="property-health" class="rr-disclosure"><summary>${tx('dataHealth')}</summary>${renderPropertyDataHealth(property)}</details>`;
   return `<div class="rr-drawer-backdrop"><section role="dialog" aria-modal="true" aria-label="${h(property.name)}" class="rr-drawer">
     <div class="rr-inspector-header"><div><p class="rr-eyebrow">${tx('property')}</p><h2>${h(property.name)}</h2><p class="rr-note">${h(property.location)} · ${tx('reviewCount',{count:reviews.length})}</p></div>${action('close','id="modal-close-btn"')}</div>
     <nav class="rr-inspector-tabs" aria-label="${tx('property')}">${[['overview','overview'],['reviews','reviews'],['work','improvements']].map(([v,k])=>`<button class="modal-tab-btn" data-tab="${v}" aria-current="${v===tab?'page':'false'}">${tx(k)}</button>`).join('')}</nav>
@@ -67,7 +87,7 @@ function renderPropertySettings(p,state) {
     ${state.isEditingLinks ? `<form id="property-listing-form" class="rr-form-grid mt-4">${['booking','airbnb'].map(platform=>{
       const max=platform==='airbnb'?5:10, data=p[platform];
       return `<fieldset><legend>${platform==='airbnb'?'Airbnb':'Booking.com'}</legend>${field(`edit-${platform}-url-input`,'listingUrl','url',p[`${platform}Url`]||'')}${field(`edit-${platform}-score-input`,'overallScore','number',data?.score??'',`min="0.1" max="${max}" step="0.01"`)}${field(`edit-${platform}-clean-input`,'cleanlinessScore','number',data?.subScores?.cleanliness??'',`min="0.1" max="${max}" step="0.01"`)}${field(`edit-${platform}-count-input`,'platformCount','number',data?.reviewCount??'','min="0" step="1"')}</fieldset>`;
-    }).join('')}<div class="rr-span">${action('saveDetails','id="modal-save-links-btn"')}</div></form>` : `<div class="rr-actions my-4">${['Airbnb','Booking.com'].map(platform=>{
+    }).join('')}<div class="rr-span">${action('saveDetails','id="modal-save-links-btn" class="rr-action rr-primary"')}</div></form>` : `<div class="rr-actions my-4">${['Airbnb','Booking.com'].map(platform=>{
       const url=safePlatformUrl(p,{platform});
       return url?`<a class="rr-action" href="${h(url)}" target="_blank" rel="noopener noreferrer">${platform} ↗</a>`:`<span class="rr-note">${platform}: ${tx('unlinked')}</span>`;
     }).join('')}</div>`}
